@@ -34,12 +34,11 @@ export const scadenzaService = {
   },
 
   async getScadenzeByCliente(clienteId: string): Promise<Scadenza[]> {
-    const query = supabase
+    const { data, error } = await supabase
       .from("scadenze")
       .select("*")
-      .eq("cliente_id", clienteId);
-      
-    const { data, error } = await query.order("data_scadenza", { ascending: true });
+      .eq("id_cliente", clienteId)
+      .order("data_scadenza", { ascending: true });
 
     if (error) {
       console.error("Error fetching scadenze by cliente:", error);

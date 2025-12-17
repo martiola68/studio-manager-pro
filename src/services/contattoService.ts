@@ -34,12 +34,11 @@ export const contattoService = {
   },
 
   async getContattiByCliente(clienteId: string): Promise<Contatto[]> {
-    const query = supabase
+    const { data, error } = await supabase
       .from("contatti")
       .select("*")
-      .eq("cliente_id", clienteId);
-      
-    const { data, error } = await query.order("cognome", { ascending: true });
+      .eq("id_cliente", clienteId)
+      .order("cognome", { ascending: true });
 
     if (error) {
       console.error("Error fetching contatti by cliente:", error);

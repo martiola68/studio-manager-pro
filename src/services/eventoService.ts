@@ -34,12 +34,11 @@ export const eventoService = {
   },
 
   async getEventiByUtente(utenteId: string): Promise<EventoAgenda[]> {
-    const query = supabase
+    const { data, error } = await supabase
       .from("eventi_agenda")
       .select("*")
-      .eq("utente_id", utenteId);
-      
-    const { data, error } = await query.order("data_inizio", { ascending: true });
+      .eq("id_utente", utenteId)
+      .order("data_inizio", { ascending: true });
 
     if (error) {
       console.error("Error fetching eventi by utente:", error);
@@ -49,12 +48,11 @@ export const eventoService = {
   },
 
   async getEventiByCliente(clienteId: string): Promise<EventoAgenda[]> {
-    const query = supabase
+    const { data, error } = await supabase
       .from("eventi_agenda")
       .select("*")
-      .eq("cliente_id", clienteId);
-
-    const { data, error } = await query.order("data_inizio", { ascending: true });
+      .eq("id_cliente", clienteId)
+      .order("data_inizio", { ascending: true });
 
     if (error) {
       console.error("Error fetching eventi by cliente:", error);

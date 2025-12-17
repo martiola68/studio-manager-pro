@@ -34,12 +34,11 @@ export const comunicazioneService = {
   },
 
   async getComunicazioniByCliente(clienteId: string): Promise<Comunicazione[]> {
-    const query = supabase
+    const { data, error } = await supabase
       .from("comunicazioni")
       .select("*")
-      .eq("cliente_id", clienteId);
-      
-    const { data, error } = await query.order("created_at", { ascending: false });
+      .eq("id_cliente", clienteId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching comunicazioni by cliente:", error);
