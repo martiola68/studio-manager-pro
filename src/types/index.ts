@@ -93,7 +93,7 @@ export interface Contatto {
   DataUltimaModifica: string;
 }
 
-export type TipoScadenza = keyof typeof SCADENZE_KEYS;
+export type TipoScadenza = typeof SCADENZE_KEYS[keyof typeof SCADENZE_KEYS];
 export type StatoScadenza = "InAttesa" | "InLavorazione" | "Completata" | "Annullata";
 
 export interface Scadenza {
