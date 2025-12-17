@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
-import { SCADENZE_KEYS } from "@/types";
 import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
 
-type EventoAgenda = Database["public"]["Tables"]["TBAgenda"]["Row"];
+type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -36,7 +35,6 @@ export default function DashboardPage() {
 
   const checkAuthAndLoadData = async () => {
     try {
-      // Verifica autenticazione Supabase
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -55,13 +53,11 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      // Carica statistiche
       const clienti = await clienteService.getClienti();
       const appuntamenti = await eventoService.getEventi();
       
       const clientiAttivi = clienti.filter(c => c.attivo).length;
       
-      // Appuntamenti prossimi 7 giorni
       const oggi = new Date();
       const setteDopo = new Date();
       setteDopo.setDate(oggi.getDate() + 7);
@@ -73,7 +69,6 @@ export default function DashboardPage() {
 
       setProssimiAppuntamenti(prossimi.slice(0, 5));
 
-      // Conta scadenze confermate usando il nuovo metodo aggregato
       const counts = await scadenzaService.getAllScadenzeCounts();
 
       setStats({
@@ -131,7 +126,6 @@ export default function DashboardPage() {
               <p className="text-gray-500 mt-1">Panoramica generale dello studio</p>
             </div>
 
-            {/* Statistiche principali */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card className="border-l-4 border-l-blue-600">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -182,7 +176,6 @@ export default function DashboardPage() {
               </Card>
             </div>
 
-            {/* Riepilogo Scadenze */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <Card>
                 <CardHeader>
@@ -262,7 +255,6 @@ export default function DashboardPage() {
               </Card>
             </div>
 
-            {/* Accessi rapidi */}
             <Card>
               <CardHeader>
                 <CardTitle>Accessi Rapidi</CardTitle>

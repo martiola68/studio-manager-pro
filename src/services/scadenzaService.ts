@@ -1,17 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
-
-// Definiamo un tipo generico per le scadenze poiché ora sono in tabelle separate
-// Questa è una semplificazione, idealmente dovremmo avere servizi separati o gestirli in modo più dinamico
 
 export const scadenzaService = {
-  // Esempio per TBScadIva
   async getScadenzeIva() {
     const { data, error } = await supabase
-      .from("TBScadIva")
+      .from("tbscadiva")
       .select(`
         *,
-        cliente:TBClienti(ragione_sociale)
+        cliente:tbclienti(ragione_sociale)
       `);
       
     if (error) {
@@ -21,13 +16,12 @@ export const scadenzaService = {
     return data || [];
   },
 
-  // Esempio per TBScadFiscali
   async getScadenzeFiscali() {
     const { data, error } = await supabase
-      .from("TBScadFiscali")
+      .from("tbscadfiscali")
       .select(`
         *,
-        cliente:TBClienti(ragione_sociale)
+        cliente:tbclienti(ragione_sociale)
       `);
       
     if (error) {
@@ -37,19 +31,17 @@ export const scadenzaService = {
     return data || [];
   },
 
-  // Metodi per recuperare tutte le scadenze per la dashboard
-  // Questo richiederà chiamate multiple a tutte le tabelle scadenze
   async getAllScadenzeCounts() {
     const results = await Promise.all([
-      supabase.from("TBScadIva").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadCCGG").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadCU").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadFiscali").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadBilanci").select("id", { count: "exact", head: true }),
-      supabase.from("TBScad770").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadLipe").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadEstero").select("id", { count: "exact", head: true }),
-      supabase.from("TBScadProforma").select("id", { count: "exact", head: true })
+      supabase.from("tbscadiva").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadccgg").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadcu").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadfiscali").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadbilanci").select("id", { count: "exact", head: true }),
+      supabase.from("tbscad770").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadlipe").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadestero").select("id", { count: "exact", head: true }),
+      supabase.from("tbscadproforma").select("id", { count: "exact", head: true })
     ]);
 
     return {

@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Comunicazione = Database["public"]["Tables"]["TBComunicazioni"]["Row"];
-type ComunicazioneInsert = Database["public"]["Tables"]["TBComunicazioni"]["Insert"];
-type ComunicazioneUpdate = Database["public"]["Tables"]["TBComunicazioni"]["Update"];
+type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
+type ComunicazioneInsert = Database["public"]["Tables"]["tbcomunicazioni"]["Insert"];
+type ComunicazioneUpdate = Database["public"]["Tables"]["tbcomunicazioni"]["Update"];
 
 export const comunicazioneService = {
   async getComunicazioni(): Promise<Comunicazione[]> {
     const { data, error } = await supabase
-      .from("TBComunicazioni")
+      .from("tbcomunicazioni")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -21,7 +21,7 @@ export const comunicazioneService = {
 
   async getComunicazioneById(id: string): Promise<Comunicazione | null> {
     const { data, error } = await supabase
-      .from("TBComunicazioni")
+      .from("tbcomunicazioni")
       .select("*")
       .eq("id", id)
       .single();
@@ -32,10 +32,10 @@ export const comunicazioneService = {
     }
     return data;
   },
-
+  
   async createComunicazione(comunicazione: ComunicazioneInsert): Promise<Comunicazione | null> {
     const { data, error } = await supabase
-      .from("TBComunicazioni")
+      .from("tbcomunicazioni")
       .insert(comunicazione)
       .select()
       .single();
@@ -49,7 +49,7 @@ export const comunicazioneService = {
 
   async updateComunicazione(id: string, updates: ComunicazioneUpdate): Promise<Comunicazione | null> {
     const { data, error } = await supabase
-      .from("TBComunicazioni")
+      .from("tbcomunicazioni")
       .update(updates)
       .eq("id", id)
       .select()
@@ -64,7 +64,7 @@ export const comunicazioneService = {
 
   async deleteComunicazione(id: string): Promise<boolean> {
     const { error } = await supabase
-      .from("TBComunicazioni")
+      .from("tbcomunicazioni")
       .delete()
       .eq("id", id);
 

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
 
-type Studio = Database["public"]["Tables"]["TBStudio"]["Row"];
-type Utente = Database["public"]["Tables"]["TBUtenti"]["Row"];
+type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function Header() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
@@ -37,11 +37,6 @@ export default function Header() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // TODO: Implementare getUtenteByUserId correttamente
-        // const utente = await utenteService.getUtenteByUserId(session.user.id);
-        // setCurrentUser(utente);
-        
-        // Temporaneo: prendiamo il primo utente admin per demo
         const utenti = await utenteService.getUtenti();
         if (utenti.length > 0) {
             setCurrentUser(utenti[0]);
@@ -100,7 +95,7 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">
-                {currentUser.nome || currentUser.username} {currentUser.cognome || ""}
+                {currentUser.nome} {currentUser.cognome}
               </p>
               <p className="text-xs text-gray-500">
                 {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}

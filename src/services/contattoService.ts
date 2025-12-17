@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Contatto = Database["public"]["Tables"]["TBContatti"]["Row"];
-type ContattoInsert = Database["public"]["Tables"]["TBContatti"]["Insert"];
-type ContattoUpdate = Database["public"]["Tables"]["TBContatti"]["Update"];
+type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"];
+type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"];
 
 export const contattoService = {
   async getContatti(): Promise<Contatto[]> {
     const { data, error } = await supabase
-      .from("TBContatti")
+      .from("tbcontatti")
       .select("*")
       .order("cognome", { ascending: true });
 
@@ -21,7 +21,7 @@ export const contattoService = {
 
   async getContattoById(id: string): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("TBContatti")
+      .from("tbcontatti")
       .select("*")
       .eq("id", id)
       .single();
@@ -33,23 +33,9 @@ export const contattoService = {
     return data;
   },
 
-  async getContattiByCliente(clienteId: string): Promise<Contatto[]> {
-    const { data, error } = await supabase
-      .from("contatti")
-      .select("*")
-      .eq("id_cliente", clienteId)
-      .order("cognome", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching contatti by cliente:", error);
-      return [];
-    }
-    return data || [];
-  },
-
   async createContatto(contatto: ContattoInsert): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("TBContatti")
+      .from("tbcontatti")
       .insert(contatto)
       .select()
       .single();
@@ -63,7 +49,7 @@ export const contattoService = {
 
   async updateContatto(id: string, updates: ContattoUpdate): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("TBContatti")
+      .from("tbcontatti")
       .update(updates)
       .eq("id", id)
       .select()
@@ -78,7 +64,7 @@ export const contattoService = {
 
   async deleteContatto(id: string): Promise<boolean> {
     const { error } = await supabase
-      .from("TBContatti")
+      .from("tbcontatti")
       .delete()
       .eq("id", id);
 

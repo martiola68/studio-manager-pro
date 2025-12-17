@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Cliente = Database["public"]["Tables"]["TBClienti"]["Row"];
-type ClienteInsert = Database["public"]["Tables"]["TBClienti"]["Insert"];
-type ClienteUpdate = Database["public"]["Tables"]["TBClienti"]["Update"];
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
+type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
 
 export const clienteService = {
   async getClienti(): Promise<Cliente[]> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .select("*")
       .order("ragione_sociale", { ascending: true });
 
@@ -21,7 +21,7 @@ export const clienteService = {
 
   async getClientiAttivi(): Promise<Cliente[]> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .select("*")
       .eq("attivo", true)
       .order("ragione_sociale", { ascending: true });
@@ -35,7 +35,7 @@ export const clienteService = {
 
   async getClienteById(id: string): Promise<Cliente | null> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .select("*")
       .eq("id", id)
       .single();
@@ -49,7 +49,7 @@ export const clienteService = {
 
   async createCliente(cliente: ClienteInsert): Promise<Cliente | null> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .insert(cliente)
       .select()
       .single();
@@ -63,7 +63,7 @@ export const clienteService = {
 
   async updateCliente(id: string, updates: ClienteUpdate): Promise<Cliente | null> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .update(updates)
       .eq("id", id)
       .select()
@@ -78,7 +78,7 @@ export const clienteService = {
 
   async deleteCliente(id: string): Promise<boolean> {
     const { error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .delete()
       .eq("id", id);
 
@@ -91,7 +91,7 @@ export const clienteService = {
 
   async searchClienti(query: string): Promise<Cliente[]> {
     const { data, error } = await supabase
-      .from("TBClienti")
+      .from("tbclienti")
       .select("*")
       .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
       .order("ragione_sociale", { ascending: true });
