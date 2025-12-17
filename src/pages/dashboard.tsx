@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getCurrentUser, getClienti, getAppuntamenti, getScadenze, SCADENZE_KEYS } from "@/lib/db";
+import { getCurrentUser, getClienti, getEventi, getScadenzeByTipo } from "@/lib/db";
+import { SCADENZE_KEYS, EventoAgenda } from "@/types";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,53 +22,60 @@ export default function DashboardPage() {
     scadenzeCUConfermate: 0,
     scadenzeBilanciConfermate: 0
   });
-  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<any[]>([]);
+  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>([]);
 
   useEffect(() => {
+    // Client-side only check
+    if (typeof window === "undefined") return;
+
     const user = getCurrentUser();
     if (!user) {
       router.push("/login");
       return;
     }
 
-    // Carica statistiche
-    const clienti = getClienti();
-    const appuntamenti = getAppuntamenti();
-    
-    const clientiAttivi = clienti.filter(c => c.attivo).length;
-    
-    // Appuntamenti prossimi 7 giorni
-    const oggi = new Date();
-    const setteDopo = new Date();
-    setteDopo.setDate(oggi.getDate() + 7);
-    
-    const prossimi = appuntamenti.filter(app => {
-      const dataApp = new Date(app.dataInizio);
-      return dataApp >= oggi && dataApp <= setteDopo;
-    }).sort((a, b) => new Date(a.dataInizio).getTime() - new Date(b.dataInizio).getTime());
+    try {
+      // Carica statistiche
+      const clienti = getClienti();
+      const appuntamenti = getEventi();
+      
+      const clientiAttivi = clienti.filter(c => c.Attivo).length;
+      
+      // Appuntamenti prossimi 7 giorni
+      const oggi = new Date();
+      const setteDopo = new Date();
+      setteDopo.setDate(oggi.getDate() + 7);
+      
+      const prossimi = appuntamenti.filter(app => {
+        const dataApp = new Date(app.DataInizio);
+        return dataApp >= oggi && dataApp <= setteDopo;
+      }).sort((a, b) => new Date(a.DataInizio).getTime() - new Date(b.DataInizio).getTime());
 
-    setProssimiAppuntamenti(prossimi.slice(0, 5));
+      setProssimiAppuntamenti(prossimi.slice(0, 5));
 
-    // Conta scadenze confermate
-    const scadIva = getScadenze<any>(SCADENZE_KEYS.IVA);
-    const scadFiscali = getScadenze<any>(SCADENZE_KEYS.FISCALI);
-    const scadCCGG = getScadenze<any>(SCADENZE_KEYS.CCGG);
-    const scad770 = getScadenze<any>(SCADENZE_KEYS["770"]);
-    const scadCU = getScadenze<any>(SCADENZE_KEYS.CU);
-    const scadBilanci = getScadenze<any>(SCADENZE_KEYS.BILANCI);
+      // Conta scadenze confermate
+      const scadIva = getScadenzeByTipo(SCADENZE_KEYS.IVA);
+      const scadFiscali = getScadenzeByTipo(SCADENZE_KEYS.FISCALI);
+      const scadCCGG = getScadenzeByTipo(SCADENZE_KEYS.CCGG);
+      const scad770 = getScadenzeByTipo(SCADENZE_KEYS["770"]);
+      const scadCU = getScadenzeByTipo(SCADENZE_KEYS.CU);
+      const scadBilanci = getScadenzeByTipo(SCADENZE_KEYS.BILANCI);
 
-    setStats({
-      clientiAttivi,
-      appuntamentiProssimi: prossimi.length,
-      scadenzeIvaConfermate: scadIva.filter(s => s.confermaRiga).length,
-      scadenzeFiscaliConfermate: scadFiscali.filter(s => s.confermaRiga).length,
-      scadenzeCCGGConfermate: scadCCGG.filter(s => s.confermaRiga).length,
-      scadenze770Confermate: scad770.filter(s => s.confermaRiga).length,
-      scadenzeCUConfermate: scadCU.filter(s => s.confermaRiga).length,
-      scadenzeBilanciConfermate: scadBilanci.filter(s => s.confermaRiga).length
-    });
-
-    setLoading(false);
+      setStats({
+        clientiAttivi,
+        appuntamentiProssimi: prossimi.length,
+        scadenzeIvaConfermate: scadIva.filter(s => s.ConfermaRiga).length,
+        scadenzeFiscaliConfermate: scadFiscali.filter(s => s.ConfermaRiga).length,
+        scadenzeCCGGConfermate: scadCCGG.filter(s => s.ConfermaRiga).length,
+        scadenze770Confermate: scad770.filter(s => s.ConfermaRiga).length,
+        scadenzeCUConfermate: scadCU.filter(s => s.ConfermaRiga).length,
+        scadenzeBilanciConfermate: scadBilanci.filter(s => s.ConfermaRiga).length
+      });
+    } catch (error) {
+      console.error("Errore nel caricamento della dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
 
   if (loading) {
@@ -82,14 +90,18 @@ export default function DashboardPage() {
   }
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   return (
@@ -215,12 +227,12 @@ export default function DashboardPage() {
                   ) : (
                     <div className="space-y-3">
                       {prossimiAppuntamenti.map((app) => (
-                        <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${app.inSede ? "bg-green-500" : "bg-red-500"}`}></div>
+                        <div key={app.ID_Evento} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${app.InSede ? "bg-green-500" : "bg-red-500"}`}></div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
-                            <p className="text-xs text-gray-500">{formatDateTime(app.dataInizio)}</p>
-                            {app.sala && <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>}
+                            <p className="font-medium text-sm text-gray-900 truncate">{app.Titolo}</p>
+                            <p className="text-xs text-gray-500">{formatDateTime(app.DataInizio)}</p>
+                            {app.Sala && <p className="text-xs text-gray-400 mt-1">Sala: {app.Sala}</p>}
                           </div>
                         </div>
                       ))}

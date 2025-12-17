@@ -3,201 +3,148 @@
 export type TipoUtente = "Admin" | "User";
 export type TipoCliente = "Interno" | "Esterno";
 
-export interface Utente {
-  id: string;
-  Nome: string;
-  Cognome: string;
-  Email: string;
-  Password: string;
-  TipoUtente: TipoUtente;
-  RuoloOperatore?: string;
-  attivo: boolean;
-}
-
-export interface RuoloOperatore {
-  ID: string;
-  Ruolo: string;
-}
-
-export interface Prestazione {
-  ID: string;
-  Descrizione: string;
-}
+// Costanti per le scadenze
+export const SCADENZE_KEYS = {
+  IVA: "IVA",
+  CCGG: "CCGG",
+  CU: "CU",
+  FISCALI: "Fiscali",
+  BILANCI: "Bilanci",
+  "770": "770",
+  LIPE: "LIPE",
+  ESTEROMETRO: "Esterometro",
+  PROFORMA: "Proforma"
+} as const;
 
 export interface Studio {
-  id: string;
+  ID_Studio: string;
   RagioneSociale: string;
   DenominazioneBreve: string;
   PartitaIVA: string;
   CodiceFiscale: string;
   Indirizzo: string;
   CAP: string;
-  Città: string;
+  Citta: string;
   Provincia: string;
   Telefono: string;
   Email: string;
   PEC: string;
-  SitoWeb: string;
-  Logo?: string;
-  Note: string;
-  attivo: boolean;
+  SitoWeb?: string;
+  Logo: string | null;
+  Note?: string;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
-export interface Contatto {
-  id: string;
+export interface Utente {
+  ID_Utente: string;
+  Username: string;
+  Password?: string;
   Nome: string;
   Cognome: string;
   Email: string;
-  Cell: string;
-  Tel: string;
-  Note: string;
-  CassettoFiscale: boolean;
-  Utente: string;
-  Password: string;
-  Pin: string;
-  Password_iniziale: string;
+  TipoUtente: TipoUtente;
+  RuoloOperatore?: string;
+  Attivo: boolean;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
 export interface Cliente {
-  id: string;
-  cod_cliente: string;
-  Ragione_Sociale: string;
-  codice_fiscale: string;
-  partita_iva: string;
-  indirizzo: string;
-  cap: string;
-  città: string;
-  provincia: string;
-  email: string;
-  note: string;
-  attivo: boolean;
-  UtenteOperatore?: string;
-  UtenteProfessionista?: string;
-  Contatto1?: string;
-  Contatto2?: string;
-  Scadenza_Antiric?: string;
-  TipoPrestazioneId?: string;
-  TipoCliente: TipoCliente;
-  data_creazione: string;
-  Flag_Iva: boolean;
-  Flag_CU: boolean;
-  Flag_Bilancio: boolean;
-  Flag_Fiscali: boolean;
-  Flag_Lipe: boolean;
-  Flag_770: boolean;
-  Flag_Esterometro: boolean;
-  Flag_ccgg: boolean;
-  Flag_Proforma: boolean;
-  Flag_mail_attivo: boolean;
-  Flag_mail_scadenze: boolean;
-  Flag_mail_newsletter: boolean;
+  ID_Cliente: string;
+  RagioneSociale: string;
+  PartitaIVA: string;
+  CodiceFiscale: string;
+  Indirizzo: string;
+  CAP: string;
+  Citta: string;
+  Provincia: string;
+  Email: string;
+  PEC?: string;
+  Telefono?: string;
+  Note?: string;
+  Attivo: boolean;
+  TipoCliente?: TipoCliente;
+  // Flag per servizi attivi
+  Flag_Iva?: boolean;
+  Flag_CU?: boolean;
+  Flag_Bilancio?: boolean;
+  Flag_Fiscali?: boolean;
+  Flag_Lipe?: boolean;
+  Flag_770?: boolean;
+  Flag_Esterometro?: boolean;
+  Flag_ccgg?: boolean;
+  Flag_Proforma?: boolean;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
-export interface ScadenzaBase {
-  id: string;
-  Nominativo: string;
-  UtenteOperatore?: string;
-  UtenteProfessionista?: string;
-  confermaRiga?: boolean;
+export interface Contatto {
+  ID_Contatto: string;
+  ID_Cliente: string;
+  Nome: string;
+  Cognome: string;
+  Email: string;
+  Telefono?: string;
+  Cellulare?: string;
+  Ruolo?: string;
+  Note?: string;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
-export interface ScadenzaIva extends ScadenzaBase {
-  Gennaio: string;
-  Febbraio: string;
-  Marzo: string;
-  Aprile: string;
-  Maggio: string;
-  Giugno: string;
-  Luglio: string;
-  Agosto: string;
-  Settembre: string;
-  Ottobre: string;
-  Novembre: string;
-  Dicembre: string;
+export type TipoScadenza = keyof typeof SCADENZE_KEYS;
+export type StatoScadenza = "InAttesa" | "InLavorazione" | "Completata" | "Annullata";
+
+export interface Scadenza {
+  ID_Scadenza: string;
+  ID_Cliente: string;
+  TipoScadenza: TipoScadenza;
+  StatoScadenza: StatoScadenza;
+  DataScadenza: string;
+  Descrizione?: string;
+  ConfermaRiga: boolean;
+  Note?: string;
+  // Campi specifici opzionali
+  Importo?: number;
+  DataInvio?: string;
+  DataDeposito?: string;
+  DataApprovazione?: string;
+  Periodo?: string; // Es. "Gennaio", "Trim1"
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
-export interface ScadenzaCCGG extends ScadenzaBase {
+export type TipoEvento = "Appuntamento" | "Riunione" | "Scadenza" | "Altro";
+
+export interface EventoAgenda {
+  ID_Evento: string;
+  ID_Utente: string;
+  ID_Cliente?: string;
+  Titolo: string;
+  Descrizione?: string;
   DataInizio: string;
   DataFine: string;
-  DataDeposito: string;
+  TuttoGiorno: boolean;
+  Colore?: string;
+  Luogo?: string;
+  InSede?: boolean;
+  Sala?: string;
+  TipoEvento: TipoEvento;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
 
-export interface ScadenzaCU extends ScadenzaBase {
-  DataInvio: string;
-}
+export type StatoComunicazione = "Bozza" | "Inviata" | "Letta" | "Archiviata";
 
-export interface ScadenzaFiscali extends ScadenzaBase {
-  ModelloUnico: string;
-  Irap: string;
-  Iva: string;
-  Mod770: string;
-  RicevutaR: boolean;
-}
-
-export interface ScadenzaBilanci extends ScadenzaBase {
-  DataApprovazione: string;
-  DataDeposito: string;
-}
-
-export interface Scadenza770 extends ScadenzaBase {
-  DataInvio: string;
-}
-
-export interface ScadenzaLipe extends ScadenzaBase {
-  Gennaio: boolean;
-  Febbraio: boolean;
-  Marzo: boolean;
-  Aprile: boolean;
-  Maggio: boolean;
-  Giugno: boolean;
-  Luglio: boolean;
-  Agosto: boolean;
-  Settembre: boolean;
-  Ottobre: boolean;
-  Novembre: boolean;
-  Dicembre: boolean;
-}
-
-export interface ScadenzaEstero extends ScadenzaBase {
-  Trim1: boolean;
-  Trim2: boolean;
-  Trim3: boolean;
-  Trim4: boolean;
-}
-
-export interface ScadenzaProforma extends ScadenzaBase {
-  Gennaio: boolean;
-  Febbraio: boolean;
-  Marzo: boolean;
-  Aprile: boolean;
-  Maggio: boolean;
-  Giugno: boolean;
-  Luglio: boolean;
-  Agosto: boolean;
-  Settembre: boolean;
-  Ottobre: boolean;
-  Novembre: boolean;
-  Dicembre: boolean;
-}
-
-export interface Appuntamento {
-  id: string;
-  titolo: string;
-  descrizione: string;
-  dataInizio: string;
-  dataFine: string;
-  utenteId: string;
-  clienteId?: string;
-  inSede: boolean;
-  sala?: string;
-  colore: string;
-}
-
-export interface Newsletter {
-  id: string;
-  oggetto: string;
-  corpo: string;
-  dataInvio: string;
-  destinatari: string[];
-  allegati?: string[];
+export interface Comunicazione {
+  ID_Comunicazione: string;
+  ID_Cliente: string;
+  Oggetto: string;
+  Messaggio: string;
+  DataInvio?: string;
+  Stato: StatoComunicazione;
+  Letto: boolean;
+  DataCreazione: string;
+  DataUltimaModifica: string;
 }
