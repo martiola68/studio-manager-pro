@@ -176,7 +176,13 @@ export default function ClientiPage() {
           description: "Cliente aggiornato con successo"
         });
       } else {
-        const newCliente = await clienteService.createCliente(formData);
+        // Genera un codice cliente provvisorio se non gestito dal DB
+        const codCliente = `CL-${Date.now().toString().substr(-6)}`;
+        
+        const newCliente = await clienteService.createCliente({
+          ...formData,
+          cod_cliente: codCliente
+        });
         toast({
           title: "Successo",
           description: "Cliente creato con successo"
