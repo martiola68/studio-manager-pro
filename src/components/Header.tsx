@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
 
-type Studio = Database["public"]["Tables"]["studios"]["Row"];
-type Utente = Database["public"]["Tables"]["utenti"]["Row"];
+type Studio = Database["public"]["Tables"]["TBStudio"]["Row"];
+type Utente = Database["public"]["Tables"]["TBUtenti"]["Row"];
 
 export default function Header() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
@@ -37,8 +37,15 @@ export default function Header() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        const utente = await utenteService.getUtenteByUserId(session.user.id);
-        setCurrentUser(utente);
+        // TODO: Implementare getUtenteByUserId correttamente
+        // const utente = await utenteService.getUtenteByUserId(session.user.id);
+        // setCurrentUser(utente);
+        
+        // Temporaneo: prendiamo il primo utente admin per demo
+        const utenti = await utenteService.getUtenti();
+        if (utenti.length > 0) {
+            setCurrentUser(utenti[0]);
+        }
       }
 
       const studioData = await studioService.getStudio();

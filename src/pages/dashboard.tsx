@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
 
-type EventoAgenda = Database["public"]["Tables"]["eventi_agenda"]["Row"];
+type EventoAgenda = Database["public"]["Tables"]["TBAgenda"]["Row"];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -73,23 +73,18 @@ export default function DashboardPage() {
 
       setProssimiAppuntamenti(prossimi.slice(0, 5));
 
-      // Conta scadenze confermate
-      const scadIva = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.IVA);
-      const scadFiscali = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.FISCALI);
-      const scadCCGG = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.CCGG);
-      const scad770 = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS["770"]);
-      const scadCU = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.CU);
-      const scadBilanci = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.BILANCI);
+      // Conta scadenze confermate usando il nuovo metodo aggregato
+      const counts = await scadenzaService.getAllScadenzeCounts();
 
       setStats({
         clientiAttivi,
         appuntamentiProssimi: prossimi.length,
-        scadenzeIvaConfermate: scadIva.filter(s => s.conferma_riga).length,
-        scadenzeFiscaliConfermate: scadFiscali.filter(s => s.conferma_riga).length,
-        scadenzeCCGGConfermate: scadCCGG.filter(s => s.conferma_riga).length,
-        scadenze770Confermate: scad770.filter(s => s.conferma_riga).length,
-        scadenzeCUConfermate: scadCU.filter(s => s.conferma_riga).length,
-        scadenzeBilanciConfermate: scadBilanci.filter(s => s.conferma_riga).length
+        scadenzeIvaConfermate: counts.iva,
+        scadenzeFiscaliConfermate: counts.fiscali,
+        scadenzeCCGGConfermate: counts.ccgg,
+        scadenze770Confermate: counts.sette70,
+        scadenzeCUConfermate: counts.cu,
+        scadenzeBilanciConfermate: counts.bilanci
       });
     } catch (error) {
       console.error("Errore nel caricamento dei dati:", error);
