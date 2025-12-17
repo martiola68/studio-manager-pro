@@ -79,8 +79,8 @@ export const utenteService = {
     const { data, error } = await supabase
       .from("utenti")
       .select("*")
-      .eq("user_id", userId)
-      .single();
+      .eq("user_id", userId as any) // Force checking mainly on ID
+      .maybeSingle(); // Use maybeSingle instead of single to handle not found better
 
     if (error) {
       console.error("Error fetching utente by user_id:", error);
