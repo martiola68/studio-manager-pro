@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getCurrentUser, getClienti, getEventi, getScadenzeByTipo } from "@/lib/db";
-import { SCADENZE_KEYS, EventoAgenda } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { clienteService } from "@/services/clienteService";
+import { eventoService } from "@/services/eventoService";
+import { scadenzaService } from "@/services/scadenzaService";
+import { SCADENZE_KEYS } from "@/types";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import type { Database } from "@/integrations/supabase/types";
+
+type EventoAgenda = Database["public"]["Tables"]["eventi_agenda"]["Row"];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,21 +31,35 @@ export default function DashboardPage() {
   const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>([]);
 
   useEffect(() => {
-    // Client-side only check
-    if (typeof window === "undefined") return;
+    checkAuthAndLoadData();
+  }, []);
 
-    const user = getCurrentUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
+  const checkAuthAndLoadData = async () => {
     try {
-      // Carica statistiche
-      const clienti = getClienti();
-      const appuntamenti = getEventi();
+      // Verifica autenticazione Supabase
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const clientiAttivi = clienti.filter(c => c.Attivo).length;
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      await loadDashboardData();
+    } catch (error) {
+      console.error("Errore nel caricamento:", error);
+      router.push("/login");
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Carica statistiche
+      const clienti = await clienteService.getClienti();
+      const appuntamenti = await eventoService.getEventi();
+      
+      const clientiAttivi = clienti.filter(c => c.attivo).length;
       
       // Appuntamenti prossimi 7 giorni
       const oggi = new Date();
@@ -47,40 +67,40 @@ export default function DashboardPage() {
       setteDopo.setDate(oggi.getDate() + 7);
       
       const prossimi = appuntamenti.filter(app => {
-        const dataApp = new Date(app.DataInizio);
+        const dataApp = new Date(app.data_inizio);
         return dataApp >= oggi && dataApp <= setteDopo;
-      }).sort((a, b) => new Date(a.DataInizio).getTime() - new Date(b.DataInizio).getTime());
+      }).sort((a, b) => new Date(a.data_inizio).getTime() - new Date(b.data_inizio).getTime());
 
       setProssimiAppuntamenti(prossimi.slice(0, 5));
 
       // Conta scadenze confermate
-      const scadIva = getScadenzeByTipo(SCADENZE_KEYS.IVA);
-      const scadFiscali = getScadenzeByTipo(SCADENZE_KEYS.FISCALI);
-      const scadCCGG = getScadenzeByTipo(SCADENZE_KEYS.CCGG);
-      const scad770 = getScadenzeByTipo(SCADENZE_KEYS["770"]);
-      const scadCU = getScadenzeByTipo(SCADENZE_KEYS.CU);
-      const scadBilanci = getScadenzeByTipo(SCADENZE_KEYS.BILANCI);
+      const scadIva = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.IVA);
+      const scadFiscali = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.FISCALI);
+      const scadCCGG = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.CCGG);
+      const scad770 = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS["770"]);
+      const scadCU = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.CU);
+      const scadBilanci = await scadenzaService.getScadenzeByTipo(SCADENZE_KEYS.BILANCI);
 
       setStats({
         clientiAttivi,
         appuntamentiProssimi: prossimi.length,
-        scadenzeIvaConfermate: scadIva.filter(s => s.ConfermaRiga).length,
-        scadenzeFiscaliConfermate: scadFiscali.filter(s => s.ConfermaRiga).length,
-        scadenzeCCGGConfermate: scadCCGG.filter(s => s.ConfermaRiga).length,
-        scadenze770Confermate: scad770.filter(s => s.ConfermaRiga).length,
-        scadenzeCUConfermate: scadCU.filter(s => s.ConfermaRiga).length,
-        scadenzeBilanciConfermate: scadBilanci.filter(s => s.ConfermaRiga).length
+        scadenzeIvaConfermate: scadIva.filter(s => s.conferma_riga).length,
+        scadenzeFiscaliConfermate: scadFiscali.filter(s => s.conferma_riga).length,
+        scadenzeCCGGConfermate: scadCCGG.filter(s => s.conferma_riga).length,
+        scadenze770Confermate: scad770.filter(s => s.conferma_riga).length,
+        scadenzeCUConfermate: scadCU.filter(s => s.conferma_riga).length,
+        scadenzeBilanciConfermate: scadBilanci.filter(s => s.conferma_riga).length
       });
     } catch (error) {
-      console.error("Errore nel caricamento della dashboard:", error);
+      console.error("Errore nel caricamento dei dati:", error);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-600">Caricamento dashboard...</p>
@@ -227,12 +247,12 @@ export default function DashboardPage() {
                   ) : (
                     <div className="space-y-3">
                       {prossimiAppuntamenti.map((app) => (
-                        <div key={app.ID_Evento} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${app.InSede ? "bg-green-500" : "bg-red-500"}`}></div>
+                        <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${app.in_sede ? "bg-green-500" : "bg-red-500"}`}></div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm text-gray-900 truncate">{app.Titolo}</p>
-                            <p className="text-xs text-gray-500">{formatDateTime(app.DataInizio)}</p>
-                            {app.Sala && <p className="text-xs text-gray-400 mt-1">Sala: {app.Sala}</p>}
+                            <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
+                            <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
+                            {app.sala && <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>}
                           </div>
                         </div>
                       ))}

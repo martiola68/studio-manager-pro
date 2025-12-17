@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getCurrentUser, initializeDatabase } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function HomePage() {
   const router = useRouter();
@@ -8,17 +8,24 @@ export default function HomePage() {
 
   useEffect(() => {
     setMounted(true);
-    initializeDatabase();
-    
-    const user = getCurrentUser();
-    if (user) {
-      router.push("/dashboard");
-    } else {
+    checkAuthAndRedirect();
+  }, []);
+
+  const checkAuthAndRedirect = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        router.push("/dashboard");
+      } else {
+        router.push("/login");
+      }
+    } catch (error) {
+      console.error("Errore verifica sessione:", error);
       router.push("/login");
     }
-  }, [router]);
+  };
 
-  // Render consistente tra SSR e CSR
   if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">

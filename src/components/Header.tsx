@@ -1,37 +1,59 @@
 import { useEffect, useState } from "react";
-import { getCurrentUser, getStudio } from "@/lib/db";
-import { Utente, Studio } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { studioService } from "@/services/studioService";
+import { utenteService } from "@/services/utenteService";
 import { User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
+import type { Database } from "@/integrations/supabase/types";
 
-export function Header() {
+type Studio = Database["public"]["Tables"]["studios"]["Row"];
+type Utente = Database["public"]["Tables"]["utenti"]["Row"];
+
+export default function Header() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
-    setStudio(getStudio());
+    loadUserAndStudio();
 
-    const handleStorageChange = () => {
-      setCurrentUser(getCurrentUser());
-      setStudio(getStudio());
-    };
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        setCurrentUser(null);
+        router.push("/login");
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        loadUserAndStudio();
+      }
+    });
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("studio-updated", handleStorageChange);
-    
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("studio-updated", handleStorageChange);
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("smp_current_user");
+  const loadUserAndStudio = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const utente = await utenteService.getUtenteByUserId(session.user.id);
+        setCurrentUser(utente);
+      }
+
+      const studioData = await studioService.getStudio();
+      setStudio(studioData);
+    } catch (error) {
+      console.error("Errore caricamento dati header:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
       router.push("/login");
+    } catch (error) {
+      console.error("Errore logout:", error);
     }
   };
 
@@ -48,20 +70,20 @@ export function Header() {
     <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {studio?.Logo ? (
+          {studio?.logo ? (
             <img 
-              src={studio.Logo} 
+              src={studio.logo} 
               alt="Logo Studio" 
               className="h-12 w-auto object-contain"
             />
           ) : (
             <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md">
-              {studio?.DenominazioneBreve ? getInitials(studio.DenominazioneBreve) : "SMP"}
+              {studio?.denominazione_breve ? getInitials(studio.denominazione_breve) : "SMP"}
             </div>
           )}
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {studio?.DenominazioneBreve || studio?.RagioneSociale || "Studio Manager Pro"}
+              {studio?.denominazione_breve || studio?.ragione_sociale || "Studio Manager Pro"}
             </h1>
             <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
           </div>
@@ -71,10 +93,10 @@ export function Header() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">
-                {currentUser.Nome} {currentUser.Cognome}
+                {currentUser.nome} {currentUser.cognome}
               </p>
               <p className="text-xs text-gray-500">
-                {currentUser.TipoUtente === "Admin" ? "Amministratore" : "Utente"}
+                {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
               </p>
             </div>
             <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
