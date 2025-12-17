@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Studio = Database["public"]["Tables"]["studios"]["Row"];
-type StudioInsert = Database["public"]["Tables"]["studios"]["Insert"];
-type StudioUpdate = Database["public"]["Tables"]["studios"]["Update"];
+type Studio = Database["public"]["Tables"]["TBStudio"]["Row"];
+type StudioInsert = Database["public"]["Tables"]["TBStudio"]["Insert"];
+type StudioUpdate = Database["public"]["Tables"]["TBStudio"]["Update"];
 
 export const studioService = {
   async getStudio(): Promise<Studio | null> {
     const { data, error } = await supabase
-      .from("studios")
+      .from("TBStudio")
       .select("*")
       .single();
 
@@ -21,7 +21,7 @@ export const studioService = {
 
   async createStudio(studio: StudioInsert): Promise<Studio | null> {
     const { data, error } = await supabase
-      .from("studios")
+      .from("TBStudio")
       .insert(studio)
       .select()
       .single();
@@ -35,7 +35,7 @@ export const studioService = {
 
   async updateStudio(id: string, updates: StudioUpdate): Promise<Studio | null> {
     const { data, error } = await supabase
-      .from("studios")
+      .from("TBStudio")
       .update(updates)
       .eq("id", id)
       .select()

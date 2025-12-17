@@ -1,119 +1,67 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Scadenza = Database["public"]["Tables"]["scadenze"]["Row"];
-type ScadenzaInsert = Database["public"]["Tables"]["scadenze"]["Insert"];
-type ScadenzaUpdate = Database["public"]["Tables"]["scadenze"]["Update"];
+// Definiamo un tipo generico per le scadenze poiché ora sono in tabelle separate
+// Questa è una semplificazione, idealmente dovremmo avere servizi separati o gestirli in modo più dinamico
 
 export const scadenzaService = {
-  async getScadenze(): Promise<Scadenza[]> {
+  // Esempio per TBScadIva
+  async getScadenzeIva() {
     const { data, error } = await supabase
-      .from("scadenze")
-      .select("*")
-      .order("data_scadenza", { ascending: true });
-
+      .from("TBScadIva")
+      .select(`
+        *,
+        cliente:TBClienti(ragione_sociale)
+      `);
+      
     if (error) {
-      console.error("Error fetching scadenze:", error);
+      console.error("Error fetching scadenze IVA:", error);
       return [];
     }
     return data || [];
   },
 
-  async getScadenzaById(id: string): Promise<Scadenza | null> {
+  // Esempio per TBScadFiscali
+  async getScadenzeFiscali() {
     const { data, error } = await supabase
-      .from("scadenze")
-      .select("*")
-      .eq("id", id)
-      .single();
-
+      .from("TBScadFiscali")
+      .select(`
+        *,
+        cliente:TBClienti(ragione_sociale)
+      `);
+      
     if (error) {
-      console.error("Error fetching scadenza:", error);
-      return null;
-    }
-    return data;
-  },
-
-  async getScadenzeByCliente(clienteId: string): Promise<Scadenza[]> {
-    const { data, error } = await supabase
-      .from("scadenze")
-      .select("*")
-      .eq("id_cliente", clienteId)
-      .order("data_scadenza", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching scadenze by cliente:", error);
+      console.error("Error fetching scadenze Fiscali:", error);
       return [];
     }
     return data || [];
   },
 
-  async getScadenzeByTipo(tipo: string): Promise<Scadenza[]> {
-    const { data, error } = await supabase
-      .from("scadenze")
-      .select("*")
-      .eq("tipo_scadenza", tipo)
-      .order("data_scadenza", { ascending: true });
+  // Metodi per recuperare tutte le scadenze per la dashboard
+  // Questo richiederà chiamate multiple a tutte le tabelle scadenze
+  async getAllScadenzeCounts() {
+    const results = await Promise.all([
+      supabase.from("TBScadIva").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadCCGG").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadCU").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadFiscali").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadBilanci").select("id", { count: "exact", head: true }),
+      supabase.from("TBScad770").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadLipe").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadEstero").select("id", { count: "exact", head: true }),
+      supabase.from("TBScadProforma").select("id", { count: "exact", head: true })
+    ]);
 
-    if (error) {
-      console.error("Error fetching scadenze by tipo:", error);
-      return [];
-    }
-    return data || [];
-  },
-
-  async getScadenzeConfermate(): Promise<Scadenza[]> {
-    const { data, error } = await supabase
-      .from("scadenze")
-      .select("*")
-      .eq("conferma_riga", true)
-      .order("data_scadenza", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching scadenze confermate:", error);
-      return [];
-    }
-    return data || [];
-  },
-
-  async createScadenza(scadenza: ScadenzaInsert): Promise<Scadenza | null> {
-    const { data, error } = await supabase
-      .from("scadenze")
-      .insert(scadenza)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating scadenza:", error);
-      throw error;
-    }
-    return data;
-  },
-
-  async updateScadenza(id: string, updates: ScadenzaUpdate): Promise<Scadenza | null> {
-    const { data, error } = await supabase
-      .from("scadenze")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating scadenza:", error);
-      throw error;
-    }
-    return data;
-  },
-
-  async deleteScadenza(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from("scadenze")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("Error deleting scadenza:", error);
-      return false;
-    }
-    return true;
+    return {
+      iva: results[0].count || 0,
+      ccgg: results[1].count || 0,
+      cu: results[2].count || 0,
+      fiscali: results[3].count || 0,
+      bilanci: results[4].count || 0,
+      sette70: results[5].count || 0,
+      lipe: results[6].count || 0,
+      estero: results[7].count || 0,
+      proforma: results[8].count || 0
+    };
   }
 };

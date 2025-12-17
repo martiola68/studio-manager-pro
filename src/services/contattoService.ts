@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Contatto = Database["public"]["Tables"]["contatti"]["Row"];
-type ContattoInsert = Database["public"]["Tables"]["contatti"]["Insert"];
-type ContattoUpdate = Database["public"]["Tables"]["contatti"]["Update"];
+type Contatto = Database["public"]["Tables"]["TBContatti"]["Row"];
+type ContattoInsert = Database["public"]["Tables"]["TBContatti"]["Insert"];
+type ContattoUpdate = Database["public"]["Tables"]["TBContatti"]["Update"];
 
 export const contattoService = {
   async getContatti(): Promise<Contatto[]> {
     const { data, error } = await supabase
-      .from("contatti")
+      .from("TBContatti")
       .select("*")
       .order("cognome", { ascending: true });
 
@@ -21,7 +21,7 @@ export const contattoService = {
 
   async getContattoById(id: string): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("contatti")
+      .from("TBContatti")
       .select("*")
       .eq("id", id)
       .single();
@@ -49,7 +49,7 @@ export const contattoService = {
 
   async createContatto(contatto: ContattoInsert): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("contatti")
+      .from("TBContatti")
       .insert(contatto)
       .select()
       .single();
@@ -63,7 +63,7 @@ export const contattoService = {
 
   async updateContatto(id: string, updates: ContattoUpdate): Promise<Contatto | null> {
     const { data, error } = await supabase
-      .from("contatti")
+      .from("TBContatti")
       .update(updates)
       .eq("id", id)
       .select()
@@ -78,7 +78,7 @@ export const contattoService = {
 
   async deleteContatto(id: string): Promise<boolean> {
     const { error } = await supabase
-      .from("contatti")
+      .from("TBContatti")
       .delete()
       .eq("id", id);
 

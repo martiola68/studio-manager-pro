@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type EventoAgenda = Database["public"]["Tables"]["eventi_agenda"]["Row"];
-type EventoAgendaInsert = Database["public"]["Tables"]["eventi_agenda"]["Insert"];
-type EventoAgendaUpdate = Database["public"]["Tables"]["eventi_agenda"]["Update"];
+type EventoAgenda = Database["public"]["Tables"]["TBAgenda"]["Row"];
+type EventoAgendaInsert = Database["public"]["Tables"]["TBAgenda"]["Insert"];
+type EventoAgendaUpdate = Database["public"]["Tables"]["TBAgenda"]["Update"];
 
 export const eventoService = {
   async getEventi(): Promise<EventoAgenda[]> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .select("*")
       .order("data_inizio", { ascending: true });
 
@@ -21,7 +21,7 @@ export const eventoService = {
 
   async getEventoById(id: string): Promise<EventoAgenda | null> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .select("*")
       .eq("id", id)
       .single();
@@ -35,9 +35,9 @@ export const eventoService = {
 
   async getEventiByUtente(utenteId: string): Promise<EventoAgenda[]> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .select("*")
-      .eq("id_utente", utenteId)
+      .eq("utente_id", utenteId)
       .order("data_inizio", { ascending: true });
 
     if (error) {
@@ -49,9 +49,9 @@ export const eventoService = {
 
   async getEventiByCliente(clienteId: string): Promise<EventoAgenda[]> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .select("*")
-      .eq("id_cliente", clienteId)
+      .eq("cliente_id", clienteId)
       .order("data_inizio", { ascending: true });
 
     if (error) {
@@ -63,7 +63,7 @@ export const eventoService = {
 
   async getEventiByDateRange(startDate: string, endDate: string): Promise<EventoAgenda[]> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .select("*")
       .gte("data_inizio", startDate)
       .lte("data_inizio", endDate)
@@ -78,7 +78,7 @@ export const eventoService = {
 
   async createEvento(evento: EventoAgendaInsert): Promise<EventoAgenda | null> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .insert(evento)
       .select()
       .single();
@@ -92,7 +92,7 @@ export const eventoService = {
 
   async updateEvento(id: string, updates: EventoAgendaUpdate): Promise<EventoAgenda | null> {
     const { data, error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .update(updates)
       .eq("id", id)
       .select()
@@ -107,7 +107,7 @@ export const eventoService = {
 
   async deleteEvento(id: string): Promise<boolean> {
     const { error } = await supabase
-      .from("eventi_agenda")
+      .from("TBAgenda")
       .delete()
       .eq("id", id);
 
