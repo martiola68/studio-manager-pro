@@ -1,247 +1,462 @@
-// Database locale con localStorage per STUDIO MANAGER PRO
-
 import { 
-  Utente, 
-  RuoloOperatore, 
-  Prestazione, 
   Studio, 
+  Utente, 
+  Cliente, 
   Contatto, 
-  Cliente,
-  ScadenzaIva,
-  ScadenzaCCGG,
-  ScadenzaCU,
-  ScadenzaFiscali,
-  ScadenzaBilanci,
-  Scadenza770,
-  ScadenzaLipe,
-  ScadenzaEstero,
-  ScadenzaProforma,
-  Appuntamento,
-  Newsletter
+  Scadenza, 
+  EventoAgenda, 
+  Comunicazione,
+  TipoScadenza,
+  StatoScadenza,
+  TipoEvento,
+  StatoComunicazione
 } from "@/types";
 
-const STORAGE_KEYS = {
-  UTENTI: "smp_utenti",
-  RUOLI: "smp_ruoli",
-  PRESTAZIONI: "smp_prestazioni",
-  STUDIO: "smp_studio",
-  CONTATTI: "smp_contatti",
-  CLIENTI: "smp_clienti",
-  SCAD_IVA: "smp_scad_iva",
-  SCAD_CCGG: "smp_scad_ccgg",
-  SCAD_CU: "smp_scad_cu",
-  SCAD_FISCALI: "smp_scad_fiscali",
-  SCAD_BILANCI: "smp_scad_bilanci",
-  SCAD_770: "smp_scad_770",
-  SCAD_LIPE: "smp_scad_lipe",
-  SCAD_ESTERO: "smp_scad_estero",
-  SCAD_PROFORMA: "smp_scad_proforma",
-  APPUNTAMENTI: "smp_appuntamenti",
-  NEWSLETTER: "smp_newsletter",
-  CURRENT_USER: "smp_current_user"
+// Safe localStorage access
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail if localStorage is not available
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Silently fail if localStorage is not available
+    }
+  }
 };
 
-// Utility functions
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+// Initialize database with default data
+export function initializeDatabase() {
+  if (typeof window === "undefined") return;
+
+  const studioData = safeLocalStorage.getItem("smp_studio");
+  if (!studioData) {
+    const defaultStudio: Studio = {
+      ID_Studio: "studio-001",
+      RagioneSociale: "Studio Manager Pro",
+      DenominazioneBreve: "SMP",
+      PartitaIVA: "12345678901",
+      CodiceFiscale: "12345678901",
+      Indirizzo: "Via Roma 1",
+      CAP: "00100",
+      Citta: "Roma",
+      Provincia: "RM",
+      Telefono: "06 1234567",
+      Email: "info@studiomanagerpro.it",
+      PEC: "pec@studiomanagerpro.it",
+      Logo: null,
+      DataCreazione: new Date().toISOString(),
+      DataUltimaModifica: new Date().toISOString()
+    };
+    safeLocalStorage.setItem("smp_studio", JSON.stringify(defaultStudio));
+  }
+
+  const utentiData = safeLocalStorage.getItem("smp_utenti");
+  if (!utentiData) {
+    const defaultUtenti: Utente[] = [
+      {
+        ID_Utente: "user-001",
+        Username: "admin",
+        Password: "admin123",
+        Nome: "Amministratore",
+        Cognome: "Sistema",
+        Email: "admin@studiomanagerpro.it",
+        TipoUtente: "Admin",
+        Attivo: true,
+        DataCreazione: new Date().toISOString(),
+        DataUltimaModifica: new Date().toISOString()
+      }
+    ];
+    safeLocalStorage.setItem("smp_utenti", JSON.stringify(defaultUtenti));
+  }
+
+  const clientiData = safeLocalStorage.getItem("smp_clienti");
+  if (!clientiData) {
+    safeLocalStorage.setItem("smp_clienti", JSON.stringify([]));
+  }
+
+  const contattiData = safeLocalStorage.getItem("smp_contatti");
+  if (!contattiData) {
+    safeLocalStorage.setItem("smp_contatti", JSON.stringify([]));
+  }
+
+  const scadenzeData = safeLocalStorage.getItem("smp_scadenze");
+  if (!scadenzeData) {
+    safeLocalStorage.setItem("smp_scadenze", JSON.stringify([]));
+  }
+
+  const eventiData = safeLocalStorage.getItem("smp_eventi");
+  if (!eventiData) {
+    safeLocalStorage.setItem("smp_eventi", JSON.stringify([]));
+  }
+
+  const comunicazioniData = safeLocalStorage.getItem("smp_comunicazioni");
+  if (!comunicazioniData) {
+    safeLocalStorage.setItem("smp_comunicazioni", JSON.stringify([]));
+  }
 }
 
-export function generateCodiceCliente(): string {
-  const clienti = getClienti();
-  const numero = clienti.length + 1;
-  return `CLI${numero.toString().padStart(5, "0")}`;
+// Studio functions
+export function getStudio(): Studio | null {
+  const data = safeLocalStorage.getItem("smp_studio");
+  return data ? JSON.parse(data) : null;
 }
 
-// Generic CRUD operations
-function getFromStorage<T>(key: string): T[] {
-  if (typeof window === "undefined") return [];
-  const data = localStorage.getItem(key);
+export function updateStudio(studio: Partial<Studio>): void {
+  const currentStudio = getStudio();
+  if (!currentStudio) return;
+
+  const updatedStudio = {
+    ...currentStudio,
+    ...studio,
+    DataUltimaModifica: new Date().toISOString()
+  };
+
+  safeLocalStorage.setItem("smp_studio", JSON.stringify(updatedStudio));
+  
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("studio-updated"));
+  }
+}
+
+// User functions
+export function getUtenti(): Utente[] {
+  const data = safeLocalStorage.getItem("smp_utenti");
   return data ? JSON.parse(data) : [];
 }
 
-function saveToStorage<T>(key: string, data: T[]): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-// Initialize default data
-export function initializeDatabase(): void {
-  if (typeof window === "undefined") return;
-
-  // Prestazioni predefinite
-  const prestazioni = getPrestazioni();
-  if (prestazioni.length === 0) {
-    const defaultPrestazioni: Prestazione[] = [
-      { ID: generateId(), Descrizione: "Assistenza totale" },
-      { ID: generateId(), Descrizione: "Consulenza fiscale e tributaria" },
-      { ID: generateId(), Descrizione: "Bilanci e dichiarazioni" },
-      { ID: generateId(), Descrizione: "Consulenza del lavoro" }
-    ];
-    savePrestazioni(defaultPrestazioni);
-  }
-
-  // Utente admin predefinito
+export function getUtenteById(id: string): Utente | null {
   const utenti = getUtenti();
-  if (utenti.length === 0) {
-    const adminUser: Utente = {
-      id: generateId(),
-      Nome: "Admin",
-      Cognome: "Sistema",
-      Email: "admin@studio.it",
-      Password: "admin123",
-      TipoUtente: "Admin",
-      attivo: true
-    };
-    saveUtenti([adminUser]);
-  }
-
-  // Studio predefinito
-  const studio = getStudio();
-  if (!studio) {
-    const defaultStudio: Studio = {
-      id: generateId(),
-      RagioneSociale: "Studio Manager Pro",
-      DenominazioneBreve: "SMP",
-      PartitaIVA: "",
-      CodiceFiscale: "",
-      Indirizzo: "",
-      CAP: "",
-      Città: "",
-      Provincia: "",
-      Telefono: "",
-      Email: "",
-      PEC: "",
-      SitoWeb: "",
-      Note: "",
-      attivo: true
-    };
-    saveStudio(defaultStudio);
-  }
+  return utenti.find(u => u.ID_Utente === id) || null;
 }
 
-// Utenti
-export function getUtenti(): Utente[] {
-  return getFromStorage<Utente>(STORAGE_KEYS.UTENTI);
+export function createUtente(utente: Omit<Utente, "ID_Utente" | "DataCreazione" | "DataUltimaModifica">): Utente {
+  const utenti = getUtenti();
+  const newUtente: Utente = {
+    ...utente,
+    ID_Utente: `user-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  utenti.push(newUtente);
+  safeLocalStorage.setItem("smp_utenti", JSON.stringify(utenti));
+  return newUtente;
 }
 
-export function saveUtenti(utenti: Utente[]): void {
-  saveToStorage(STORAGE_KEYS.UTENTI, utenti);
+export function updateUtente(id: string, updates: Partial<Utente>): Utente | null {
+  const utenti = getUtenti();
+  const index = utenti.findIndex(u => u.ID_Utente === id);
+  if (index === -1) return null;
+
+  utenti[index] = {
+    ...utenti[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_utenti", JSON.stringify(utenti));
+  return utenti[index];
+}
+
+export function deleteUtente(id: string): boolean {
+  const utenti = getUtenti();
+  const filtered = utenti.filter(u => u.ID_Utente !== id);
+  if (filtered.length === utenti.length) return false;
+  safeLocalStorage.setItem("smp_utenti", JSON.stringify(filtered));
+  return true;
 }
 
 export function getCurrentUser(): Utente | null {
-  if (typeof window === "undefined") return null;
-  const userId = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-  if (!userId) return null;
-  const utenti = getUtenti();
-  return utenti.find(u => u.id === userId) || null;
+  const data = safeLocalStorage.getItem("smp_current_user");
+  return data ? JSON.parse(data) : null;
 }
 
-export function setCurrentUser(userId: string | null): void {
-  if (typeof window === "undefined") return;
-  if (userId) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, userId);
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-  }
-}
-
-export function login(email: string, password: string): Utente | null {
-  const utenti = getUtenti();
-  const user = utenti.find(u => u.Email === email && u.Password === password && u.attivo);
+export function setCurrentUser(user: Utente | null): void {
   if (user) {
-    setCurrentUser(user.id);
-    return user;
+    safeLocalStorage.setItem("smp_current_user", JSON.stringify(user));
+  } else {
+    safeLocalStorage.removeItem("smp_current_user");
   }
-  return null;
+}
+
+export function login(username: string, password: string): Utente | null {
+  const utenti = getUtenti();
+  const user = utenti.find(u => u.Username === username && u.Password === password && u.Attivo);
+  if (user) {
+    setCurrentUser(user);
+  }
+  return user || null;
 }
 
 export function logout(): void {
   setCurrentUser(null);
 }
 
-// Ruoli
-export function getRuoli(): RuoloOperatore[] {
-  return getFromStorage<RuoloOperatore>(STORAGE_KEYS.RUOLI);
-}
-
-export function saveRuoli(ruoli: RuoloOperatore[]): void {
-  saveToStorage(STORAGE_KEYS.RUOLI, ruoli);
-}
-
-// Prestazioni
-export function getPrestazioni(): Prestazione[] {
-  return getFromStorage<Prestazione>(STORAGE_KEYS.PRESTAZIONI);
-}
-
-export function savePrestazioni(prestazioni: Prestazione[]): void {
-  saveToStorage(STORAGE_KEYS.PRESTAZIONI, prestazioni);
-}
-
-// Studio
-export function getStudio(): Studio | null {
-  const studios = getFromStorage<Studio>(STORAGE_KEYS.STUDIO);
-  return studios.find(s => s.attivo) || null;
-}
-
-export function saveStudio(studio: Studio): void {
-  const studios = getFromStorage<Studio>(STORAGE_KEYS.STUDIO);
-  const filtered = studios.filter(s => s.id !== studio.id);
-  saveToStorage(STORAGE_KEYS.STUDIO, [...filtered, studio]);
-}
-
-// Contatti
-export function getContatti(): Contatto[] {
-  return getFromStorage<Contatto>(STORAGE_KEYS.CONTATTI);
-}
-
-export function saveContatti(contatti: Contatto[]): void {
-  saveToStorage(STORAGE_KEYS.CONTATTI, contatti);
-}
-
-// Clienti
+// Cliente functions
 export function getClienti(): Cliente[] {
-  return getFromStorage<Cliente>(STORAGE_KEYS.CLIENTI);
+  const data = safeLocalStorage.getItem("smp_clienti");
+  return data ? JSON.parse(data) : [];
 }
 
-export function saveClienti(clienti: Cliente[]): void {
-  saveToStorage(STORAGE_KEYS.CLIENTI, clienti);
+export function getClienteById(id: string): Cliente | null {
+  const clienti = getClienti();
+  return clienti.find(c => c.ID_Cliente === id) || null;
 }
 
-// Scadenze
-export function getScadenze<T>(tipo: string): T[] {
-  return getFromStorage<T>(tipo);
+export function createCliente(cliente: Omit<Cliente, "ID_Cliente" | "DataCreazione" | "DataUltimaModifica">): Cliente {
+  const clienti = getClienti();
+  const newCliente: Cliente = {
+    ...cliente,
+    ID_Cliente: `cliente-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  clienti.push(newCliente);
+  safeLocalStorage.setItem("smp_clienti", JSON.stringify(clienti));
+  return newCliente;
 }
 
-export function saveScadenze<T>(tipo: string, scadenze: T[]): void {
-  saveToStorage(tipo, scadenze);
+export function updateCliente(id: string, updates: Partial<Cliente>): Cliente | null {
+  const clienti = getClienti();
+  const index = clienti.findIndex(c => c.ID_Cliente === id);
+  if (index === -1) return null;
+
+  clienti[index] = {
+    ...clienti[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_clienti", JSON.stringify(clienti));
+  return clienti[index];
 }
 
-export const SCADENZE_KEYS = {
-  IVA: STORAGE_KEYS.SCAD_IVA,
-  CCGG: STORAGE_KEYS.SCAD_CCGG,
-  CU: STORAGE_KEYS.SCAD_CU,
-  FISCALI: STORAGE_KEYS.SCAD_FISCALI,
-  BILANCI: STORAGE_KEYS.SCAD_BILANCI,
-  "770": STORAGE_KEYS.SCAD_770,
-  LIPE: STORAGE_KEYS.SCAD_LIPE,
-  ESTERO: STORAGE_KEYS.SCAD_ESTERO,
-  PROFORMA: STORAGE_KEYS.SCAD_PROFORMA
-};
-
-// Appuntamenti
-export function getAppuntamenti(): Appuntamento[] {
-  return getFromStorage<Appuntamento>(STORAGE_KEYS.APPUNTAMENTI);
+export function deleteCliente(id: string): boolean {
+  const clienti = getClienti();
+  const filtered = clienti.filter(c => c.ID_Cliente !== id);
+  if (filtered.length === clienti.length) return false;
+  safeLocalStorage.setItem("smp_clienti", JSON.stringify(filtered));
+  return true;
 }
 
-export function saveAppuntamenti(appuntamenti: Appuntamento[]): void {
-  saveToStorage(STORAGE_KEYS.APPUNTAMENTI, appuntamenti);
+// Contatto functions
+export function getContatti(): Contatto[] {
+  const data = safeLocalStorage.getItem("smp_contatti");
+  return data ? JSON.parse(data) : [];
 }
 
-// Newsletter
-export function getNewsletter(): Newsletter[] {
-  return getFromStorage<Newsletter>(STORAGE_KEYS.NEWSLETTER);
+export function getContattoById(id: string): Contatto | null {
+  const contatti = getContatti();
+  return contatti.find(c => c.ID_Contatto === id) || null;
 }
 
-export function saveNewsletter(newsletter: Newsletter[]): void {
-  saveToStorage(STORAGE_KEYS.NEWSLETTER, newsletter);
+export function getContattiByCliente(clienteId: string): Contatto[] {
+  const contatti = getContatti();
+  return contatti.filter(c => c.ID_Cliente === clienteId);
+}
+
+export function createContatto(contatto: Omit<Contatto, "ID_Contatto" | "DataCreazione" | "DataUltimaModifica">): Contatto {
+  const contatti = getContatti();
+  const newContatto: Contatto = {
+    ...contatto,
+    ID_Contatto: `contatto-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  contatti.push(newContatto);
+  safeLocalStorage.setItem("smp_contatti", JSON.stringify(contatti));
+  return newContatto;
+}
+
+export function updateContatto(id: string, updates: Partial<Contatto>): Contatto | null {
+  const contatti = getContatti();
+  const index = contatti.findIndex(c => c.ID_Contatto === id);
+  if (index === -1) return null;
+
+  contatti[index] = {
+    ...contatti[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_contatti", JSON.stringify(contatti));
+  return contatti[index];
+}
+
+export function deleteContatto(id: string): boolean {
+  const contatti = getContatti();
+  const filtered = contatti.filter(c => c.ID_Contatto !== id);
+  if (filtered.length === contatti.length) return false;
+  safeLocalStorage.setItem("smp_contatti", JSON.stringify(filtered));
+  return true;
+}
+
+// Scadenza functions
+export function getScadenze(): Scadenza[] {
+  const data = safeLocalStorage.getItem("smp_scadenze");
+  return data ? JSON.parse(data) : [];
+}
+
+export function getScadenzaById(id: string): Scadenza | null {
+  const scadenze = getScadenze();
+  return scadenze.find(s => s.ID_Scadenza === id) || null;
+}
+
+export function getScadenzeByCliente(clienteId: string): Scadenza[] {
+  const scadenze = getScadenze();
+  return scadenze.filter(s => s.ID_Cliente === clienteId);
+}
+
+export function getScadenzeByTipo(tipo: TipoScadenza): Scadenza[] {
+  const scadenze = getScadenze();
+  return scadenze.filter(s => s.TipoScadenza === tipo);
+}
+
+export function createScadenza(scadenza: Omit<Scadenza, "ID_Scadenza" | "DataCreazione" | "DataUltimaModifica">): Scadenza {
+  const scadenze = getScadenze();
+  const newScadenza: Scadenza = {
+    ...scadenza,
+    ID_Scadenza: `scadenza-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  scadenze.push(newScadenza);
+  safeLocalStorage.setItem("smp_scadenze", JSON.stringify(scadenze));
+  return newScadenza;
+}
+
+export function updateScadenza(id: string, updates: Partial<Scadenza>): Scadenza | null {
+  const scadenze = getScadenze();
+  const index = scadenze.findIndex(s => s.ID_Scadenza === id);
+  if (index === -1) return null;
+
+  scadenze[index] = {
+    ...scadenze[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_scadenze", JSON.stringify(scadenze));
+  return scadenze[index];
+}
+
+export function deleteScadenza(id: string): boolean {
+  const scadenze = getScadenze();
+  const filtered = scadenze.filter(s => s.ID_Scadenza !== id);
+  if (filtered.length === scadenze.length) return false;
+  safeLocalStorage.setItem("smp_scadenze", JSON.stringify(filtered));
+  return true;
+}
+
+// Evento Agenda functions
+export function getEventi(): EventoAgenda[] {
+  const data = safeLocalStorage.getItem("smp_eventi");
+  return data ? JSON.parse(data) : [];
+}
+
+export function getEventoById(id: string): EventoAgenda | null {
+  const eventi = getEventi();
+  return eventi.find(e => e.ID_Evento === id) || null;
+}
+
+export function getEventiByUtente(utenteId: string): EventoAgenda[] {
+  const eventi = getEventi();
+  return eventi.filter(e => e.ID_Utente === utenteId);
+}
+
+export function createEvento(evento: Omit<EventoAgenda, "ID_Evento" | "DataCreazione" | "DataUltimaModifica">): EventoAgenda {
+  const eventi = getEventi();
+  const newEvento: EventoAgenda = {
+    ...evento,
+    ID_Evento: `evento-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  eventi.push(newEvento);
+  safeLocalStorage.setItem("smp_eventi", JSON.stringify(eventi));
+  return newEvento;
+}
+
+export function updateEvento(id: string, updates: Partial<EventoAgenda>): EventoAgenda | null {
+  const eventi = getEventi();
+  const index = eventi.findIndex(e => e.ID_Evento === id);
+  if (index === -1) return null;
+
+  eventi[index] = {
+    ...eventi[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_eventi", JSON.stringify(eventi));
+  return eventi[index];
+}
+
+export function deleteEvento(id: string): boolean {
+  const eventi = getEventi();
+  const filtered = eventi.filter(e => e.ID_Evento !== id);
+  if (filtered.length === eventi.length) return false;
+  safeLocalStorage.setItem("smp_eventi", JSON.stringify(filtered));
+  return true;
+}
+
+// Comunicazione functions
+export function getComunicazioni(): Comunicazione[] {
+  const data = safeLocalStorage.getItem("smp_comunicazioni");
+  return data ? JSON.parse(data) : [];
+}
+
+export function getComunicazioneById(id: string): Comunicazione | null {
+  const comunicazioni = getComunicazioni();
+  return comunicazioni.find(c => c.ID_Comunicazione === id) || null;
+}
+
+export function getComunicazioniByCliente(clienteId: string): Comunicazione[] {
+  const comunicazioni = getComunicazioni();
+  return comunicazioni.filter(c => c.ID_Cliente === clienteId);
+}
+
+export function createComunicazione(comunicazione: Omit<Comunicazione, "ID_Comunicazione" | "DataCreazione" | "DataUltimaModifica">): Comunicazione {
+  const comunicazioni = getComunicazioni();
+  const newComunicazione: Comunicazione = {
+    ...comunicazione,
+    ID_Comunicazione: `comunicazione-${Date.now()}`,
+    DataCreazione: new Date().toISOString(),
+    DataUltimaModifica: new Date().toISOString()
+  };
+  comunicazioni.push(newComunicazione);
+  safeLocalStorage.setItem("smp_comunicazioni", JSON.stringify(comunicazioni));
+  return newComunicazione;
+}
+
+export function updateComunicazione(id: string, updates: Partial<Comunicazione>): Comunicazione | null {
+  const comunicazioni = getComunicazioni();
+  const index = comunicazioni.findIndex(c => c.ID_Comunicazione === id);
+  if (index === -1) return null;
+
+  comunicazioni[index] = {
+    ...comunicazioni[index],
+    ...updates,
+    DataUltimaModifica: new Date().toISOString()
+  };
+  safeLocalStorage.setItem("smp_comunicazioni", JSON.stringify(comunicazioni));
+  return comunicazioni[index];
+}
+
+export function deleteComunicazione(id: string): boolean {
+  const comunicazioni = getComunicazioni();
+  const filtered = comunicazioni.filter(c => c.ID_Comunicazione !== id);
+  if (filtered.length === comunicazioni.length) return false;
+  safeLocalStorage.setItem("smp_comunicazioni", JSON.stringify(filtered));
+  return true;
 }
