@@ -5,7 +5,7 @@ import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
 import { SCADENZE_KEYS } from "@/types";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp } from "lucide-react";

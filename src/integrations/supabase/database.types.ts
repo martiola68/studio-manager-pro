@@ -414,8 +414,11 @@ export type Database = {
       utenti: {
         Row: {
           attivo: boolean
+          cognome: string | null
           created_at: string | null
+          email: string | null
           id: string
+          nome: string | null
           ruolo_operatore: string | null
           tipo_utente: string
           updated_at: string | null
@@ -423,8 +426,11 @@ export type Database = {
         }
         Insert: {
           attivo?: boolean
+          cognome?: string | null
           created_at?: string | null
+          email?: string | null
           id: string
+          nome?: string | null
           ruolo_operatore?: string | null
           tipo_utente: string
           updated_at?: string | null
@@ -432,8 +438,11 @@ export type Database = {
         }
         Update: {
           attivo?: boolean
+          cognome?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
+          nome?: string | null
           ruolo_operatore?: string | null
           tipo_utente?: string
           updated_at?: string | null
