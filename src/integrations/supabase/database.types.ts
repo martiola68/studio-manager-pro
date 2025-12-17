@@ -17,7 +17,7 @@ export type Database = {
     Tables: {
       clienti: {
         Row: {
-          attivo: boolean
+          attivo: boolean | null
           cap: string
           citta: string
           codice_fiscale: string
@@ -44,7 +44,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          attivo?: boolean
+          attivo?: boolean | null
           cap: string
           citta: string
           codice_fiscale: string
@@ -71,7 +71,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          attivo?: boolean
+          attivo?: boolean | null
           cap?: string
           citta?: string
           codice_fiscale?: string
@@ -105,7 +105,7 @@ export type Database = {
           data_invio: string | null
           id: string
           id_cliente: string
-          letto: boolean
+          letto: boolean | null
           messaggio: string
           oggetto: string
           stato: string
@@ -116,10 +116,10 @@ export type Database = {
           data_invio?: string | null
           id?: string
           id_cliente: string
-          letto?: boolean
+          letto?: boolean | null
           messaggio: string
           oggetto: string
-          stato?: string
+          stato: string
           updated_at?: string | null
         }
         Update: {
@@ -127,7 +127,7 @@ export type Database = {
           data_invio?: string | null
           id?: string
           id_cliente?: string
-          letto?: boolean
+          letto?: boolean | null
           messaggio?: string
           oggetto?: string
           stato?: string
@@ -208,7 +208,7 @@ export type Database = {
           sala: string | null
           tipo_evento: string
           titolo: string
-          tutto_giorno: boolean
+          tutto_giorno: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -225,7 +225,7 @@ export type Database = {
           sala?: string | null
           tipo_evento: string
           titolo: string
-          tutto_giorno?: boolean
+          tutto_giorno?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -242,7 +242,7 @@ export type Database = {
           sala?: string | null
           tipo_evento?: string
           titolo?: string
-          tutto_giorno?: boolean
+          tutto_giorno?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -257,7 +257,7 @@ export type Database = {
             foreignKeyName: "eventi_agenda_id_utente_fkey"
             columns: ["id_utente"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "utenti"
             referencedColumns: ["id"]
           },
         ]
@@ -291,7 +291,7 @@ export type Database = {
       }
       scadenze: {
         Row: {
-          conferma_riga: boolean
+          conferma_riga: boolean | null
           created_at: string | null
           data_approvazione: string | null
           data_deposito: string | null
@@ -308,7 +308,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          conferma_riga?: boolean
+          conferma_riga?: boolean | null
           created_at?: string | null
           data_approvazione?: string | null
           data_deposito?: string | null
@@ -320,12 +320,12 @@ export type Database = {
           importo?: number | null
           note?: string | null
           periodo?: string | null
-          stato_scadenza?: string
+          stato_scadenza: string
           tipo_scadenza: string
           updated_at?: string | null
         }
         Update: {
-          conferma_riga?: boolean
+          conferma_riga?: boolean | null
           created_at?: string | null
           data_approvazione?: string | null
           data_deposito?: string | null
@@ -413,50 +413,45 @@ export type Database = {
       }
       utenti: {
         Row: {
-          attivo: boolean
-          cognome: string | null
+          attivo: boolean | null
+          cognome: string
           created_at: string | null
-          email: string | null
+          email: string
           id: string
-          nome: string | null
+          nome: string
           ruolo_operatore: string | null
           tipo_utente: string
           updated_at: string | null
+          user_id: string | null
           username: string
         }
         Insert: {
-          attivo?: boolean
-          cognome?: string | null
+          attivo?: boolean | null
+          cognome: string
           created_at?: string | null
-          email?: string | null
-          id: string
-          nome?: string | null
+          email: string
+          id?: string
+          nome: string
           ruolo_operatore?: string | null
           tipo_utente: string
           updated_at?: string | null
+          user_id?: string | null
           username: string
         }
         Update: {
-          attivo?: boolean
-          cognome?: string | null
+          attivo?: boolean | null
+          cognome?: string
           created_at?: string | null
-          email?: string | null
+          email?: string
           id?: string
-          nome?: string | null
+          nome?: string
           ruolo_operatore?: string | null
           tipo_utente?: string
           updated_at?: string | null
+          user_id?: string | null
           username?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "utenti_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
