@@ -394,10 +394,16 @@ export type Database = {
         Row: {
           conferma_riga: boolean | null
           created_at: string | null
+          data_invio: string | null
           id: string
-          invio: boolean | null
-          invio_data: string | null
+          mod_compilato: boolean | null
+          mod_definitivo: boolean | null
+          mod_inviato: boolean | null
+          modelli_770: string | null
           nominativo: string
+          note: string | null
+          ricevuta: boolean | null
+          tipo_invio: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -405,10 +411,16 @@ export type Database = {
         Insert: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_invio?: string | null
           id: string
-          invio?: boolean | null
-          invio_data?: string | null
+          mod_compilato?: boolean | null
+          mod_definitivo?: boolean | null
+          mod_inviato?: boolean | null
+          modelli_770?: string | null
           nominativo: string
+          note?: string | null
+          ricevuta?: boolean | null
+          tipo_invio?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -416,10 +428,16 @@ export type Database = {
         Update: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_invio?: string | null
           id?: string
-          invio?: boolean | null
-          invio_data?: string | null
+          mod_compilato?: boolean | null
+          mod_definitivo?: boolean | null
+          mod_inviato?: boolean | null
+          modelli_770?: string | null
           nominativo?: string
+          note?: string | null
+          ricevuta?: boolean | null
+          tipo_invio?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -450,43 +468,67 @@ export type Database = {
       }
       tbscadbilanci: {
         Row: {
-          approvazione: boolean | null
-          approvazione_data: string | null
+          bil_approvato: boolean | null
+          bilancio_def: boolean | null
           conferma_riga: boolean | null
           created_at: string | null
-          deposito: boolean | null
-          deposito_data: string | null
+          data_approvazione: string | null
+          data_invio: string | null
+          data_scad_pres: string | null
           id: string
+          invio_bil: boolean | null
           nominativo: string
+          note: string | null
+          relazione_gest: boolean | null
+          relazione_revisore: boolean | null
+          relazione_sindaci: boolean | null
+          ricevuta: boolean | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
+          verbale_app: boolean | null
         }
         Insert: {
-          approvazione?: boolean | null
-          approvazione_data?: string | null
+          bil_approvato?: boolean | null
+          bilancio_def?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
-          deposito?: boolean | null
-          deposito_data?: string | null
+          data_approvazione?: string | null
+          data_invio?: string | null
+          data_scad_pres?: string | null
           id: string
+          invio_bil?: boolean | null
           nominativo: string
+          note?: string | null
+          relazione_gest?: boolean | null
+          relazione_revisore?: boolean | null
+          relazione_sindaci?: boolean | null
+          ricevuta?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
+          verbale_app?: boolean | null
         }
         Update: {
-          approvazione?: boolean | null
-          approvazione_data?: string | null
+          bil_approvato?: boolean | null
+          bilancio_def?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
-          deposito?: boolean | null
-          deposito_data?: string | null
+          data_approvazione?: string | null
+          data_invio?: string | null
+          data_scad_pres?: string | null
           id?: string
+          invio_bil?: boolean | null
           nominativo?: string
+          note?: string | null
+          relazione_gest?: boolean | null
+          relazione_revisore?: boolean | null
+          relazione_sindaci?: boolean | null
+          ricevuta?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
+          verbale_app?: boolean | null
         }
         Relationships: [
           {
