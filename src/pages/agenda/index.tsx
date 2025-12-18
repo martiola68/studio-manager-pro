@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -34,7 +34,7 @@ export default function AgendaPage() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [vistaCorrente, setVistaCorrente] = useState<"mensile" | "settimanale">("mensile");
   const [dataSelezionata, setDataSelezionata] = useState(new Date());
-  const [filtroUtente, setFiltroUtente] = useState("");
+  const [filtroUtente, setFiltroUtente] = useState("__all__");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvento, setEditingEvento] = useState<EventoAgenda | null>(null);
 
@@ -46,6 +46,7 @@ export default function AgendaPage() {
     tutto_giorno: false,
     utente_id: "",
     cliente_id: "",
+    evento_generico: false,
     in_sede: true,
     sala: "",
     luogo: "",
@@ -105,21 +106,44 @@ export default function AgendaPage() {
     if (!formData.titolo || !formData.data_inizio || !formData.data_fine) {
       toast({
         title: "Errore",
-        description: "Compila i campi obbligatori",
+        description: "Compila i campi obbligatori (Titolo, Data Inizio, Data Fine)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.evento_generico && !formData.cliente_id) {
+      toast({
+        title: "Errore",
+        description: "Seleziona un cliente oppure attiva 'Evento Generico'",
         variant: "destructive"
       });
       return;
     }
 
     try {
+      const dataToSave = {
+        titolo: formData.titolo,
+        descrizione: formData.descrizione,
+        data_inizio: formData.data_inizio,
+        data_fine: formData.data_fine,
+        tutto_giorno: formData.tutto_giorno,
+        utente_id: formData.utente_id || null,
+        cliente_id: formData.evento_generico ? null : (formData.cliente_id || null),
+        in_sede: formData.in_sede,
+        sala: formData.sala || null,
+        luogo: formData.luogo || null,
+        colore: formData.colore
+      };
+
       if (editingEvento) {
-        await eventoService.updateEvento(editingEvento.id, formData);
+        await eventoService.updateEvento(editingEvento.id, dataToSave);
         toast({
           title: "Successo",
           description: "Evento aggiornato con successo"
         });
       } else {
-        await eventoService.createEvento(formData);
+        await eventoService.createEvento(dataToSave);
         toast({
           title: "Successo",
           description: "Evento creato con successo"
@@ -149,6 +173,7 @@ export default function AgendaPage() {
       tutto_giorno: evento.tutto_giorno || false,
       utente_id: evento.utente_id || "",
       cliente_id: evento.cliente_id || "",
+      evento_generico: !evento.cliente_id,
       in_sede: evento.in_sede ?? true,
       sala: evento.sala || "",
       luogo: evento.luogo || "",
@@ -186,12 +211,27 @@ export default function AgendaPage() {
       tutto_giorno: false,
       utente_id: currentUser?.id || "",
       cliente_id: "",
+      evento_generico: false,
       in_sede: true,
       sala: "",
       luogo: "",
       colore: COLORI_EVENTO[0]
     });
     setEditingEvento(null);
+  };
+
+  const apriGoogleMaps = (indirizzo: string) => {
+    if (!indirizzo.trim()) {
+      toast({
+        title: "Indirizzo mancante",
+        description: "Inserisci un indirizzo per calcolare il percorso",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(indirizzo)}`;
+    window.open(url, "_blank");
   };
 
   const getEventiPerGiorno = (data: Date) => {
@@ -201,7 +241,7 @@ export default function AgendaPage() {
         eventoData.getDate() === data.getDate() &&
         eventoData.getMonth() === data.getMonth() &&
         eventoData.getFullYear() === data.getFullYear() &&
-        (!filtroUtente || filtroUtente === "__all__" || e.utente_id === filtroUtente)
+        (filtroUtente === "__all__" || e.utente_id === filtroUtente)
       );
     });
   };
@@ -314,10 +354,15 @@ export default function AgendaPage() {
                           {evento.sala}
                         </div>
                       )}
-                      {!evento.in_sede && evento.luogo && (
+                      {evento.luogo && (
                         <div className="flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
-                          {evento.luogo}
+                          <span className="truncate">{evento.luogo}</span>
+                        </div>
+                      )}
+                      {clienteEvento && (
+                        <div className="text-[10px] mt-1 opacity-90 truncate">
+                          {clienteEvento.ragione_sociale}
                         </div>
                       )}
                       {utenteEvento && (
@@ -381,7 +426,7 @@ export default function AgendaPage() {
                     Nuovo Evento
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingEvento ? "Modifica Evento" : "Nuovo Evento"}
@@ -445,17 +490,37 @@ export default function AgendaPage() {
                       <Label htmlFor="tutto_giorno" className="cursor-pointer">Tutto il giorno</Label>
                     </div>
 
+                    <div className="border-t pt-4">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <input
+                          type="checkbox"
+                          id="evento_generico"
+                          checked={formData.evento_generico}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            evento_generico: e.target.checked,
+                            cliente_id: e.target.checked ? "" : formData.cliente_id
+                          })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="evento_generico" className="cursor-pointer font-semibold">
+                          Evento Generico (senza cliente)
+                        </Label>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="utente_id">Utente</Label>
                         <Select
-                          value={formData.utente_id}
-                          onValueChange={(value) => setFormData({ ...formData, utente_id: value })}
+                          value={formData.utente_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, utente_id: value === "__none__" ? "" : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona utente" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
                             {utenti.map((u) => (
                               <SelectItem key={u.id} value={u.id}>
                                 {u.nome} {u.cognome}
@@ -466,13 +531,16 @@ export default function AgendaPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="cliente_id">Cliente</Label>
+                        <Label htmlFor="cliente_id">
+                          Cliente {!formData.evento_generico && <span className="text-red-500">*</span>}
+                        </Label>
                         <Select
                           value={formData.cliente_id || "__none__"}
                           onValueChange={(value) => setFormData({ ...formData, cliente_id: value === "__none__" ? "" : value })}
+                          disabled={formData.evento_generico}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleziona cliente" />
+                            <SelectValue placeholder={formData.evento_generico ? "Non richiesto" : "Seleziona cliente"} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Nessuno</SelectItem>
@@ -486,58 +554,77 @@ export default function AgendaPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="in_sede"
-                        checked={formData.in_sede}
-                        onChange={(e) => setFormData({ ...formData, in_sede: e.target.checked })}
-                        className="rounded"
-                      />
-                      <Label htmlFor="in_sede" className="cursor-pointer">In Sede</Label>
+                    <div className="border-t pt-4">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <input
+                          type="checkbox"
+                          id="in_sede"
+                          checked={formData.in_sede}
+                          onChange={(e) => setFormData({ ...formData, in_sede: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="in_sede" className="cursor-pointer">In Sede</Label>
+                      </div>
+
+                      {formData.in_sede && (
+                        <div className="space-y-2 mb-4">
+                          <Label htmlFor="sala">Sala</Label>
+                          <Select
+                            value={formData.sala || "__none__"}
+                            onValueChange={(value) => setFormData({ ...formData, sala: value === "__none__" ? "" : value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona sala" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuna</SelectItem>
+                              {SALE.map((sala) => (
+                                <SelectItem key={sala} value={sala}>
+                                  {sala}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="luogo">Indirizzo / Luogo</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="luogo"
+                            value={formData.luogo}
+                            onChange={(e) => setFormData({ ...formData, luogo: e.target.value })}
+                            placeholder="Via Roma 1, Milano"
+                            className="flex-1"
+                          />
+                          {formData.luogo && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => apriGoogleMaps(formData.luogo)}
+                              className="flex-shrink-0"
+                            >
+                              <Navigation className="h-4 w-4 mr-2" />
+                              Percorso
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Inserisci un indirizzo per calcolare il percorso con Google Maps
+                        </p>
+                      </div>
                     </div>
 
-                    {formData.in_sede ? (
-                      <div className="space-y-2">
-                        <Label htmlFor="sala">Sala</Label>
-                        <Select
-                          value={formData.sala || "__none__"}
-                          onValueChange={(value) => setFormData({ ...formData, sala: value === "__none__" ? "" : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona sala" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuna</SelectItem>
-                            {SALE.map((sala) => (
-                              <SelectItem key={sala} value={sala}>
-                                {sala}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Label htmlFor="luogo">Luogo</Label>
-                        <Input
-                          id="luogo"
-                          value={formData.luogo}
-                          onChange={(e) => setFormData({ ...formData, luogo: e.target.value })}
-                          placeholder="Inserisci indirizzo"
-                        />
-                      </div>
-                    )}
-
                     <div className="space-y-2">
-                      <Label>Colore</Label>
+                      <Label>Colore Evento</Label>
                       <div className="flex gap-2">
                         {COLORI_EVENTO.map((colore) => (
                           <button
                             key={colore}
                             type="button"
                             className={`w-8 h-8 rounded-full border-2 ${
-                              formData.colore === colore ? "border-gray-900" : "border-transparent"
+                              formData.colore === colore ? "border-gray-900 ring-2 ring-offset-2 ring-gray-400" : "border-transparent"
                             }`}
                             style={{ backgroundColor: colore }}
                             onClick={() => setFormData({ ...formData, colore })}
@@ -647,22 +734,26 @@ export default function AgendaPage() {
                 <CardTitle>Legenda</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span className="text-sm">In Sede</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded"></div>
-                    <span className="text-sm">Fuori Sede</span>
-                  </div>
+                <div className="flex items-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">Con Sala</span>
+                    <span className="text-sm">Evento in Sede</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-600" />
                     <span className="text-sm">Con Indirizzo</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Navigation className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm">Calcola Percorso (Google Maps)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {COLORI_EVENTO.slice(0, 3).map(c => (
+                        <div key={c} className="w-4 h-4 rounded" style={{ backgroundColor: c }}></div>
+                      ))}
+                    </div>
+                    <span className="text-sm">Colori Personalizzati</span>
                   </div>
                 </div>
               </CardContent>
