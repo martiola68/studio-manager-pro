@@ -278,16 +278,16 @@ export default function GestioneUtentiPage() {
                       <div className="space-y-2">
                         <Label htmlFor="ruolo_operatore_id">Ruolo Operatore</Label>
                         <Select
-                          value={formData.ruolo_operatore_id}
+                          value={formData.ruolo_operatore_id || "__none__"}
                           onValueChange={(value) => 
-                            setFormData({ ...formData, ruolo_operatore_id: value })
+                            setFormData({ ...formData, ruolo_operatore_id: value === "__none__" ? "" : value })
                           }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona ruolo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
                             {ruoli.map((ruolo) => (
                               <SelectItem key={ruolo.id} value={ruolo.id}>
                                 {ruolo.ruolo}
