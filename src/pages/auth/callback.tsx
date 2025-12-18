@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -18,27 +19,38 @@ export default function AuthCallbackPage() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
 
+  // Mounted guard per hydration
   useEffect(() => {
-    // Aspetta che il router sia pronto
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (!router.isReady) return;
     
     handleAuthCallback();
-  }, [router.isReady]);
+  }, [mounted, router.isReady]);
 
   const handleAuthCallback = async () => {
     try {
-      console.log("🔍 Query params:", router.query);
+      console.log("🔍 Auth callback iniziato");
       
-      // Controlla se ci sono hash params (Supabase li usa per auth)
+      // Controlla hash params (Supabase li usa per auth)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
       const type = hashParams.get("type");
       
-      console.log("🔑 Hash params:", { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+      console.log("🔑 Hash params:", { 
+        hasAccessToken: !!accessToken, 
+        hasRefreshToken: !!refreshToken, 
+        type 
+      });
 
       // Se ci sono token nell'hash, imposta la sessione
       if (accessToken && refreshToken) {
+        console.log("📝 Impostazione sessione con token dall'hash");
+        
         const { data, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
@@ -46,28 +58,29 @@ export default function AuthCallbackPage() {
 
         if (sessionError) {
           console.error("❌ Errore impostazione sessione:", sessionError);
-          setError("Errore durante l'autenticazione. Link scaduto o non valido.");
+          setError("Link scaduto o non valido. Richiedi un nuovo invito o reset password.");
           setLoading(false);
           return;
         }
 
-        console.log("✅ Sessione impostata:", data);
+        console.log("✅ Sessione impostata con successo");
 
-        // Se è un invite o recovery, mostra il form password
+        // Se è un invite, recovery o signup, mostra il form password
         if (type === "invite" || type === "recovery" || type === "signup") {
-          console.log("📝 Richiesta impostazione password per tipo:", type);
+          console.log("🔐 Tipo richiede password:", type);
           setNeedsPassword(true);
           setLoading(false);
           return;
         }
 
         // Altrimenti redirect alla dashboard
-        console.log("➡️ Redirect a dashboard");
+        console.log("➡️ Redirect a dashboard (login normale)");
         router.push("/dashboard");
         return;
       }
 
-      // Fallback: controlla sessione esistente
+      // Fallback: controlla sessione esistente (per casi edge)
+      console.log("🔍 Nessun token nell'hash, controllo sessione esistente");
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) {
@@ -80,14 +93,16 @@ export default function AuthCallbackPage() {
       if (sessionData.session) {
         console.log("✅ Sessione esistente trovata");
         
-        // Verifica se è un nuovo utente che deve impostare password
+        // Controlla se è un nuovo utente
         const user = sessionData.session.user;
-        const isNewUser = user.user_metadata?.invited_by || 
-                          router.query.type === "recovery" || 
-                          router.query.type === "invite";
-
-        if (isNewUser) {
-          console.log("📝 Nuovo utente - mostra form password");
+        const queryType = router.query.type as string;
+        
+        // Se c'è un tipo nella query o nei metadata, mostra form password
+        if (queryType === "recovery" || 
+            queryType === "invite" || 
+            queryType === "signup" ||
+            user.user_metadata?.invited_by) {
+          console.log("🔐 Nuovo utente o recovery - mostra form password");
           setNeedsPassword(true);
           setLoading(false);
         } else {
@@ -95,7 +110,7 @@ export default function AuthCallbackPage() {
           router.push("/dashboard");
         }
       } else {
-        console.log("⚠️ Nessuna sessione valida trovata");
+        console.log("⚠️ Nessuna sessione trovata");
         setError("Link di autenticazione non valido o scaduto. Richiedi un nuovo invito.");
         setLoading(false);
       }
@@ -123,7 +138,7 @@ export default function AuthCallbackPage() {
     try {
       setUpdating(true);
 
-      console.log("🔐 Aggiornamento password...");
+      console.log("🔐 Aggiornamento password utente");
 
       // Aggiorna la password
       const { error: updateError } = await supabase.auth.updateUser({
@@ -139,7 +154,7 @@ export default function AuthCallbackPage() {
 
       toast({
         title: "✅ Password impostata!",
-        description: "Accesso al sistema completato con successo"
+        description: "Accesso completato con successo"
       });
 
       // Redirect a dashboard dopo 1 secondo
@@ -154,9 +169,10 @@ export default function AuthCallbackPage() {
     }
   };
 
-  if (loading) {
+  // SSR/CSR consistent render durante mount
+  if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50" suppressHydrationWarning>
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 text-center">
             <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -184,7 +200,7 @@ export default function AuthCallbackPage() {
               <p className="font-semibold mb-1">💡 Cosa fare:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Torna alla pagina di login</li>
-                <li>Accedi con l'account demo (admin@studiodemo.it / Demo123!)</li>
+                <li>Accedi con account demo (admin@studiodemo.it / Demo123!)</li>
                 <li>Vai su Impostazioni → Utenti</li>
                 <li>Clicca l'icona 🔄 "Reset Password" sul tuo utente</li>
                 <li>Controlla l'email e clicca il NUOVO link</li>
