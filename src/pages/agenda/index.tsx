@@ -468,14 +468,14 @@ export default function AgendaPage() {
                       <div className="space-y-2">
                         <Label htmlFor="cliente_id">Cliente</Label>
                         <Select
-                          value={formData.cliente_id}
-                          onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                          value={formData.cliente_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, cliente_id: value === "__none__" ? "" : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona cliente" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
                             {clienti.map((c) => (
                               <SelectItem key={c.id} value={c.id}>
                                 {c.ragione_sociale}
@@ -501,14 +501,14 @@ export default function AgendaPage() {
                       <div className="space-y-2">
                         <Label htmlFor="sala">Sala</Label>
                         <Select
-                          value={formData.sala}
-                          onValueChange={(value) => setFormData({ ...formData, sala: value })}
+                          value={formData.sala || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, sala: value === "__none__" ? "" : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona sala" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Nessuna</SelectItem>
+                            <SelectItem value="__none__">Nessuna</SelectItem>
                             {SALE.map((sala) => (
                               <SelectItem key={sala} value={sala}>
                                 {sala}

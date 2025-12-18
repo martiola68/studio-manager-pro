@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { getCurrentUser } from "@/lib/db";
-import { Utente } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import {
   LayoutDashboard,
   Users,
@@ -12,9 +12,12 @@ import {
   Mail,
   Settings,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 interface MenuItem {
   label: string;
@@ -28,10 +31,33 @@ export function Sidebar() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["scadenze"]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setCurrentUser(getCurrentUser());
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.email) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("*")
+          .eq("email", session.user.email)
+          .single();
+        
+        if (utente) {
+          setCurrentUser(utente);
+        }
+      }
+    } catch (error) {
+      console.error("Errore caricamento utente:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleMenu = (label: string) => {
     setExpandedMenus(prev => 
@@ -65,7 +91,7 @@ export function Sidebar() {
     },
     {
       label: "Dati Studio",
-      icon: <Settings className="h-5 w-5" />,
+      icon: <Building2 className="h-5 w-5" />,
       href: "/impostazioni/studio",
       adminOnly: true
     },
@@ -105,7 +131,8 @@ export function Sidebar() {
   const isActive = (href: string) => router.pathname === href;
 
   const renderMenuItem = (item: MenuItem, depth: number = 0) => {
-    if (item.adminOnly && currentUser?.TipoUtente !== "Admin") {
+    // Se è un menu solo per admin e l'utente non è admin, non mostrarlo
+    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
       return null;
     }
 
@@ -158,6 +185,16 @@ export function Sidebar() {
       </Link>
     );
   };
+
+  if (loading) {
+    return (
+      <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
+        <div className="flex items-center justify-center py-8">
+          <div className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
