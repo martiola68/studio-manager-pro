@@ -1145,96 +1145,60 @@ export type Database = {
       tbscadproforma: {
         Row: {
           agosto: boolean | null
-          agosto_data: string | null
           aprile: boolean | null
-          aprile_data: string | null
           created_at: string | null
           dicembre: boolean | null
-          dicembre_data: string | null
           febbraio: boolean | null
-          febbraio_data: string | null
           gennaio: boolean | null
-          gennaio_data: string | null
           giugno: boolean | null
-          giugno_data: string | null
           id: string
           luglio: boolean | null
-          luglio_data: string | null
           maggio: boolean | null
-          maggio_data: string | null
           marzo: boolean | null
-          marzo_data: string | null
           nominativo: string
           novembre: boolean | null
-          novembre_data: string | null
           ottobre: boolean | null
-          ottobre_data: string | null
           settembre: boolean | null
-          settembre_data: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
           agosto?: boolean | null
-          agosto_data?: string | null
           aprile?: boolean | null
-          aprile_data?: string | null
           created_at?: string | null
           dicembre?: boolean | null
-          dicembre_data?: string | null
           febbraio?: boolean | null
-          febbraio_data?: string | null
           gennaio?: boolean | null
-          gennaio_data?: string | null
           giugno?: boolean | null
-          giugno_data?: string | null
           id: string
           luglio?: boolean | null
-          luglio_data?: string | null
           maggio?: boolean | null
-          maggio_data?: string | null
           marzo?: boolean | null
-          marzo_data?: string | null
           nominativo: string
           novembre?: boolean | null
-          novembre_data?: string | null
           ottobre?: boolean | null
-          ottobre_data?: string | null
           settembre?: boolean | null
-          settembre_data?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
           agosto?: boolean | null
-          agosto_data?: string | null
           aprile?: boolean | null
-          aprile_data?: string | null
           created_at?: string | null
           dicembre?: boolean | null
-          dicembre_data?: string | null
           febbraio?: boolean | null
-          febbraio_data?: string | null
           gennaio?: boolean | null
-          gennaio_data?: string | null
           giugno?: boolean | null
-          giugno_data?: string | null
           id?: string
           luglio?: boolean | null
-          luglio_data?: string | null
           maggio?: boolean | null
-          maggio_data?: string | null
           marzo?: boolean | null
-          marzo_data?: string | null
           nominativo?: string
           novembre?: boolean | null
-          novembre_data?: string | null
           ottobre?: boolean | null
-          ottobre_data?: string | null
           settembre?: boolean | null
-          settembre_data?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null

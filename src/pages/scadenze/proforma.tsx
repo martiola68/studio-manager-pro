@@ -16,7 +16,20 @@ import type { Database } from "@/integrations/supabase/types";
 type ScadenzaProforma = Database["public"]["Tables"]["tbscadproforma"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+const MESI = [
+  { nome: "Gen", field: "gennaio" },
+  { nome: "Feb", field: "febbraio" },
+  { nome: "Mar", field: "marzo" },
+  { nome: "Apr", field: "aprile" },
+  { nome: "Mag", field: "maggio" },
+  { nome: "Giu", field: "giugno" },
+  { nome: "Lug", field: "luglio" },
+  { nome: "Ago", field: "agosto" },
+  { nome: "Set", field: "settembre" },
+  { nome: "Ott", field: "ottobre" },
+  { nome: "Nov", field: "novembre" },
+  { nome: "Dic", field: "dicembre" }
+];
 
 export default function ScadenzeProformaPage() {
   const router = useRouter();
@@ -87,10 +100,10 @@ export default function ScadenzeProformaPage() {
     return data || [];
   };
 
-  const handleToggleMese = async (scadenzaId: string, mese: string, currentValue: boolean) => {
+  const handleToggleMese = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
       const updates: any = {};
-      updates[mese] = !currentValue;
+      updates[field] = !currentValue;
       
       const { error } = await supabase
         .from("tbscadproforma")
@@ -102,36 +115,13 @@ export default function ScadenzeProformaPage() {
       await loadData();
       toast({
         title: "Successo",
-        description: "Scadenza aggiornata"
+        description: "Invio aggiornato"
       });
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la scadenza",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleSetData = async (scadenzaId: string, mese: string, data: string) => {
-    try {
-      const updates: any = {};
-      updates[`${mese}_data`] = data;
-      
-      const { error } = await supabase
-        .from("tbscadproforma")
-        .update(updates)
-        .eq("id", scadenzaId);
-
-      if (error) throw error;
-
-      await loadData();
-    } catch (error) {
-      console.error("Errore aggiornamento data:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare la data",
+        description: "Impossibile aggiornare l'invio",
         variant: "destructive"
       });
     }
@@ -170,6 +160,12 @@ export default function ScadenzeProformaPage() {
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find(u => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -190,7 +186,7 @@ export default function ScadenzeProformaPage() {
           <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario Proforma</h1>
-              <p className="text-gray-500 mt-1">Gestione scadenze mensili Proforma</p>
+              <p className="text-gray-500 mt-1">Gestione invii mensili Proforma</p>
             </div>
 
             <Card className="mb-6">
@@ -251,31 +247,25 @@ export default function ScadenzeProformaPage() {
 
             <Card>
               <CardContent className="p-0">
-                {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Gennaio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Febbraio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Marzo</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Aprile</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Maggio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Giugno</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Luglio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Agosto</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Settembre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Ottobre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Novembre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Dicembre</TableHead>
+                        <TableHead className="min-w-[150px]">Professionista</TableHead>
+                        <TableHead className="min-w-[150px]">Operatore</TableHead>
+                        {MESI.map((mese) => (
+                          <TableHead key={mese.field} className="text-center min-w-[80px]">
+                            {mese.nome}
+                          </TableHead>
+                        ))}
                         <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredScadenze.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={14} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={16} className="text-center py-8 text-gray-500">
                             Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
@@ -285,37 +275,32 @@ export default function ScadenzeProformaPage() {
                             <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
                               {scadenza.nominativo}
                             </TableCell>
+                            <TableCell className="text-sm">
+                              {getUtenteNome(scadenza.utente_professionista_id)}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {getUtenteNome(scadenza.utente_operatore_id)}
+                            </TableCell>
+                            
                             {MESI.map((mese) => {
-                              const meseValue = scadenza[mese as keyof ScadenzaProforma] as boolean | null;
-                              const meseData = scadenza[`${mese}_data` as keyof ScadenzaProforma] as string | null;
+                              const meseValue = scadenza[mese.field as keyof ScadenzaProforma] as boolean | null;
                               
                               return (
-                                <TableCell key={mese} className="text-center">
-                                  <div className="flex flex-col items-center gap-2 py-2">
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={meseValue || false}
-                                        onChange={() => handleToggleMese(scadenza.id, mese, meseValue || false)}
-                                        className="rounded w-4 h-4 cursor-pointer"
-                                        title="Attiva/Disattiva"
-                                      />
-                                      <span className="text-xs text-gray-500">
-                                        {meseValue ? "Attivo" : "Off"}
-                                      </span>
-                                    </div>
-                                    {meseValue && (
-                                      <Input
-                                        type="date"
-                                        value={meseData || ""}
-                                        onChange={(e) => handleSetData(scadenza.id, mese, e.target.value)}
-                                        className="w-32 text-xs"
-                                      />
-                                    )}
-                                  </div>
+                                <TableCell 
+                                  key={mese.field} 
+                                  className={`text-center ${meseValue ? 'bg-green-50' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={meseValue || false}
+                                    onChange={() => handleToggleMese(scadenza.id, mese.field, meseValue)}
+                                    className="rounded w-4 h-4 cursor-pointer"
+                                    title={`Invio ${mese.nome}`}
+                                  />
                                 </TableCell>
                               );
                             })}
+                            
                             <TableCell className="text-center">
                               <Button
                                 variant="ghost"
@@ -331,6 +316,35 @@ export default function ScadenzeProformaPage() {
                       )}
                     </TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legenda */}
+            <Card className="mt-4">
+              <CardContent className="py-4">
+                <div className="space-y-3">
+                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Scadenzario Proforma:</div>
+                  
+                  <div className="text-sm text-gray-700">
+                    <p className="mb-2">Struttura semplificata: <strong>solo flag di invio per ogni mese</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Checkbox = Invio effettuato per quel mese</li>
+                      <li>Sfondo verde = Mesi con invio completato</li>
+                      <li>Sfondo bianco = Mesi senza invio</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-50 border border-green-200 rounded"></div>
+                      <span>Invio Effettuato (verde chiaro)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
+                      <span>Nessun Invio (bianco)</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
