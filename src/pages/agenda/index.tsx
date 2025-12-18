@@ -49,7 +49,8 @@ export default function AgendaPage() {
     in_sede: true,
     sala: "",
     luogo: "",
-    partecipanti: [] as string[]
+    partecipanti: [] as string[],
+    invia_a_tutti: false
   });
 
   useEffect(() => {
@@ -132,6 +133,11 @@ export default function AgendaPage() {
       // Determina automaticamente il colore
       const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
 
+      // Se "Invia a tutti" è attivo, prendi tutti gli ID utenti
+      const partecipantiFinal = formData.invia_a_tutti 
+        ? utenti.map(u => u.id)
+        : formData.partecipanti;
+
       const dataToSave = {
         titolo: formData.titolo,
         descrizione: formData.descrizione,
@@ -144,7 +150,7 @@ export default function AgendaPage() {
         sala: formData.sala || null,
         luogo: formData.luogo || null,
         colore: colore,
-        partecipanti: formData.partecipanti
+        partecipanti: partecipantiFinal
       };
 
       if (editingEvento) {
@@ -162,9 +168,12 @@ export default function AgendaPage() {
       }
 
       // TODO: Inviare email ai partecipanti
-      // if (formData.partecipanti.length > 0) {
-      //   await inviaNotifichePartecipanti(formData.partecipanti, dataToSave);
-      // }
+      if (partecipantiFinal.length > 0) {
+        toast({
+          title: "Info",
+          description: `${partecipantiFinal.length} partecipanti riceveranno notifica email`,
+        });
+      }
 
       setDialogOpen(false);
       resetForm();
@@ -184,11 +193,19 @@ export default function AgendaPage() {
     
     // Parse partecipanti from JSON
     let partecipantiArray: string[] = [];
+    let inviaATutti = false;
+    
     if (evento.partecipanti) {
       try {
         partecipantiArray = Array.isArray(evento.partecipanti) 
           ? evento.partecipanti.map(p => String(p)) 
           : [];
+        
+        // Se i partecipanti sono tutti gli utenti, attiva "invia a tutti"
+        if (partecipantiArray.length === utenti.length && 
+            utenti.every(u => partecipantiArray.includes(u.id))) {
+          inviaATutti = true;
+        }
       } catch {
         partecipantiArray = [];
       }
@@ -206,7 +223,8 @@ export default function AgendaPage() {
       in_sede: evento.in_sede ?? true,
       sala: evento.sala || "",
       luogo: evento.luogo || "",
-      partecipanti: partecipantiArray
+      partecipanti: partecipantiArray,
+      invia_a_tutti: inviaATutti
     });
     setDialogOpen(true);
   };
@@ -244,7 +262,8 @@ export default function AgendaPage() {
       in_sede: true,
       sala: "",
       luogo: "",
-      partecipanti: []
+      partecipanti: [],
+      invia_a_tutti: false
     });
     setEditingEvento(null);
   };
@@ -692,6 +711,85 @@ export default function AgendaPage() {
                           Inserisci un indirizzo per calcolare il percorso con Google Maps
                         </p>
                       </div>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2">
+                        <Users className="h-5 w-5 text-blue-600" />
+                        Partecipanti (Notifiche Email)
+                      </h3>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-blue-800">
+                          📧 I partecipanti selezionati riceveranno un'email con i dettagli dell'evento
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 mb-4">
+                        <input
+                          type="checkbox"
+                          id="invia_a_tutti"
+                          checked={formData.invia_a_tutti}
+                          onChange={(e) => setFormData({ 
+                            ...formData, 
+                            invia_a_tutti: e.target.checked,
+                            partecipanti: e.target.checked ? [] : formData.partecipanti
+                          })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="invia_a_tutti" className="cursor-pointer font-semibold text-blue-700">
+                          📢 Invia notifica a TUTTI gli utenti dello studio ({utenti.length} persone)
+                        </Label>
+                      </div>
+
+                      {!formData.invia_a_tutti && (
+                        <div className="space-y-2">
+                          <Label>Seleziona Partecipanti Specifici</Label>
+                          <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-gray-50">
+                            {utenti.length === 0 ? (
+                              <p className="text-sm text-gray-500 text-center py-4">
+                                Nessun utente disponibile
+                              </p>
+                            ) : (
+                              utenti.map((utente) => (
+                                <div key={utente.id} className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`part-${utente.id}`}
+                                    checked={formData.partecipanti.includes(utente.id)}
+                                    onChange={() => togglePartecipante(utente.id)}
+                                    className="rounded"
+                                  />
+                                  <Label 
+                                    htmlFor={`part-${utente.id}`} 
+                                    className="cursor-pointer flex-1 py-1"
+                                  >
+                                    {utente.nome} {utente.cognome}
+                                    {utente.email && (
+                                      <span className="text-xs text-gray-500 ml-2">
+                                        ({utente.email})
+                                      </span>
+                                    )}
+                                  </Label>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          {formData.partecipanti.length > 0 && !formData.invia_a_tutti && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              ✅ {formData.partecipanti.length} partecipante{formData.partecipanti.length > 1 ? 'i' : ''} selezionato{formData.partecipanti.length > 1 ? 'i' : ''}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {formData.invia_a_tutti && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                          <p className="text-sm text-green-800 font-medium">
+                            ✅ Tutti gli utenti ({utenti.length}) riceveranno la notifica email
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-3 pt-4">
