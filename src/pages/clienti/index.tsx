@@ -169,8 +169,19 @@ export default function ClientiPage() {
     if (hasDuplicates) return;
 
     try {
+      // Prepara i dati convertendo stringhe vuote in null per i campi UUID
+      const dataToSave = {
+        ...formData,
+        utente_operatore_id: formData.utente_operatore_id || null,
+        utente_professionista_id: formData.utente_professionista_id || null,
+        contatto1_id: formData.contatto1_id || null,
+        contatto2_id: formData.contatto2_id || null,
+        tipo_prestazione_id: formData.tipo_prestazione_id || null,
+        scadenza_antiric: formData.scadenza_antiric || null
+      };
+
       if (editingCliente) {
-        await clienteService.updateCliente(editingCliente.id, formData);
+        await clienteService.updateCliente(editingCliente.id, dataToSave);
         toast({
           title: "Successo",
           description: "Cliente aggiornato con successo"
@@ -179,8 +190,8 @@ export default function ClientiPage() {
         // Genera un codice cliente provvisorio se non gestito dal DB
         const codCliente = `CL-${Date.now().toString().substr(-6)}`;
         
-        const newCliente = await clienteService.createCliente({
-          ...formData,
+        await clienteService.createCliente({
+          ...dataToSave,
           cod_cliente: codCliente
         });
         toast({
@@ -627,14 +638,14 @@ export default function ClientiPage() {
                           <div className="space-y-2">
                             <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
                             <Select
-                              value={formData.utente_operatore_id}
-                              onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value })}
+                              value={formData.utente_operatore_id || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value === "__none__" ? "" : value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleziona utente" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Nessuno</SelectItem>
+                                <SelectItem value="__none__">Nessuno</SelectItem>
                                 {utenti.map((u) => (
                                   <SelectItem key={u.id} value={u.id}>
                                     {u.nome} {u.cognome}
@@ -646,14 +657,14 @@ export default function ClientiPage() {
                           <div className="space-y-2">
                             <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
                             <Select
-                              value={formData.utente_professionista_id}
-                              onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value })}
+                              value={formData.utente_professionista_id || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value === "__none__" ? "" : value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleziona utente" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Nessuno</SelectItem>
+                                <SelectItem value="__none__">Nessuno</SelectItem>
                                 {utenti.map((u) => (
                                   <SelectItem key={u.id} value={u.id}>
                                     {u.nome} {u.cognome}
@@ -668,14 +679,14 @@ export default function ClientiPage() {
                           <div className="space-y-2">
                             <Label htmlFor="contatto1_id">Contatto 1</Label>
                             <Select
-                              value={formData.contatto1_id}
-                              onValueChange={(value) => setFormData({ ...formData, contatto1_id: value })}
+                              value={formData.contatto1_id || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, contatto1_id: value === "__none__" ? "" : value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleziona contatto" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Nessuno</SelectItem>
+                                <SelectItem value="__none__">Nessuno</SelectItem>
                                 {contatti.map((c) => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.nome} {c.cognome}
@@ -687,14 +698,14 @@ export default function ClientiPage() {
                           <div className="space-y-2">
                             <Label htmlFor="contatto2_id">Contatto 2</Label>
                             <Select
-                              value={formData.contatto2_id}
-                              onValueChange={(value) => setFormData({ ...formData, contatto2_id: value })}
+                              value={formData.contatto2_id || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, contatto2_id: value === "__none__" ? "" : value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Seleziona contatto" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Nessuno</SelectItem>
+                                <SelectItem value="__none__">Nessuno</SelectItem>
                                 {contatti.map((c) => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.nome} {c.cognome}
@@ -708,14 +719,14 @@ export default function ClientiPage() {
                         <div className="space-y-2">
                           <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
                           <Select
-                            value={formData.tipo_prestazione_id}
-                            onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value })}
+                            value={formData.tipo_prestazione_id || "__none__"}
+                            onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value === "__none__" ? "" : value })}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Seleziona prestazione" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Nessuna</SelectItem>
+                              <SelectItem value="__none__">Nessuna</SelectItem>
                               {prestazioni.map((p) => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.descrizione}
