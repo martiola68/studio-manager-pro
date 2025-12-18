@@ -103,135 +103,222 @@ export default function GenerazioneScadenzariPage() {
       }
 
       let generati = 0;
+      let errori = 0;
 
       for (const cliente of clienti) {
-        // TBScadIva
-        if (cliente.flag_iva) {
-          const { error } = await supabase
-            .from("tbscadiva")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+        try {
+          // TBScadIva - Prima verifica se esiste
+          if (cliente.flag_iva) {
+            const { data: existing } = await supabase
+              .from("tbscadiva")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
 
-        // TBScadCCGG
-        if (cliente.flag_ccgg) {
-          const { error } = await supabase
-            .from("tbscadccgg")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadiva")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
 
-        // TBScadCU
-        if (cliente.flag_cu) {
-          const { error } = await supabase
-            .from("tbscadcu")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+          // TBScadCCGG
+          if (cliente.flag_ccgg) {
+            const { data: existing } = await supabase
+              .from("tbscadccgg")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
 
-        // TBScadFiscali
-        if (cliente.flag_fiscali) {
-          const { error } = await supabase
-            .from("tbscadfiscali")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadccgg")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
 
-        // TBScadBilanci
-        if (cliente.flag_bilancio) {
-          const { error } = await supabase
-            .from("tbscadbilanci")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+          // TBScadCU
+          if (cliente.flag_cu) {
+            const { data: existing } = await supabase
+              .from("tbscadcu")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
 
-        // TBScad770
-        if (cliente.flag_770) {
-          const { error } = await supabase
-            .from("tbscad770")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              conferma_riga: false
-            });
-          if (!error) generati++;
-        }
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadcu")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
 
-        // TBScadLipe
-        if (cliente.flag_lipe) {
-          const { error } = await supabase
-            .from("tbscadlipe")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id
-            });
-          if (!error) generati++;
-        }
+          // TBScadFiscali
+          if (cliente.flag_fiscali) {
+            const { data: existing } = await supabase
+              .from("tbscadfiscali")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
 
-        // TBScadEstero
-        if (cliente.flag_esterometro) {
-          const { error } = await supabase
-            .from("tbscadestero")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id
-            });
-          if (!error) generati++;
-        }
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadfiscali")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
 
-        // TBScadProforma
-        if (cliente.flag_proforma) {
-          const { error } = await supabase
-            .from("tbscadproforma")
-            .upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id
-            });
-          if (!error) generati++;
+          // TBScadBilanci
+          if (cliente.flag_bilancio) {
+            const { data: existing } = await supabase
+              .from("tbscadbilanci")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadbilanci")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+
+          // TBScad770
+          if (cliente.flag_770) {
+            const { data: existing } = await supabase
+              .from("tbscad770")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscad770")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+
+          // TBScadLipe
+          if (cliente.flag_lipe) {
+            const { data: existing } = await supabase
+              .from("tbscadlipe")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadlipe")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+
+          // TBScadEstero
+          if (cliente.flag_esterometro) {
+            const { data: existing } = await supabase
+              .from("tbscadestero")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadestero")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+
+          // TBScadProforma
+          if (cliente.flag_proforma) {
+            const { data: existing } = await supabase
+              .from("tbscadproforma")
+              .select("id")
+              .eq("id", cliente.id)
+              .single();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadproforma")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+        } catch (error) {
+          console.error(`Errore elaborazione cliente ${cliente.ragione_sociale}:`, error);
+          errori++;
         }
       }
 
       toast({
-        title: "Successo",
-        description: `Generati ${generati} scadenzari per ${clienti.length} clienti`
+        title: "Generazione completata",
+        description: `Generati ${generati} nuovi scadenzari per ${clienti.length} clienti${errori > 0 ? ` (${errori} errori)` : ''}`
       });
 
     } catch (error) {
@@ -350,7 +437,8 @@ export default function GenerazioneScadenzariPage() {
                       <ul className="list-disc list-inside space-y-1">
                         <li>Vengono generati scadenzari solo per i clienti ATTIVI</li>
                         <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
-                        <li>Se uno scadenzario esiste già, viene aggiornato (non duplicato)</li>
+                        <li>Se uno scadenzario esiste già, NON viene duplicato</li>
+                        <li>I nominativi vengono inseriti automaticamente in base ai flag attivi</li>
                       </ul>
                     </div>
                   </div>

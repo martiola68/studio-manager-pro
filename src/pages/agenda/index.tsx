@@ -201,7 +201,7 @@ export default function AgendaPage() {
         eventoData.getDate() === data.getDate() &&
         eventoData.getMonth() === data.getMonth() &&
         eventoData.getFullYear() === data.getFullYear() &&
-        (!filtroUtente || e.utente_id === filtroUtente)
+        (!filtroUtente || filtroUtente === "__all__" || e.utente_id === filtroUtente)
       );
     });
   };
@@ -611,7 +611,7 @@ export default function AgendaPage() {
                         <SelectValue placeholder="Filtra per utente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tutti gli utenti</SelectItem>
+                        <SelectItem value="__all__">Tutti gli utenti</SelectItem>
                         {utenti.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.nome} {u.cognome}
