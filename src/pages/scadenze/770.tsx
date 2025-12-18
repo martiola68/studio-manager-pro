@@ -185,7 +185,7 @@ export default function Scadenze770Page() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
               <p className="text-gray-500 mt-1">Gestione dichiarazione annuale 770</p>
@@ -252,13 +252,13 @@ export default function Scadenze770Page() {
                 {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead className="w-[250px]">Nominativo</TableHead>
-                        <TableHead>Conferma</TableHead>
-                        <TableHead>Invio</TableHead>
-                        <TableHead>Data Invio</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[250px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Conferma</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Invio</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Data Invio</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -274,37 +274,40 @@ export default function Scadenze770Page() {
                             key={scadenza.id}
                             className={scadenza.conferma_riga ? "bg-green-50" : ""}
                           >
-                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            <TableCell className="text-center">
                               <Button
                                 variant={scadenza.conferma_riga ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                                className="w-full"
                               >
-                                {scadenza.conferma_riga ? "✓" : "○"}
+                                {scadenza.conferma_riga ? "✓ Chiusa" : "○ Aperta"}
                               </Button>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <input
                                 type="checkbox"
                                 checked={scadenza.invio || false}
                                 onChange={() => handleToggleField(scadenza.id, "invio", scadenza.invio)}
-                                className="rounded"
-                                disabled={!scadenza.conferma_riga}
+                                className="rounded w-4 h-4"
+                                disabled={scadenza.conferma_riga || false}
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               {scadenza.invio && (
                                 <Input
                                   type="date"
                                   value={scadenza.invio_data || ""}
                                   onChange={(e) => handleSetData(scadenza.id, "invio_data", e.target.value)}
                                   className="w-40"
-                                  disabled={!scadenza.conferma_riga}
+                                  disabled={scadenza.conferma_riga || false}
                                 />
                               )}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"

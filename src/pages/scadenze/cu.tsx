@@ -141,7 +141,7 @@ export default function ScadenzeCUPage() {
       await loadData();
       toast({
         title: "Successo",
-        description: currentValue ? "Conferma rimossa" : "Riga confermata"
+        description: currentValue ? "Riga riaperta per modifiche" : "Riga chiusa e confermata"
       });
     } catch (error) {
       console.error("Errore conferma:", error);
@@ -301,7 +301,7 @@ export default function ScadenzeCUPage() {
                                 onClick={() => handleToggleConferma(scadenza.id, scadenza.conferma_riga)}
                                 className="w-full"
                               >
-                                {scadenza.conferma_riga ? "✓ Confermato" : "○ Conferma"}
+                                {scadenza.conferma_riga ? "✓ Chiusa" : "○ Aperta"}
                               </Button>
                             </TableCell>
                             <TableCell className="text-center">
@@ -311,8 +311,8 @@ export default function ScadenzeCUPage() {
                                   checked={scadenza.invio || false}
                                   onChange={() => handleToggleInvio(scadenza.id, scadenza.invio)}
                                   className="rounded w-4 h-4 cursor-pointer"
-                                  disabled={!scadenza.conferma_riga}
-                                  title={scadenza.conferma_riga ? "Attiva/Disattiva invio" : "Conferma prima la riga"}
+                                  disabled={scadenza.conferma_riga}
+                                  title={scadenza.conferma_riga ? "Riga chiusa - non modificabile" : "Attiva/Disattiva invio"}
                                 />
                                 <span className="text-xs text-gray-500">
                                   {scadenza.invio ? "Inviato" : "Da inviare"}
@@ -326,7 +326,7 @@ export default function ScadenzeCUPage() {
                                   value={scadenza.invio_data || ""}
                                   onChange={(e) => handleSetDataInvio(scadenza.id, e.target.value)}
                                   className="w-40 mx-auto"
-                                  disabled={!scadenza.conferma_riga}
+                                  disabled={scadenza.conferma_riga}
                                 />
                               )}
                             </TableCell>

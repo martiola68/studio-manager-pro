@@ -149,7 +149,7 @@ export default function ScadenzeCCGGPage() {
       await loadData();
       toast({
         title: "Successo",
-        description: currentValue ? "Conferma rimossa" : "Riga confermata"
+        description: currentValue ? "Riga riaperta per modifiche" : "Riga chiusa e confermata"
       });
     } catch (error) {
       console.error("Errore conferma:", error);
@@ -311,7 +311,7 @@ export default function ScadenzeCCGGPage() {
                                 onClick={() => handleToggleConferma(scadenza.id, scadenza.conferma_riga)}
                                 className="w-full"
                               >
-                                {scadenza.conferma_riga ? "✓ Confermato" : "○ Conferma"}
+                                {scadenza.conferma_riga ? "✓ Chiusa" : "○ Aperta"}
                               </Button>
                             </TableCell>
                             {TRIMESTRI.map((trim) => {
@@ -327,8 +327,8 @@ export default function ScadenzeCCGGPage() {
                                         checked={trimValue || false}
                                         onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
                                         className="rounded w-4 h-4 cursor-pointer"
-                                        disabled={!scadenza.conferma_riga}
-                                        title={scadenza.conferma_riga ? "Attiva/Disattiva" : "Conferma prima la riga"}
+                                        disabled={scadenza.conferma_riga}
+                                        title={scadenza.conferma_riga ? "Riga chiusa - non modificabile" : "Attiva/Disattiva"}
                                       />
                                       <span className="text-xs text-gray-500">
                                         {trimValue ? "Attivo" : "Off"}
@@ -340,7 +340,7 @@ export default function ScadenzeCCGGPage() {
                                         value={trimData || ""}
                                         onChange={(e) => handleSetData(scadenza.id, trim, e.target.value)}
                                         className="w-32 text-xs"
-                                        disabled={!scadenza.conferma_riga}
+                                        disabled={scadenza.conferma_riga}
                                       />
                                     )}
                                   </div>

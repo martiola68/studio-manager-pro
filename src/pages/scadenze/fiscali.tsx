@@ -185,7 +185,7 @@ export default function ScadenzeFiscaliPage() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario Fiscali</h1>
               <p className="text-gray-500 mt-1">Gestione scadenze fiscali (Acconti e Saldo)</p>
@@ -252,18 +252,18 @@ export default function ScadenzeFiscaliPage() {
                 {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead className="w-[200px]">Nominativo</TableHead>
-                        <TableHead>Conferma</TableHead>
-                        <TableHead>Acconto 1</TableHead>
-                        <TableHead>Data Acc. 1</TableHead>
-                        <TableHead>Acconto 2</TableHead>
-                        <TableHead>Data Acc. 2</TableHead>
-                        <TableHead>Saldo</TableHead>
-                        <TableHead>Data Saldo</TableHead>
-                        <TableHead>Ricevuta R</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Conferma</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Acconto 1</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Data Acc. 1</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Acconto 2</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Data Acc. 2</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Saldo</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Data Saldo</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Ricevuta R</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -285,86 +285,89 @@ export default function ScadenzeFiscaliPage() {
                                 : ""
                             }
                           >
-                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            <TableCell className="text-center">
                               <Button
                                 variant={scadenza.conferma_riga ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                                className="w-full"
                               >
-                                {scadenza.conferma_riga ? "✓" : "○"}
+                                {scadenza.conferma_riga ? "✓ Chiusa" : "○ Aperta"}
                               </Button>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <input
                                 type="checkbox"
                                 checked={scadenza.acconto1 || false}
                                 onChange={() => handleToggleField(scadenza.id, "acconto1", scadenza.acconto1)}
-                                className="rounded"
-                                disabled={!scadenza.conferma_riga}
+                                className="rounded w-4 h-4"
+                                disabled={scadenza.conferma_riga || false}
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               {scadenza.acconto1 && (
                                 <Input
                                   type="date"
                                   value={scadenza.acconto1_data || ""}
                                   onChange={(e) => handleSetData(scadenza.id, "acconto1_data", e.target.value)}
-                                  className="w-32"
-                                  disabled={!scadenza.conferma_riga}
+                                  className="w-40"
+                                  disabled={scadenza.conferma_riga || false}
                                 />
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <input
                                 type="checkbox"
                                 checked={scadenza.acconto2 || false}
                                 onChange={() => handleToggleField(scadenza.id, "acconto2", scadenza.acconto2)}
-                                className="rounded"
-                                disabled={!scadenza.conferma_riga}
+                                className="rounded w-4 h-4"
+                                disabled={scadenza.conferma_riga || false}
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               {scadenza.acconto2 && (
                                 <Input
                                   type="date"
                                   value={scadenza.acconto2_data || ""}
                                   onChange={(e) => handleSetData(scadenza.id, "acconto2_data", e.target.value)}
-                                  className="w-32"
-                                  disabled={!scadenza.conferma_riga}
+                                  className="w-40"
+                                  disabled={scadenza.conferma_riga || false}
                                 />
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <input
                                 type="checkbox"
                                 checked={scadenza.saldo || false}
                                 onChange={() => handleToggleField(scadenza.id, "saldo", scadenza.saldo)}
-                                className="rounded"
-                                disabled={!scadenza.conferma_riga}
+                                className="rounded w-4 h-4"
+                                disabled={scadenza.conferma_riga || false}
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               {scadenza.saldo && (
                                 <Input
                                   type="date"
                                   value={scadenza.saldo_data || ""}
                                   onChange={(e) => handleSetData(scadenza.id, "saldo_data", e.target.value)}
-                                  className="w-32"
-                                  disabled={!scadenza.conferma_riga}
+                                  className="w-40"
+                                  disabled={scadenza.conferma_riga || false}
                                 />
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <input
                                 type="checkbox"
                                 checked={scadenza.ricevuta_r || false}
                                 onChange={() => handleToggleField(scadenza.id, "ricevuta_r", scadenza.ricevuta_r)}
-                                className="rounded"
-                                disabled={!scadenza.conferma_riga}
+                                className="rounded w-4 h-4"
+                                disabled={scadenza.conferma_riga || false}
                               />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"
