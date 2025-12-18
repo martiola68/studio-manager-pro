@@ -17,6 +17,7 @@ export default function AuthCallbackPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
+  const [authType, setAuthType] = useState<string>("");
 
   useEffect(() => {
     handleAuthCallback();
@@ -24,59 +25,116 @@ export default function AuthCallbackPage() {
 
   const handleAuthCallback = async () => {
     try {
+      console.log("🔍 Callback URL:", window.location.href);
+      
       // Controlla hash params (Supabase li usa per auth)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
       const type = hashParams.get("type");
+      const errorCode = hashParams.get("error_code");
+      const errorDescription = hashParams.get("error_description");
+
+      console.log("📋 Parametri ricevuti:", {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        type,
+        errorCode,
+        errorDescription
+      });
+
+      // Gestisci errori espliciti
+      if (errorCode) {
+        setError(errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
+        setLoading(false);
+        return;
+      }
 
       // Se ci sono token nell'hash, imposta la sessione
       if (accessToken && refreshToken) {
-        const { error: sessionError } = await supabase.auth.setSession({
+        console.log("🔑 Token trovati, impostazione sessione...");
+        
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         });
 
         if (sessionError) {
+          console.error("❌ Errore sessione:", sessionError);
           setError("Link scaduto o non valido. Richiedi un nuovo invito o reset password.");
           setLoading(false);
           return;
         }
 
-        // Se è un invite, recovery o signup, mostra il form password
-        if (type === "invite" || type === "recovery" || type === "signup") {
+        console.log("✅ Sessione impostata:", sessionData.session?.user?.email);
+        console.log("🎯 Tipo autenticazione:", type);
+
+        // Determina se serve impostare password
+        const requiresPassword = type === "recovery" || 
+                                type === "invite" || 
+                                type === "signup" ||
+                                type === "magiclink";
+
+        console.log("🔐 Richiede password?", requiresPassword);
+
+        if (requiresPassword) {
+          setAuthType(type || "");
           setNeedsPassword(true);
           setLoading(false);
+          
+          // Messaggio specifico in base al tipo
+          if (type === "recovery") {
+            toast({
+              title: "🔐 Reset Password",
+              description: "Imposta la tua nuova password per accedere"
+            });
+          } else if (type === "invite") {
+            toast({
+              title: "👋 Benvenuto!",
+              description: "Imposta la tua password per completare la registrazione"
+            });
+          }
           return;
         }
 
-        // Altrimenti redirect alla dashboard
+        // Se non serve password, redirect alla dashboard
+        console.log("➡️ Redirect a dashboard...");
         router.push("/dashboard");
         return;
       }
 
       // Fallback: controlla sessione esistente
-      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("🔄 Controllo sessione esistente...");
+      const { data: existingSession } = await supabase.auth.getSession();
 
-      if (sessionData.session) {
-        const user = sessionData.session.user;
+      if (existingSession.session) {
+        console.log("✅ Sessione esistente trovata");
         
-        // Se c'è un tipo nella query o nei metadata, mostra form password
-        if (type === "recovery" || 
-            type === "invite" || 
-            type === "signup" ||
+        // Controlla se serve password anche con sessione esistente
+        const user = existingSession.session.user;
+        
+        // Se c'è un tipo recovery/invite nella query, mostra form password
+        const urlType = new URLSearchParams(window.location.search).get("type") || type;
+        
+        if (urlType === "recovery" || 
+            urlType === "invite" || 
+            urlType === "signup" ||
             user.user_metadata?.invited_by) {
+          console.log("🔐 Sessione esistente richiede password");
+          setAuthType(urlType || "");
           setNeedsPassword(true);
           setLoading(false);
         } else {
+          console.log("➡️ Sessione esistente valida, redirect dashboard");
           router.push("/dashboard");
         }
       } else {
-        setError("Link di autenticazione non valido o scaduto. Richiedi un nuovo invito.");
+        console.log("❌ Nessuna sessione valida trovata");
+        setError("Link di autenticazione non valido o scaduto. Richiedi un nuovo link.");
         setLoading(false);
       }
     } catch (err) {
-      console.error("Errore gestione callback:", err);
+      console.error("💥 Errore gestione callback:", err);
       setError("Errore imprevisto. Riprova o contatta il supporto.");
       setLoading(false);
     }
@@ -98,6 +156,7 @@ export default function AuthCallbackPage() {
 
     try {
       setUpdating(true);
+      console.log("🔐 Aggiornamento password...");
 
       // Aggiorna la password
       const { error: updateError } = await supabase.auth.updateUser({
@@ -105,21 +164,28 @@ export default function AuthCallbackPage() {
       });
 
       if (updateError) {
+        console.error("❌ Errore aggiornamento:", updateError);
         throw updateError;
       }
 
+      console.log("✅ Password aggiornata con successo!");
+
       toast({
         title: "✅ Password impostata!",
-        description: "Accesso completato con successo"
+        description: authType === "recovery" 
+          ? "Password aggiornata con successo. Accesso in corso..." 
+          : "Account configurato con successo. Accesso in corso..."
       });
 
+      // Breve pausa per mostrare il messaggio
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Redirect a dashboard
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
+      console.log("➡️ Redirect a dashboard...");
+      router.push("/dashboard");
 
     } catch (err) {
-      console.error("Errore impostazione password:", err);
+      console.error("💥 Errore impostazione password:", err);
       setError(err instanceof Error ? err.message : "Errore durante l'impostazione della password");
       setUpdating(false);
     }
@@ -163,17 +229,25 @@ export default function AuthCallbackPage() {
   }
 
   if (needsPassword) {
+    const isRecovery = authType === "recovery";
+    const title = isRecovery ? "Reimposta la tua Password" : "Imposta la tua Password";
+    const description = isRecovery 
+      ? "Scegli una nuova password sicura per il tuo account."
+      : "Benvenuto in Studio Manager Pro! Crea una password sicura per accedere.";
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-600 to-green-800 rounded-2xl flex items-center justify-center shadow-lg mb-2">
+            <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mb-2 ${
+              isRecovery 
+                ? "bg-gradient-to-br from-orange-600 to-orange-800" 
+                : "bg-gradient-to-br from-green-600 to-green-800"
+            }`}>
               <Lock className="h-8 w-8 text-white" />
             </div>
-            <CardTitle className="text-2xl">Imposta la tua Password</CardTitle>
-            <p className="text-gray-600 text-sm">
-              Benvenuto in Studio Manager Pro! Crea una password sicura per accedere.
-            </p>
+            <CardTitle className="text-2xl">{title}</CardTitle>
+            <p className="text-gray-600 text-sm">{description}</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSetPassword} className="space-y-4">
@@ -196,6 +270,7 @@ export default function AuthCallbackPage() {
                   disabled={updating}
                   minLength={8}
                   className="h-11"
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -211,12 +286,25 @@ export default function AuthCallbackPage() {
                   disabled={updating}
                   minLength={8}
                   className="h-11"
+                  autoComplete="new-password"
                 />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+                <p className="font-semibold mb-1">📋 Requisiti password:</p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>Almeno 8 caratteri</li>
+                  <li>Si consiglia l'uso di lettere, numeri e simboli</li>
+                </ul>
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                className={`w-full h-11 text-base ${
+                  isRecovery
+                    ? "bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+                    : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                }`}
                 disabled={updating}
               >
                 {updating ? (
@@ -227,7 +315,7 @@ export default function AuthCallbackPage() {
                 ) : (
                   <>
                     <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Conferma e Accedi
+                    {isRecovery ? "Aggiorna Password e Accedi" : "Conferma e Accedi"}
                   </>
                 )}
               </Button>
