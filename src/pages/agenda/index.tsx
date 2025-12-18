@@ -108,6 +108,252 @@ export default function AgendaPage() {
     return inSede ? "#10B981" : "#EF4444"; // VERDE - In sede, ROSSO - Fuori sede
   };
 
+  // Funzione per generare file .ics (iCalendar) per email
+  const generaFileICS = (evento: any): string => {
+    const formatDateICS = (dateString: string): string => {
+      const date = new Date(dateString);
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Studio Manager Pro//Agenda//IT',
+      'BEGIN:VEVENT',
+      `UID:${evento.id || Date.now()}@studiomanagerpro.it`,
+      `DTSTAMP:${formatDateICS(new Date().toISOString())}`,
+      `DTSTART:${formatDateICS(evento.data_inizio)}`,
+      `DTEND:${formatDateICS(evento.data_fine)}`,
+      `SUMMARY:${evento.titolo}`,
+      evento.descrizione ? `DESCRIPTION:${evento.descrizione.replace(/\n/g, '\\n')}` : '',
+      evento.luogo ? `LOCATION:${evento.luogo}` : '',
+      'STATUS:CONFIRMED',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].filter(Boolean).join('\r\n');
+
+    return icsContent;
+  };
+
+  // Funzione per preparare e inviare email ai partecipanti
+  const inviaEmailPartecipanti = async (partecipantiIds: string[], eventoData: any) => {
+    if (partecipantiIds.length === 0) return;
+
+    try {
+      // Recupera dati completi partecipanti
+      const partecipantiCompleti = utenti.filter(u => partecipantiIds.includes(u.id));
+      
+      // Recupera dati cliente se presente
+      const clienteData = eventoData.cliente_id 
+        ? clienti.find(c => c.id === eventoData.cliente_id)
+        : null;
+
+      // Genera link Google Maps se c'è un indirizzo
+      const googleMapsLink = eventoData.luogo 
+        ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(eventoData.luogo)}`
+        : null;
+
+      // Genera file .ics per allegato calendario
+      const icsFile = generaFileICS(eventoData);
+
+      // Prepara i dati per l'email
+      const emailData = {
+        destinatari: partecipantiCompleti.map(p => ({
+          email: p.email,
+          nome: `${p.nome} ${p.cognome}`
+        })),
+        oggetto: `Nuovo Evento: ${eventoData.titolo}`,
+        corpo: {
+          titolo: eventoData.titolo,
+          descrizione: eventoData.descrizione,
+          dataInizio: new Date(eventoData.data_inizio).toLocaleString('it-IT', {
+            dateStyle: 'full',
+            timeStyle: 'short'
+          }),
+          dataFine: new Date(eventoData.data_fine).toLocaleString('it-IT', {
+            dateStyle: 'full',
+            timeStyle: 'short'
+          }),
+          tuttoGiorno: eventoData.tutto_giorno,
+          cliente: clienteData ? {
+            ragioneSociale: clienteData.ragione_sociale,
+            indirizzo: `${clienteData.indirizzo}, ${clienteData.cap} ${clienteData.citta} (${clienteData.provincia})`,
+            telefono: clienteData.telefono,
+            email: clienteData.email
+          } : null,
+          eventoGenerico: !eventoData.cliente_id,
+          inSede: eventoData.in_sede,
+          sala: eventoData.sala,
+          luogo: eventoData.luogo,
+          googleMapsLink: googleMapsLink,
+          numeroPartecipanti: partecipantiIds.length,
+          tipoEvento: eventoData.evento_generico ? 'Evento Generico' : 
+                      eventoData.in_sede ? 'Appuntamento in Sede' : 'Appuntamento Fuori Sede'
+        },
+        allegati: [
+          {
+            filename: `evento-${eventoData.titolo.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`,
+            content: icsFile,
+            contentType: 'text/calendar'
+          }
+        ]
+      };
+
+      // TODO: Integrare con servizio email (SendGrid, AWS SES, Resend, ecc.)
+      // Esempio con SendGrid:
+      /*
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: emailData.destinatari,
+          subject: emailData.oggetto,
+          html: generaTemplateEmail(emailData.corpo),
+          attachments: emailData.allegati
+        })
+      });
+      
+      if (!response.ok) throw new Error('Errore invio email');
+      */
+
+      // Per ora: log dei dati preparati
+      console.log('📧 Email preparata per invio:', emailData);
+      
+      // Simulazione invio riuscito
+      return {
+        success: true,
+        destinatari: partecipantiCompleti.length,
+        emailData
+      };
+
+    } catch (error) {
+      console.error('Errore preparazione email:', error);
+      throw error;
+    }
+  };
+
+  // Template HTML per email (pronto per l'invio)
+  const generaTemplateEmail = (dati: any): string => {
+    const coloreEvento = dati.eventoGenerico ? '#3B82F6' : 
+                        dati.inSede ? '#10B981' : '#EF4444';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nuovo Evento - Studio Manager Pro</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="margin: 0; font-size: 24px;">📅 Nuovo Evento in Agenda</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Studio Manager Pro</p>
+        </div>
+
+        <!-- Contenuto -->
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+          
+          <!-- Tipo Evento Badge -->
+          <div style="margin-bottom: 20px;">
+            <span style="background: ${coloreEvento}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+              ${dati.tipoEvento}
+            </span>
+          </div>
+
+          <!-- Titolo Evento -->
+          <h2 style="color: ${coloreEvento}; margin: 0 0 20px 0; font-size: 22px;">
+            ${dati.titolo}
+          </h2>
+
+          <!-- Descrizione -->
+          ${dati.descrizione ? `
+            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid ${coloreEvento};">
+              <p style="margin: 0; color: #555;">${dati.descrizione}</p>
+            </div>
+          ` : ''}
+
+          <!-- Info Evento -->
+          <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            
+            <!-- Data e Ora -->
+            <div style="margin-bottom: 15px; padding: 10px; background: #f0f9ff; border-radius: 6px;">
+              <p style="margin: 0; font-weight: bold; color: #0284c7;">📅 Data e Ora</p>
+              <p style="margin: 5px 0 0 0; color: #333;">
+                <strong>Inizio:</strong> ${dati.dataInizio}<br>
+                <strong>Fine:</strong> ${dati.dataFine}
+                ${dati.tuttoGiorno ? '<br><em>Evento tutto il giorno</em>' : ''}
+              </p>
+            </div>
+
+            <!-- Cliente (se presente) -->
+            ${dati.cliente ? `
+              <div style="margin-bottom: 15px; padding: 10px; background: #fef3c7; border-radius: 6px;">
+                <p style="margin: 0; font-weight: bold; color: #d97706;">🏢 Cliente</p>
+                <p style="margin: 5px 0 0 0; color: #333;">
+                  <strong>${dati.cliente.ragioneSociale}</strong><br>
+                  ${dati.cliente.indirizzo}<br>
+                  📞 ${dati.cliente.telefono || 'N/D'}<br>
+                  ✉️ ${dati.cliente.email}
+                </p>
+              </div>
+            ` : ''}
+
+            <!-- Luogo -->
+            ${dati.inSede ? `
+              <div style="margin-bottom: 15px; padding: 10px; background: #d1fae5; border-radius: 6px;">
+                <p style="margin: 0; font-weight: bold; color: #059669;">🏢 Sede Studio</p>
+                ${dati.sala ? `<p style="margin: 5px 0 0 0; color: #333;"><strong>Sala:</strong> ${dati.sala}</p>` : ''}
+              </div>
+            ` : ''}
+
+            ${dati.luogo && !dati.inSede ? `
+              <div style="margin-bottom: 15px; padding: 10px; background: #fee2e2; border-radius: 6px;">
+                <p style="margin: 0; font-weight: bold; color: #dc2626;">📍 Fuori Sede</p>
+                <p style="margin: 5px 0 0 0; color: #333;">${dati.luogo}</p>
+                ${dati.googleMapsLink ? `
+                  <a href="${dati.googleMapsLink}" 
+                     style="display: inline-block; margin-top: 10px; background: #dc2626; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                    🗺️ Apri in Google Maps
+                  </a>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Partecipanti -->
+            ${dati.numeroPartecipanti > 1 ? `
+              <div style="padding: 10px; background: #ede9fe; border-radius: 6px;">
+                <p style="margin: 0; font-weight: bold; color: #7c3aed;">👥 Partecipanti</p>
+                <p style="margin: 5px 0 0 0; color: #333;">
+                  ${dati.numeroPartecipanti} persone invitate a questo evento
+                </p>
+              </div>
+            ` : ''}
+
+          </div>
+
+          <!-- Allegato Calendario -->
+          <div style="background: #fff7ed; border: 2px dashed #f59e0b; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+            <p style="margin: 0; color: #92400e;">
+              📎 <strong>Allegato incluso:</strong> File .ics per aggiungere l'evento al tuo calendario
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+            <p style="margin: 0;">Questa è una notifica automatica da Studio Manager Pro</p>
+            <p style="margin: 5px 0 0 0;">Per modifiche o cancellazioni, accedi alla piattaforma</p>
+          </div>
+
+        </div>
+
+      </body>
+      </html>
+    `;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -167,12 +413,22 @@ export default function AgendaPage() {
         });
       }
 
-      // TODO: Inviare email ai partecipanti
+      // Invia email ai partecipanti
       if (partecipantiFinal.length > 0) {
-        toast({
-          title: "Info",
-          description: `${partecipantiFinal.length} partecipanti riceveranno notifica email`,
-        });
+        try {
+          const risultatoEmail = await inviaEmailPartecipanti(partecipantiFinal, dataToSave);
+          toast({
+            title: "Email preparate",
+            description: `Sistema pronto per inviare ${risultatoEmail.destinatari} email di notifica`,
+          });
+        } catch (emailError) {
+          console.error('Errore invio email:', emailError);
+          toast({
+            title: "Attenzione",
+            description: "Evento salvato ma errore nell'invio delle email",
+            variant: "destructive"
+          });
+        }
       }
 
       setDialogOpen(false);
@@ -211,11 +467,28 @@ export default function AgendaPage() {
       }
     }
 
+    // CRITICAL FIX: Convert ISO datetime to datetime-local format
+    const convertToDatetimeLocal = (isoString: string): string => {
+      if (!isoString) return "";
+      try {
+        const date = new Date(isoString);
+        // Format: YYYY-MM-DDTHH:mm (datetime-local input format)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      } catch {
+        return "";
+      }
+    };
+
     setFormData({
       titolo: evento.titolo,
       descrizione: evento.descrizione || "",
-      data_inizio: evento.data_inizio,
-      data_fine: evento.data_fine,
+      data_inizio: convertToDatetimeLocal(evento.data_inizio),
+      data_fine: convertToDatetimeLocal(evento.data_fine),
       tutto_giorno: evento.tutto_giorno || false,
       utente_id: evento.utente_id || "",
       cliente_id: evento.cliente_id || "",
