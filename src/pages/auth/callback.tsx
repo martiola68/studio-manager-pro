@@ -8,6 +8,11 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Force this page to be client-side only to avoid hydration issues
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -28,17 +33,19 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     if (!mounted) return;
     handleAuthCallback();
-  }, [mounted]);
+  }, [mounted, router]);
 
   const handleAuthCallback = async () => {
     try {
-      // STEP 1: Read query params (?) - Supabase puts type= here
+      // Get query params from URL (?)
       const urlParams = new URLSearchParams(window.location.search);
       const typeFromQuery = urlParams.get("type");
       const errorFromQuery = urlParams.get("error");
       const errorDescFromQuery = urlParams.get("error_description");
 
-      // STEP 2: Read hash params (#) - Supabase puts tokens here
+      console.log("🔍 DEBUG: Query params:", Object.fromEntries(urlParams.entries()));
+
+      // Get hash params from URL (#)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
@@ -46,8 +53,11 @@ export default function AuthCallbackPage() {
       const errorCode = hashParams.get("error_code");
       const errorDescription = hashParams.get("error_description");
 
-      // STEP 3: Combine type from query AND hash (priority to query)
+      console.log("🔍 DEBUG: Hash params:", Object.fromEntries(hashParams.entries()));
+
+      // Combine type from query AND hash (priority to query)
       const type = typeFromQuery || typeFromHash;
+      console.log("🔍 DEBUG: Type rilevato:", type);
 
       // Handle explicit errors
       if (errorFromQuery || errorCode) {
@@ -56,7 +66,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // STEP 4: If tokens in hash, set session
+      // If tokens in hash, set session
       if (accessToken && refreshToken) {
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -64,16 +74,19 @@ export default function AuthCallbackPage() {
         });
 
         if (sessionError) {
+          console.error("❌ Session error:", sessionError);
           setError("Link scaduto o non valido. Richiedi un nuovo invito o reset password.");
           setLoading(false);
           return;
         }
 
-        // STEP 5: Determine if password is needed
+        // Determine if password is needed
         const requiresPassword = type === "recovery" || 
                                 type === "invite" || 
                                 type === "signup" ||
                                 type === "magiclink";
+
+        console.log("🔍 DEBUG: Richiede password?", requiresPassword, "- Tipo:", type);
 
         if (requiresPassword) {
           setAuthType(type || "");
@@ -100,7 +113,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // STEP 6: Fallback - check existing session
+      // Fallback - check existing session
       const { data: existingSession } = await supabase.auth.getSession();
 
       if (existingSession.session) {
@@ -131,7 +144,7 @@ export default function AuthCallbackPage() {
         setLoading(false);
       }
     } catch (err) {
-      console.error("Errore gestione callback:", err);
+      console.error("❌ Errore gestione callback:", err);
       setError("Errore imprevisto. Riprova o contatta il supporto.");
       setLoading(false);
     }
@@ -177,7 +190,7 @@ export default function AuthCallbackPage() {
       router.push("/dashboard");
 
     } catch (err) {
-      console.error("Errore impostazione password:", err);
+      console.error("❌ Errore impostazione password:", err);
       setError(err instanceof Error ? err.message : "Errore durante l'impostazione della password");
       setUpdating(false);
     }
@@ -190,7 +203,7 @@ export default function AuthCallbackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50" suppressHydrationWarning>
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 text-center">
             <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -203,7 +216,7 @@ export default function AuthCallbackPage() {
 
   if (error && !needsPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4" suppressHydrationWarning>
         <Card className="w-full max-w-md border-red-200">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -233,7 +246,7 @@ export default function AuthCallbackPage() {
       : "Benvenuto in Studio Manager Pro! Crea una password sicura per accedere.";
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4" suppressHydrationWarning>
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center space-y-2">
             <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mb-2 ${
@@ -316,6 +329,17 @@ export default function AuthCallbackPage() {
                   </>
                 )}
               </Button>
+
+              <div className="text-center pt-2">
+                <Button 
+                  type="button"
+                  variant="link" 
+                  onClick={() => router.push("/login")}
+                  className="text-sm text-gray-600"
+                >
+                  ← Torna al login
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
