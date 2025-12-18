@@ -696,97 +696,136 @@ export type Database = {
       }
       tbscadestero: {
         Row: {
-          agosto: boolean | null
-          agosto_data: string | null
-          aprile: boolean | null
-          aprile_data: string | null
+          ago_invio: boolean | null
+          ago_previsto: boolean | null
+          apr_invio: boolean | null
+          apr_previsto: boolean | null
           created_at: string | null
-          dicembre: boolean | null
-          dicembre_data: string | null
-          febbraio: boolean | null
-          febbraio_data: string | null
-          gennaio: boolean | null
-          gennaio_data: string | null
-          giugno: boolean | null
-          giugno_data: string | null
+          dic_invio: boolean | null
+          dic_previsto: boolean | null
+          feb_invio: boolean | null
+          feb_previsto: boolean | null
+          gen_invio: boolean | null
+          gen_previsto: boolean | null
+          giu_invio: boolean | null
+          giu_previsto: boolean | null
           id: string
-          luglio: boolean | null
-          luglio_data: string | null
-          maggio: boolean | null
-          maggio_data: string | null
-          marzo: boolean | null
-          marzo_data: string | null
+          lug_invio: boolean | null
+          lug_previsto: boolean | null
+          mag_invio: boolean | null
+          mag_previsto: boolean | null
+          mar_invio: boolean | null
+          mar_previsto: boolean | null
+          nmese1: number | null
+          nmese10: number | null
+          nmese11: number | null
+          nmese12: number | null
+          nmese2: number | null
+          nmese3: number | null
+          nmese4: number | null
+          nmese5: number | null
+          nmese6: number | null
+          nmese7: number | null
+          nmese8: number | null
+          nmese9: number | null
           nominativo: string
-          novembre: boolean | null
-          novembre_data: string | null
-          ottobre: boolean | null
-          ottobre_data: string | null
-          settembre: boolean | null
-          settembre_data: string | null
+          nov_invio: boolean | null
+          nov_previsto: boolean | null
+          ott_invio: boolean | null
+          ott_previsto: boolean | null
+          set_invio: boolean | null
+          set_previsto: boolean | null
+          tot_doc: number | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
-          agosto?: boolean | null
-          agosto_data?: string | null
-          aprile?: boolean | null
-          aprile_data?: string | null
+          ago_invio?: boolean | null
+          ago_previsto?: boolean | null
+          apr_invio?: boolean | null
+          apr_previsto?: boolean | null
           created_at?: string | null
-          dicembre?: boolean | null
-          dicembre_data?: string | null
-          febbraio?: boolean | null
-          febbraio_data?: string | null
-          gennaio?: boolean | null
-          gennaio_data?: string | null
-          giugno?: boolean | null
-          giugno_data?: string | null
+          dic_invio?: boolean | null
+          dic_previsto?: boolean | null
+          feb_invio?: boolean | null
+          feb_previsto?: boolean | null
+          gen_invio?: boolean | null
+          gen_previsto?: boolean | null
+          giu_invio?: boolean | null
+          giu_previsto?: boolean | null
           id: string
-          luglio?: boolean | null
-          luglio_data?: string | null
-          maggio?: boolean | null
-          maggio_data?: string | null
-          marzo?: boolean | null
-          marzo_data?: string | null
+          lug_invio?: boolean | null
+          lug_previsto?: boolean | null
+          mag_invio?: boolean | null
+          mag_previsto?: boolean | null
+          mar_invio?: boolean | null
+          mar_previsto?: boolean | null
+          nmese1?: number | null
+          nmese10?: number | null
+          nmese11?: number | null
+          nmese12?: number | null
+          nmese2?: number | null
+          nmese3?: number | null
+          nmese4?: number | null
+          nmese5?: number | null
+          nmese6?: number | null
+          nmese7?: number | null
+          nmese8?: number | null
+          nmese9?: number | null
           nominativo: string
-          novembre?: boolean | null
-          novembre_data?: string | null
-          ottobre?: boolean | null
-          ottobre_data?: string | null
-          settembre?: boolean | null
-          settembre_data?: string | null
+          nov_invio?: boolean | null
+          nov_previsto?: boolean | null
+          ott_invio?: boolean | null
+          ott_previsto?: boolean | null
+          set_invio?: boolean | null
+          set_previsto?: boolean | null
+          tot_doc?: number | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
-          agosto?: boolean | null
-          agosto_data?: string | null
-          aprile?: boolean | null
-          aprile_data?: string | null
+          ago_invio?: boolean | null
+          ago_previsto?: boolean | null
+          apr_invio?: boolean | null
+          apr_previsto?: boolean | null
           created_at?: string | null
-          dicembre?: boolean | null
-          dicembre_data?: string | null
-          febbraio?: boolean | null
-          febbraio_data?: string | null
-          gennaio?: boolean | null
-          gennaio_data?: string | null
-          giugno?: boolean | null
-          giugno_data?: string | null
+          dic_invio?: boolean | null
+          dic_previsto?: boolean | null
+          feb_invio?: boolean | null
+          feb_previsto?: boolean | null
+          gen_invio?: boolean | null
+          gen_previsto?: boolean | null
+          giu_invio?: boolean | null
+          giu_previsto?: boolean | null
           id?: string
-          luglio?: boolean | null
-          luglio_data?: string | null
-          maggio?: boolean | null
-          maggio_data?: string | null
-          marzo?: boolean | null
-          marzo_data?: string | null
+          lug_invio?: boolean | null
+          lug_previsto?: boolean | null
+          mag_invio?: boolean | null
+          mag_previsto?: boolean | null
+          mar_invio?: boolean | null
+          mar_previsto?: boolean | null
+          nmese1?: number | null
+          nmese10?: number | null
+          nmese11?: number | null
+          nmese12?: number | null
+          nmese2?: number | null
+          nmese3?: number | null
+          nmese4?: number | null
+          nmese5?: number | null
+          nmese6?: number | null
+          nmese7?: number | null
+          nmese8?: number | null
+          nmese9?: number | null
           nominativo?: string
-          novembre?: boolean | null
-          novembre_data?: string | null
-          ottobre?: boolean | null
-          ottobre_data?: string | null
-          settembre?: boolean | null
-          settembre_data?: string | null
+          nov_invio?: boolean | null
+          nov_previsto?: boolean | null
+          ott_invio?: boolean | null
+          ott_previsto?: boolean | null
+          set_invio?: boolean | null
+          set_previsto?: boolean | null
+          tot_doc?: number | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null

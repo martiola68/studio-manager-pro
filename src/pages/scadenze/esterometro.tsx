@@ -16,7 +16,20 @@ import type { Database } from "@/integrations/supabase/types";
 type ScadenzaEstero = Database["public"]["Tables"]["tbscadestero"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+const MESI = [
+  { nome: "Gennaio", previsto: "gen_previsto", invio: "gen_invio", ndoc: "nmese1" },
+  { nome: "Febbraio", previsto: "feb_previsto", invio: "feb_invio", ndoc: "nmese2" },
+  { nome: "Marzo", previsto: "mar_previsto", invio: "mar_invio", ndoc: "nmese3" },
+  { nome: "Aprile", previsto: "apr_previsto", invio: "apr_invio", ndoc: "nmese4" },
+  { nome: "Maggio", previsto: "mag_previsto", invio: "mag_invio", ndoc: "nmese5" },
+  { nome: "Giugno", previsto: "giu_previsto", invio: "giu_invio", ndoc: "nmese6" },
+  { nome: "Luglio", previsto: "lug_previsto", invio: "lug_invio", ndoc: "nmese7" },
+  { nome: "Agosto", previsto: "ago_previsto", invio: "ago_invio", ndoc: "nmese8" },
+  { nome: "Settembre", previsto: "set_previsto", invio: "set_invio", ndoc: "nmese9" },
+  { nome: "Ottobre", previsto: "ott_previsto", invio: "ott_invio", ndoc: "nmese10" },
+  { nome: "Novembre", previsto: "nov_previsto", invio: "nov_invio", ndoc: "nmese11" },
+  { nome: "Dicembre", previsto: "dic_previsto", invio: "dic_invio", ndoc: "nmese12" }
+];
 
 export default function ScadenzeEsterometroPage() {
   const router = useRouter();
@@ -87,10 +100,10 @@ export default function ScadenzeEsterometroPage() {
     return data || [];
   };
 
-  const handleToggleMese = async (scadenzaId: string, mese: string, currentValue: boolean) => {
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
       const updates: any = {};
-      updates[mese] = !currentValue;
+      updates[field] = !currentValue;
       
       const { error } = await supabase
         .from("tbscadestero")
@@ -102,22 +115,25 @@ export default function ScadenzeEsterometroPage() {
       await loadData();
       toast({
         title: "Successo",
-        description: "Scadenza aggiornata"
+        description: "Campo aggiornato"
       });
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la scadenza",
+        description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
     }
   };
 
-  const handleSetData = async (scadenzaId: string, mese: string, data: string) => {
+  const handleUpdateNumeric = async (scadenzaId: string, field: string, value: string) => {
     try {
+      const numValue = value === "" ? 0 : parseInt(value, 10);
+      if (isNaN(numValue)) return;
+
       const updates: any = {};
-      updates[`${mese}_data`] = data;
+      updates[field] = numValue;
       
       const { error } = await supabase
         .from("tbscadestero")
@@ -128,10 +144,10 @@ export default function ScadenzeEsterometroPage() {
 
       await loadData();
     } catch (error) {
-      console.error("Errore aggiornamento data:", error);
+      console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la data",
+        description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
     }
@@ -170,6 +186,12 @@ export default function ScadenzeEsterometroPage() {
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find(u => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -190,7 +212,7 @@ export default function ScadenzeEsterometroPage() {
           <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario Esterometro</h1>
-              <p className="text-gray-500 mt-1">Gestione scadenze mensili Esterometro</p>
+              <p className="text-gray-500 mt-1">Gestione comunicazioni mensili con calcolo automatico totale documenti</p>
             </div>
 
             <Card className="mb-6">
@@ -251,31 +273,35 @@ export default function ScadenzeEsterometroPage() {
 
             <Card>
               <CardContent className="p-0">
-                {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Gennaio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Febbraio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Marzo</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Aprile</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Maggio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Giugno</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Luglio</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Agosto</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Settembre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Ottobre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Novembre</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Dicembre</TableHead>
+                        <TableHead className="min-w-[150px]">Professionista</TableHead>
+                        <TableHead className="min-w-[150px]">Operatore</TableHead>
+                        
+                        {MESI.map((mese) => (
+                          <TableHead key={mese.nome} className="text-center min-w-[180px] border-l">
+                            <div className="font-bold">{mese.nome}</div>
+                            <div className="grid grid-cols-3 gap-1 text-xs font-normal mt-1">
+                              <span>Prev.</span>
+                              <span>Inv.</span>
+                              <span>N.Doc</span>
+                            </div>
+                          </TableHead>
+                        ))}
+                        
+                        <TableHead className="text-center min-w-[100px] bg-blue-50 border-l-4 border-blue-400">
+                          <div className="font-bold text-blue-900">Tot Doc</div>
+                        </TableHead>
                         <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredScadenze.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={14} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={17} className="text-center py-8 text-gray-500">
                             Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
@@ -285,37 +311,70 @@ export default function ScadenzeEsterometroPage() {
                             <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
                               {scadenza.nominativo}
                             </TableCell>
+                            <TableCell className="text-sm">
+                              {getUtenteNome(scadenza.utente_professionista_id)}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {getUtenteNome(scadenza.utente_operatore_id)}
+                            </TableCell>
+                            
                             {MESI.map((mese) => {
-                              const meseValue = scadenza[mese as keyof ScadenzaEstero] as boolean | null;
-                              const meseData = scadenza[`${mese}_data` as keyof ScadenzaEstero] as string | null;
+                              const previsto = scadenza[mese.previsto as keyof ScadenzaEstero] as boolean;
+                              const invio = scadenza[mese.invio as keyof ScadenzaEstero] as boolean;
+                              const ndoc = scadenza[mese.ndoc as keyof ScadenzaEstero] as number;
                               
                               return (
-                                <TableCell key={mese} className="text-center">
-                                  <div className="flex flex-col items-center gap-2 py-2">
-                                    <div className="flex items-center gap-2">
+                                <TableCell 
+                                  key={mese.nome} 
+                                  className={`text-center border-l ${invio ? 'bg-green-50' : ''}`}
+                                >
+                                  <div className="grid grid-cols-3 gap-1 items-center">
+                                    {/* Previsto */}
+                                    <div className="flex justify-center">
                                       <input
                                         type="checkbox"
-                                        checked={meseValue || false}
-                                        onChange={() => handleToggleMese(scadenza.id, mese, meseValue || false)}
+                                        checked={previsto || false}
+                                        onChange={() => handleToggleField(scadenza.id, mese.previsto, previsto)}
                                         className="rounded w-4 h-4 cursor-pointer"
-                                        title="Attiva/Disattiva"
+                                        title="Previsto"
                                       />
-                                      <span className="text-xs text-gray-500">
-                                        {meseValue ? "Attivo" : "Off"}
-                                      </span>
                                     </div>
-                                    {meseValue && (
-                                      <Input
-                                        type="date"
-                                        value={meseData || ""}
-                                        onChange={(e) => handleSetData(scadenza.id, mese, e.target.value)}
-                                        className="w-32 text-xs"
+                                    
+                                    {/* Invio */}
+                                    <div className="flex justify-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={invio || false}
+                                        onChange={() => handleToggleField(scadenza.id, mese.invio, invio)}
+                                        className="rounded w-4 h-4 cursor-pointer"
+                                        title="Inviato"
+                                        disabled={!previsto}
                                       />
-                                    )}
+                                    </div>
+                                    
+                                    {/* N.Doc */}
+                                    <div className="flex justify-center">
+                                      <Input
+                                        type="number"
+                                        value={ndoc || 0}
+                                        onChange={(e) => handleUpdateNumeric(scadenza.id, mese.ndoc, e.target.value)}
+                                        className="w-16 h-7 text-xs text-center p-1"
+                                        min="0"
+                                      />
+                                    </div>
                                   </div>
                                 </TableCell>
                               );
                             })}
+                            
+                            {/* Totale Documenti (calcolato automaticamente) */}
+                            <TableCell className="text-center bg-blue-50 border-l-4 border-blue-400">
+                              <div className="font-bold text-blue-900 text-lg">
+                                {scadenza.tot_doc || 0}
+                              </div>
+                            </TableCell>
+                            
+                            {/* Azioni */}
                             <TableCell className="text-center">
                               <Button
                                 variant="ghost"
@@ -331,6 +390,46 @@ export default function ScadenzeEsterometroPage() {
                       )}
                     </TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legenda */}
+            <Card className="mt-4">
+              <CardContent className="py-4">
+                <div className="space-y-3">
+                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Funzionalità:</div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium mb-1">Per ogni mese:</p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-700">
+                        <li><strong>Prev.</strong> (Previsto): Indica se il mese è previsto per la comunicazione</li>
+                        <li><strong>Inv.</strong> (Invio): Attivo solo se "Previsto" è checked - Indica invio effettivo</li>
+                        <li><strong>N.Doc</strong>: Numero documenti del mese (numerico, min: 0)</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium mb-1">Calcolo Automatico:</p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-700">
+                        <li><strong>Tot Doc</strong>: Somma automatica di tutti i documenti mensili</li>
+                        <li>Aggiornato in tempo reale ad ogni modifica</li>
+                        <li>Campo readonly (sola lettura)</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-50 border border-green-200 rounded"></div>
+                      <span>Mese Inviato (verde chiaro)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-50 border border-blue-200 rounded"></div>
+                      <span>Totale Documenti (azzurro)</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
