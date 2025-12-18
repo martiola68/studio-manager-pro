@@ -178,7 +178,7 @@ export default function AgendaPage() {
           cliente: clienteData ? {
             ragioneSociale: clienteData.ragione_sociale,
             indirizzo: `${clienteData.indirizzo}, ${clienteData.cap} ${clienteData.citta} (${clienteData.provincia})`,
-            telefono: clienteData.telefono,
+            telefono: "N/D", // Campo non presente in tabella tbclienti
             email: clienteData.email
           } : null,
           eventoGenerico: !eventoData.cliente_id,
