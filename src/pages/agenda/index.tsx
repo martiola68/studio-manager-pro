@@ -22,7 +22,6 @@ type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 const SALE = ["Riunioni", "Briefing", "Stanza Personale"];
-const COLORI_EVENTO = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
 
 export default function AgendaPage() {
   const router = useRouter();
@@ -49,8 +48,7 @@ export default function AgendaPage() {
     evento_generico: false,
     in_sede: true,
     sala: "",
-    luogo: "",
-    colore: COLORI_EVENTO[0]
+    luogo: ""
   });
 
   useEffect(() => {
@@ -100,6 +98,14 @@ export default function AgendaPage() {
     }
   };
 
+  // Funzione per determinare automaticamente il colore dell'evento
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean): string => {
+    if (eventoGenerico) {
+      return "#3B82F6"; // BLU - Eventi generici
+    }
+    return inSede ? "#10B981" : "#EF4444"; // VERDE - In sede, ROSSO - Fuori sede
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -122,6 +128,9 @@ export default function AgendaPage() {
     }
 
     try {
+      // Determina automaticamente il colore
+      const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
+
       const dataToSave = {
         titolo: formData.titolo,
         descrizione: formData.descrizione,
@@ -133,7 +142,7 @@ export default function AgendaPage() {
         in_sede: formData.in_sede,
         sala: formData.sala || null,
         luogo: formData.luogo || null,
-        colore: formData.colore
+        colore: colore
       };
 
       if (editingEvento) {
@@ -176,8 +185,7 @@ export default function AgendaPage() {
       evento_generico: !evento.cliente_id,
       in_sede: evento.in_sede ?? true,
       sala: evento.sala || "",
-      luogo: evento.luogo || "",
-      colore: evento.colore || COLORI_EVENTO[0]
+      luogo: evento.luogo || ""
     });
     setDialogOpen(true);
   };
@@ -214,8 +222,7 @@ export default function AgendaPage() {
       evento_generico: false,
       in_sede: true,
       sala: "",
-      luogo: "",
-      colore: COLORI_EVENTO[0]
+      luogo: ""
     });
     setEditingEvento(null);
   };
@@ -507,6 +514,24 @@ export default function AgendaPage() {
                           Evento Generico (senza cliente)
                         </Label>
                       </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                        <p className="font-semibold mb-2">ℹ️ Colori automatici:</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
+                            <span>Blu → Evento generico (senza cliente)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
+                            <span>Verde → Appuntamento in sede</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
+                            <span>Rosso → Appuntamento fuori sede</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -562,11 +587,14 @@ export default function AgendaPage() {
                           checked={formData.in_sede}
                           onChange={(e) => setFormData({ ...formData, in_sede: e.target.checked })}
                           className="rounded"
+                          disabled={formData.evento_generico}
                         />
-                        <Label htmlFor="in_sede" className="cursor-pointer">In Sede</Label>
+                        <Label htmlFor="in_sede" className="cursor-pointer">
+                          In Sede {formData.evento_generico && "(non applicabile per eventi generici)"}
+                        </Label>
                       </div>
 
-                      {formData.in_sede && (
+                      {formData.in_sede && !formData.evento_generico && (
                         <div className="space-y-2 mb-4">
                           <Label htmlFor="sala">Sala</Label>
                           <Select
@@ -613,23 +641,6 @@ export default function AgendaPage() {
                         <p className="text-xs text-gray-500">
                           Inserisci un indirizzo per calcolare il percorso con Google Maps
                         </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Colore Evento</Label>
-                      <div className="flex gap-2">
-                        {COLORI_EVENTO.map((colore) => (
-                          <button
-                            key={colore}
-                            type="button"
-                            className={`w-8 h-8 rounded-full border-2 ${
-                              formData.colore === colore ? "border-gray-900 ring-2 ring-offset-2 ring-gray-400" : "border-transparent"
-                            }`}
-                            style={{ backgroundColor: colore }}
-                            onClick={() => setFormData({ ...formData, colore })}
-                          />
-                        ))}
                       </div>
                     </div>
 
@@ -736,8 +747,20 @@ export default function AgendaPage() {
               <CardContent>
                 <div className="flex items-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
+                    <span className="text-sm">Evento Generico</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
+                    <span className="text-sm">In Sede</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
+                    <span className="text-sm">Fuori Sede</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">Evento in Sede</span>
+                    <span className="text-sm">Con Sala Assegnata</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-600" />
@@ -745,15 +768,7 @@ export default function AgendaPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Navigation className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm">Calcola Percorso (Google Maps)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      {COLORI_EVENTO.slice(0, 3).map(c => (
-                        <div key={c} className="w-4 h-4 rounded" style={{ backgroundColor: c }}></div>
-                      ))}
-                    </div>
-                    <span className="text-sm">Colori Personalizzati</span>
+                    <span className="text-sm">Calcola Percorso</span>
                   </div>
                 </div>
               </CardContent>
