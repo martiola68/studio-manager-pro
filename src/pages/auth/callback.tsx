@@ -25,32 +25,48 @@ export default function AuthCallbackPage() {
 
   const handleAuthCallback = async () => {
     try {
-      console.log("🔍 Callback URL:", window.location.href);
+      console.log("🔍 Callback URL completo:", window.location.href);
       
-      // Controlla hash params (Supabase li usa per auth)
+      // STEP 1: Leggi PRIMA i query params (?) - Supabase mette type= qui!
+      const urlParams = new URLSearchParams(window.location.search);
+      const typeFromQuery = urlParams.get("type");
+      const errorFromQuery = urlParams.get("error");
+      const errorDescFromQuery = urlParams.get("error_description");
+      
+      console.log("📋 Query params (?):", {
+        type: typeFromQuery,
+        error: errorFromQuery,
+        errorDesc: errorDescFromQuery
+      });
+
+      // STEP 2: Leggi hash params (#) - Supabase mette i token qui
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
-      const type = hashParams.get("type");
+      const typeFromHash = hashParams.get("type");
       const errorCode = hashParams.get("error_code");
       const errorDescription = hashParams.get("error_description");
 
-      console.log("📋 Parametri ricevuti:", {
+      console.log("🔑 Hash params (#):", {
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
-        type,
+        type: typeFromHash,
         errorCode,
         errorDescription
       });
 
+      // STEP 3: Combina type da query E hash (priorità a query)
+      const type = typeFromQuery || typeFromHash;
+      console.log("🎯 Tipo finale rilevato:", type);
+
       // Gestisci errori espliciti
-      if (errorCode) {
-        setError(errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
+      if (errorFromQuery || errorCode) {
+        setError(errorDescFromQuery || errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
         setLoading(false);
         return;
       }
 
-      // Se ci sono token nell'hash, imposta la sessione
+      // STEP 4: Se ci sono token nell'hash, imposta la sessione
       if (accessToken && refreshToken) {
         console.log("🔑 Token trovati, impostazione sessione...");
         
@@ -66,16 +82,16 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        console.log("✅ Sessione impostata:", sessionData.session?.user?.email);
+        console.log("✅ Sessione impostata per:", sessionData.session?.user?.email);
         console.log("🎯 Tipo autenticazione:", type);
 
-        // Determina se serve impostare password
+        // STEP 5: Determina se serve impostare password
         const requiresPassword = type === "recovery" || 
                                 type === "invite" || 
                                 type === "signup" ||
                                 type === "magiclink";
 
-        console.log("🔐 Richiede password?", requiresPassword);
+        console.log("🔐 Richiede password?", requiresPassword, "- Tipo:", type);
 
         if (requiresPassword) {
           setAuthType(type || "");
@@ -98,39 +114,46 @@ export default function AuthCallbackPage() {
         }
 
         // Se non serve password, redirect alla dashboard
-        console.log("➡️ Redirect a dashboard...");
+        console.log("➡️ Nessuna password richiesta, redirect a dashboard...");
         router.push("/dashboard");
         return;
       }
 
-      // Fallback: controlla sessione esistente
-      console.log("🔄 Controllo sessione esistente...");
+      // STEP 6: Fallback - controlla sessione esistente
+      console.log("🔄 Nessun token trovato, controllo sessione esistente...");
       const { data: existingSession } = await supabase.auth.getSession();
 
       if (existingSession.session) {
         console.log("✅ Sessione esistente trovata");
         
-        // Controlla se serve password anche con sessione esistente
-        const user = existingSession.session.user;
-        
         // Se c'è un tipo recovery/invite nella query, mostra form password
-        const urlType = new URLSearchParams(window.location.search).get("type") || type;
-        
-        if (urlType === "recovery" || 
-            urlType === "invite" || 
-            urlType === "signup" ||
-            user.user_metadata?.invited_by) {
-          console.log("🔐 Sessione esistente richiede password");
-          setAuthType(urlType || "");
+        if (type === "recovery" || 
+            type === "invite" || 
+            type === "signup") {
+          console.log("🔐 Sessione esistente richiede password (type=", type, ")");
+          setAuthType(type || "");
           setNeedsPassword(true);
           setLoading(false);
+          
+          if (type === "recovery") {
+            toast({
+              title: "🔐 Reset Password",
+              description: "Imposta la tua nuova password per accedere"
+            });
+          }
         } else {
           console.log("➡️ Sessione esistente valida, redirect dashboard");
           router.push("/dashboard");
         }
       } else {
         console.log("❌ Nessuna sessione valida trovata");
-        setError("Link di autenticazione non valido o scaduto. Richiedi un nuovo link.");
+        
+        // Se c'è un type= ma nessuna sessione, il link è scaduto
+        if (type) {
+          setError("Link di autenticazione scaduto. Richiedi un nuovo link.");
+        } else {
+          setError("Link di autenticazione non valido. Accedi normalmente.");
+        }
         setLoading(false);
       }
     } catch (err) {
