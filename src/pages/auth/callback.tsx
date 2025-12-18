@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -19,27 +20,25 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState("");
   const [authType, setAuthType] = useState<string>("");
 
+  // Prevent hydration issues
   useEffect(() => {
-    handleAuthCallback();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    handleAuthCallback();
+  }, [mounted]);
 
   const handleAuthCallback = async () => {
     try {
-      console.log("🔍 Callback URL completo:", window.location.href);
-      
-      // STEP 1: Leggi PRIMA i query params (?) - Supabase mette type= qui!
+      // STEP 1: Read query params (?) - Supabase puts type= here
       const urlParams = new URLSearchParams(window.location.search);
       const typeFromQuery = urlParams.get("type");
       const errorFromQuery = urlParams.get("error");
       const errorDescFromQuery = urlParams.get("error_description");
-      
-      console.log("📋 Query params (?):", {
-        type: typeFromQuery,
-        error: errorFromQuery,
-        errorDesc: errorDescFromQuery
-      });
 
-      // STEP 2: Leggi hash params (#) - Supabase mette i token qui
+      // STEP 2: Read hash params (#) - Supabase puts tokens here
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
@@ -47,58 +46,41 @@ export default function AuthCallbackPage() {
       const errorCode = hashParams.get("error_code");
       const errorDescription = hashParams.get("error_description");
 
-      console.log("🔑 Hash params (#):", {
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        type: typeFromHash,
-        errorCode,
-        errorDescription
-      });
-
-      // STEP 3: Combina type da query E hash (priorità a query)
+      // STEP 3: Combine type from query AND hash (priority to query)
       const type = typeFromQuery || typeFromHash;
-      console.log("🎯 Tipo finale rilevato:", type);
 
-      // Gestisci errori espliciti
+      // Handle explicit errors
       if (errorFromQuery || errorCode) {
         setError(errorDescFromQuery || errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
         setLoading(false);
         return;
       }
 
-      // STEP 4: Se ci sono token nell'hash, imposta la sessione
+      // STEP 4: If tokens in hash, set session
       if (accessToken && refreshToken) {
-        console.log("🔑 Token trovati, impostazione sessione...");
-        
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         });
 
         if (sessionError) {
-          console.error("❌ Errore sessione:", sessionError);
           setError("Link scaduto o non valido. Richiedi un nuovo invito o reset password.");
           setLoading(false);
           return;
         }
 
-        console.log("✅ Sessione impostata per:", sessionData.session?.user?.email);
-        console.log("🎯 Tipo autenticazione:", type);
-
-        // STEP 5: Determina se serve impostare password
+        // STEP 5: Determine if password is needed
         const requiresPassword = type === "recovery" || 
                                 type === "invite" || 
                                 type === "signup" ||
                                 type === "magiclink";
-
-        console.log("🔐 Richiede password?", requiresPassword, "- Tipo:", type);
 
         if (requiresPassword) {
           setAuthType(type || "");
           setNeedsPassword(true);
           setLoading(false);
           
-          // Messaggio specifico in base al tipo
+          // Type-specific message
           if (type === "recovery") {
             toast({
               title: "🔐 Reset Password",
@@ -113,24 +95,19 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Se non serve password, redirect alla dashboard
-        console.log("➡️ Nessuna password richiesta, redirect a dashboard...");
+        // No password needed, redirect to dashboard
         router.push("/dashboard");
         return;
       }
 
-      // STEP 6: Fallback - controlla sessione esistente
-      console.log("🔄 Nessun token trovato, controllo sessione esistente...");
+      // STEP 6: Fallback - check existing session
       const { data: existingSession } = await supabase.auth.getSession();
 
       if (existingSession.session) {
-        console.log("✅ Sessione esistente trovata");
-        
-        // Se c'è un tipo recovery/invite nella query, mostra form password
+        // If recovery/invite/signup type in query, show password form
         if (type === "recovery" || 
             type === "invite" || 
             type === "signup") {
-          console.log("🔐 Sessione esistente richiede password (type=", type, ")");
           setAuthType(type || "");
           setNeedsPassword(true);
           setLoading(false);
@@ -142,13 +119,10 @@ export default function AuthCallbackPage() {
             });
           }
         } else {
-          console.log("➡️ Sessione esistente valida, redirect dashboard");
           router.push("/dashboard");
         }
       } else {
-        console.log("❌ Nessuna sessione valida trovata");
-        
-        // Se c'è un type= ma nessuna sessione, il link è scaduto
+        // If type exists but no session, link expired
         if (type) {
           setError("Link di autenticazione scaduto. Richiedi un nuovo link.");
         } else {
@@ -157,7 +131,7 @@ export default function AuthCallbackPage() {
         setLoading(false);
       }
     } catch (err) {
-      console.error("💥 Errore gestione callback:", err);
+      console.error("Errore gestione callback:", err);
       setError("Errore imprevisto. Riprova o contatta il supporto.");
       setLoading(false);
     }
@@ -179,19 +153,15 @@ export default function AuthCallbackPage() {
 
     try {
       setUpdating(true);
-      console.log("🔐 Aggiornamento password...");
 
-      // Aggiorna la password
+      // Update password
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
       if (updateError) {
-        console.error("❌ Errore aggiornamento:", updateError);
         throw updateError;
       }
-
-      console.log("✅ Password aggiornata con successo!");
 
       toast({
         title: "✅ Password impostata!",
@@ -200,19 +170,23 @@ export default function AuthCallbackPage() {
           : "Account configurato con successo. Accesso in corso..."
       });
 
-      // Breve pausa per mostrare il messaggio
+      // Brief pause to show message
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Redirect a dashboard
-      console.log("➡️ Redirect a dashboard...");
+      // Redirect to dashboard
       router.push("/dashboard");
 
     } catch (err) {
-      console.error("💥 Errore impostazione password:", err);
+      console.error("Errore impostazione password:", err);
       setError(err instanceof Error ? err.message : "Errore durante l'impostazione della password");
       setUpdating(false);
     }
   };
+
+  // Prevent hydration by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -317,7 +291,7 @@ export default function AuthCallbackPage() {
                 <p className="font-semibold mb-1">📋 Requisiti password:</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>Almeno 8 caratteri</li>
-                  <li>Si consiglia l'uso di lettere, numeri e simboli</li>
+                  <li>Si consiglia l&apos;uso di lettere, numeri e simboli</li>
                 </ul>
               </div>
 
