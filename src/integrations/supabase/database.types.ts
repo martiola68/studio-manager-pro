@@ -775,49 +775,76 @@ export type Database = {
       }
       tbscadfiscali: {
         Row: {
-          acconto1: boolean | null
-          acconto1_data: string | null
-          acconto2: boolean | null
-          acconto2_data: string | null
+          acc2: boolean | null
+          con_irap: boolean | null
+          conferma_invii: boolean | null
           conferma_riga: boolean | null
           created_at: string | null
+          data_com1: string | null
+          data_com2: string | null
+          data_i_invio: string | null
+          data_r_invio: string | null
           id: string
+          mod_i_compilato: boolean | null
+          mod_i_definitivo: boolean | null
+          mod_i_inviato: boolean | null
+          mod_r_compilato: boolean | null
+          mod_r_definitivo: boolean | null
+          mod_r_inviato: boolean | null
           nominativo: string
+          note: string | null
           ricevuta_r: boolean | null
-          saldo: boolean | null
-          saldo_data: string | null
+          saldo_acc_cciaa: boolean | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
-          acconto1?: boolean | null
-          acconto1_data?: string | null
-          acconto2?: boolean | null
-          acconto2_data?: string | null
+          acc2?: boolean | null
+          con_irap?: boolean | null
+          conferma_invii?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_com1?: string | null
+          data_com2?: string | null
+          data_i_invio?: string | null
+          data_r_invio?: string | null
           id: string
+          mod_i_compilato?: boolean | null
+          mod_i_definitivo?: boolean | null
+          mod_i_inviato?: boolean | null
+          mod_r_compilato?: boolean | null
+          mod_r_definitivo?: boolean | null
+          mod_r_inviato?: boolean | null
           nominativo: string
+          note?: string | null
           ricevuta_r?: boolean | null
-          saldo?: boolean | null
-          saldo_data?: string | null
+          saldo_acc_cciaa?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
-          acconto1?: boolean | null
-          acconto1_data?: string | null
-          acconto2?: boolean | null
-          acconto2_data?: string | null
+          acc2?: boolean | null
+          con_irap?: boolean | null
+          conferma_invii?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_com1?: string | null
+          data_com2?: string | null
+          data_i_invio?: string | null
+          data_r_invio?: string | null
           id?: string
+          mod_i_compilato?: boolean | null
+          mod_i_definitivo?: boolean | null
+          mod_i_inviato?: boolean | null
+          mod_r_compilato?: boolean | null
+          mod_r_definitivo?: boolean | null
+          mod_r_inviato?: boolean | null
           nominativo?: string
+          note?: string | null
           ricevuta_r?: boolean | null
-          saldo?: boolean | null
-          saldo_data?: string | null
+          saldo_acc_cciaa?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
