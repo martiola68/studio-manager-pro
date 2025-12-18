@@ -7,7 +7,7 @@ import { scadenzaService } from "@/services/scadenzaService";
 import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, UserCog } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
@@ -284,6 +284,12 @@ export default function DashboardPage() {
                     <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                       <FileText className="h-8 w-8 text-orange-600" />
                       <span className="text-sm font-medium">Comunicazioni</span>
+                    </Button>
+                  </Link>
+                  <Link href="/impostazioni/utenti">
+                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+                      <UserCog className="h-8 w-8 text-indigo-600" />
+                      <span className="text-sm font-medium">Utenti</span>
                     </Button>
                   </Link>
                 </div>
