@@ -583,10 +583,15 @@ export type Database = {
         Row: {
           conferma_riga: boolean | null
           created_at: string | null
+          cu_autonomi: boolean | null
+          data_invio: string | null
+          generate: boolean | null
           id: string
-          invio: boolean | null
-          invio_data: string | null
+          inserite: boolean | null
+          inviate: boolean | null
           nominativo: string
+          note: string | null
+          num_cu: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -594,10 +599,15 @@ export type Database = {
         Insert: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          cu_autonomi?: boolean | null
+          data_invio?: string | null
+          generate?: boolean | null
           id: string
-          invio?: boolean | null
-          invio_data?: string | null
+          inserite?: boolean | null
+          inviate?: boolean | null
           nominativo: string
+          note?: string | null
+          num_cu?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -605,10 +615,15 @@ export type Database = {
         Update: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          cu_autonomi?: boolean | null
+          data_invio?: string | null
+          generate?: boolean | null
           id?: string
-          invio?: boolean | null
-          invio_data?: string | null
+          inserite?: boolean | null
+          inviate?: boolean | null
           nominativo?: string
+          note?: string | null
+          num_cu?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null

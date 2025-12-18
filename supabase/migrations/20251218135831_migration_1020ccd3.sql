@@ -1,0 +1,14 @@
+-- Modifica struttura tbscadcu
+ALTER TABLE tbscadcu 
+  DROP COLUMN IF EXISTS invio,
+  DROP COLUMN IF EXISTS invio_data;
+
+-- Aggiungi nuove colonne
+ALTER TABLE tbscadcu 
+  ADD COLUMN IF NOT EXISTS cu_autonomi BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS inserite BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS generate BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS inviate BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS data_invio DATE,
+  ADD COLUMN IF NOT EXISTS num_cu TEXT,
+  ADD COLUMN IF NOT EXISTS note TEXT;
