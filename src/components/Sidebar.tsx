@@ -58,6 +58,18 @@ export function Sidebar() {
       href: "/contatti"
     },
     {
+      label: "Utenti",
+      icon: <Users className="h-5 w-5" />,
+      href: "/impostazioni/utenti",
+      adminOnly: true
+    },
+    {
+      label: "Dati Studio",
+      icon: <Settings className="h-5 w-5" />,
+      href: "/impostazioni/studio",
+      adminOnly: true
+    },
+    {
       label: "Scadenze",
       icon: <FileText className="h-5 w-5" />,
       children: [
