@@ -187,7 +187,7 @@ export default function ScadenzeLipePage() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario LIPE</h1>
               <p className="text-gray-500 mt-1">Gestione scadenze trimestrali LIPE</p>
@@ -251,17 +251,17 @@ export default function ScadenzeLipePage() {
 
             <Card>
               <CardContent className="p-0">
+                {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead className="w-[200px]">Nominativo</TableHead>
-                        {TRIMESTRI.map((trim, idx) => (
-                          <TableHead key={trim} className="text-center">
-                            T{idx + 1}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 1</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 2</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 3</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 4</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -274,20 +274,28 @@ export default function ScadenzeLipePage() {
                       ) : (
                         filteredScadenze.map((scadenza) => (
                           <TableRow key={scadenza.id}>
-                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                            {TRIMESTRI.map((trim) => {
+                            <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            {TRIMESTRI.map((trim, idx) => {
                               const trimValue = scadenza[trim as keyof ScadenzaLipe] as boolean | null;
                               const trimData = scadenza[`${trim}_data` as keyof ScadenzaLipe] as string | null;
                               
                               return (
                                 <TableCell key={trim} className="text-center">
-                                  <div className="flex flex-col items-center gap-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={trimValue || false}
-                                      onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
-                                      className="rounded"
-                                    />
+                                  <div className="flex flex-col items-center gap-2 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={trimValue || false}
+                                        onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
+                                        className="rounded w-4 h-4 cursor-pointer"
+                                        title="Attiva/Disattiva"
+                                      />
+                                      <span className="text-xs text-gray-500">
+                                        {trimValue ? "Attivo" : "Off"}
+                                      </span>
+                                    </div>
                                     {trimValue && (
                                       <Input
                                         type="date"
@@ -300,7 +308,7 @@ export default function ScadenzeLipePage() {
                                 </TableCell>
                               );
                             })}
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"

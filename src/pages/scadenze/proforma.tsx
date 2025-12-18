@@ -187,7 +187,7 @@ export default function ScadenzeProformaPage() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario Proforma</h1>
               <p className="text-gray-500 mt-1">Gestione scadenze mensili Proforma</p>
@@ -251,17 +251,25 @@ export default function ScadenzeProformaPage() {
 
             <Card>
               <CardContent className="p-0">
+                {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead className="w-[200px]">Nominativo</TableHead>
-                        {MESI.map((mese) => (
-                          <TableHead key={mese} className="text-center">
-                            {mese.charAt(0).toUpperCase() + mese.slice(1, 3)}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Gennaio</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Febbraio</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Marzo</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Aprile</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Maggio</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Giugno</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Luglio</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Agosto</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Settembre</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Ottobre</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Novembre</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Dicembre</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -274,20 +282,28 @@ export default function ScadenzeProformaPage() {
                       ) : (
                         filteredScadenze.map((scadenza) => (
                           <TableRow key={scadenza.id}>
-                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
+                            <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
                             {MESI.map((mese) => {
                               const meseValue = scadenza[mese as keyof ScadenzaProforma] as boolean | null;
                               const meseData = scadenza[`${mese}_data` as keyof ScadenzaProforma] as string | null;
                               
                               return (
                                 <TableCell key={mese} className="text-center">
-                                  <div className="flex flex-col items-center gap-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={meseValue || false}
-                                      onChange={() => handleToggleMese(scadenza.id, mese, meseValue || false)}
-                                      className="rounded"
-                                    />
+                                  <div className="flex flex-col items-center gap-2 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={meseValue || false}
+                                        onChange={() => handleToggleMese(scadenza.id, mese, meseValue || false)}
+                                        className="rounded w-4 h-4 cursor-pointer"
+                                        title="Attiva/Disattiva"
+                                      />
+                                      <span className="text-xs text-gray-500">
+                                        {meseValue ? "Attivo" : "Off"}
+                                      </span>
+                                    </div>
                                     {meseValue && (
                                       <Input
                                         type="date"
@@ -300,7 +316,7 @@ export default function ScadenzeProformaPage() {
                                 </TableCell>
                               );
                             })}
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"
