@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -48,7 +48,8 @@ export default function AgendaPage() {
     evento_generico: false,
     in_sede: true,
     sala: "",
-    luogo: ""
+    luogo: "",
+    partecipanti: [] as string[]
   });
 
   useEffect(() => {
@@ -142,7 +143,8 @@ export default function AgendaPage() {
         in_sede: formData.in_sede,
         sala: formData.sala || null,
         luogo: formData.luogo || null,
-        colore: colore
+        colore: colore,
+        partecipanti: formData.partecipanti
       };
 
       if (editingEvento) {
@@ -159,6 +161,11 @@ export default function AgendaPage() {
         });
       }
 
+      // TODO: Inviare email ai partecipanti
+      // if (formData.partecipanti.length > 0) {
+      //   await inviaNotifichePartecipanti(formData.partecipanti, dataToSave);
+      // }
+
       setDialogOpen(false);
       resetForm();
       await loadData();
@@ -174,6 +181,17 @@ export default function AgendaPage() {
 
   const handleEdit = (evento: EventoAgenda) => {
     setEditingEvento(evento);
+    
+    // Parse partecipanti from JSON
+    let partecipantiArray: string[] = [];
+    if (evento.partecipanti) {
+      try {
+        partecipantiArray = Array.isArray(evento.partecipanti) ? evento.partecipanti : [];
+      } catch {
+        partecipantiArray = [];
+      }
+    }
+
     setFormData({
       titolo: evento.titolo,
       descrizione: evento.descrizione || "",
@@ -185,7 +203,8 @@ export default function AgendaPage() {
       evento_generico: !evento.cliente_id,
       in_sede: evento.in_sede ?? true,
       sala: evento.sala || "",
-      luogo: evento.luogo || ""
+      luogo: evento.luogo || "",
+      partecipanti: partecipantiArray
     });
     setDialogOpen(true);
   };
@@ -222,7 +241,8 @@ export default function AgendaPage() {
       evento_generico: false,
       in_sede: true,
       sala: "",
-      luogo: ""
+      luogo: "",
+      partecipanti: []
     });
     setEditingEvento(null);
   };
@@ -239,6 +259,25 @@ export default function AgendaPage() {
 
     const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(indirizzo)}`;
     window.open(url, "_blank");
+  };
+
+  const togglePartecipante = (utenteId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      partecipanti: prev.partecipanti.includes(utenteId)
+        ? prev.partecipanti.filter(id => id !== utenteId)
+        : [...prev.partecipanti, utenteId]
+    }));
+  };
+
+  const getPartecipantiEvento = (evento: EventoAgenda): Utente[] => {
+    if (!evento.partecipanti) return [];
+    try {
+      const partecipantiIds = Array.isArray(evento.partecipanti) ? evento.partecipanti : [];
+      return utenti.filter(u => partecipantiIds.includes(u.id));
+    } catch {
+      return [];
+    }
   };
 
   const getEventiPerGiorno = (data: Date) => {
@@ -340,6 +379,7 @@ export default function AgendaPage() {
                 {eventiGiorno.map((evento) => {
                   const utenteEvento = utenti.find(u => u.id === evento.utente_id);
                   const clienteEvento = clienti.find(c => c.id === evento.cliente_id);
+                  const partecipantiEvento = getPartecipantiEvento(evento);
                   
                   return (
                     <div
@@ -365,6 +405,12 @@ export default function AgendaPage() {
                         <div className="flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate">{evento.luogo}</span>
+                        </div>
+                      )}
+                      {partecipantiEvento.length > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Users className="h-3 w-3" />
+                          <span>{partecipantiEvento.length} partecipanti</span>
                         </div>
                       )}
                       {clienteEvento && (
@@ -536,7 +582,7 @@ export default function AgendaPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="utente_id">Utente</Label>
+                        <Label htmlFor="utente_id">Utente Responsabile</Label>
                         <Select
                           value={formData.utente_id || "__none__"}
                           onValueChange={(value) => setFormData({ ...formData, utente_id: value === "__none__" ? "" : value })}
@@ -765,6 +811,10 @@ export default function AgendaPage() {
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-600" />
                     <span className="text-sm">Con Indirizzo</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-gray-600" />
+                    <span className="text-sm">Con Partecipanti</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Navigation className="h-4 w-4 text-blue-600" />

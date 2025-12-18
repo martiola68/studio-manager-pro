@@ -53,6 +53,7 @@ export type Database = {
           id: string
           in_sede: boolean | null
           luogo: string | null
+          partecipanti: Json | null
           sala: string | null
           titolo: string
           tutto_giorno: boolean | null
@@ -69,6 +70,7 @@ export type Database = {
           id?: string
           in_sede?: boolean | null
           luogo?: string | null
+          partecipanti?: Json | null
           sala?: string | null
           titolo: string
           tutto_giorno?: boolean | null
@@ -85,6 +87,7 @@ export type Database = {
           id?: string
           in_sede?: boolean | null
           luogo?: string | null
+          partecipanti?: Json | null
           sala?: string | null
           titolo?: string
           tutto_giorno?: boolean | null
