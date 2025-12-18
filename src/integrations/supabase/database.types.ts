@@ -516,16 +516,13 @@ export type Database = {
         Row: {
           conferma_riga: boolean | null
           created_at: string | null
+          data_comunicato: string | null
+          f24_comunicato: boolean | null
+          f24_generato: boolean | null
           id: string
+          importo_calcolato: boolean | null
           nominativo: string
-          trim1: boolean | null
-          trim1_data: string | null
-          trim2: boolean | null
-          trim2_data: string | null
-          trim3: boolean | null
-          trim3_data: string | null
-          trim4: boolean | null
-          trim4_data: string | null
+          note: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -533,16 +530,13 @@ export type Database = {
         Insert: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_comunicato?: string | null
+          f24_comunicato?: boolean | null
+          f24_generato?: boolean | null
           id: string
+          importo_calcolato?: boolean | null
           nominativo: string
-          trim1?: boolean | null
-          trim1_data?: string | null
-          trim2?: boolean | null
-          trim2_data?: string | null
-          trim3?: boolean | null
-          trim3_data?: string | null
-          trim4?: boolean | null
-          trim4_data?: string | null
+          note?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -550,16 +544,13 @@ export type Database = {
         Update: {
           conferma_riga?: boolean | null
           created_at?: string | null
+          data_comunicato?: string | null
+          f24_comunicato?: boolean | null
+          f24_generato?: boolean | null
           id?: string
+          importo_calcolato?: boolean | null
           nominativo?: string
-          trim1?: boolean | null
-          trim1_data?: string | null
-          trim2?: boolean | null
-          trim2_data?: string | null
-          trim3?: boolean | null
-          trim3_data?: string | null
-          trim4?: boolean | null
-          trim4_data?: string | null
+          note?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -842,100 +833,46 @@ export type Database = {
       }
       tbscadiva: {
         Row: {
-          agosto: boolean | null
-          agosto_data: string | null
-          aprile: boolean | null
-          aprile_data: string | null
           conferma_riga: boolean | null
           created_at: string | null
-          dicembre: boolean | null
-          dicembre_data: string | null
-          febbraio: boolean | null
-          febbraio_data: string | null
-          gennaio: boolean | null
-          gennaio_data: string | null
-          giugno: boolean | null
-          giugno_data: string | null
+          data_invio: string | null
           id: string
-          luglio: boolean | null
-          luglio_data: string | null
-          maggio: boolean | null
-          maggio_data: string | null
-          marzo: boolean | null
-          marzo_data: string | null
+          mod_definitivo: boolean | null
+          mod_inviato: boolean | null
+          mod_predisposto: boolean | null
           nominativo: string
-          novembre: boolean | null
-          novembre_data: string | null
-          ottobre: boolean | null
-          ottobre_data: string | null
-          settembre: boolean | null
-          settembre_data: string | null
+          note: string | null
+          ricevuta: boolean | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
-          agosto?: boolean | null
-          agosto_data?: string | null
-          aprile?: boolean | null
-          aprile_data?: string | null
           conferma_riga?: boolean | null
           created_at?: string | null
-          dicembre?: boolean | null
-          dicembre_data?: string | null
-          febbraio?: boolean | null
-          febbraio_data?: string | null
-          gennaio?: boolean | null
-          gennaio_data?: string | null
-          giugno?: boolean | null
-          giugno_data?: string | null
+          data_invio?: string | null
           id: string
-          luglio?: boolean | null
-          luglio_data?: string | null
-          maggio?: boolean | null
-          maggio_data?: string | null
-          marzo?: boolean | null
-          marzo_data?: string | null
+          mod_definitivo?: boolean | null
+          mod_inviato?: boolean | null
+          mod_predisposto?: boolean | null
           nominativo: string
-          novembre?: boolean | null
-          novembre_data?: string | null
-          ottobre?: boolean | null
-          ottobre_data?: string | null
-          settembre?: boolean | null
-          settembre_data?: string | null
+          note?: string | null
+          ricevuta?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
-          agosto?: boolean | null
-          agosto_data?: string | null
-          aprile?: boolean | null
-          aprile_data?: string | null
           conferma_riga?: boolean | null
           created_at?: string | null
-          dicembre?: boolean | null
-          dicembre_data?: string | null
-          febbraio?: boolean | null
-          febbraio_data?: string | null
-          gennaio?: boolean | null
-          gennaio_data?: string | null
-          giugno?: boolean | null
-          giugno_data?: string | null
+          data_invio?: string | null
           id?: string
-          luglio?: boolean | null
-          luglio_data?: string | null
-          maggio?: boolean | null
-          maggio_data?: string | null
-          marzo?: boolean | null
-          marzo_data?: string | null
+          mod_definitivo?: boolean | null
+          mod_inviato?: boolean | null
+          mod_predisposto?: boolean | null
           nominativo?: string
-          novembre?: boolean | null
-          novembre_data?: string | null
-          ottobre?: boolean | null
-          ottobre_data?: string | null
-          settembre?: boolean | null
-          settembre_data?: string | null
+          note?: string | null
+          ricevuta?: boolean | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
