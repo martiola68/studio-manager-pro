@@ -203,7 +203,7 @@ export default function ScadenzeCUPage() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario CU</h1>
               <p className="text-gray-500 mt-1">Gestione Certificazioni Uniche</p>
@@ -267,74 +267,85 @@ export default function ScadenzeCUPage() {
 
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[250px]">Nominativo</TableHead>
-                      <TableHead>Conferma</TableHead>
-                      <TableHead>Invio</TableHead>
-                      <TableHead>Data Invio</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredScadenze.length === 0 ? (
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                          Nessuna scadenza trovata
-                        </TableCell>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[250px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Invio</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Data Invio</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredScadenze.map((scadenza) => (
-                        <TableRow 
-                          key={scadenza.id}
-                          className={scadenza.conferma_riga ? "bg-green-50" : ""}
-                        >
-                          <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant={scadenza.conferma_riga ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleToggleConferma(scadenza.id, scadenza.conferma_riga)}
-                            >
-                              {scadenza.conferma_riga ? "✓" : "○"}
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={scadenza.invio || false}
-                              onChange={() => handleToggleInvio(scadenza.id, scadenza.invio)}
-                              className="rounded"
-                              disabled={!scadenza.conferma_riga}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {scadenza.invio && (
-                              <Input
-                                type="date"
-                                value={scadenza.invio_data || ""}
-                                onChange={(e) => handleSetDataInvio(scadenza.id, e.target.value)}
-                                className="w-40"
-                                disabled={!scadenza.conferma_riga}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(scadenza.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredScadenze.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                            Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredScadenze.map((scadenza) => (
+                          <TableRow 
+                            key={scadenza.id}
+                            className={scadenza.conferma_riga ? "bg-green-50" : "bg-white hover:bg-gray-50"}
+                          >
+                            <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant={scadenza.conferma_riga ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleToggleConferma(scadenza.id, scadenza.conferma_riga)}
+                                className="w-full"
+                              >
+                                {scadenza.conferma_riga ? "✓ Confermato" : "○ Conferma"}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.invio || false}
+                                  onChange={() => handleToggleInvio(scadenza.id, scadenza.invio)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={!scadenza.conferma_riga}
+                                  title={scadenza.conferma_riga ? "Attiva/Disattiva invio" : "Conferma prima la riga"}
+                                />
+                                <span className="text-xs text-gray-500">
+                                  {scadenza.invio ? "Inviato" : "Da inviare"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {scadenza.invio && (
+                                <Input
+                                  type="date"
+                                  value={scadenza.invio_data || ""}
+                                  onChange={(e) => handleSetDataInvio(scadenza.id, e.target.value)}
+                                  className="w-40 mx-auto"
+                                  disabled={!scadenza.conferma_riga}
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(scadenza.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </div>

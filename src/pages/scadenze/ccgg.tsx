@@ -211,7 +211,7 @@ export default function ScadenzeCCGGPage() {
       <div className="flex">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario CCGG</h1>
               <p className="text-gray-500 mt-1">Gestione scadenze trimestrali CCGG</p>
@@ -275,18 +275,17 @@ export default function ScadenzeCCGGPage() {
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead className="w-[200px]">Nominativo</TableHead>
-                        <TableHead>Conferma</TableHead>
-                        {TRIMESTRI.map((trim, idx) => (
-                          <TableHead key={trim} className="text-center">
-                            T{idx + 1}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Conferma</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 1</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 2</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 3</TableHead>
+                        <TableHead className="text-center min-w-[150px]">Trimestre 4</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -300,16 +299,19 @@ export default function ScadenzeCCGGPage() {
                         filteredScadenze.map((scadenza) => (
                           <TableRow 
                             key={scadenza.id}
-                            className={scadenza.conferma_riga ? "bg-green-50" : ""}
+                            className={scadenza.conferma_riga ? "bg-green-50" : "bg-white hover:bg-gray-50"}
                           >
-                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            <TableCell className="text-center">
                               <Button
                                 variant={scadenza.conferma_riga ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => handleToggleConferma(scadenza.id, scadenza.conferma_riga)}
+                                className="w-full"
                               >
-                                {scadenza.conferma_riga ? "✓" : "○"}
+                                {scadenza.conferma_riga ? "✓ Confermato" : "○ Conferma"}
                               </Button>
                             </TableCell>
                             {TRIMESTRI.map((trim) => {
@@ -318,14 +320,20 @@ export default function ScadenzeCCGGPage() {
                               
                               return (
                                 <TableCell key={trim} className="text-center">
-                                  <div className="flex flex-col items-center gap-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={trimValue || false}
-                                      onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
-                                      className="rounded"
-                                      disabled={!scadenza.conferma_riga}
-                                    />
+                                  <div className="flex flex-col items-center gap-2 py-2">
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={trimValue || false}
+                                        onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
+                                        className="rounded w-4 h-4 cursor-pointer"
+                                        disabled={!scadenza.conferma_riga}
+                                        title={scadenza.conferma_riga ? "Attiva/Disattiva" : "Conferma prima la riga"}
+                                      />
+                                      <span className="text-xs text-gray-500">
+                                        {trimValue ? "Attivo" : "Off"}
+                                      </span>
+                                    </div>
                                     {trimValue && (
                                       <Input
                                         type="date"
@@ -339,7 +347,7 @@ export default function ScadenzeCCGGPage() {
                                 </TableCell>
                               );
                             })}
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="icon"

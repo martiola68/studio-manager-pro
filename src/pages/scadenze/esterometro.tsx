@@ -251,7 +251,7 @@ export default function ScadenzeEsterometroPage() {
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>

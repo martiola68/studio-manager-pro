@@ -249,7 +249,8 @@ export default function ScadenzeFiscaliPage() {
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* CRITICAL: Wrapper con scroll visibile */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>

@@ -249,96 +249,99 @@ export default function ScadenzeBilanciPage() {
 
             <Card>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Nominativo</TableHead>
-                      <TableHead>Conferma</TableHead>
-                      <TableHead>Deposito</TableHead>
-                      <TableHead>Data Deposito</TableHead>
-                      <TableHead>Approvazione</TableHead>
-                      <TableHead>Data Approvazione</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredScadenze.length === 0 ? (
+                {/* CRITICAL: Wrapper con scroll visibile */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nessuna scadenza trovata
-                        </TableCell>
+                        <TableHead className="w-[200px]">Nominativo</TableHead>
+                        <TableHead>Conferma</TableHead>
+                        <TableHead>Deposito</TableHead>
+                        <TableHead>Data Deposito</TableHead>
+                        <TableHead>Approvazione</TableHead>
+                        <TableHead>Data Approvazione</TableHead>
+                        <TableHead className="text-right">Azioni</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredScadenze.map((scadenza) => (
-                        <TableRow 
-                          key={scadenza.id}
-                          className={scadenza.conferma_riga ? "bg-green-50" : ""}
-                        >
-                          <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant={scadenza.conferma_riga ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                            >
-                              {scadenza.conferma_riga ? "✓" : "○"}
-                            </Button>
-                          </TableCell>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={scadenza.deposito || false}
-                              onChange={() => handleToggleField(scadenza.id, "deposito", scadenza.deposito)}
-                              className="rounded"
-                              disabled={!scadenza.conferma_riga}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {scadenza.deposito && (
-                              <Input
-                                type="date"
-                                value={scadenza.deposito_data || ""}
-                                onChange={(e) => handleSetData(scadenza.id, "deposito_data", e.target.value)}
-                                className="w-32"
-                                disabled={!scadenza.conferma_riga}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={scadenza.approvazione || false}
-                              onChange={() => handleToggleField(scadenza.id, "approvazione", scadenza.approvazione)}
-                              className="rounded"
-                              disabled={!scadenza.conferma_riga}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {scadenza.approvazione && (
-                              <Input
-                                type="date"
-                                value={scadenza.approvazione_data || ""}
-                                onChange={(e) => handleSetData(scadenza.id, "approvazione_data", e.target.value)}
-                                className="w-32"
-                                disabled={!scadenza.conferma_riga}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(scadenza.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredScadenze.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredScadenze.map((scadenza) => (
+                          <TableRow 
+                            key={scadenza.id}
+                            className={scadenza.conferma_riga ? "bg-green-50" : ""}
+                          >
+                            <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant={scadenza.conferma_riga ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              >
+                                {scadenza.conferma_riga ? "✓" : "○"}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={scadenza.deposito || false}
+                                onChange={() => handleToggleField(scadenza.id, "deposito", scadenza.deposito)}
+                                className="rounded"
+                                disabled={!scadenza.conferma_riga}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {scadenza.deposito && (
+                                <Input
+                                  type="date"
+                                  value={scadenza.deposito_data || ""}
+                                  onChange={(e) => handleSetData(scadenza.id, "deposito_data", e.target.value)}
+                                  className="w-32"
+                                  disabled={!scadenza.conferma_riga}
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={scadenza.approvazione || false}
+                                onChange={() => handleToggleField(scadenza.id, "approvazione", scadenza.approvazione)}
+                                className="rounded"
+                                disabled={!scadenza.conferma_riga}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {scadenza.approvazione && (
+                                <Input
+                                  type="date"
+                                  value={scadenza.approvazione_data || ""}
+                                  onChange={(e) => handleSetData(scadenza.id, "approvazione_data", e.target.value)}
+                                  className="w-32"
+                                  disabled={!scadenza.conferma_riga}
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(scadenza.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </div>
