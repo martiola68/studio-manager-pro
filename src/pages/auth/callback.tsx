@@ -19,40 +19,89 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Aspetta che il router sia pronto
+    if (!router.isReady) return;
+    
     handleAuthCallback();
-  }, []);
+  }, [router.isReady]);
 
   const handleAuthCallback = async () => {
     try {
-      // Gestisce il callback OAuth/Magic Link/Password Reset
-      const { data, error } = await supabase.auth.getSession();
+      console.log("🔍 Query params:", router.query);
+      
+      // Controlla se ci sono hash params (Supabase li usa per auth)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const type = hashParams.get("type");
+      
+      console.log("🔑 Hash params:", { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
 
-      if (error) {
-        console.error("Errore callback auth:", error);
-        setError("Errore durante l'autenticazione. Riprova.");
+      // Se ci sono token nell'hash, imposta la sessione
+      if (accessToken && refreshToken) {
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (sessionError) {
+          console.error("❌ Errore impostazione sessione:", sessionError);
+          setError("Errore durante l'autenticazione. Link scaduto o non valido.");
+          setLoading(false);
+          return;
+        }
+
+        console.log("✅ Sessione impostata:", data);
+
+        // Se è un invite o recovery, mostra il form password
+        if (type === "invite" || type === "recovery" || type === "signup") {
+          console.log("📝 Richiesta impostazione password per tipo:", type);
+          setNeedsPassword(true);
+          setLoading(false);
+          return;
+        }
+
+        // Altrimenti redirect alla dashboard
+        console.log("➡️ Redirect a dashboard");
+        router.push("/dashboard");
+        return;
+      }
+
+      // Fallback: controlla sessione esistente
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("❌ Errore verifica sessione:", sessionError);
+        setError("Errore durante la verifica della sessione.");
         setLoading(false);
         return;
       }
 
-      if (data.session) {
-        // Verifica se l'utente deve impostare la password
-        const user = data.session.user;
+      if (sessionData.session) {
+        console.log("✅ Sessione esistente trovata");
         
-        // Se è un nuovo utente invitato o reset password, chiede di impostare password
-        if (user.user_metadata?.invited_by || router.query.type === "recovery") {
+        // Verifica se è un nuovo utente che deve impostare password
+        const user = sessionData.session.user;
+        const isNewUser = user.user_metadata?.invited_by || 
+                          router.query.type === "recovery" || 
+                          router.query.type === "invite";
+
+        if (isNewUser) {
+          console.log("📝 Nuovo utente - mostra form password");
           setNeedsPassword(true);
           setLoading(false);
         } else {
-          // Utente già configurato, redirect a dashboard
+          console.log("➡️ Utente esistente - redirect a dashboard");
           router.push("/dashboard");
         }
       } else {
-        setError("Sessione non valida. Riprova.");
+        console.log("⚠️ Nessuna sessione valida trovata");
+        setError("Link di autenticazione non valido o scaduto. Richiedi un nuovo invito.");
         setLoading(false);
       }
     } catch (err) {
-      console.error("Errore gestione callback:", err);
-      setError("Errore imprevisto. Riprova.");
+      console.error("❌ Errore gestione callback:", err);
+      setError("Errore imprevisto. Riprova o contatta il supporto.");
       setLoading(false);
     }
   };
@@ -74,14 +123,19 @@ export default function AuthCallbackPage() {
     try {
       setUpdating(true);
 
+      console.log("🔐 Aggiornamento password...");
+
       // Aggiorna la password
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
       if (updateError) {
+        console.error("❌ Errore aggiornamento password:", updateError);
         throw updateError;
       }
+
+      console.log("✅ Password impostata con successo!");
 
       toast({
         title: "✅ Password impostata!",
@@ -94,7 +148,7 @@ export default function AuthCallbackPage() {
       }, 1000);
 
     } catch (err) {
-      console.error("Errore impostazione password:", err);
+      console.error("❌ Errore impostazione password:", err);
       setError(err instanceof Error ? err.message : "Errore durante l'impostazione della password");
       setUpdating(false);
     }
@@ -106,7 +160,8 @@ export default function AuthCallbackPage() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 text-center">
             <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-600">Verifica in corso...</p>
+            <p className="text-gray-600">Verifica credenziali in corso...</p>
+            <p className="text-xs text-gray-500 mt-2">Attendere prego</p>
           </CardContent>
         </Card>
       </div>
@@ -125,6 +180,16 @@ export default function AuthCallbackPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-red-700">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+              <p className="font-semibold mb-1">💡 Cosa fare:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Torna alla pagina di login</li>
+                <li>Accedi con l'account demo (admin@studiodemo.it / Demo123!)</li>
+                <li>Vai su Impostazioni → Utenti</li>
+                <li>Clicca l'icona 🔄 "Reset Password" sul tuo utente</li>
+                <li>Controlla l'email e clicca il NUOVO link</li>
+              </ul>
+            </div>
             <Button 
               onClick={() => router.push("/login")} 
               className="w-full"
@@ -142,12 +207,12 @@ export default function AuthCallbackPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
         <Card className="w-full max-w-md shadow-2xl">
           <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg mb-2">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-600 to-green-800 rounded-2xl flex items-center justify-center shadow-lg mb-2">
               <Lock className="h-8 w-8 text-white" />
             </div>
-            <CardTitle className="text-2xl">Imposta la tua Password</CardTitle>
+            <CardTitle className="text-2xl">🎉 Imposta la tua Password</CardTitle>
             <p className="text-gray-600 text-sm">
-              Benvenuto in Studio Manager Pro! Imposta una password sicura per accedere.
+              Benvenuto in Studio Manager Pro! Crea una password sicura per accedere al sistema.
             </p>
           </CardHeader>
           <CardContent>
@@ -170,6 +235,7 @@ export default function AuthCallbackPage() {
                   required
                   disabled={updating}
                   minLength={8}
+                  className="h-11"
                 />
               </div>
 
@@ -184,28 +250,29 @@ export default function AuthCallbackPage() {
                   required
                   disabled={updating}
                   minLength={8}
+                  className="h-11"
                 />
               </div>
 
               <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-900">
-                <p className="font-semibold mb-1">💡 Consigli per una password sicura:</p>
+                <p className="font-semibold mb-1">💡 Requisiti password:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Almeno 8 caratteri</li>
+                  <li>Minimo 8 caratteri</li>
                   <li>Usa lettere maiuscole e minuscole</li>
-                  <li>Includi numeri e simboli</li>
-                  <li>Non usare password facilmente indovinabili</li>
+                  <li>Includi numeri e/o simboli</li>
+                  <li>Evita password facili da indovinare</li>
                 </ul>
               </div>
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="w-full h-11 text-base bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                 disabled={updating}
               >
                 {updating ? (
                   <>
                     <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Salvataggio...
+                    Salvataggio in corso...
                   </>
                 ) : (
                   <>
