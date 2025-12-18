@@ -987,49 +987,94 @@ export type Database = {
       }
       tbscadlipe: {
         Row: {
+          acconto: string | null
+          acconto_com: boolean | null
+          ago: boolean | null
+          apr: boolean | null
           created_at: string | null
+          dic: boolean | null
+          feb: boolean | null
+          gen: boolean | null
+          giu: boolean | null
           id: string
+          lipe1t: boolean | null
+          lipe1t_invio: string | null
+          lipe2t: boolean | null
+          lipe2t_invio: string | null
+          lipe3t: boolean | null
+          lipe3t_invio: string | null
+          lipe4t: boolean | null
+          lipe4t_invio: string | null
+          lug: boolean | null
+          mag: boolean | null
+          mar: boolean | null
           nominativo: string
-          trim1: boolean | null
-          trim1_data: string | null
-          trim2: boolean | null
-          trim2_data: string | null
-          trim3: boolean | null
-          trim3_data: string | null
-          trim4: boolean | null
-          trim4_data: string | null
+          nov: boolean | null
+          ott: boolean | null
+          set: boolean | null
+          tipo_liq: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
+          acconto?: string | null
+          acconto_com?: boolean | null
+          ago?: boolean | null
+          apr?: boolean | null
           created_at?: string | null
+          dic?: boolean | null
+          feb?: boolean | null
+          gen?: boolean | null
+          giu?: boolean | null
           id: string
+          lipe1t?: boolean | null
+          lipe1t_invio?: string | null
+          lipe2t?: boolean | null
+          lipe2t_invio?: string | null
+          lipe3t?: boolean | null
+          lipe3t_invio?: string | null
+          lipe4t?: boolean | null
+          lipe4t_invio?: string | null
+          lug?: boolean | null
+          mag?: boolean | null
+          mar?: boolean | null
           nominativo: string
-          trim1?: boolean | null
-          trim1_data?: string | null
-          trim2?: boolean | null
-          trim2_data?: string | null
-          trim3?: boolean | null
-          trim3_data?: string | null
-          trim4?: boolean | null
-          trim4_data?: string | null
+          nov?: boolean | null
+          ott?: boolean | null
+          set?: boolean | null
+          tipo_liq?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
+          acconto?: string | null
+          acconto_com?: boolean | null
+          ago?: boolean | null
+          apr?: boolean | null
           created_at?: string | null
+          dic?: boolean | null
+          feb?: boolean | null
+          gen?: boolean | null
+          giu?: boolean | null
           id?: string
+          lipe1t?: boolean | null
+          lipe1t_invio?: string | null
+          lipe2t?: boolean | null
+          lipe2t_invio?: string | null
+          lipe3t?: boolean | null
+          lipe3t_invio?: string | null
+          lipe4t?: boolean | null
+          lipe4t_invio?: string | null
+          lug?: boolean | null
+          mag?: boolean | null
+          mar?: boolean | null
           nominativo?: string
-          trim1?: boolean | null
-          trim1_data?: string | null
-          trim2?: boolean | null
-          trim2_data?: string | null
-          trim3?: boolean | null
-          trim3_data?: string | null
-          trim4?: boolean | null
-          trim4_data?: string | null
+          nov?: boolean | null
+          ott?: boolean | null
+          set?: boolean | null
+          tipo_liq?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null

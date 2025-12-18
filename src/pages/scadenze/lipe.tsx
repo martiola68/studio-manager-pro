@@ -16,8 +16,6 @@ import type { Database } from "@/integrations/supabase/types";
 type ScadenzaLipe = Database["public"]["Tables"]["tbscadlipe"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const TRIMESTRI = ["trim1", "trim2", "trim3", "trim4"];
-
 export default function ScadenzeLipePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -87,10 +85,10 @@ export default function ScadenzeLipePage() {
     return data || [];
   };
 
-  const handleToggleTrimestre = async (scadenzaId: string, trimestre: string, currentValue: boolean) => {
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
       const updates: any = {};
-      updates[trimestre] = !currentValue;
+      updates[field] = !currentValue;
       
       const { error } = await supabase
         .from("tbscadlipe")
@@ -102,22 +100,22 @@ export default function ScadenzeLipePage() {
       await loadData();
       toast({
         title: "Successo",
-        description: "Scadenza aggiornata"
+        description: "Campo aggiornato"
       });
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la scadenza",
+        description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
     }
   };
 
-  const handleSetData = async (scadenzaId: string, trimestre: string, data: string) => {
+  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
     try {
       const updates: any = {};
-      updates[`${trimestre}_data`] = data;
+      updates[field] = value || null;
       
       const { error } = await supabase
         .from("tbscadlipe")
@@ -128,10 +126,10 @@ export default function ScadenzeLipePage() {
 
       await loadData();
     } catch (error) {
-      console.error("Errore aggiornamento data:", error);
+      console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la data",
+        description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
     }
@@ -170,6 +168,28 @@ export default function ScadenzeLipePage() {
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find(u => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
+  // Determina se un mese è abilitato in base al tipo di liquidazione
+  const isMeseEnabled = (scadenza: ScadenzaLipe, mese: string): boolean => {
+    const tipoLiq = scadenza.tipo_liq;
+    
+    // Se Mensile (M), tutti i mesi sono attivi
+    if (tipoLiq === "M") return true;
+    
+    // Se Trimestrale (T), solo i mesi di chiusura trimestre sono attivi
+    if (tipoLiq === "T") {
+      return ["mar", "giu", "set", "dic"].includes(mese);
+    }
+    
+    // Default: abilitato
+    return true;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -189,8 +209,8 @@ export default function ScadenzeLipePage() {
         <main className="flex-1 p-8">
           <div className="max-w-full mx-auto">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Scadenzario LIPE</h1>
-              <p className="text-gray-500 mt-1">Gestione scadenze trimestrali LIPE</p>
+              <h1 className="text-3xl font-bold text-gray-900">Scadenzario Iva per. e Lipe</h1>
+              <p className="text-gray-500 mt-1">Gestione liquidazioni IVA mensili/trimestrali e comunicazioni LIPE</p>
             </div>
 
             <Card className="mb-6">
@@ -251,78 +271,362 @@ export default function ScadenzeLipePage() {
 
             <Card>
               <CardContent className="p-0">
-                {/* CRITICAL: Wrapper con scroll visibile */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Trimestre 1</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Trimestre 2</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Trimestre 3</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Trimestre 4</TableHead>
+                        <TableHead className="min-w-[150px]">Professionista</TableHead>
+                        <TableHead className="min-w-[150px]">Operatore</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Tipo Liq</TableHead>
+                        
+                        {/* Trimestre 1 */}
+                        <TableHead className="text-center min-w-[80px] bg-blue-50">Gen</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-blue-50">Feb</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-blue-50">Mar</TableHead>
+                        <TableHead className="text-center min-w-[100px] bg-blue-100">Lipe 1T</TableHead>
+                        <TableHead className="text-center min-w-[140px] bg-blue-100">Data Invio 1T</TableHead>
+                        
+                        {/* Trimestre 2 */}
+                        <TableHead className="text-center min-w-[80px] bg-green-50">Apr</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-green-50">Mag</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-green-50">Giu</TableHead>
+                        <TableHead className="text-center min-w-[100px] bg-green-100">Lipe 2T</TableHead>
+                        <TableHead className="text-center min-w-[140px] bg-green-100">Data Invio 2T</TableHead>
+                        
+                        {/* Trimestre 3 */}
+                        <TableHead className="text-center min-w-[80px] bg-yellow-50">Lug</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-yellow-50">Ago</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-yellow-50">Set</TableHead>
+                        <TableHead className="text-center min-w-[100px] bg-yellow-100">Lipe 3T</TableHead>
+                        <TableHead className="text-center min-w-[140px] bg-yellow-100">Data Invio 3T</TableHead>
+                        
+                        {/* Trimestre 4 + Acconto */}
+                        <TableHead className="text-center min-w-[80px] bg-red-50">Ott</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-red-50">Nov</TableHead>
+                        <TableHead className="text-center min-w-[120px] bg-orange-100">Acconto</TableHead>
+                        <TableHead className="text-center min-w-[120px] bg-orange-100">Acc. Com</TableHead>
+                        <TableHead className="text-center min-w-[80px] bg-red-50">Dic</TableHead>
+                        <TableHead className="text-center min-w-[100px] bg-red-100">Lipe 4T</TableHead>
+                        <TableHead className="text-center min-w-[140px] bg-red-100">Data Invio 4T</TableHead>
+                        
                         <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredScadenze.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={28} className="text-center py-8 text-gray-500">
                             Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredScadenze.map((scadenza) => (
-                          <TableRow key={scadenza.id}>
-                            <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
-                              {scadenza.nominativo}
-                            </TableCell>
-                            {TRIMESTRI.map((trim, idx) => {
-                              const trimValue = scadenza[trim as keyof ScadenzaLipe] as boolean | null;
-                              const trimData = scadenza[`${trim}_data` as keyof ScadenzaLipe] as string | null;
+                        filteredScadenze.map((scadenza) => {
+                          const tipoLiq = scadenza.tipo_liq || "M";
+                          const acconto = scadenza.acconto || "Non dovuto";
+                          const isAccontoComEnabled = acconto === "Dovuto";
+                          
+                          return (
+                            <TableRow key={scadenza.id}>
+                              <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
+                                {scadenza.nominativo}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {getUtenteNome(scadenza.utente_professionista_id)}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {getUtenteNome(scadenza.utente_operatore_id)}
+                              </TableCell>
                               
-                              return (
-                                <TableCell key={trim} className="text-center">
-                                  <div className="flex flex-col items-center gap-2 py-2">
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        checked={trimValue || false}
-                                        onChange={() => handleToggleTrimestre(scadenza.id, trim, trimValue || false)}
-                                        className="rounded w-4 h-4 cursor-pointer"
-                                        title="Attiva/Disattiva"
-                                      />
-                                      <span className="text-xs text-gray-500">
-                                        {trimValue ? "Attivo" : "Off"}
-                                      </span>
-                                    </div>
-                                    {trimValue && (
-                                      <Input
-                                        type="date"
-                                        value={trimData || ""}
-                                        onChange={(e) => handleSetData(scadenza.id, trim, e.target.value)}
-                                        className="w-32 text-xs"
-                                      />
-                                    )}
-                                  </div>
-                                </TableCell>
-                              );
-                            })}
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(scadenza.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                              {/* Tipo Liq */}
+                              <TableCell className="text-center">
+                                <Select
+                                  value={tipoLiq}
+                                  onValueChange={(value) => handleUpdateField(scadenza.id, "tipo_liq", value)}
+                                >
+                                  <SelectTrigger className="w-20 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="M">M</SelectItem>
+                                    <SelectItem value="T">T</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+
+                              {/* TRIMESTRE 1 */}
+                              <TableCell className="text-center bg-blue-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.gen || false}
+                                  onChange={() => handleToggleField(scadenza.id, "gen", scadenza.gen)}
+                                  disabled={!isMeseEnabled(scadenza, "gen")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-blue-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.feb || false}
+                                  onChange={() => handleToggleField(scadenza.id, "feb", scadenza.feb)}
+                                  disabled={!isMeseEnabled(scadenza, "feb")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-blue-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.mar || false}
+                                  onChange={() => handleToggleField(scadenza.id, "mar", scadenza.mar)}
+                                  disabled={!isMeseEnabled(scadenza, "mar")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-blue-100">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.lipe1t || false}
+                                  onChange={() => handleToggleField(scadenza.id, "lipe1t", scadenza.lipe1t)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-blue-100">
+                                <Input
+                                  type="date"
+                                  value={scadenza.lipe1t_invio || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "lipe1t_invio", e.target.value)}
+                                  className="w-36 text-xs"
+                                />
+                              </TableCell>
+
+                              {/* TRIMESTRE 2 */}
+                              <TableCell className="text-center bg-green-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.apr || false}
+                                  onChange={() => handleToggleField(scadenza.id, "apr", scadenza.apr)}
+                                  disabled={!isMeseEnabled(scadenza, "apr")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-green-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.mag || false}
+                                  onChange={() => handleToggleField(scadenza.id, "mag", scadenza.mag)}
+                                  disabled={!isMeseEnabled(scadenza, "mag")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-green-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.giu || false}
+                                  onChange={() => handleToggleField(scadenza.id, "giu", scadenza.giu)}
+                                  disabled={!isMeseEnabled(scadenza, "giu")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-green-100">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.lipe2t || false}
+                                  onChange={() => handleToggleField(scadenza.id, "lipe2t", scadenza.lipe2t)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-green-100">
+                                <Input
+                                  type="date"
+                                  value={scadenza.lipe2t_invio || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "lipe2t_invio", e.target.value)}
+                                  className="w-36 text-xs"
+                                />
+                              </TableCell>
+
+                              {/* TRIMESTRE 3 */}
+                              <TableCell className="text-center bg-yellow-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.lug || false}
+                                  onChange={() => handleToggleField(scadenza.id, "lug", scadenza.lug)}
+                                  disabled={!isMeseEnabled(scadenza, "lug")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-yellow-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.ago || false}
+                                  onChange={() => handleToggleField(scadenza.id, "ago", scadenza.ago)}
+                                  disabled={!isMeseEnabled(scadenza, "ago")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-yellow-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.set || false}
+                                  onChange={() => handleToggleField(scadenza.id, "set", scadenza.set)}
+                                  disabled={!isMeseEnabled(scadenza, "set")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-yellow-100">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.lipe3t || false}
+                                  onChange={() => handleToggleField(scadenza.id, "lipe3t", scadenza.lipe3t)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-yellow-100">
+                                <Input
+                                  type="date"
+                                  value={scadenza.lipe3t_invio || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "lipe3t_invio", e.target.value)}
+                                  className="w-36 text-xs"
+                                />
+                              </TableCell>
+
+                              {/* TRIMESTRE 4 + ACCONTO */}
+                              <TableCell className="text-center bg-red-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.ott || false}
+                                  onChange={() => handleToggleField(scadenza.id, "ott", scadenza.ott)}
+                                  disabled={!isMeseEnabled(scadenza, "ott")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-red-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.nov || false}
+                                  onChange={() => handleToggleField(scadenza.id, "nov", scadenza.nov)}
+                                  disabled={!isMeseEnabled(scadenza, "nov")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              
+                              {/* Acconto */}
+                              <TableCell className="text-center bg-orange-100">
+                                <Select
+                                  value={acconto}
+                                  onValueChange={(value) => handleUpdateField(scadenza.id, "acconto", value)}
+                                >
+                                  <SelectTrigger className="w-full text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Dovuto">Dovuto</SelectItem>
+                                    <SelectItem value="Non dovuto">Non dovuto</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="text-center bg-orange-100">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.acconto_com || false}
+                                  onChange={() => handleToggleField(scadenza.id, "acconto_com", scadenza.acconto_com)}
+                                  disabled={!isAccontoComEnabled}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              
+                              <TableCell className="text-center bg-red-50">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.dic || false}
+                                  onChange={() => handleToggleField(scadenza.id, "dic", scadenza.dic)}
+                                  disabled={!isMeseEnabled(scadenza, "dic")}
+                                  className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-red-100">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.lipe4t || false}
+                                  onChange={() => handleToggleField(scadenza.id, "lipe4t", scadenza.lipe4t)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center bg-red-100">
+                                <Input
+                                  type="date"
+                                  value={scadenza.lipe4t_invio || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "lipe4t_invio", e.target.value)}
+                                  className="w-36 text-xs"
+                                />
+                              </TableCell>
+
+                              {/* Azioni */}
+                              <TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(scadenza.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legenda */}
+            <Card className="mt-4">
+              <CardContent className="py-4">
+                <div className="space-y-3">
+                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Colori e Funzionalità:</div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium mb-1">Tipo Liquidazione:</p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-700">
+                        <li><strong>M (Mensile)</strong>: Tutti i mesi attivi</li>
+                        <li><strong>T (Trimestrale)</strong>: Solo Mar, Giu, Set, Dic attivi</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium mb-1">Acconto IVA (4° Trimestre):</p>
+                      <ul className="list-disc list-inside space-y-1 text-gray-700">
+                        <li><strong>Dovuto</strong>: Acconto Com abilitato</li>
+                        <li><strong>Non dovuto</strong>: Acconto Com disabilitato</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 border border-blue-200 rounded"></div>
+                      <span>Trimestre 1 (Gen-Feb-Mar)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-100 border border-green-200 rounded"></div>
+                      <span>Trimestre 2 (Apr-Mag-Giu)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-yellow-100 border border-yellow-200 rounded"></div>
+                      <span>Trimestre 3 (Lug-Ago-Set)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-red-100 border border-red-200 rounded"></div>
+                      <span>Trimestre 4 (Ott-Nov-Dic)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-orange-100 border border-orange-200 rounded"></div>
+                      <span>Acconto IVA</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
