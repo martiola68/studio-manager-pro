@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Edit, Trash2, Search } from "lucide-react";
+import { UserPlus, Edit, Trash2, Search, Mail, RotateCcw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -28,6 +28,8 @@ export default function GestioneUtentiPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -99,22 +101,79 @@ export default function GestioneUtentiPage() {
     return data || [];
   };
 
+  const inviteUser = async (email: string, nome: string, cognome: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessione non valida");
+
+      const response = await fetch("/api/auth/invite-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ email, nome, cognome })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Errore durante l'invio dell'invito");
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Errore invito utente:", error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.nome || !formData.cognome || !formData.email) {
+      toast({
+        title: "Errore",
+        description: "Compila tutti i campi obbligatori",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      setInviting(true);
+
       if (editingUtente) {
+        // Modifica utente esistente - solo aggiornamento DB
         await utenteService.updateUtente(editingUtente.id, formData);
         toast({
-          title: "Successo",
-          description: "Utente aggiornato con successo"
+          title: "✅ Utente aggiornato",
+          description: "Le modifiche sono state salvate con successo"
         });
       } else {
-        await utenteService.createUtente(formData);
-        toast({
-          title: "Successo",
-          description: "Utente creato con successo"
-        });
+        // Nuovo utente - crea su DB + invia invito
+        
+        // 1. Crea utente nel DB
+        const newUtente = await utenteService.createUtente(formData);
+        
+        // 2. Invia invito via email (crea account Supabase Auth)
+        try {
+          await inviteUser(formData.email, formData.nome, formData.cognome);
+          
+          toast({
+            title: "✅ Utente creato e invitato!",
+            description: `Email di invito inviata a ${formData.email}. L'utente riceverà un link per impostare la password.`,
+            duration: 6000
+          });
+        } catch (inviteError) {
+          console.error("Errore invio invito:", inviteError);
+          toast({
+            title: "⚠️ Utente creato, invio email fallito",
+            description: "L'utente è stato creato nel sistema ma l'email di invito non è stata inviata. Puoi reinviare l'invito dalla lista utenti.",
+            variant: "destructive",
+            duration: 8000
+          });
+        }
       }
 
       setDialogOpen(false);
@@ -124,9 +183,76 @@ export default function GestioneUtentiPage() {
       console.error("Errore salvataggio:", error);
       toast({
         title: "Errore",
-        description: "Impossibile salvare l'utente",
+        description: error instanceof Error ? error.message : "Impossibile salvare l'utente",
         variant: "destructive"
       });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleResendInvite = async (utente: Utente) => {
+    if (!confirm(`Inviare una nuova email di invito a ${utente.email}?`)) return;
+
+    try {
+      setResettingPassword(utente.id);
+      await inviteUser(utente.email, utente.nome, utente.cognome);
+      
+      toast({
+        title: "✅ Invito reinviato",
+        description: `Email di invito inviata a ${utente.email}`,
+        duration: 5000
+      });
+    } catch (error) {
+      console.error("Errore reinvio invito:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inviare l'invito. Riprova.",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(null);
+    }
+  };
+
+  const handleResetPassword = async (utente: Utente) => {
+    if (!confirm(`Inviare email di reset password a ${utente.email}?`)) return;
+
+    try {
+      setResettingPassword(utente.id);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sessione non valida");
+
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ email: utente.email })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Errore durante il reset password");
+      }
+
+      toast({
+        title: "✅ Email inviata",
+        description: `Email di reset password inviata a ${utente.email}`,
+        duration: 5000
+      });
+    } catch (error) {
+      console.error("Errore reset password:", error);
+      toast({
+        title: "Errore",
+        description: error instanceof Error ? error.message : "Impossibile inviare l'email di reset",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(null);
     }
   };
 
@@ -144,13 +270,13 @@ export default function GestioneUtentiPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo utente?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questo utente?\n\nATTENZIONE: Questo eliminerà solo l'utente dal database. L'account Supabase Auth rimarrà attivo.")) return;
 
     try {
       await utenteService.deleteUtente(id);
       toast({
-        title: "Successo",
-        description: "Utente eliminato con successo"
+        title: "✅ Utente eliminato",
+        description: "L'utente è stato rimosso dal sistema"
       });
       await loadData();
     } catch (error) {
@@ -202,7 +328,7 @@ export default function GestioneUtentiPage() {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
-                <p className="text-gray-500 mt-1">Crea e gestisci gli utenti del sistema</p>
+                <p className="text-gray-500 mt-1">Invita e gestisci gli utenti del sistema</p>
               </div>
               <Dialog open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
@@ -211,16 +337,18 @@ export default function GestioneUtentiPage() {
                 <DialogTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Nuovo Utente
+                    Invita Nuovo Utente
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingUtente ? "Modifica Utente" : "Nuovo Utente"}
+                      {editingUtente ? "Modifica Utente" : "Invita Nuovo Utente"}
                     </DialogTitle>
                     <DialogDescription>
-                      Inserisci i dati dell'utente
+                      {editingUtente 
+                        ? "Modifica i dati dell'utente" 
+                        : "L'utente riceverà un'email con un link per impostare la password"}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -253,7 +381,11 @@ export default function GestioneUtentiPage() {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
+                        disabled={!!editingUtente}
                       />
+                      {editingUtente && (
+                        <p className="text-xs text-gray-500">L'email non può essere modificata</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -309,14 +441,40 @@ export default function GestioneUtentiPage() {
                       <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
                     </div>
 
+                    {!editingUtente && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-blue-900">
+                            <p className="font-semibold">📧 Come funziona l'invito:</p>
+                            <ol className="list-decimal list-inside mt-2 space-y-1">
+                              <li>L'utente riceve un'email con un link sicuro</li>
+                              <li>Cliccando il link, imposta la sua password</li>
+                              <li>Può subito accedere al sistema</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1">
-                        {editingUtente ? "Aggiorna" : "Crea"} Utente
+                      <Button type="submit" className="flex-1" disabled={inviting}>
+                        {inviting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {editingUtente ? "Aggiornamento..." : "Invio..."}
+                          </>
+                        ) : (
+                          <>
+                            {editingUtente ? "Aggiorna" : "Crea e Invita"} Utente
+                          </>
+                        )}
                       </Button>
                       <Button 
                         type="button" 
                         variant="outline" 
                         onClick={() => setDialogOpen(false)}
+                        disabled={inviting}
                       >
                         Annulla
                       </Button>
@@ -387,14 +545,42 @@ export default function GestioneUtentiPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleEdit(utente)}
+                                  title="Modifica utente"
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
+                                  onClick={() => handleResendInvite(utente)}
+                                  title="Reinvia invito"
+                                  disabled={resettingPassword === utente.id}
+                                >
+                                  {resettingPassword === utente.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-4 w-4 text-blue-600" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleResetPassword(utente)}
+                                  title="Reset password"
+                                  disabled={resettingPassword === utente.id}
+                                >
+                                  {resettingPassword === utente.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="h-4 w-4 text-orange-600" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={() => handleDelete(utente.id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  title="Elimina utente"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -406,6 +592,23 @@ export default function GestioneUtentiPage() {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardContent className="py-4">
+                <div className="flex items-start gap-3 text-sm">
+                  <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-2">📧 Azioni disponibili:</p>
+                    <ul className="space-y-1 text-gray-700">
+                      <li><strong>✏️ Modifica</strong> - Aggiorna dati utente</li>
+                      <li><strong>📨 Reinvia Invito</strong> - Invia nuova email di configurazione account</li>
+                      <li><strong>🔄 Reset Password</strong> - Invia email per reimpostare password</li>
+                      <li><strong>🗑️ Elimina</strong> - Rimuovi utente dal sistema</li>
+                    </ul>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
