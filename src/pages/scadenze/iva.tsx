@@ -26,8 +26,8 @@ export default function ScadenzeIvaPage() {
   const [scadenze, setScadenze] = useState<ScadenzaIva[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterOperatore, setFilterOperatore] = useState("");
-  const [filterProfessionista, setFilterProfessionista] = useState("");
+  const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -190,8 +190,8 @@ export default function ScadenzeIvaPage() {
 
   const filteredScadenze = scadenze.filter(s => {
     const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchOperatore = !filterOperatore || s.utente_operatore_id === filterOperatore;
-    const matchProfessionista = !filterProfessionista || s.utente_professionista_id === filterProfessionista;
+    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
@@ -244,7 +244,7 @@ export default function ScadenzeIvaPage() {
                         <SelectValue placeholder="Tutti" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tutti</SelectItem>
+                        <SelectItem value="__all__">Tutti</SelectItem>
                         {utenti.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.nome} {u.cognome}
@@ -261,7 +261,7 @@ export default function ScadenzeIvaPage() {
                         <SelectValue placeholder="Tutti" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tutti</SelectItem>
+                        <SelectItem value="__all__">Tutti</SelectItem>
                         {utenti.map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.nome} {u.cognome}
