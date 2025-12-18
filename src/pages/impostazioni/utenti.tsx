@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Edit, Trash2, Search, Mail, RotateCcw, Loader2 } from "lucide-react";
+import { UserPlus, Edit, UserX, Search, Mail, RotateCcw, Loader2, UserCheck, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -26,6 +26,7 @@ export default function GestioneUtentiPage() {
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [ruoli, setRuoli] = useState<RuoloOperatore[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
   const [inviting, setInviting] = useState(false);
@@ -154,7 +155,7 @@ export default function GestioneUtentiPage() {
         // Nuovo utente - crea su DB + invia invito
         
         // 1. Crea utente nel DB
-        const newUtente = await utenteService.createUtente(formData);
+        await utenteService.createUtente(formData);
         
         // 2. Invia invito via email (crea account Supabase Auth)
         try {
@@ -256,6 +257,35 @@ export default function GestioneUtentiPage() {
     }
   };
 
+  const handleToggleStatus = async (utente: Utente) => {
+    const newStatus = !utente.attivo;
+    const action = newStatus ? "riattivare" : "disattivare";
+    
+    if (!confirm(`Sei sicuro di voler ${action} l'utente ${utente.nome} ${utente.cognome}?\n\n${newStatus ? "L'utente potrà nuovamente accedere al sistema." : "L'utente NON potrà più accedere al sistema, ma tutti i suoi dati e assegnazioni rimarranno intatti."}`)) {
+      return;
+    }
+
+    try {
+      await utenteService.updateUtente(utente.id, { attivo: newStatus });
+      
+      toast({
+        title: newStatus ? "✅ Utente riattivato" : "✅ Utente disattivato",
+        description: newStatus 
+          ? `${utente.nome} ${utente.cognome} può nuovamente accedere al sistema`
+          : `${utente.nome} ${utente.cognome} non può più accedere al sistema`,
+      });
+      
+      await loadData();
+    } catch (error) {
+      console.error("Errore cambio stato:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile modificare lo stato dell'utente",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEdit = (utente: Utente) => {
     setEditingUtente(utente);
     setFormData({
@@ -267,26 +297,6 @@ export default function GestioneUtentiPage() {
       attivo: utente.attivo ?? true
     });
     setDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo utente?\n\nATTENZIONE: Questo eliminerà solo l'utente dal database. L'account Supabase Auth rimarrà attivo.")) return;
-
-    try {
-      await utenteService.deleteUtente(id);
-      toast({
-        title: "✅ Utente eliminato",
-        description: "L'utente è stato rimosso dal sistema"
-      });
-      await loadData();
-    } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare l'utente",
-        variant: "destructive"
-      });
-    }
   };
 
   const resetForm = () => {
@@ -301,11 +311,22 @@ export default function GestioneUtentiPage() {
     setEditingUtente(null);
   };
 
-  const filteredUtenti = utenti.filter(u =>
-    u.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.cognome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUtenti = utenti.filter(u => {
+    const matchSearch = 
+      u.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.cognome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchStatus = 
+      filterStatus === "all" ? true :
+      filterStatus === "active" ? (u.attivo ?? true) :
+      !(u.attivo ?? true);
+    
+    return matchSearch && matchStatus;
+  });
+
+  const activeCount = utenti.filter(u => u.attivo ?? true).length;
+  const inactiveCount = utenti.filter(u => !(u.attivo ?? true)).length;
 
   if (loading) {
     return (
@@ -484,8 +505,24 @@ export default function GestioneUtentiPage() {
               </Dialog>
             </div>
 
-            <Card>
+            {/* Filtri e Statistiche */}
+            <Card className="mb-6">
               <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Filtri e Ricerca</CardTitle>
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4 text-green-600" />
+                      <span className="font-semibold">{activeCount} Attivi</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <UserX className="h-4 w-4 text-gray-400" />
+                      <span className="font-semibold">{inactiveCount} Disattivati</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
                 <div className="flex items-center gap-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -496,9 +533,25 @@ export default function GestioneUtentiPage() {
                       className="pl-10"
                     />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <Select value={filterStatus} onValueChange={(value: "all" | "active" | "inactive") => setFilterStatus(value)}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tutti gli utenti</SelectItem>
+                        <SelectItem value="active">Solo attivi</SelectItem>
+                        <SelectItem value="inactive">Solo disattivati</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -521,8 +574,10 @@ export default function GestioneUtentiPage() {
                     ) : (
                       filteredUtenti.map((utente) => {
                         const ruolo = ruoli.find(r => r.id === utente.ruolo_operatore_id);
+                        const isActive = utente.attivo ?? true;
+                        
                         return (
-                          <TableRow key={utente.id}>
+                          <TableRow key={utente.id} className={!isActive ? "opacity-60 bg-gray-50" : ""}>
                             <TableCell className="font-medium">{utente.nome}</TableCell>
                             <TableCell>{utente.cognome}</TableCell>
                             <TableCell>{utente.email}</TableCell>
@@ -535,8 +590,8 @@ export default function GestioneUtentiPage() {
                               {ruolo ? ruolo.ruolo : "-"}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={utente.attivo ? "default" : "secondary"}>
-                                {utente.attivo ? "Attivo" : "Non attivo"}
+                              <Badge variant={isActive ? "default" : "secondary"}>
+                                {isActive ? "✓ Attivo" : "○ Disattivato"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
@@ -578,11 +633,15 @@ export default function GestioneUtentiPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDelete(utente.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  title="Elimina utente"
+                                  onClick={() => handleToggleStatus(utente)}
+                                  title={isActive ? "Disattiva utente" : "Riattiva utente"}
+                                  className={isActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  {isActive ? (
+                                    <UserX className="h-4 w-4" />
+                                  ) : (
+                                    <UserCheck className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>
@@ -605,8 +664,13 @@ export default function GestioneUtentiPage() {
                       <li><strong>✏️ Modifica</strong> - Aggiorna dati utente</li>
                       <li><strong>📨 Reinvia Invito</strong> - Invia nuova email di configurazione account</li>
                       <li><strong>🔄 Reset Password</strong> - Invia email per reimpostare password</li>
-                      <li><strong>🗑️ Elimina</strong> - Rimuovi utente dal sistema</li>
+                      <li><strong>👤 Disattiva/Riattiva</strong> - Gestisce l'accesso al sistema (dati e assegnazioni rimangono intatti)</li>
                     </ul>
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded">
+                      <p className="text-amber-900 text-xs">
+                        ℹ️ <strong>Disattivare un utente</strong> è la scelta consigliata invece di eliminarlo: impedisce l'accesso ma mantiene intatti tutti i dati storici (clienti assegnati, scadenze, appuntamenti).
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
