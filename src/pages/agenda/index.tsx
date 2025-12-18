@@ -186,7 +186,9 @@ export default function AgendaPage() {
     let partecipantiArray: string[] = [];
     if (evento.partecipanti) {
       try {
-        partecipantiArray = Array.isArray(evento.partecipanti) ? evento.partecipanti : [];
+        partecipantiArray = Array.isArray(evento.partecipanti) 
+          ? evento.partecipanti.map(p => String(p)) 
+          : [];
       } catch {
         partecipantiArray = [];
       }
@@ -273,7 +275,9 @@ export default function AgendaPage() {
   const getPartecipantiEvento = (evento: EventoAgenda): Utente[] => {
     if (!evento.partecipanti) return [];
     try {
-      const partecipantiIds = Array.isArray(evento.partecipanti) ? evento.partecipanti : [];
+      const partecipantiIds = Array.isArray(evento.partecipanti) 
+        ? evento.partecipanti.map(p => String(p)) 
+        : [];
       return utenti.filter(u => partecipantiIds.includes(u.id));
     } catch {
       return [];
