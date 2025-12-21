@@ -3,7 +3,7 @@
 export type TipoUtente = "Admin" | "User";
 export type TipoCliente = "Interno" | "Esterno";
 
-// Costanti per le scadenze
+// Costanti per le scadenze - VALORI EFFETTIVI
 export const SCADENZE_KEYS = {
   IVA: "IVA",
   CCGG: "CCGG",
@@ -15,6 +15,9 @@ export const SCADENZE_KEYS = {
   ESTEROMETRO: "Esterometro",
   PROFORMA: "Proforma"
 } as const;
+
+// Tipo derivato dai VALORI (non dalle chiavi)
+export type TipoScadenza = typeof SCADENZE_KEYS[keyof typeof SCADENZE_KEYS];
 
 export interface Studio {
   ID_Studio: string;
@@ -93,7 +96,6 @@ export interface Contatto {
   DataUltimaModifica: string;
 }
 
-export type TipoScadenza = typeof SCADENZE_KEYS[keyof typeof SCADENZE_KEYS];
 export type StatoScadenza = "InAttesa" | "InLavorazione" | "Completata" | "Annullata";
 
 export interface Scadenza {

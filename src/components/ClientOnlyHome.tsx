@@ -31,7 +31,7 @@ export default function ClientOnlyHome() {
     checkAuth();
   }, [mounted, router]);
 
-  // Rendering consistente SSR/CSR
+  // Rendering consistente SSR/CSR - SEMPRE lo stesso HTML
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <div className="text-center">
