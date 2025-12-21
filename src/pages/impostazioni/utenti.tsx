@@ -181,7 +181,7 @@ export default function GestioneUtentiPage() {
         }
 
         // Determina password da usare
-        const passwordToUse = useAutoPassword ? generateSecurePassword() : formData.password;
+        const passwordToUse = useAutoPassword ? "" : formData.password;
 
         if (!useAutoPassword && (!passwordToUse || passwordToUse.length < 8)) {
           toast({
@@ -192,24 +192,30 @@ export default function GestioneUtentiPage() {
           return;
         }
 
-        // Crea utente in Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          password: passwordToUse,
-          email_confirm: true,
-          user_metadata: {
+        // Chiama API per creare utente in Auth
+        const response = await fetch("/api/auth/create-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: passwordToUse,
             nome: formData.nome,
-            cognome: formData.cognome
-          }
+            cognome: formData.cognome,
+            useAutoPassword
+          })
         });
 
-        if (authError) {
-          console.error("Errore creazione Auth:", authError);
-          throw new Error(`Errore creazione account: ${authError.message}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.details || result.error || "Errore creazione utente");
         }
 
-        // Crea utente nel DB
-        await utenteService.createUtente({
+        // Crea utente nel DB con l'ID restituito dall'API
+        await supabase.from("tbutenti").insert({
+          id: result.userId,
           nome: formData.nome,
           cognome: formData.cognome,
           email: formData.email,
@@ -220,7 +226,7 @@ export default function GestioneUtentiPage() {
         
         // Mostra la password usata
         const message = useAutoPassword 
-          ? `Password generata: ${passwordToUse}\n\nComunica questa password all'utente.`
+          ? `Password generata: ${result.password}\n\nComunica questa password all'utente.`
           : `Utente creato con la password fornita.`;
         
         alert(`✅ UTENTE CREATO!\n\nEmail: ${formData.email}\n${message}`);
@@ -228,7 +234,7 @@ export default function GestioneUtentiPage() {
         // Copia password negli appunti se auto-generata
         if (useAutoPassword) {
           try {
-            await navigator.clipboard.writeText(passwordToUse);
+            await navigator.clipboard.writeText(result.password);
             toast({
               title: "✅ Password copiata!",
               description: "La password è stata copiata negli appunti"
@@ -267,35 +273,37 @@ export default function GestioneUtentiPage() {
       `Oppure lascia vuoto per generare una password automatica.`
     );
 
-    if (newPassword === null) return; // User cancelled
+    if (newPassword === null) return;
 
     try {
       setResettingPassword(utente.id);
 
-      const passwordToUse = newPassword.trim() === "" ? generateSecurePassword() : newPassword.trim();
-
-      if (passwordToUse.length < 8) {
-        toast({
-          title: "Errore",
-          description: "La password deve essere di almeno 8 caratteri",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Usa l'API admin di Supabase direttamente
-      const { error } = await supabase.auth.admin.updateUserById(utente.id, {
-        password: passwordToUse
+      // Chiama API per reset password
+      const response = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: utente.id,
+          userEmail: utente.email,
+          password: newPassword.trim() || null,
+          useAutoPassword: newPassword.trim() === ""
+        })
       });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      // Mostra la password
-      const message = `✅ PASSWORD RESETTATA!\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nNuova Password:\n━━━━━━━━━━━━━━━━━━━━━━\n${passwordToUse}\n━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Comunica questa password all'utente`;
+      if (!response.ok) {
+        throw new Error(result.details || result.error || "Errore reset password");
+      }
 
-      // Copia negli appunti
+      const passwordToShow = result.tempPassword;
+
+      const message = `✅ PASSWORD RESETTATA!\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nNuova Password:\n━━━━━━━━━━━━━━━━━━━━━━\n${passwordToShow}\n━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Comunica questa password all'utente`;
+
       try {
-        await navigator.clipboard.writeText(passwordToUse);
+        await navigator.clipboard.writeText(passwordToShow);
         alert(message + "\n\n✅ Password copiata negli appunti!");
       } catch {
         alert(message);
@@ -335,13 +343,22 @@ export default function GestioneUtentiPage() {
     try {
       setLoading(true);
 
-      // 1. Elimina da Supabase Auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(utente.id);
-      if (authError) {
-        console.error("Errore eliminazione Auth:", authError);
+      // Chiama API per eliminare da Auth
+      const response = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: utente.id
+        })
+      });
+
+      if (!response.ok) {
+        console.error("Errore eliminazione Auth");
       }
 
-      // 2. Elimina dal DB
+      // Elimina dal DB
       await utenteService.deleteUtente(utente.id);
 
       toast({

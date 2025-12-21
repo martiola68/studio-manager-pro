@@ -1,21 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabaseAdmin = supabaseUrl && serviceRoleKey ? createClient(
-  supabaseUrl,
-  serviceRoleKey,
+// Admin client con Service Role Key (solo backend!)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
       persistSession: false
     }
   }
-) : null;
+);
 
-// Genera password sicura temporanea
+// Genera password sicura
 function generateSecurePassword(): string {
   const length = 16;
   const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
@@ -41,56 +39,52 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!supabaseAdmin) {
-    return res.status(500).json({ 
-      error: "Configurazione server non valida",
-      details: "Service Role Key mancante o non valida"
-    });
-  }
-
   try {
-    const { userId, userEmail, password, useAutoPassword } = req.body;
+    const { email, password, nome, cognome, useAutoPassword } = req.body;
 
-    if (!userId || !userEmail) {
-      return res.status(400).json({ error: "userId e userEmail richiesti" });
+    if (!email || !nome || !cognome) {
+      return res.status(400).json({ error: "Email, nome e cognome richiesti" });
     }
 
     // Determina password da usare
-    const tempPassword = useAutoPassword || !password 
-      ? generateSecurePassword() 
-      : password;
+    const passwordToUse = useAutoPassword ? generateSecurePassword() : password;
 
-    if (tempPassword.length < 8) {
+    if (!passwordToUse || passwordToUse.length < 8) {
       return res.status(400).json({ error: "Password deve essere almeno 8 caratteri" });
     }
 
-    // Aggiorna password usando Admin API
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      { password: tempPassword }
-    );
+    // Crea utente in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: passwordToUse,
+      email_confirm: true,
+      user_metadata: {
+        nome,
+        cognome
+      }
+    });
 
-    if (error) {
-      console.error("Errore Supabase Admin:", error);
-      return res.status(500).json({ 
-        error: "Errore durante il reset della password",
-        details: error.message,
-        code: error.code
+    if (authError) {
+      console.error("Errore creazione Auth:", authError);
+      return res.status(400).json({ 
+        error: "Errore creazione account", 
+        details: authError.message 
       });
     }
 
+    // Restituisci i dati
     return res.status(200).json({
       success: true,
-      tempPassword,
-      message: "Password resettata con successo"
+      userId: authData.user.id,
+      password: passwordToUse,
+      email: authData.user.email
     });
 
   } catch (error: any) {
-    console.error("Errore API reset password:", error);
+    console.error("Errore API create-user:", error);
     return res.status(500).json({ 
       error: "Errore interno del server",
-      details: error.message,
-      name: error.name
+      details: error.message
     });
   }
 }
