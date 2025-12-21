@@ -310,6 +310,27 @@ export default function GenerazioneScadenzariPage() {
               else errori++;
             }
           }
+
+          // TBScadAntiric - SEMPRE generato per tutti i clienti attivi
+          const { data: existingAntiric } = await supabase
+            .from("tbscadantiric")
+            .select("id")
+            .eq("id", cliente.id)
+            .single();
+
+          if (!existingAntiric) {
+            const { error } = await supabase
+              .from("tbscadantiric")
+              .insert({
+                id: cliente.id,
+                nominativo: cliente.ragione_sociale,
+                utente_operatore_id: cliente.utente_operatore_id,
+                data_ultima_verifica: cliente.data_ultima_verifica_antiric,
+                data_scadenza: cliente.scadenza_antiric
+              });
+            if (!error) generati++;
+            else errori++;
+          }
         } catch (error) {
           console.error(`Errore elaborazione cliente ${cliente.ragione_sociale}:`, error);
           errori++;

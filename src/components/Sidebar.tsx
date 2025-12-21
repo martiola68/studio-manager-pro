@@ -112,6 +112,11 @@ export function Sidebar() {
       ]
     },
     {
+      label: "Cassetti Fiscali",
+      icon: <FileText className="h-5 w-5" />,
+      href: "/cassetti-fiscali"
+    },
+    {
       label: "Agenda",
       icon: <Calendar className="h-5 w-5" />,
       href: "/agenda"
