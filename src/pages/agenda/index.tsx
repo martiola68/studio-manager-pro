@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -31,7 +31,7 @@ export default function AgendaPage() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
-  const [vistaCorrente, setVistaCorrente] = useState<"mensile" | "settimanale">("mensile");
+  const [vistaCorrente, setVistaCorrente] = useState<"mensile" | "settimanale">("settimanale");
   const [dataSelezionata, setDataSelezionata] = useState(new Date());
   const [filtroUtente, setFiltroUtente] = useState("__all__");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -100,63 +100,54 @@ export default function AgendaPage() {
     }
   };
 
-  // Funzione per determinare automaticamente il colore dell'evento
   const getColoreEvento = (eventoGenerico: boolean, inSede: boolean): string => {
     if (eventoGenerico) {
-      return "#3B82F6"; // BLU - Eventi generici
+      return "#3B82F6";
     }
-    return inSede ? "#10B981" : "#EF4444"; // VERDE - In sede, ROSSO - Fuori sede
+    return inSede ? "#10B981" : "#EF4444";
   };
 
-  // Funzione per generare file .ics (iCalendar) per email
   const generaFileICS = (evento: any): string => {
     const formatDateICS = (dateString: string): string => {
       const date = new Date(dateString);
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
     };
 
     const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Studio Manager Pro//Agenda//IT',
-      'BEGIN:VEVENT',
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Studio Manager Pro//Agenda//IT",
+      "BEGIN:VEVENT",
       `UID:${evento.id || Date.now()}@studiomanagerpro.it`,
       `DTSTAMP:${formatDateICS(new Date().toISOString())}`,
       `DTSTART:${formatDateICS(evento.data_inizio)}`,
       `DTEND:${formatDateICS(evento.data_fine)}`,
       `SUMMARY:${evento.titolo}`,
-      evento.descrizione ? `DESCRIPTION:${evento.descrizione.replace(/\n/g, '\\n')}` : '',
-      evento.luogo ? `LOCATION:${evento.luogo}` : '',
-      'STATUS:CONFIRMED',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].filter(Boolean).join('\r\n');
+      evento.descrizione ? `DESCRIPTION:${evento.descrizione.replace(/\n/g, "\\n")}` : "",
+      evento.luogo ? `LOCATION:${evento.luogo}` : "",
+      "STATUS:CONFIRMED",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].filter(Boolean).join("\r\n");
 
     return icsContent;
   };
 
-  // Funzione per preparare e inviare email ai partecipanti
   const inviaEmailPartecipanti = async (partecipantiIds: string[], eventoData: any) => {
     if (partecipantiIds.length === 0) return;
 
     try {
-      // Recupera dati completi partecipanti
       const partecipantiCompleti = utenti.filter(u => partecipantiIds.includes(u.id));
-      
-      // Recupera dati cliente se presente
       const clienteData = eventoData.cliente_id 
         ? clienti.find(c => c.id === eventoData.cliente_id)
         : null;
 
-      // Genera link Google Maps se c'è un indirizzo
       const googleMapsLink = eventoData.luogo 
         ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(eventoData.luogo)}`
         : null;
 
-      // Genera file .ics per allegato calendario
       const icsFile = generaFileICS(eventoData);
 
-      // Prepara i dati per l'email
       const emailData = {
         destinatari: partecipantiCompleti.map(p => ({
           email: p.email,
@@ -166,19 +157,19 @@ export default function AgendaPage() {
         corpo: {
           titolo: eventoData.titolo,
           descrizione: eventoData.descrizione,
-          dataInizio: new Date(eventoData.data_inizio).toLocaleString('it-IT', {
-            dateStyle: 'full',
-            timeStyle: 'short'
+          dataInizio: new Date(eventoData.data_inizio).toLocaleString("it-IT", {
+            dateStyle: "full",
+            timeStyle: "short"
           }),
-          dataFine: new Date(eventoData.data_fine).toLocaleString('it-IT', {
-            dateStyle: 'full',
-            timeStyle: 'short'
+          dataFine: new Date(eventoData.data_fine).toLocaleString("it-IT", {
+            dateStyle: "full",
+            timeStyle: "short"
           }),
           tuttoGiorno: eventoData.tutto_giorno,
           cliente: clienteData ? {
             ragioneSociale: clienteData.ragione_sociale,
             indirizzo: `${clienteData.indirizzo}, ${clienteData.cap} ${clienteData.citta} (${clienteData.provincia})`,
-            telefono: "N/D", // Campo non presente in tabella tbclienti
+            telefono: "N/D",
             email: clienteData.email
           } : null,
           eventoGenerico: !eventoData.cliente_id,
@@ -187,39 +178,20 @@ export default function AgendaPage() {
           luogo: eventoData.luogo,
           googleMapsLink: googleMapsLink,
           numeroPartecipanti: partecipantiIds.length,
-          tipoEvento: eventoData.evento_generico ? 'Evento Generico' : 
-                      eventoData.in_sede ? 'Appuntamento in Sede' : 'Appuntamento Fuori Sede'
+          tipoEvento: eventoData.evento_generico ? "Evento Generico" : 
+                      eventoData.in_sede ? "Appuntamento in Sede" : "Appuntamento Fuori Sede"
         },
         allegati: [
           {
-            filename: `evento-${eventoData.titolo.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`,
+            filename: `evento-${eventoData.titolo.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.ics`,
             content: icsFile,
-            contentType: 'text/calendar'
+            contentType: "text/calendar"
           }
         ]
       };
 
-      // TODO: Integrare con servizio email (SendGrid, AWS SES, Resend, ecc.)
-      // Esempio con SendGrid:
-      /*
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: emailData.destinatari,
-          subject: emailData.oggetto,
-          html: generaTemplateEmail(emailData.corpo),
-          attachments: emailData.allegati
-        })
-      });
+      console.log("📧 Email preparata per invio:", emailData);
       
-      if (!response.ok) throw new Error('Errore invio email');
-      */
-
-      // Per ora: log dei dati preparati
-      console.log('📧 Email preparata per invio:', emailData);
-      
-      // Simulazione invio riuscito
       return {
         success: true,
         destinatari: partecipantiCompleti.length,
@@ -227,131 +199,9 @@ export default function AgendaPage() {
       };
 
     } catch (error) {
-      console.error('Errore preparazione email:', error);
+      console.error("Errore preparazione email:", error);
       throw error;
     }
-  };
-
-  // Template HTML per email (pronto per l'invio)
-  const generaTemplateEmail = (dati: any): string => {
-    const coloreEvento = dati.eventoGenerico ? '#3B82F6' : 
-                        dati.inSede ? '#10B981' : '#EF4444';
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Nuovo Evento - Studio Manager Pro</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="margin: 0; font-size: 24px;">📅 Nuovo Evento in Agenda</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Studio Manager Pro</p>
-        </div>
-
-        <!-- Contenuto -->
-        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
-          
-          <!-- Tipo Evento Badge -->
-          <div style="margin-bottom: 20px;">
-            <span style="background: ${coloreEvento}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-              ${dati.tipoEvento}
-            </span>
-          </div>
-
-          <!-- Titolo Evento -->
-          <h2 style="color: ${coloreEvento}; margin: 0 0 20px 0; font-size: 22px;">
-            ${dati.titolo}
-          </h2>
-
-          <!-- Descrizione -->
-          ${dati.descrizione ? `
-            <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid ${coloreEvento};">
-              <p style="margin: 0; color: #555;">${dati.descrizione}</p>
-            </div>
-          ` : ''}
-
-          <!-- Info Evento -->
-          <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            
-            <!-- Data e Ora -->
-            <div style="margin-bottom: 15px; padding: 10px; background: #f0f9ff; border-radius: 6px;">
-              <p style="margin: 0; font-weight: bold; color: #0284c7;">📅 Data e Ora</p>
-              <p style="margin: 5px 0 0 0; color: #333;">
-                <strong>Inizio:</strong> ${dati.dataInizio}<br>
-                <strong>Fine:</strong> ${dati.dataFine}
-                ${dati.tuttoGiorno ? '<br><em>Evento tutto il giorno</em>' : ''}
-              </p>
-            </div>
-
-            <!-- Cliente (se presente) -->
-            ${dati.cliente ? `
-              <div style="margin-bottom: 15px; padding: 10px; background: #fef3c7; border-radius: 6px;">
-                <p style="margin: 0; font-weight: bold; color: #d97706;">🏢 Cliente</p>
-                <p style="margin: 5px 0 0 0; color: #333;">
-                  <strong>${dati.cliente.ragioneSociale}</strong><br>
-                  ${dati.cliente.indirizzo}<br>
-                  📞 ${dati.cliente.telefono || 'N/D'}<br>
-                  ✉️ ${dati.cliente.email}
-                </p>
-              </div>
-            ` : ''}
-
-            <!-- Luogo -->
-            ${dati.inSede ? `
-              <div style="margin-bottom: 15px; padding: 10px; background: #d1fae5; border-radius: 6px;">
-                <p style="margin: 0; font-weight: bold; color: #059669;">🏢 Sede Studio</p>
-                ${dati.sala ? `<p style="margin: 5px 0 0 0; color: #333;"><strong>Sala:</strong> ${dati.sala}</p>` : ''}
-              </div>
-            ` : ''}
-
-            ${dati.luogo && !dati.inSede ? `
-              <div style="margin-bottom: 15px; padding: 10px; background: #fee2e2; border-radius: 6px;">
-                <p style="margin: 0; font-weight: bold; color: #dc2626;">📍 Fuori Sede</p>
-                <p style="margin: 5px 0 0 0; color: #333;">${dati.luogo}</p>
-                ${dati.googleMapsLink ? `
-                  <a href="${dati.googleMapsLink}" 
-                     style="display: inline-block; margin-top: 10px; background: #dc2626; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                    🗺️ Apri in Google Maps
-                  </a>
-                ` : ''}
-              </div>
-            ` : ''}
-
-            <!-- Partecipanti -->
-            ${dati.numeroPartecipanti > 1 ? `
-              <div style="padding: 10px; background: #ede9fe; border-radius: 6px;">
-                <p style="margin: 0; font-weight: bold; color: #7c3aed;">👥 Partecipanti</p>
-                <p style="margin: 5px 0 0 0; color: #333;">
-                  ${dati.numeroPartecipanti} persone invitate a questo evento
-                </p>
-              </div>
-            ` : ''}
-
-          </div>
-
-          <!-- Allegato Calendario -->
-          <div style="background: #fff7ed; border: 2px dashed #f59e0b; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
-            <p style="margin: 0; color: #92400e;">
-              📎 <strong>Allegato incluso:</strong> File .ics per aggiungere l'evento al tuo calendario
-            </p>
-          </div>
-
-          <!-- Footer -->
-          <div style="text-align: center; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 12px;">
-            <p style="margin: 0;">Questa è una notifica automatica da Studio Manager Pro</p>
-            <p style="margin: 5px 0 0 0;">Per modifiche o cancellazioni, accedi alla piattaforma</p>
-          </div>
-
-        </div>
-
-      </body>
-      </html>
-    `;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -376,10 +226,8 @@ export default function AgendaPage() {
     }
 
     try {
-      // Determina automaticamente il colore
       const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
 
-      // Se "Invia a tutti" è attivo, prendi tutti gli ID utenti
       const partecipantiFinal = formData.invia_a_tutti 
         ? utenti.map(u => u.id)
         : formData.partecipanti;
@@ -413,7 +261,6 @@ export default function AgendaPage() {
         });
       }
 
-      // Invia email ai partecipanti
       if (partecipantiFinal.length > 0) {
         try {
           const risultatoEmail = await inviaEmailPartecipanti(partecipantiFinal, dataToSave);
@@ -422,7 +269,7 @@ export default function AgendaPage() {
             description: `Sistema pronto per inviare ${risultatoEmail.destinatari} email di notifica`,
           });
         } catch (emailError) {
-          console.error('Errore invio email:', emailError);
+          console.error("Errore invio email:", emailError);
           toast({
             title: "Attenzione",
             description: "Evento salvato ma errore nell'invio delle email",
@@ -447,7 +294,6 @@ export default function AgendaPage() {
   const handleEdit = (evento: EventoAgenda) => {
     setEditingEvento(evento);
     
-    // Parse partecipanti from JSON
     let partecipantiArray: string[] = [];
     let inviaATutti = false;
     
@@ -457,7 +303,6 @@ export default function AgendaPage() {
           ? evento.partecipanti.map(p => String(p)) 
           : [];
         
-        // Se i partecipanti sono tutti gli utenti, attiva "invia a tutti"
         if (partecipantiArray.length === utenti.length && 
             utenti.every(u => partecipantiArray.includes(u.id))) {
           inviaATutti = true;
@@ -467,17 +312,15 @@ export default function AgendaPage() {
       }
     }
 
-    // CRITICAL FIX: Convert ISO datetime to datetime-local format
     const convertToDatetimeLocal = (isoString: string): string => {
       if (!isoString) return "";
       try {
         const date = new Date(isoString);
-        // Format: YYYY-MM-DDTHH:mm (datetime-local input format)
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
         return `${year}-${month}-${day}T${hours}:${minutes}`;
       } catch {
         return "";
@@ -605,9 +448,9 @@ export default function AgendaPage() {
     }
 
     return (
-      <div className="grid grid-cols-7 gap-2">
-        {["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"].map((giorno) => (
-          <div key={giorno} className="text-center font-semibold text-sm py-2 bg-gray-100 rounded">
+      <div className="grid grid-cols-7 gap-1 md:gap-2">
+        {["D", "L", "M", "M", "G", "V", "S"].map((giorno, idx) => (
+          <div key={idx} className="text-center font-semibold text-xs md:text-sm py-2 bg-gray-100 rounded">
             {giorno}
           </div>
         ))}
@@ -619,13 +462,13 @@ export default function AgendaPage() {
           return (
             <div
               key={idx}
-              className={`min-h-[100px] border rounded-lg p-2 ${
+              className={`min-h-[80px] md:min-h-[100px] border rounded-lg p-1 md:p-2 ${
                 fuoriMese ? "bg-gray-50 text-gray-400" : "bg-white"
               } ${oggi ? "ring-2 ring-blue-500" : ""}`}
             >
-              <div className="text-sm font-semibold mb-1">{data.getDate()}</div>
+              <div className="text-xs md:text-sm font-semibold mb-1">{data.getDate()}</div>
               <div className="space-y-1">
-                {eventiGiorno.slice(0, 3).map((evento) => (
+                {eventiGiorno.slice(0, 2).map((evento) => (
                   <div
                     key={evento.id}
                     className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
@@ -635,8 +478,8 @@ export default function AgendaPage() {
                     {evento.titolo}
                   </div>
                 ))}
-                {eventiGiorno.length > 3 && (
-                  <div className="text-xs text-gray-500">+{eventiGiorno.length - 3} altri</div>
+                {eventiGiorno.length > 2 && (
+                  <div className="text-xs text-gray-500">+{eventiGiorno.length - 2}</div>
                 )}
               </div>
             </div>
@@ -658,7 +501,7 @@ export default function AgendaPage() {
     }
 
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
         {giorniSettimana.map((data) => {
           const eventiGiorno = getEventiPerGiorno(data);
           const oggi = new Date().toDateString() === data.toDateString();
@@ -673,50 +516,44 @@ export default function AgendaPage() {
               </div>
               <div className="space-y-2">
                 {eventiGiorno.map((evento) => {
-                  const utenteEvento = utenti.find(u => u.id === evento.utente_id);
                   const clienteEvento = clienti.find(c => c.id === evento.cliente_id);
                   const partecipantiEvento = getPartecipantiEvento(evento);
                   
                   return (
                     <div
                       key={evento.id}
-                      className="text-xs p-2 rounded cursor-pointer hover:opacity-80"
+                      className="text-xs p-2 rounded cursor-pointer hover:opacity-80 space-y-1"
                       style={{ backgroundColor: evento.colore || "#3B82F6", color: "white" }}
                       onClick={() => handleEdit(evento)}
                     >
                       <div className="font-semibold truncate">{evento.titolo}</div>
                       {!evento.tutto_giorno && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(evento.data_inizio).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                        <div className="flex items-center gap-1 opacity-90">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{new Date(evento.data_inizio).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
                       )}
                       {evento.in_sede && evento.sala && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Building2 className="h-3 w-3" />
-                          {evento.sala}
+                        <div className="flex items-center gap-1 opacity-90">
+                          <Building2 className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{evento.sala}</span>
                         </div>
                       )}
                       {evento.luogo && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <MapPin className="h-3 w-3" />
+                        <div className="flex items-center gap-1 opacity-90">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">{evento.luogo}</span>
                         </div>
                       )}
                       {partecipantiEvento.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Users className="h-3 w-3" />
-                          <span>{partecipantiEvento.length} partecipanti</span>
+                        <div className="flex items-center gap-1 opacity-90">
+                          <Users className="h-3 w-3 flex-shrink-0" />
+                          <span>{partecipantiEvento.length}</span>
                         </div>
                       )}
                       {clienteEvento && (
-                        <div className="text-[10px] mt-1 opacity-90 truncate">
+                        <div className="text-[10px] opacity-90 truncate">
                           {clienteEvento.ragione_sociale}
-                        </div>
-                      )}
-                      {utenteEvento && (
-                        <div className="text-[10px] mt-1 opacity-90">
-                          {utenteEvento.nome} {utenteEvento.cognome}
                         </div>
                       )}
                     </div>
@@ -758,19 +595,19 @@ export default function AgendaPage() {
       <Header />
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
+            <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Agenda</h1>
-                <p className="text-gray-500 mt-1">Gestione appuntamenti e calendario</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Agenda</h1>
+                <p className="text-sm md:text-base text-gray-500 mt-1">Gestione appuntamenti e calendario</p>
               </div>
               <Dialog open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
                 if (!open) resetForm();
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
                     <Plus className="h-4 w-4 mr-2" />
                     Nuovo Evento
                   </Button>
@@ -805,7 +642,7 @@ export default function AgendaPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="data_inizio">Data/Ora Inizio *</Label>
                         <Input
@@ -834,7 +671,7 @@ export default function AgendaPage() {
                         id="tutto_giorno"
                         checked={formData.tutto_giorno}
                         onChange={(e) => setFormData({ ...formData, tutto_giorno: e.target.checked })}
-                        className="rounded"
+                        className="rounded w-4 h-4"
                       />
                       <Label htmlFor="tutto_giorno" className="cursor-pointer">Tutto il giorno</Label>
                     </div>
@@ -850,7 +687,7 @@ export default function AgendaPage() {
                             evento_generico: e.target.checked,
                             cliente_id: e.target.checked ? "" : formData.cliente_id
                           })}
-                          className="rounded"
+                          className="rounded w-4 h-4"
                         />
                         <Label htmlFor="evento_generico" className="cursor-pointer font-semibold">
                           Evento Generico (senza cliente)
@@ -862,21 +699,21 @@ export default function AgendaPage() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
-                            <span>Blu → Evento generico (senza cliente)</span>
+                            <span>Blu → Evento generico</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
-                            <span>Verde → Appuntamento in sede</span>
+                            <span>Verde → In sede</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
-                            <span>Rosso → Appuntamento fuori sede</span>
+                            <span>Rosso → Fuori sede</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="utente_id">Utente Responsabile</Label>
                         <Select
@@ -928,11 +765,11 @@ export default function AgendaPage() {
                           id="in_sede"
                           checked={formData.in_sede}
                           onChange={(e) => setFormData({ ...formData, in_sede: e.target.checked })}
-                          className="rounded"
+                          className="rounded w-4 h-4"
                           disabled={formData.evento_generico}
                         />
                         <Label htmlFor="in_sede" className="cursor-pointer">
-                          In Sede {formData.evento_generico && "(non applicabile per eventi generici)"}
+                          In Sede {formData.evento_generico && "(non applicabile)"}
                         </Label>
                       </div>
 
@@ -980,9 +817,6 @@ export default function AgendaPage() {
                             </Button>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">
-                          Inserisci un indirizzo per calcolare il percorso con Google Maps
-                        </p>
                       </div>
                     </div>
 
@@ -994,7 +828,7 @@ export default function AgendaPage() {
 
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                         <p className="text-sm text-blue-800">
-                          📧 I partecipanti selezionati riceveranno un'email con i dettagli dell'evento
+                          📧 I partecipanti riceveranno un'email con i dettagli
                         </p>
                       </div>
 
@@ -1008,16 +842,16 @@ export default function AgendaPage() {
                             invia_a_tutti: e.target.checked,
                             partecipanti: e.target.checked ? [] : formData.partecipanti
                           })}
-                          className="rounded"
+                          className="rounded w-4 h-4"
                         />
                         <Label htmlFor="invia_a_tutti" className="cursor-pointer font-semibold text-blue-700">
-                          📢 Invia notifica a TUTTI gli utenti dello studio ({utenti.length} persone)
+                          📢 Invia a TUTTI ({utenti.length} persone)
                         </Label>
                       </div>
 
                       {!formData.invia_a_tutti && (
                         <div className="space-y-2">
-                          <Label>Seleziona Partecipanti Specifici</Label>
+                          <Label>Seleziona Partecipanti</Label>
                           <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-gray-50">
                             {utenti.length === 0 ? (
                               <p className="text-sm text-gray-500 text-center py-4">
@@ -1031,7 +865,7 @@ export default function AgendaPage() {
                                     id={`part-${utente.id}`}
                                     checked={formData.partecipanti.includes(utente.id)}
                                     onChange={() => togglePartecipante(utente.id)}
-                                    className="rounded"
+                                    className="rounded w-4 h-4"
                                   />
                                   <Label 
                                     htmlFor={`part-${utente.id}`} 
@@ -1048,24 +882,16 @@ export default function AgendaPage() {
                               ))
                             )}
                           </div>
-                          {formData.partecipanti.length > 0 && !formData.invia_a_tutti && (
+                          {formData.partecipanti.length > 0 && (
                             <p className="text-sm text-gray-600 mt-2">
-                              ✅ {formData.partecipanti.length} partecipante{formData.partecipanti.length > 1 ? 'i' : ''} selezionato{formData.partecipanti.length > 1 ? 'i' : ''}
+                              ✅ {formData.partecipanti.length} partecipante{formData.partecipanti.length > 1 ? "i" : ""} selezionato{formData.partecipanti.length > 1 ? "i" : ""}
                             </p>
                           )}
                         </div>
                       )}
-
-                      {formData.invia_a_tutti && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
-                          <p className="text-sm text-green-800 font-medium">
-                            ✅ Tutti gli utenti ({utenti.length}) riceveranno la notifica email
-                          </p>
-                        </div>
-                      )}
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
                       <Button type="submit" className="flex-1">
                         {editingEvento ? "Aggiorna" : "Crea"} Evento
                       </Button>
@@ -1096,15 +922,17 @@ export default function AgendaPage() {
 
             <Card className="mb-6">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
                     <Button
                       variant="outline"
+                      size="icon"
                       onClick={() => vistaCorrente === "mensile" ? cambiaMese(-1) : cambiaSettimana(-1)}
+                      className="h-10 w-10"
                     >
-                      ←
+                      <ChevronLeft className="h-5 w-5" />
                     </Button>
-                    <CardTitle>
+                    <CardTitle className="text-base md:text-lg">
                       {dataSelezionata.toLocaleDateString("it-IT", { 
                         month: "long", 
                         year: "numeric" 
@@ -1112,21 +940,25 @@ export default function AgendaPage() {
                     </CardTitle>
                     <Button
                       variant="outline"
+                      size="icon"
                       onClick={() => vistaCorrente === "mensile" ? cambiaMese(1) : cambiaSettimana(1)}
+                      className="h-10 w-10"
                     >
-                      →
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setDataSelezionata(new Date())}
-                    >
-                      Oggi
+                      <ChevronRight className="h-5 w-5" />
                     </Button>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setDataSelezionata(new Date())}
+                      className="flex-shrink-0"
+                    >
+                      Oggi
+                    </Button>
+
                     <Select value={filtroUtente} onValueChange={setFiltroUtente}>
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Filtra per utente" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1139,7 +971,7 @@ export default function AgendaPage() {
                       </SelectContent>
                     </Select>
 
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant={vistaCorrente === "mensile" ? "default" : "outline"}
                         onClick={() => setVistaCorrente("mensile")}
@@ -1163,37 +995,33 @@ export default function AgendaPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Legenda</CardTitle>
+                <CardTitle className="text-base md:text-lg">Legenda</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-6 flex-wrap">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
-                    <span className="text-sm">Evento Generico</span>
+                    <span>Evento Generico</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
-                    <span className="text-sm">In Sede</span>
+                    <span>In Sede</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
-                    <span className="text-sm">Fuori Sede</span>
+                    <span>Fuori Sede</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">Con Sala Assegnata</span>
+                    <span>Con Sala</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">Con Indirizzo</span>
+                    <span>Con Indirizzo</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">Con Partecipanti</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Navigation className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm">Calcola Percorso</span>
+                    <span>Con Partecipanti</span>
                   </div>
                 </div>
               </CardContent>
