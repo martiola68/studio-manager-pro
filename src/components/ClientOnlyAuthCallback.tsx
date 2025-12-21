@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function ClientOnlyAuthCallback() {
   const router = useRouter();
   const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -20,68 +21,56 @@ export default function ClientOnlyAuthCallback() {
   const [authType, setAuthType] = useState<string>("");
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     handleAuthCallback();
-  }, [router]);
+  }, [mounted]);
 
   const handleAuthCallback = async () => {
     try {
-      // Get query params from URL (?)
       const urlParams = new URLSearchParams(window.location.search);
-      const typeFromQuery = urlParams.get("type");
-      const errorFromQuery = urlParams.get("error");
-      const errorDescFromQuery = urlParams.get("error_description");
-
-      console.log("🔍 DEBUG: Query params:", Object.fromEntries(urlParams.entries()));
-
-      // Get hash params from URL (#)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      const typeFromQuery = urlParams.get("type");
+      const typeFromHash = hashParams.get("type");
+      const type = typeFromQuery || typeFromHash;
+      
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
-      const typeFromHash = hashParams.get("type");
-      const errorCode = hashParams.get("error_code");
-      const errorDescription = hashParams.get("error_description");
+      const errorFromQuery = urlParams.get("error");
+      const errorDescription = urlParams.get("error_description");
 
-      console.log("🔍 DEBUG: Hash params:", Object.fromEntries(hashParams.entries()));
-
-      // Combine type from query AND hash (priority to query)
-      const type = typeFromQuery || typeFromHash;
-      console.log("🔍 DEBUG: Type rilevato:", type);
-
-      // Handle explicit errors
-      if (errorFromQuery || errorCode) {
-        setError(errorDescFromQuery || errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
+      if (errorFromQuery) {
+        setError(errorDescription || "Link non valido o scaduto. Richiedi un nuovo link.");
         setLoading(false);
         return;
       }
 
-      // If tokens in hash, set session
       if (accessToken && refreshToken) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+        const { error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken
         });
 
         if (sessionError) {
-          console.error("❌ Session error:", sessionError);
           setError("Link scaduto o non valido. Richiedi un nuovo invito o reset password.");
           setLoading(false);
           return;
         }
 
-        // Determine if password is needed
         const requiresPassword = type === "recovery" || 
                                 type === "invite" || 
                                 type === "signup" ||
                                 type === "magiclink";
-
-        console.log("🔍 DEBUG: Richiede password?", requiresPassword, "- Tipo:", type);
 
         if (requiresPassword) {
           setAuthType(type || "");
           setNeedsPassword(true);
           setLoading(false);
           
-          // Type-specific message
           if (type === "recovery") {
             toast({
               title: "🔐 Reset Password",
@@ -96,16 +85,13 @@ export default function ClientOnlyAuthCallback() {
           return;
         }
 
-        // No password needed, redirect to dashboard
         router.push("/dashboard");
         return;
       }
 
-      // Fallback - check existing session
       const { data: existingSession } = await supabase.auth.getSession();
 
       if (existingSession.session) {
-        // If recovery/invite/signup type in query, show password form
         if (type === "recovery" || 
             type === "invite" || 
             type === "signup") {
@@ -123,7 +109,6 @@ export default function ClientOnlyAuthCallback() {
           router.push("/dashboard");
         }
       } else {
-        // If type exists but no session, link expired
         if (type) {
           setError("Link di autenticazione scaduto. Richiedi un nuovo link.");
         } else {
@@ -132,7 +117,7 @@ export default function ClientOnlyAuthCallback() {
         setLoading(false);
       }
     } catch (err) {
-      console.error("❌ Errore gestione callback:", err);
+      console.error("Errore gestione callback:", err);
       setError("Errore imprevisto. Riprova o contatta il supporto.");
       setLoading(false);
     }
@@ -155,7 +140,6 @@ export default function ClientOnlyAuthCallback() {
     try {
       setUpdating(true);
 
-      // Update password
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
@@ -171,18 +155,19 @@ export default function ClientOnlyAuthCallback() {
           : "Account configurato con successo. Accesso in corso..."
       });
 
-      // Brief pause to show message
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Redirect to dashboard
       router.push("/dashboard");
 
     } catch (err) {
-      console.error("❌ Errore impostazione password:", err);
+      console.error("Errore impostazione password:", err);
       setError(err instanceof Error ? err.message : "Errore durante l'impostazione della password");
       setUpdating(false);
     }
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   if (loading) {
     return (
