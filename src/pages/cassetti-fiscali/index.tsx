@@ -15,7 +15,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 
-const CASSETTO_FISCALE_URL = "https://www.agenziaentrate.gov.it/portale/web/guest/servizi-online/servizi-te/cassetto-fiscale";
+const CASSETTO_FISCALE_URL = "https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate";
 
 export default function CassettiFiscaliPage() {
   const router = useRouter();
@@ -55,7 +55,6 @@ export default function CassettiFiscaliPage() {
     try {
       setLoading(true);
       const data = await contattoService.getContatti();
-      // Filtro solo contatti con cassetto fiscale attivo
       const contattiCassetto = data.filter(c => c.cassetto_fiscale === true);
       setContatti(contattiCassetto);
     } catch (error) {
@@ -104,7 +103,6 @@ export default function CassettiFiscaliPage() {
     try {
       await navigator.clipboard.writeText(text);
       
-      // Mostra feedback visivo
       setCopiedField(`${contattoId}-${fieldName}`);
       setTimeout(() => setCopiedField(null), 2000);
 
@@ -163,18 +161,17 @@ export default function CassettiFiscaliPage() {
                   <FolderKey className="h-8 w-8 text-blue-600" />
                   Cassetti Fiscali
                 </h1>
-                <p className="text-gray-500 mt-1">Accesso rapido ai cassetti fiscali dei clienti</p>
+                <p className="text-gray-500 mt-1">Accesso rapido - Scheda Fisconline/Entratel</p>
               </div>
               <Button 
                 onClick={apriCassettoFiscale}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                Apri Cassetto Fiscale
+                Apri Fisconline/Entratel
               </Button>
             </div>
 
-            {/* Dashboard Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <Card className="border-l-4 border-l-blue-600">
                 <CardHeader className="pb-3">
@@ -367,7 +364,6 @@ export default function CassettiFiscaliPage() {
               </CardContent>
             </Card>
 
-            {/* Info Card */}
             <Card className="mt-6 border-l-4 border-l-blue-600">
               <CardContent className="py-4">
                 <div className="flex items-start gap-3">
@@ -375,7 +371,7 @@ export default function CassettiFiscaliPage() {
                   <div className="space-y-2 text-sm">
                     <p className="font-semibold text-gray-900">💡 Come usare i Cassetti Fiscali:</p>
                     <ol className="list-decimal list-inside space-y-1 text-gray-700">
-                      <li>Clicca <strong>"Apri Cassetto Fiscale"</strong> in alto per aprire il portale Agenzia Entrate</li>
+                      <li>Clicca <strong>"Apri Fisconline/Entratel"</strong> in alto per aprire il portale Agenzia Entrate</li>
                       <li>Trova il contatto nella tabella sotto</li>
                       <li>Clicca <strong>"Copia Utente"</strong>, poi incolla nel campo del cassetto fiscale</li>
                       <li>Clicca <strong>"Copia PIN"</strong>, poi incolla nel campo del cassetto fiscale</li>
