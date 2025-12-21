@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -122,6 +122,7 @@ export type Database = {
           contatto2_id: string | null
           created_at: string | null
           data_creazione: string | null
+          data_ultima_verifica_antiric: string | null
           email: string
           flag_770: boolean | null
           flag_bilancio: boolean | null
@@ -144,6 +145,7 @@ export type Database = {
           scadenza_antiric: string | null
           tipo_cliente: string | null
           tipo_prestazione_id: string | null
+          tipo_redditi: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -158,6 +160,7 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
+          data_ultima_verifica_antiric?: string | null
           email: string
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -180,6 +183,7 @@ export type Database = {
           scadenza_antiric?: string | null
           tipo_cliente?: string | null
           tipo_prestazione_id?: string | null
+          tipo_redditi?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -194,6 +198,7 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
+          data_ultima_verifica_antiric?: string | null
           email?: string
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -216,6 +221,7 @@ export type Database = {
           scadenza_antiric?: string | null
           tipo_cliente?: string | null
           tipo_prestazione_id?: string | null
+          tipo_redditi?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -460,6 +466,54 @@ export type Database = {
           {
             foreignKeyName: "tbscad770_utente_professionista_id_fkey"
             columns: ["utente_professionista_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbscadantiric: {
+        Row: {
+          created_at: string | null
+          data_scadenza: string | null
+          data_ultima_verifica: string | null
+          id: string
+          nominativo: string
+          note: string | null
+          updated_at: string | null
+          utente_operatore_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_scadenza?: string | null
+          data_ultima_verifica?: string | null
+          id: string
+          nominativo: string
+          note?: string | null
+          updated_at?: string | null
+          utente_operatore_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_scadenza?: string | null
+          data_ultima_verifica?: string | null
+          id?: string
+          nominativo?: string
+          note?: string | null
+          updated_at?: string | null
+          utente_operatore_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbscadantiric_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadantiric_utente_operatore_id_fkey"
+            columns: ["utente_operatore_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
             referencedColumns: ["id"]

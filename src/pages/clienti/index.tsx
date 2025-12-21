@@ -67,6 +67,8 @@ interface ImportResult {
   errorDetails: Array<{ row: number; ragione_sociale: string; error: string }>;
 }
 
+const TIPO_REDDITI_OPTIONS = ["SC", "SP", "ENC", "PF", "730"];
+
 export default function ClientiPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -106,6 +108,8 @@ export default function ClientiPage() {
     scadenza_antiric: "",
     tipo_prestazione_id: "",
     tipo_cliente: "Esterno",
+    tipo_redditi: "",
+    data_ultima_verifica_antiric: "",
     flag_iva: true,
     flag_cu: true,
     flag_bilancio: true,
@@ -626,6 +630,8 @@ export default function ClientiPage() {
       scadenza_antiric: cliente.scadenza_antiric || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_cliente: cliente.tipo_cliente || "Esterno",
+      tipo_redditi: cliente.tipo_redditi || "",
+      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric || "",
       flag_iva: cliente.flag_iva ?? true,
       flag_cu: cliente.flag_cu ?? true,
       flag_bilancio: cliente.flag_bilancio ?? true,
@@ -681,6 +687,8 @@ export default function ClientiPage() {
       scadenza_antiric: "",
       tipo_prestazione_id: "",
       tipo_cliente: "Esterno",
+      tipo_redditi: "",
+      data_ultima_verifica_antiric: "",
       flag_iva: true,
       flag_cu: true,
       flag_bilancio: true,
@@ -1260,13 +1268,49 @@ export default function ClientiPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio</Label>
-                            <Input
-                              id="scadenza_antiric"
-                              type="date"
-                              value={formData.scadenza_antiric}
-                              onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
-                            />
+                            <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+                            <Select
+                              value={formData.tipo_redditi || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, tipo_redditi: value === "__none__" ? "" : value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleziona tipo redditi" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Nessuno</SelectItem>
+                                {TIPO_REDDITI_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="border-t pt-4 mt-4">
+                            <h3 className="font-semibold mb-3">Antiriciclaggio</h3>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica</Label>
+                                <Input
+                                  id="data_ultima_verifica_antiric"
+                                  type="date"
+                                  value={formData.data_ultima_verifica_antiric}
+                                  onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio</Label>
+                                <Input
+                                  id="scadenza_antiric"
+                                  type="date"
+                                  value={formData.scadenza_antiric}
+                                  onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </TabsContent>
 
