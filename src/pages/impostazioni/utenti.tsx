@@ -152,28 +152,53 @@ export default function GestioneUtentiPage() {
           description: "Le modifiche sono state salvate con successo"
         });
       } else {
-        // Nuovo utente - crea su DB + invia invito
-        
-        // 1. Crea utente nel DB
-        await utenteService.createUtente(formData);
-        
-        // 2. Invia invito via email (crea account Supabase Auth)
-        try {
-          await inviteUser(formData.email, formData.nome, formData.cognome);
+        // Nuovo utente - VERIFICA SE ESISTE GIÀ
+        const utentiEsistenti = await utenteService.getUtenti();
+        const utenteEsistente = utentiEsistenti.find(u => u.email.toLowerCase() === formData.email.toLowerCase());
+
+        if (utenteEsistente) {
+          // UTENTE GIÀ ESISTE - SOLO INVIO EMAIL
+          try {
+            await inviteUser(formData.email, formData.nome, formData.cognome);
+            
+            toast({
+              title: "✅ Invito inviato!",
+              description: `L'utente esiste già nel sistema. Email di attivazione inviata a ${formData.email}`,
+              duration: 6000
+            });
+          } catch (inviteError) {
+            console.error("Errore invio invito:", inviteError);
+            toast({
+              title: "Errore invio email",
+              description: "L'utente esiste già ma non è stato possibile inviare l'email di attivazione. Riprova con il pulsante 'Reinvia Invito'.",
+              variant: "destructive",
+              duration: 8000
+            });
+          }
+        } else {
+          // UTENTE NON ESISTE - CREA NEL DB + INVIA EMAIL
           
-          toast({
-            title: "✅ Utente creato e invitato!",
-            description: `Email di invito inviata a ${formData.email}. L'utente riceverà un link per impostare la password.`,
-            duration: 6000
-          });
-        } catch (inviteError) {
-          console.error("Errore invio invito:", inviteError);
-          toast({
-            title: "⚠️ Utente creato, invio email fallito",
-            description: "L'utente è stato creato nel sistema ma l'email di invito non è stata inviata. Puoi reinviare l'invito dalla lista utenti.",
-            variant: "destructive",
-            duration: 8000
-          });
+          // 1. Crea utente nel DB
+          await utenteService.createUtente(formData);
+          
+          // 2. Invia invito via email (crea account Supabase Auth)
+          try {
+            await inviteUser(formData.email, formData.nome, formData.cognome);
+            
+            toast({
+              title: "✅ Utente creato e invitato!",
+              description: `Email di invito inviata a ${formData.email}. L'utente riceverà un link per impostare la password.`,
+              duration: 6000
+            });
+          } catch (inviteError) {
+            console.error("Errore invio invito:", inviteError);
+            toast({
+              title: "⚠️ Utente creato, invio email fallito",
+              description: "L'utente è stato creato nel sistema ma l'email di invito non è stata inviata. Puoi reinviare l'invito dalla lista utenti.",
+              variant: "destructive",
+              duration: 8000
+            });
+          }
         }
       }
 
@@ -364,12 +389,12 @@ export default function GestioneUtentiPage() {
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingUtente ? "Modifica Utente" : "Invita Nuovo Utente"}
+                      {editingUtente ? "Modifica Utente" : "Invita Utente"}
                     </DialogTitle>
                     <DialogDescription>
                       {editingUtente 
                         ? "Modifica i dati dell'utente" 
-                        : "L'utente riceverà un'email con un link per impostare la password"}
+                        : "Crea un nuovo utente o invia invito a un utente già esistente. L'utente riceverà un'email con un link per impostare la password."}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -487,7 +512,7 @@ export default function GestioneUtentiPage() {
                           </>
                         ) : (
                           <>
-                            {editingUtente ? "Aggiorna" : "Crea e Invita"} Utente
+                            {editingUtente ? "Aggiorna Utente" : "Invia Invito"}
                           </>
                         )}
                       </Button>
