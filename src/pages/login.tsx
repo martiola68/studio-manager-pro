@@ -162,18 +162,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="pt-6 border-t border-gray-200">
-            <div className="bg-blue-50 rounded-lg p-4 space-y-2">
-              <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
-                Credenziali Demo
-              </p>
-              <div className="space-y-1 text-sm text-blue-800">
-                <p><strong>Email:</strong> admin@studiodemo.it</p>
-                <p><strong>Password:</strong> Demo123!</p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
