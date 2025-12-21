@@ -35,6 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
+      console.error("Auth error:", authError);
       return res.status(401).json({ error: "Sessione non valida" });
     }
 
@@ -49,7 +50,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: "Solo gli amministratori possono invitare utenti" });
     }
 
-    // Crea l'utente su Supabase Auth con email di invito
+    // Verifica se l'utente esiste già in Auth
+    const { data: existingUsers, error: searchError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (searchError) {
+      console.error("Error searching users:", searchError);
+    }
+
+    const existingAuthUser = existingUsers?.users.find(u => u.email === email);
+
+    if (existingAuthUser) {
+      // Utente già esiste in Auth - invia email di reset password invece
+      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      });
+
+      if (resetError) {
+        console.error("Error sending password reset:", resetError);
+        return res.status(400).json({ 
+          error: "L'utente esiste già. Impossibile inviare email di reset password.", 
+          details: resetError.message 
+        });
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        message: "L'utente esiste già in Auth. Email di reset password inviata.",
+        existing: true
+      });
+    }
+
+    // Crea nuovo utente Auth con email di invito
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
       {
@@ -58,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cognome,
           invited_by: user.email
         },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/callback`
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
       }
     );
 
