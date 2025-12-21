@@ -57,7 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error("Error searching users:", searchError);
     }
 
-    const existingAuthUser = existingUsers?.users.find(u => u.email === email);
+    // Fix TypeScript error: explicit any cast to avoid 'never' type issue
+    const users = existingUsers?.users || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existingAuthUser = users.find((u: any) => u.email === email);
 
     if (existingAuthUser) {
       // Utente già esiste in Auth - invia email di reset password invece
