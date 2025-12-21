@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Edit, UserX, Search, Copy, Check, RotateCcw, Loader2, UserCheck, Filter, Key } from "lucide-react";
+import { UserPlus, Edit, UserX, Search, Copy, Check, RotateCcw, Loader2, UserCheck, Filter, Key, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -21,26 +21,23 @@ type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];
 
 // Funzione per generare password sicura
 const generateSecurePassword = (): string => {
-  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // Escluso I, O
-  const lowercase = "abcdefghijkmnopqrstuvwxyz"; // Escluso l
-  const numbers = "23456789"; // Escluso 0, 1
+  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lowercase = "abcdefghijkmnopqrstuvwxyz";
+  const numbers = "23456789";
   const symbols = "!@#$%&*";
   
   const all = uppercase + lowercase + numbers + symbols;
   
   let password = "";
-  // Assicura almeno 1 carattere per tipo
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += symbols[Math.floor(Math.random() * symbols.length)];
   
-  // Riempi fino a 12 caratteri
   for (let i = password.length; i < 12; i++) {
     password += all[Math.floor(Math.random() * all.length)];
   }
   
-  // Mescola i caratteri
   return password.split("").sort(() => Math.random() - 0.5).join("");
 };
 
@@ -56,17 +53,14 @@ export default function GestioneUtentiPage() {
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
   const [creating, setCreating] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [useAutoPassword, setUseAutoPassword] = useState(true);
   
-  // Password temporanea dialog
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [generatedPassword, setGeneratedPassword] = useState("");
-  const [generatedEmail, setGeneratedEmail] = useState("");
-  const [passwordCopied, setPasswordCopied] = useState(false);
-
   const [formData, setFormData] = useState({
     nome: "",
     cognome: "",
     email: "",
+    password: "",
     tipo_utente: "User" as "Admin" | "User",
     ruolo_operatore_id: "",
     attivo: true
@@ -133,14 +127,9 @@ export default function GestioneUtentiPage() {
     return data || [];
   };
 
-  const copyPasswordToClipboard = () => {
-    navigator.clipboard.writeText(generatedPassword);
-    setPasswordCopied(true);
-    toast({
-      title: "✅ Password copiata!",
-      description: "La password è stata copiata negli appunti"
-    });
-    setTimeout(() => setPasswordCopied(false), 3000);
+  const handleGeneratePassword = () => {
+    const newPassword = generateSecurePassword();
+    setFormData({ ...formData, password: newPassword });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,8 +148,16 @@ export default function GestioneUtentiPage() {
       setCreating(true);
 
       if (editingUtente) {
-        // Modifica utente esistente - solo aggiornamento DB
-        await utenteService.updateUtente(editingUtente.id, formData);
+        // Modifica utente esistente
+        await utenteService.updateUtente(editingUtente.id, {
+          nome: formData.nome,
+          cognome: formData.cognome,
+          email: formData.email,
+          tipo_utente: formData.tipo_utente,
+          ruolo_operatore_id: formData.ruolo_operatore_id || null,
+          attivo: formData.attivo
+        });
+        
         toast({
           title: "✅ Utente aggiornato",
           description: "Le modifiche sono state salvate con successo"
@@ -170,9 +167,7 @@ export default function GestioneUtentiPage() {
         resetForm();
         await loadData();
       } else {
-        // Nuovo utente - CREA CON PASSWORD TEMPORANEA
-        
-        // 1. Verifica se utente esiste già
+        // Nuovo utente
         const utentiEsistenti = await utenteService.getUtenti();
         const utenteEsistente = utentiEsistenti.find(u => u.email.toLowerCase() === formData.email.toLowerCase());
 
@@ -185,14 +180,23 @@ export default function GestioneUtentiPage() {
           return;
         }
 
-        // 2. Genera password temporanea
-        const tempPassword = generateSecurePassword();
-        
-        // 3. Crea utente in Supabase Auth
+        // Determina password da usare
+        const passwordToUse = useAutoPassword ? generateSecurePassword() : formData.password;
+
+        if (!useAutoPassword && (!passwordToUse || passwordToUse.length < 8)) {
+          toast({
+            title: "Errore",
+            description: "La password deve essere di almeno 8 caratteri",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Crea utente in Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email: formData.email,
-          password: tempPassword,
-          email_confirm: true, // Conferma email automaticamente
+          password: passwordToUse,
+          email_confirm: true,
           user_metadata: {
             nome: formData.nome,
             cognome: formData.cognome
@@ -204,24 +208,43 @@ export default function GestioneUtentiPage() {
           throw new Error(`Errore creazione account: ${authError.message}`);
         }
 
-        // 4. Crea utente nel DB
-        await utenteService.createUtente(formData);
+        // Crea utente nel DB
+        await utenteService.createUtente({
+          nome: formData.nome,
+          cognome: formData.cognome,
+          email: formData.email,
+          tipo_utente: formData.tipo_utente,
+          ruolo_operatore_id: formData.ruolo_operatore_id || null,
+          attivo: formData.attivo
+        });
         
-        // 5. Mostra password in dialog
-        setGeneratedPassword(tempPassword);
-        setGeneratedEmail(formData.email);
-        setPasswordDialogOpen(true);
+        // Mostra la password usata
+        const message = useAutoPassword 
+          ? `Password generata: ${passwordToUse}\n\nComunica questa password all'utente.`
+          : `Utente creato con la password fornita.`;
         
-        // Chiudi form dialog
+        alert(`✅ UTENTE CREATO!\n\nEmail: ${formData.email}\n${message}`);
+        
+        // Copia password negli appunti se auto-generata
+        if (useAutoPassword) {
+          try {
+            await navigator.clipboard.writeText(passwordToUse);
+            toast({
+              title: "✅ Password copiata!",
+              description: "La password è stata copiata negli appunti"
+            });
+          } catch {
+            // Ignore clipboard errors
+          }
+        }
+        
         setDialogOpen(false);
         resetForm();
-        
-        // Ricarica lista
         await loadData();
         
         toast({
           title: "✅ Utente creato con successo!",
-          description: "Comunica la password temporanea all'utente",
+          description: useAutoPassword ? "Password copiata negli appunti" : "Utente pronto per il login",
           duration: 5000
         });
       }
@@ -238,66 +261,49 @@ export default function GestioneUtentiPage() {
   };
 
   const handleResetPassword = async (utente: Utente) => {
-    if (!confirm(`Resettare la password per ${utente.nome} ${utente.cognome}?\n\nVerrà generata una password temporanea che dovrai comunicare all'utente.`)) {
-      return;
-    }
+    const newPassword = prompt(
+      `🔑 RESET PASSWORD PER: ${utente.nome} ${utente.cognome}\n\n` +
+      `Inserisci la nuova password (min 8 caratteri):\n\n` +
+      `Oppure lascia vuoto per generare una password automatica.`
+    );
+
+    if (newPassword === null) return; // User cancelled
 
     try {
-      setLoading(true);
+      setResettingPassword(utente.id);
 
-      // Chiama API backend con Service Role Key
-      const response = await fetch("/api/admin/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          userId: utente.id,
-          userEmail: utente.email
-        })
-      });
+      const passwordToUse = newPassword.trim() === "" ? generateSecurePassword() : newPassword.trim();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Errore reset password");
+      if (passwordToUse.length < 8) {
+        toast({
+          title: "Errore",
+          description: "La password deve essere di almeno 8 caratteri",
+          variant: "destructive"
+        });
+        return;
       }
 
-      // Mostra dialog con password temporanea
-      const tempPassword = data.tempPassword;
-      
-      const dialogContent = `
-╔════════════════════════════════════════╗
-║   🔑 PASSWORD TEMPORANEA GENERATA      ║
-╚════════════════════════════════════════╝
+      // Usa l'API admin di Supabase direttamente
+      const { error } = await supabase.auth.admin.updateUserById(utente.id, {
+        password: passwordToUse
+      });
 
-Utente: ${utente.nome} ${utente.cognome}
-Email: ${utente.email}
+      if (error) throw error;
 
-Password Temporanea:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${tempPassword}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // Mostra la password
+      const message = `✅ PASSWORD RESETTATA!\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nNuova Password:\n━━━━━━━━━━━━━━━━━━━━━━\n${passwordToUse}\n━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Comunica questa password all'utente`;
 
-⚠️  ISTRUZIONI:
-1. Copia questa password (Ctrl+C / Cmd+C)
-2. Invia all'utente via email o WhatsApp
-3. L'utente può cambiarla dopo il login
-
-✅ Password valida immediatamente
-      `.trim();
-
-      // Copia automaticamente negli appunti
+      // Copia negli appunti
       try {
-        await navigator.clipboard.writeText(tempPassword);
-        alert(dialogContent + "\n\n✅ Password copiata negli appunti!");
+        await navigator.clipboard.writeText(passwordToUse);
+        alert(message + "\n\n✅ Password copiata negli appunti!");
       } catch {
-        alert(dialogContent);
+        alert(message);
       }
 
       toast({
-        title: "Password resettata",
-        description: `Password temporanea generata per ${utente.nome} ${utente.cognome}`
+        title: "✅ Password resettata",
+        description: `Nuova password impostata per ${utente.nome} ${utente.cognome}`
       });
 
     } catch (error: any) {
@@ -305,6 +311,50 @@ ${tempPassword}
       toast({
         title: "Errore",
         description: error.message || "Impossibile resettare la password",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(null);
+    }
+  };
+
+  const handleDeleteUser = async (utente: Utente) => {
+    if (utente.tipo_utente === "Admin") {
+      toast({
+        title: "Operazione non consentita",
+        description: "Non è possibile eliminare un amministratore",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!confirm(`⚠️ ELIMINARE UTENTE?\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nQuesta operazione eliminerà:\n- L'account di accesso\n- I dati dell'utente\n\nQuesta azione NON può essere annullata!`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1. Elimina da Supabase Auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(utente.id);
+      if (authError) {
+        console.error("Errore eliminazione Auth:", authError);
+      }
+
+      // 2. Elimina dal DB
+      await utenteService.deleteUtente(utente.id);
+
+      toast({
+        title: "✅ Utente eliminato",
+        description: `${utente.nome} ${utente.cognome} è stato eliminato dal sistema`
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'utente",
         variant: "destructive"
       });
     } finally {
@@ -316,7 +366,7 @@ ${tempPassword}
     const newStatus = !utente.attivo;
     const action = newStatus ? "riattivare" : "disattivare";
     
-    if (!confirm(`Sei sicuro di voler ${action} l'utente ${utente.nome} ${utente.cognome}?\n\n${newStatus ? "L'utente potrà nuovamente accedere al sistema." : "L'utente NON potrà più accedere al sistema, ma tutti i suoi dati e assegnazioni rimarranno intatti."}`)) {
+    if (!confirm(`Sei sicuro di voler ${action} l'utente ${utente.nome} ${utente.cognome}?`)) {
       return;
     }
 
@@ -347,6 +397,7 @@ ${tempPassword}
       nome: utente.nome,
       cognome: utente.cognome,
       email: utente.email,
+      password: "",
       tipo_utente: utente.tipo_utente as "Admin" | "User",
       ruolo_operatore_id: utente.ruolo_operatore_id || "",
       attivo: utente.attivo ?? true
@@ -359,11 +410,14 @@ ${tempPassword}
       nome: "",
       cognome: "",
       email: "",
+      password: "",
       tipo_utente: "User",
       ruolo_operatore_id: "",
       attivo: true
     });
     setEditingUtente(null);
+    setUseAutoPassword(true);
+    setShowPassword(false);
   };
 
   const filteredUtenti = utenti.filter(u => {
@@ -424,7 +478,7 @@ ${tempPassword}
                     <DialogDescription>
                       {editingUtente 
                         ? "Modifica i dati dell'utente" 
-                        : "Crea un nuovo utente con password temporanea. Il sistema genererà una password sicura che dovrai comunicare all'utente."}
+                        : "Compila i campi per creare un nuovo utente"}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -463,6 +517,77 @@ ${tempPassword}
                         <p className="text-xs text-gray-500">L'email non può essere modificata</p>
                       )}
                     </div>
+
+                    {!editingUtente && (
+                      <div className="space-y-3 border-t pt-4">
+                        <div className="flex items-center justify-between">
+                          <Label>Password *</Label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="useAutoPassword"
+                              checked={useAutoPassword}
+                              onChange={(e) => {
+                                setUseAutoPassword(e.target.checked);
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, password: "" });
+                                }
+                              }}
+                              className="rounded"
+                            />
+                            <Label htmlFor="useAutoPassword" className="cursor-pointer text-sm">
+                              Genera automaticamente
+                            </Label>
+                          </div>
+                        </div>
+
+                        {!useAutoPassword && (
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <Input
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Inserisci password (min 8 caratteri)"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                required={!useAutoPassword}
+                                minLength={8}
+                                className="pr-20"
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="h-8 w-8"
+                                >
+                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={handleGeneratePassword}
+                                  className="h-8 w-8"
+                                  title="Genera password"
+                                >
+                                  <Key className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Min 8 caratteri. Click sull'icona 🔑 per generare una password sicura.
+                            </p>
+                          </div>
+                        )}
+
+                        {useAutoPassword && (
+                          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                            ℹ️ Una password sicura verrà generata automaticamente e mostrata dopo la creazione
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -517,23 +642,6 @@ ${tempPassword}
                       <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
                     </div>
 
-                    {!editingUtente && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-sm text-blue-900">
-                            <p className="font-semibold">🔑 Password Temporanea Automatica</p>
-                            <ol className="list-decimal list-inside mt-2 space-y-1">
-                              <li>Il sistema genera una password sicura casuale</li>
-                              <li>Ti verrà mostrata in un dialog con pulsante copia</li>
-                              <li>Comunicala all'utente (email, telefono, chat)</li>
-                              <li>L'utente potrà fare login e cambiarla</li>
-                            </ol>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     <div className="flex gap-3 pt-4">
                       <Button type="submit" className="flex-1" disabled={creating}>
                         {creating ? (
@@ -561,86 +669,6 @@ ${tempPassword}
               </Dialog>
             </div>
 
-            {/* Dialog Password Temporanea */}
-            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Key className="h-6 w-6 text-green-600" />
-                    Password Temporanea Generata
-                  </DialogTitle>
-                  <DialogDescription>
-                    Comunica questa password all'utente via email, telefono o chat
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-6">
-                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm text-gray-600">Email Utente:</Label>
-                        <p className="text-lg font-semibold text-gray-900">{generatedEmail}</p>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm text-gray-600">Password Temporanea:</Label>
-                        <div className="flex items-center gap-3 mt-2">
-                          <code className="flex-1 text-2xl font-mono font-bold bg-white px-4 py-3 rounded border-2 border-green-300 text-green-700 select-all">
-                            {generatedPassword}
-                          </code>
-                          <Button
-                            onClick={copyPasswordToClipboard}
-                            variant={passwordCopied ? "default" : "outline"}
-                            size="lg"
-                            className={passwordCopied ? "bg-green-600 hover:bg-green-700" : ""}
-                          >
-                            {passwordCopied ? (
-                              <>
-                                <Check className="h-5 w-5 mr-2" />
-                                Copiata!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-5 w-5 mr-2" />
-                                Copia
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="font-semibold text-blue-900 mb-2">📧 Istruzioni per l'utente:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-                      <li>Vai su: <code className="bg-white px-2 py-1 rounded text-xs">{window.location.origin}/login</code></li>
-                      <li>Email: <code className="bg-white px-2 py-1 rounded text-xs">{generatedEmail}</code></li>
-                      <li>Password: <code className="bg-white px-2 py-1 rounded text-xs">[La password sopra]</code></li>
-                      <li>Dopo il login, cambia la password nelle impostazioni profilo</li>
-                    </ol>
-                  </div>
-
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <p className="text-sm text-amber-900">
-                      <strong>⚠️ IMPORTANTE:</strong> Questa password verrà mostrata solo una volta. 
-                      Assicurati di copiarla e comunicarla all'utente prima di chiudere questa finestra.
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button onClick={() => {
-                      setPasswordDialogOpen(false);
-                      setPasswordCopied(false);
-                    }}>
-                      Ho Comunicato la Password
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Filtri e Statistiche */}
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -743,7 +771,7 @@ ${tempPassword}
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleResetPassword(utente)}
-                                  title="Genera nuova password"
+                                  title="Reset password"
                                   disabled={resettingPassword === utente.id}
                                 >
                                   {resettingPassword === utente.id ? (
@@ -757,7 +785,7 @@ ${tempPassword}
                                   size="icon"
                                   onClick={() => handleToggleStatus(utente)}
                                   title={isActive ? "Disattiva utente" : "Riattiva utente"}
-                                  className={isActive ? "text-red-600 hover:text-red-700 hover:bg-red-50" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+                                  className={isActive ? "text-gray-600 hover:text-gray-700" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
                                 >
                                   {isActive ? (
                                     <UserX className="h-4 w-4" />
@@ -765,6 +793,17 @@ ${tempPassword}
                                     <UserCheck className="h-4 w-4" />
                                   )}
                                 </Button>
+                                {utente.tipo_utente !== "Admin" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteUser(utente)}
+                                    title="Elimina utente"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -781,18 +820,12 @@ ${tempPassword}
                 <div className="flex items-start gap-3 text-sm">
                   <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900 mb-2">🔑 Sistema Password Temporanea:</p>
+                    <p className="font-semibold text-gray-900 mb-2">🔑 Gestione Password:</p>
                     <ul className="space-y-1 text-gray-700">
-                      <li><strong>✏️ Modifica</strong> - Aggiorna dati utente (nome, tipo, ruolo, stato)</li>
-                      <li><strong>🔄 Reset Password</strong> - Genera nuova password temporanea casuale</li>
-                      <li><strong>👤 Disattiva/Riattiva</strong> - Gestisce accesso (dati rimangono intatti)</li>
+                      <li><strong>✏️ Creazione</strong> - Puoi inserire manualmente una password o generarla automaticamente</li>
+                      <li><strong>🔄 Reset</strong> - Ti verrà chiesto di inserire la nuova password (o lascia vuoto per generarla)</li>
+                      <li><strong>🗑️ Elimina</strong> - Rimuove completamente l'utente dal sistema (solo utenti non-admin)</li>
                     </ul>
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                      <p className="text-blue-900 text-xs">
-                        💡 <strong>Le password sono sicure:</strong> 12 caratteri con maiuscole, minuscole, numeri e simboli. 
-                        L'utente può cambiarla dopo il primo login.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </CardContent>
