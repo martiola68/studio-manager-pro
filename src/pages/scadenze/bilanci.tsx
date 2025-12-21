@@ -26,6 +26,14 @@ export default function ScadenzeBilanciPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+  const [filterConferma, setFilterConferma] = useState("__all__");
+
+  // Stats
+  const [stats, setStats] = useState({
+    totale: 0,
+    confermate: 0,
+    nonConfermate: 0
+  });
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -54,6 +62,14 @@ export default function ScadenzeBilanciPage() {
       ]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
+      
+      // Calculate stats
+      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      setStats({
+        totale: scadenzeData.length,
+        confermate,
+        nonConfermate: scadenzeData.length - confermate
+      });
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
@@ -166,7 +182,9 @@ export default function ScadenzeBilanciPage() {
     const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    return matchSearch && matchOperatore && matchProfessionista;
+    const matchConferma = filterConferma === "__all__" || 
+      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
@@ -214,12 +232,42 @@ export default function ScadenzeBilanciPage() {
               <p className="text-gray-500 mt-1">Gestione deposito e approvazione bilanci</p>
             </div>
 
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">Totale Clienti</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-green-600">Confermate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-orange-600">Non Confermate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Filtri e Ricerca</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label>Cerca Nominativo</Label>
                     <div className="relative">
@@ -263,6 +311,20 @@ export default function ScadenzeBilanciPage() {
                             {u.nome} {u.cognome}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Stato Conferma</Label>
+                    <Select value={filterConferma} onValueChange={setFilterConferma}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tutti" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Tutti</SelectItem>
+                        <SelectItem value="true">Solo Confermate</SelectItem>
+                        <SelectItem value="false">Solo Non Confermate</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
