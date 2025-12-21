@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
+import ClientOnlyHome from "@/components/ClientOnlyHome";
 
-const ClientOnlyHome = dynamic(() => import("@/components/ClientOnlyHome"), {
-  ssr: false
-});
-
-export default function Home() {
+export default function HomePage() {
   return <ClientOnlyHome />;
 }
