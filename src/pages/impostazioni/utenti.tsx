@@ -238,42 +238,30 @@ export default function GestioneUtentiPage() {
   };
 
   const handleResetPassword = async (utente: Utente) => {
-    if (!confirm(`Generare una nuova password temporanea per ${utente.nome} ${utente.cognome}?`)) return;
+    if (!confirm(`Inviare email di reset password a ${utente.nome} ${utente.cognome}?\n\nL'utente riceverà un link via email per impostare una nuova password.`)) return;
 
     try {
       setResettingPassword(utente.id);
 
-      // Genera nuova password temporanea
-      const tempPassword = generateSecurePassword();
-      
-      // Aggiorna password in Supabase Auth
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sessione non valida");
+      // Invia email con link reset password
+      const { error } = await supabase.auth.resetPasswordForEmail(utente.email, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
 
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        utente.id,
-        { password: tempPassword }
-      );
-
-      if (updateError) {
-        throw new Error(`Errore reset password: ${updateError.message}`);
+      if (error) {
+        throw new Error(`Errore invio email: ${error.message}`);
       }
 
-      // Mostra nuova password
-      setGeneratedPassword(tempPassword);
-      setGeneratedEmail(utente.email);
-      setPasswordDialogOpen(true);
-      
       toast({
-        title: "✅ Password resettata",
-        description: "Comunica la nuova password temporanea all'utente",
+        title: "✅ Email inviata!",
+        description: `${utente.nome} ${utente.cognome} riceverà un'email con il link per resettare la password`,
         duration: 5000
       });
     } catch (error) {
       console.error("Errore reset password:", error);
       toast({
         title: "Errore",
-        description: error instanceof Error ? error.message : "Impossibile resettare la password",
+        description: error instanceof Error ? error.message : "Impossibile inviare l'email di reset",
         variant: "destructive"
       });
     } finally {
