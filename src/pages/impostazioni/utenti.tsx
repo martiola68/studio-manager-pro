@@ -238,34 +238,77 @@ export default function GestioneUtentiPage() {
   };
 
   const handleResetPassword = async (utente: Utente) => {
-    if (!confirm(`Inviare email di reset password a ${utente.nome} ${utente.cognome}?\n\nL'utente riceverà un link via email per impostare una nuova password.`)) return;
+    if (!confirm(`Resettare la password per ${utente.nome} ${utente.cognome}?\n\nVerrà generata una password temporanea che dovrai comunicare all'utente.`)) {
+      return;
+    }
 
     try {
-      setResettingPassword(utente.id);
+      setLoading(true);
 
-      // Invia email con link reset password
-      const { error } = await supabase.auth.resetPasswordForEmail(utente.email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      // Chiama API backend con Service Role Key
+      const response = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userId: utente.id,
+          userEmail: utente.email
+        })
       });
 
-      if (error) {
-        throw new Error(`Errore invio email: ${error.message}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Errore reset password");
+      }
+
+      // Mostra dialog con password temporanea
+      const tempPassword = data.tempPassword;
+      
+      const dialogContent = `
+╔════════════════════════════════════════╗
+║   🔑 PASSWORD TEMPORANEA GENERATA      ║
+╚════════════════════════════════════════╝
+
+Utente: ${utente.nome} ${utente.cognome}
+Email: ${utente.email}
+
+Password Temporanea:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${tempPassword}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  ISTRUZIONI:
+1. Copia questa password (Ctrl+C / Cmd+C)
+2. Invia all'utente via email o WhatsApp
+3. L'utente può cambiarla dopo il login
+
+✅ Password valida immediatamente
+      `.trim();
+
+      // Copia automaticamente negli appunti
+      try {
+        await navigator.clipboard.writeText(tempPassword);
+        alert(dialogContent + "\n\n✅ Password copiata negli appunti!");
+      } catch {
+        alert(dialogContent);
       }
 
       toast({
-        title: "✅ Email inviata!",
-        description: `${utente.nome} ${utente.cognome} riceverà un'email con il link per resettare la password`,
-        duration: 5000
+        title: "Password resettata",
+        description: `Password temporanea generata per ${utente.nome} ${utente.cognome}`
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Errore reset password:", error);
       toast({
         title: "Errore",
-        description: error instanceof Error ? error.message : "Impossibile inviare l'email di reset",
+        description: error.message || "Impossibile resettare la password",
         variant: "destructive"
       });
     } finally {
-      setResettingPassword(null);
+      setLoading(false);
     }
   };
 
