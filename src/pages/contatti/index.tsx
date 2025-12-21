@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus } from "lucide-react";
+import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -28,6 +28,10 @@ export default function ContattiPage() {
   const [letterFilter, setLetterFilter] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContatto, setEditingContatto] = useState<Contatto | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -191,6 +195,220 @@ export default function ContattiPage() {
     setEditingContatto(null);
   };
 
+  const downloadTemplate = () => {
+    const headers = [
+      "nome",
+      "cognome",
+      "email",
+      "cell",
+      "tel",
+      "note",
+      "cassetto_fiscale",
+      "utente",
+      "password",
+      "pin",
+      "password_iniziale"
+    ];
+
+    const exampleRows = [
+      [
+        "Mario",
+        "Rossi",
+        "mario.rossi@email.it",
+        "3331234567",
+        "0612345678",
+        "Contatto principale",
+        "true",
+        "RSSMRA80A01H501Z",
+        "password123",
+        "12345",
+        "temp123"
+      ],
+      [
+        "Laura",
+        "Bianchi",
+        "laura.bianchi@email.it",
+        "3337654321",
+        "",
+        "",
+        "false",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "template_importazione_contatti.csv";
+    link.click();
+
+    toast({
+      title: "Template scaricato",
+      description: "Compila il file CSV seguendo l'esempio fornito"
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith(".csv")) {
+        toast({
+          title: "Formato non valido",
+          description: "Seleziona un file CSV",
+          variant: "destructive"
+        });
+        return;
+      }
+      setCsvFile(file);
+      parseCSV(file);
+    }
+  };
+
+  const parseCSV = async (file: File) => {
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({
+          title: "File vuoto",
+          description: "Il file CSV non contiene dati",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+      const data = lines.slice(1).map((line, index) => {
+        const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+        const row: any = { _lineNumber: index + 2 };
+        
+        headers.forEach((header, i) => {
+          row[header] = values[i] || "";
+        });
+        
+        return row;
+      });
+
+      setPreviewData(data);
+    } catch (error) {
+      console.error("Errore parsing CSV:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile leggere il file CSV",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const validateContatto = (row: any): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!row.nome?.trim()) errors.push("Nome obbligatorio");
+    if (!row.cognome?.trim()) errors.push("Cognome obbligatorio");
+    
+    if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+      errors.push("Email non valida");
+    }
+
+    if (row.cell && !/^\d{9,13}$/.test(row.cell.replace(/\s/g, ""))) {
+      errors.push("Cellulare non valido");
+    }
+
+    if (row.tel && !/^\d{9,13}$/.test(row.tel.replace(/\s/g, ""))) {
+      errors.push("Telefono non valido");
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
+  const handleImport = async () => {
+    if (previewData.length === 0) {
+      toast({
+        title: "Nessun dato",
+        description: "Carica un file CSV prima di importare",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setImporting(true);
+      let imported = 0;
+      let errors = 0;
+      const errorDetails: string[] = [];
+
+      for (const row of previewData) {
+        const validation = validateContatto(row);
+        
+        if (!validation.valid) {
+          errors++;
+          errorDetails.push(`Riga ${row._lineNumber}: ${validation.errors.join(", ")}`);
+          continue;
+        }
+
+        try {
+          const contattoData = {
+            nome: row.nome.trim(),
+            cognome: row.cognome.trim(),
+            email: row.email?.trim() || null,
+            cell: row.cell?.trim() || null,
+            tel: row.tel?.trim() || null,
+            note: row.note?.trim() || null,
+            cassetto_fiscale: row.cassetto_fiscale?.toLowerCase() === "true" || false,
+            utente: row.utente?.trim() || null,
+            password: row.password?.trim() || null,
+            pin: row.pin?.trim() || null,
+            password_iniziale: row.password_iniziale?.trim() || null
+          };
+
+          await contattoService.createContatto(contattoData);
+          imported++;
+        } catch (error) {
+          errors++;
+          errorDetails.push(`Riga ${row._lineNumber}: Errore database`);
+          console.error(`Errore importazione riga ${row._lineNumber}:`, error);
+        }
+      }
+
+      if (errorDetails.length > 0) {
+        console.log("Errori importazione:", errorDetails);
+      }
+
+      toast({
+        title: "Importazione completata",
+        description: `✅ Importati: ${imported} | ❌ Errori: ${errors}`,
+        duration: 6000
+      });
+
+      setImportDialogOpen(false);
+      setCsvFile(null);
+      setPreviewData([]);
+      await loadContatti();
+
+    } catch (error) {
+      console.error("Errore importazione:", error);
+      toast({
+        title: "Errore",
+        description: "Errore durante l'importazione",
+        variant: "destructive"
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -214,157 +432,325 @@ export default function ContattiPage() {
                 <h1 className="text-3xl font-bold text-gray-900">Rubrica Contatti</h1>
                 <p className="text-gray-500 mt-1">Gestisci i contatti della rubrica</p>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuovo Contatto
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Inserisci i dati del contatto
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+              <div className="flex gap-3">
+                <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importa CSV
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Importazione Contatti da CSV</DialogTitle>
+                      <DialogDescription>
+                        Carica un file CSV per importare più contatti contemporaneamente
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-blue-900">
+                            <p className="font-semibold mb-2">📋 Come funziona:</p>
+                            <ol className="list-decimal list-inside space-y-1">
+                              <li>Scarica il template CSV cliccando il pulsante qui sotto</li>
+                              <li>Compila il file seguendo l'esempio fornito</li>
+                              <li>Carica il file compilato</li>
+                              <li>Verifica l'anteprima e conferma l'importazione</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={downloadTemplate}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Scarica Template CSV
+                      </Button>
+
                       <div className="space-y-2">
-                        <Label htmlFor="nome">Nome *</Label>
+                        <Label htmlFor="csv-file">Carica File CSV</Label>
                         <Input
-                          id="nome"
-                          value={formData.nome}
-                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                          required
+                          id="csv-file"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileChange}
+                          className="cursor-pointer"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cognome">Cognome *</Label>
-                        <Input
-                          id="cognome"
-                          value={formData.cognome}
-                          onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
-                          required
-                        />
+
+                      {previewData.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">Anteprima Dati ({previewData.length} righe)</h3>
+                            <Badge variant="secondary">{csvFile?.name}</Badge>
+                          </div>
+
+                          <div className="border rounded-lg overflow-hidden">
+                            <div className="overflow-x-auto max-h-96">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="w-12">#</TableHead>
+                                    <TableHead>Nome</TableHead>
+                                    <TableHead>Cognome</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Cell</TableHead>
+                                    <TableHead>Tel</TableHead>
+                                    <TableHead>Cassetto</TableHead>
+                                    <TableHead>Stato</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {previewData.slice(0, 10).map((row, index) => {
+                                    const validation = validateContatto(row);
+                                    return (
+                                      <TableRow key={index} className={!validation.valid ? "bg-red-50" : ""}>
+                                        <TableCell className="font-mono text-xs">{row._lineNumber}</TableCell>
+                                        <TableCell>{row.nome || "-"}</TableCell>
+                                        <TableCell>{row.cognome || "-"}</TableCell>
+                                        <TableCell className="text-xs">{row.email || "-"}</TableCell>
+                                        <TableCell className="text-xs">{row.cell || "-"}</TableCell>
+                                        <TableCell className="text-xs">{row.tel || "-"}</TableCell>
+                                        <TableCell>
+                                          {row.cassetto_fiscale?.toLowerCase() === "true" ? (
+                                            <Badge variant="default" className="text-xs">Sì</Badge>
+                                          ) : (
+                                            <Badge variant="secondary" className="text-xs">No</Badge>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          {validation.valid ? (
+                                            <Badge variant="default" className="bg-green-600 text-xs">✓ OK</Badge>
+                                          ) : (
+                                            <Badge variant="destructive" className="text-xs">
+                                              <AlertCircle className="h-3 w-3 mr-1" />
+                                              Errore
+                                            </Badge>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
+
+                          {previewData.length > 10 && (
+                            <p className="text-sm text-gray-500 text-center">
+                              ... e altri {previewData.length - 10} contatti
+                            </p>
+                          )}
+
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-sm text-amber-900">
+                                <p className="font-semibold mb-1">⚠️ Attenzione:</p>
+                                <ul className="list-disc list-inside space-y-1">
+                                  <li>Le righe con errori di validazione verranno saltate</li>
+                                  <li>I contatti validi verranno importati</li>
+                                  <li>Riceverai un report finale con successi ed errori</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 pt-4">
+                            <Button
+                              onClick={handleImport}
+                              disabled={importing}
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                            >
+                              {importing ? (
+                                <>
+                                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                  Importazione in corso...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Importa {previewData.length} Contatti
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setImportDialogOpen(false);
+                                setCsvFile(null);
+                                setPreviewData([]);
+                              }}
+                              disabled={importing}
+                            >
+                              Annulla
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={dialogOpen} onOpenChange={(open) => {
+                  setDialogOpen(open);
+                  if (!open) resetForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuovo Contatto
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Inserisci i dati del contatto
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nome">Nome *</Label>
+                          <Input
+                            id="nome"
+                            value={formData.nome}
+                            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cognome">Cognome *</Label>
+                          <Input
+                            id="cognome"
+                            value={formData.cognome}
+                            onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
+                            required
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="cell">Cellulare</Label>
+                        <Label htmlFor="email">Email</Label>
                         <Input
-                          id="cell"
-                          type="tel"
-                          value={formData.cell}
-                          onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
+                          id="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="tel">Telefono</Label>
-                        <Input
-                          id="tel"
-                          type="tel"
-                          value={formData.tel}
-                          onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="note">Note</Label>
-                      <Textarea
-                        id="note"
-                        value={formData.note}
-                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="border-t pt-4">
-                      <h3 className="font-semibold mb-3">Credenziali Cassetto Fiscale</h3>
-                      
-                      <div className="flex items-center space-x-2 mb-4">
-                        <input
-                          type="checkbox"
-                          id="cassetto_fiscale"
-                          checked={formData.cassetto_fiscale}
-                          onChange={(e) => setFormData({ ...formData, cassetto_fiscale: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="cassetto_fiscale" className="cursor-pointer">Ha Cassetto Fiscale</Label>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="utente">Utente</Label>
+                          <Label htmlFor="cell">Cellulare</Label>
                           <Input
-                            id="utente"
-                            value={formData.utente}
-                            onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
+                            id="cell"
+                            type="tel"
+                            value={formData.cell}
+                            onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="pin">PIN</Label>
+                          <Label htmlFor="tel">Telefono</Label>
                           <Input
-                            id="pin"
-                            value={formData.pin}
-                            onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                            id="tel"
+                            type="tel"
+                            value={formData.tel}
+                            onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
                           />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Password</Label>
-                          <Input
-                            id="password"
-                            type="password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      <div className="space-y-2">
+                        <Label htmlFor="note">Note</Label>
+                        <Textarea
+                          id="note"
+                          value={formData.note}
+                          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <h3 className="font-semibold mb-3">Credenziali Cassetto Fiscale</h3>
+                        
+                        <div className="flex items-center space-x-2 mb-4">
+                          <input
+                            type="checkbox"
+                            id="cassetto_fiscale"
+                            checked={formData.cassetto_fiscale}
+                            onChange={(e) => setFormData({ ...formData, cassetto_fiscale: e.target.checked })}
+                            className="rounded"
                           />
+                          <Label htmlFor="cassetto_fiscale" className="cursor-pointer">Ha Cassetto Fiscale</Label>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="password_iniziale">Password Iniziale</Label>
-                          <Input
-                            id="password_iniziale"
-                            value={formData.password_iniziale}
-                            onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
-                          />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="utente">Utente</Label>
+                            <Input
+                              id="utente"
+                              value={formData.utente}
+                              onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pin">PIN</Label>
+                            <Input
+                              id="pin"
+                              value={formData.pin}
+                              onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                              id="password"
+                              type="password"
+                              value={formData.password}
+                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="password_iniziale">Password Iniziale</Label>
+                            <Input
+                              id="password_iniziale"
+                              value={formData.password_iniziale}
+                              onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1">
-                        {editingContatto ? "Aggiorna" : "Crea"} Contatto
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setDialogOpen(false)}
-                      >
-                        Annulla
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                      <div className="flex gap-3 pt-4">
+                        <Button type="submit" className="flex-1">
+                          {editingContatto ? "Aggiorna" : "Crea"} Contatto
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setDialogOpen(false)}
+                        >
+                          Annulla
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
 
             <Card>
