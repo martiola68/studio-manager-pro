@@ -12,19 +12,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    setMounted(true);
     checkSession();
   }, []);
 
   const checkSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      router.push("/dashboard");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      console.error("Error checking session:", error);
+    } finally {
+      setCheckingSession(false);
     }
   };
 
@@ -56,6 +61,7 @@ export default function LoginPage() {
             : error.message,
           variant: "destructive"
         });
+        setLoading(false);
         return;
       }
 
@@ -73,12 +79,11 @@ export default function LoginPage() {
         description: "Si è verificato un errore durante l'accesso",
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
 
-  if (!mounted) {
+  if (checkingSession) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
         <div className="text-center">
