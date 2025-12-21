@@ -876,6 +876,7 @@ export type Database = {
           note: string | null
           ricevuta_r: boolean | null
           saldo_acc_cciaa: boolean | null
+          tipo_redditi: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -901,6 +902,7 @@ export type Database = {
           note?: string | null
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
+          tipo_redditi?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -926,6 +928,7 @@ export type Database = {
           note?: string | null
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
+          tipo_redditi?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null

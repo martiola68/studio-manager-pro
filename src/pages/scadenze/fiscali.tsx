@@ -17,6 +17,8 @@ import type { Database } from "@/integrations/supabase/types";
 type ScadenzaFiscali = Database["public"]["Tables"]["tbscadfiscali"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
+const TIPO_REDDITI_OPTIONS = ["SC", "SP", "ENC", "PF", "730"];
+
 export default function ScadenzeFiscaliPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -270,6 +272,7 @@ export default function ScadenzeFiscaliPage() {
                         <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
                         <TableHead className="min-w-[150px]">Professionista</TableHead>
                         <TableHead className="min-w-[150px]">Operatore</TableHead>
+                        <TableHead className="min-w-[120px]">Tipo Redditi</TableHead>
                         <TableHead className="text-center min-w-[120px]">Mod R Comp.</TableHead>
                         <TableHead className="text-center min-w-[120px]">Mod R Def.</TableHead>
                         <TableHead className="text-center min-w-[120px]">Mod R Inv.</TableHead>
@@ -315,6 +318,27 @@ export default function ScadenzeFiscaliPage() {
                               </TableCell>
                               <TableCell className="text-sm">
                                 {getUtenteNome(scadenza.utente_operatore_id)}
+                              </TableCell>
+                              
+                              {/* Tipo Redditi */}
+                              <TableCell>
+                                <Select
+                                  value={scadenza.tipo_redditi || "__none__"}
+                                  onValueChange={(value) => handleUpdateField(scadenza.id, "tipo_redditi", value === "__none__" ? null : value)}
+                                  disabled={isConfermata}
+                                >
+                                  <SelectTrigger className="w-full text-xs">
+                                    <SelectValue placeholder="-" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">-</SelectItem>
+                                    {TIPO_REDDITI_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt} value={opt}>
+                                        {opt}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               
                               {/* Sezione Modello R */}
