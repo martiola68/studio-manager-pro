@@ -372,16 +372,23 @@ export default function CassettiFiscaliPage() {
                     <p className="font-semibold text-gray-900">💡 Come usare i Cassetti Fiscali:</p>
                     <ol className="list-decimal list-inside space-y-1 text-gray-700">
                       <li>Clicca <strong>"Apri Fisconline/Entratel"</strong> in alto per aprire il portale Agenzia Entrate</li>
+                      <li><strong className="text-blue-600">⚠️ IMPORTANTE:</strong> Nel portale, clicca sulla scheda <strong>"Fisconline/Entratel"</strong></li>
                       <li>Trova il contatto nella tabella sotto</li>
-                      <li>Clicca <strong>"Copia Utente"</strong>, poi incolla nel campo del cassetto fiscale</li>
-                      <li>Clicca <strong>"Copia PIN"</strong>, poi incolla nel campo del cassetto fiscale</li>
-                      <li>Clicca <strong>"Copia Password"</strong>, poi incolla nel campo del cassetto fiscale</li>
+                      <li>Clicca <strong>"Copia Utente"</strong>, poi incolla nel campo Utente del cassetto fiscale</li>
+                      <li>Clicca <strong>"Copia PIN"</strong>, poi incolla nel campo PIN del cassetto fiscale</li>
+                      <li>Clicca <strong>"Copia Password"</strong>, poi incolla nel campo Password del cassetto fiscale</li>
                       <li>Effettua il login nel cassetto fiscale</li>
                     </ol>
                     <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
-                      <p className="text-blue-900 text-xs">
+                      <p className="text-blue-900 text-xs mb-2">
                         <strong>⚡ Tip:</strong> Dopo aver cliccato "Copia", vedrai il pulsante cambiare in "Copiato!" per 2 secondi. 
                         Questo conferma che il valore è negli appunti e pronto per essere incollato.
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded p-3 mt-2">
+                      <p className="text-amber-900 text-xs">
+                        <strong>🎯 Ricorda:</strong> Il portale si apre alla pagina generale dell'Agenzia delle Entrate. 
+                        Devi cliccare sulla scheda <strong>"Fisconline/Entratel"</strong> per accedere all'area di login del cassetto fiscale.
                       </p>
                     </div>
                   </div>
