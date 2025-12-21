@@ -12,12 +12,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Edit, UserX, Search, Mail, RotateCcw, Loader2, UserCheck, Filter } from "lucide-react";
+import { UserPlus, Edit, UserX, Search, Copy, Check, RotateCcw, Loader2, UserCheck, Filter, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];
+
+// Funzione per generare password sicura
+const generateSecurePassword = (): string => {
+  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // Escluso I, O
+  const lowercase = "abcdefghijkmnopqrstuvwxyz"; // Escluso l
+  const numbers = "23456789"; // Escluso 0, 1
+  const symbols = "!@#$%&*";
+  
+  const all = uppercase + lowercase + numbers + symbols;
+  
+  let password = "";
+  // Assicura almeno 1 carattere per tipo
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+  
+  // Riempi fino a 12 caratteri
+  for (let i = password.length; i < 12; i++) {
+    password += all[Math.floor(Math.random() * all.length)];
+  }
+  
+  // Mescola i caratteri
+  return password.split("").sort(() => Math.random() - 0.5).join("");
+};
 
 export default function GestioneUtentiPage() {
   const router = useRouter();
@@ -29,8 +54,14 @@ export default function GestioneUtentiPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
-  const [inviting, setInviting] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  
+  // Password temporanea dialog
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState("");
+  const [generatedEmail, setGeneratedEmail] = useState("");
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -102,31 +133,14 @@ export default function GestioneUtentiPage() {
     return data || [];
   };
 
-  const inviteUser = async (email: string, nome: string, cognome: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sessione non valida");
-
-      const response = await fetch("/api/auth/invite-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ email, nome, cognome })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Errore durante l'invio dell'invito");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Errore invito utente:", error);
-      throw error;
-    }
+  const copyPasswordToClipboard = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    setPasswordCopied(true);
+    toast({
+      title: "✅ Password copiata!",
+      description: "La password è stata copiata negli appunti"
+    });
+    setTimeout(() => setPasswordCopied(false), 3000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,7 +156,7 @@ export default function GestioneUtentiPage() {
     }
 
     try {
-      setInviting(true);
+      setCreating(true);
 
       if (editingUtente) {
         // Modifica utente esistente - solo aggiornamento DB
@@ -151,60 +165,66 @@ export default function GestioneUtentiPage() {
           title: "✅ Utente aggiornato",
           description: "Le modifiche sono state salvate con successo"
         });
+        
+        setDialogOpen(false);
+        resetForm();
+        await loadData();
       } else {
-        // Nuovo utente - VERIFICA SE ESISTE GIÀ
+        // Nuovo utente - CREA CON PASSWORD TEMPORANEA
+        
+        // 1. Verifica se utente esiste già
         const utentiEsistenti = await utenteService.getUtenti();
         const utenteEsistente = utentiEsistenti.find(u => u.email.toLowerCase() === formData.email.toLowerCase());
 
         if (utenteEsistente) {
-          // UTENTE GIÀ ESISTE - SOLO INVIO EMAIL
-          try {
-            await inviteUser(formData.email, formData.nome, formData.cognome);
-            
-            toast({
-              title: "✅ Invito inviato!",
-              description: `L'utente esiste già nel sistema. Email di attivazione inviata a ${formData.email}`,
-              duration: 6000
-            });
-          } catch (inviteError) {
-            console.error("Errore invio invito:", inviteError);
-            toast({
-              title: "Errore invio email",
-              description: "L'utente esiste già ma non è stato possibile inviare l'email di attivazione. Riprova con il pulsante 'Reinvia Invito'.",
-              variant: "destructive",
-              duration: 8000
-            });
-          }
-        } else {
-          // UTENTE NON ESISTE - CREA NEL DB + INVIA EMAIL
-          
-          // 1. Crea utente nel DB
-          await utenteService.createUtente(formData);
-          
-          // 2. Invia invito via email (crea account Supabase Auth)
-          try {
-            await inviteUser(formData.email, formData.nome, formData.cognome);
-            
-            toast({
-              title: "✅ Utente creato e invitato!",
-              description: `Email di invito inviata a ${formData.email}. L'utente riceverà un link per impostare la password.`,
-              duration: 6000
-            });
-          } catch (inviteError) {
-            console.error("Errore invio invito:", inviteError);
-            toast({
-              title: "⚠️ Utente creato, invio email fallito",
-              description: "L'utente è stato creato nel sistema ma l'email di invito non è stata inviata. Puoi reinviare l'invito dalla lista utenti.",
-              variant: "destructive",
-              duration: 8000
-            });
-          }
+          toast({
+            title: "⚠️ Utente già esistente",
+            description: `Un utente con email ${formData.email} esiste già nel sistema`,
+            variant: "destructive"
+          });
+          return;
         }
-      }
 
-      setDialogOpen(false);
-      resetForm();
-      await loadData();
+        // 2. Genera password temporanea
+        const tempPassword = generateSecurePassword();
+        
+        // 3. Crea utente in Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email,
+          password: tempPassword,
+          email_confirm: true, // Conferma email automaticamente
+          user_metadata: {
+            nome: formData.nome,
+            cognome: formData.cognome
+          }
+        });
+
+        if (authError) {
+          console.error("Errore creazione Auth:", authError);
+          throw new Error(`Errore creazione account: ${authError.message}`);
+        }
+
+        // 4. Crea utente nel DB
+        await utenteService.createUtente(formData);
+        
+        // 5. Mostra password in dialog
+        setGeneratedPassword(tempPassword);
+        setGeneratedEmail(formData.email);
+        setPasswordDialogOpen(true);
+        
+        // Chiudi form dialog
+        setDialogOpen(false);
+        resetForm();
+        
+        // Ricarica lista
+        await loadData();
+        
+        toast({
+          title: "✅ Utente creato con successo!",
+          description: "Comunica la password temporanea all'utente",
+          duration: 5000
+        });
+      }
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -213,68 +233,47 @@ export default function GestioneUtentiPage() {
         variant: "destructive"
       });
     } finally {
-      setInviting(false);
-    }
-  };
-
-  const handleResendInvite = async (utente: Utente) => {
-    if (!confirm(`Inviare una nuova email di invito a ${utente.email}?`)) return;
-
-    try {
-      setResettingPassword(utente.id);
-      await inviteUser(utente.email, utente.nome, utente.cognome);
-      
-      toast({
-        title: "✅ Invito reinviato",
-        description: `Email di invito inviata a ${utente.email}`,
-        duration: 5000
-      });
-    } catch (error) {
-      console.error("Errore reinvio invito:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile inviare l'invito. Riprova.",
-        variant: "destructive"
-      });
-    } finally {
-      setResettingPassword(null);
+      setCreating(false);
     }
   };
 
   const handleResetPassword = async (utente: Utente) => {
-    if (!confirm(`Inviare email di reset password a ${utente.email}?`)) return;
+    if (!confirm(`Generare una nuova password temporanea per ${utente.nome} ${utente.cognome}?`)) return;
 
     try {
       setResettingPassword(utente.id);
 
+      // Genera nuova password temporanea
+      const tempPassword = generateSecurePassword();
+      
+      // Aggiorna password in Supabase Auth
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Sessione non valida");
 
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ email: utente.email })
-      });
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        utente.id,
+        { password: tempPassword }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Errore durante il reset password");
+      if (updateError) {
+        throw new Error(`Errore reset password: ${updateError.message}`);
       }
 
+      // Mostra nuova password
+      setGeneratedPassword(tempPassword);
+      setGeneratedEmail(utente.email);
+      setPasswordDialogOpen(true);
+      
       toast({
-        title: "✅ Email inviata",
-        description: `Email di reset password inviata a ${utente.email}`,
+        title: "✅ Password resettata",
+        description: "Comunica la nuova password temporanea all'utente",
         duration: 5000
       });
     } catch (error) {
       console.error("Errore reset password:", error);
       toast({
         title: "Errore",
-        description: error instanceof Error ? error.message : "Impossibile inviare l'email di reset",
+        description: error instanceof Error ? error.message : "Impossibile resettare la password",
         variant: "destructive"
       });
     } finally {
@@ -374,7 +373,7 @@ export default function GestioneUtentiPage() {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
-                <p className="text-gray-500 mt-1">Invita e gestisci gli utenti del sistema</p>
+                <p className="text-gray-500 mt-1">Crea e gestisci gli utenti del sistema</p>
               </div>
               <Dialog open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
@@ -383,18 +382,18 @@ export default function GestioneUtentiPage() {
                 <DialogTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Invita Nuovo Utente
+                    Nuovo Utente
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingUtente ? "Modifica Utente" : "Invita Utente"}
+                      {editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}
                     </DialogTitle>
                     <DialogDescription>
                       {editingUtente 
                         ? "Modifica i dati dell'utente" 
-                        : "Crea un nuovo utente o invia invito a un utente già esistente. L'utente riceverà un'email con un link per impostare la password."}
+                        : "Crea un nuovo utente con password temporanea. Il sistema genererà una password sicura che dovrai comunicare all'utente."}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -490,13 +489,14 @@ export default function GestioneUtentiPage() {
                     {!editingUtente && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
                         <div className="flex items-start gap-2">
-                          <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                           <div className="text-sm text-blue-900">
-                            <p className="font-semibold">📧 Come funziona l'invito:</p>
+                            <p className="font-semibold">🔑 Password Temporanea Automatica</p>
                             <ol className="list-decimal list-inside mt-2 space-y-1">
-                              <li>L'utente riceve un'email con un link sicuro</li>
-                              <li>Cliccando il link, imposta la sua password</li>
-                              <li>Può subito accedere al sistema</li>
+                              <li>Il sistema genera una password sicura casuale</li>
+                              <li>Ti verrà mostrata in un dialog con pulsante copia</li>
+                              <li>Comunicala all'utente (email, telefono, chat)</li>
+                              <li>L'utente potrà fare login e cambiarla</li>
                             </ol>
                           </div>
                         </div>
@@ -504,15 +504,15 @@ export default function GestioneUtentiPage() {
                     )}
 
                     <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1" disabled={inviting}>
-                        {inviting ? (
+                      <Button type="submit" className="flex-1" disabled={creating}>
+                        {creating ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {editingUtente ? "Aggiornamento..." : "Invio..."}
+                            {editingUtente ? "Aggiornamento..." : "Creazione..."}
                           </>
                         ) : (
                           <>
-                            {editingUtente ? "Aggiorna Utente" : "Invia Invito"}
+                            {editingUtente ? "Aggiorna Utente" : "Crea Utente"}
                           </>
                         )}
                       </Button>
@@ -520,7 +520,7 @@ export default function GestioneUtentiPage() {
                         type="button" 
                         variant="outline" 
                         onClick={() => setDialogOpen(false)}
-                        disabled={inviting}
+                        disabled={creating}
                       >
                         Annulla
                       </Button>
@@ -529,6 +529,85 @@ export default function GestioneUtentiPage() {
                 </DialogContent>
               </Dialog>
             </div>
+
+            {/* Dialog Password Temporanea */}
+            <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Key className="h-6 w-6 text-green-600" />
+                    Password Temporanea Generata
+                  </DialogTitle>
+                  <DialogDescription>
+                    Comunica questa password all'utente via email, telefono o chat
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-6">
+                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm text-gray-600">Email Utente:</Label>
+                        <p className="text-lg font-semibold text-gray-900">{generatedEmail}</p>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-600">Password Temporanea:</Label>
+                        <div className="flex items-center gap-3 mt-2">
+                          <code className="flex-1 text-2xl font-mono font-bold bg-white px-4 py-3 rounded border-2 border-green-300 text-green-700 select-all">
+                            {generatedPassword}
+                          </code>
+                          <Button
+                            onClick={copyPasswordToClipboard}
+                            variant={passwordCopied ? "default" : "outline"}
+                            size="lg"
+                            className={passwordCopied ? "bg-green-600 hover:bg-green-700" : ""}
+                          >
+                            {passwordCopied ? (
+                              <>
+                                <Check className="h-5 w-5 mr-2" />
+                                Copiata!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-5 w-5 mr-2" />
+                                Copia
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="font-semibold text-blue-900 mb-2">📧 Istruzioni per l'utente:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                      <li>Vai su: <code className="bg-white px-2 py-1 rounded text-xs">{window.location.origin}/login</code></li>
+                      <li>Email: <code className="bg-white px-2 py-1 rounded text-xs">{generatedEmail}</code></li>
+                      <li>Password: <code className="bg-white px-2 py-1 rounded text-xs">[La password sopra]</code></li>
+                      <li>Dopo il login, cambia la password nelle impostazioni profilo</li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-sm text-amber-900">
+                      <strong>⚠️ IMPORTANTE:</strong> Questa password verrà mostrata solo una volta. 
+                      Assicurati di copiarla e comunicarla all'utente prima di chiudere questa finestra.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button onClick={() => {
+                      setPasswordDialogOpen(false);
+                      setPasswordCopied(false);
+                    }}>
+                      Ho Comunicato la Password
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             {/* Filtri e Statistiche */}
             <Card className="mb-6">
@@ -632,21 +711,8 @@ export default function GestioneUtentiPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleResendInvite(utente)}
-                                  title="Reinvia invito"
-                                  disabled={resettingPassword === utente.id}
-                                >
-                                  {resettingPassword === utente.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Mail className="h-4 w-4 text-blue-600" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
                                   onClick={() => handleResetPassword(utente)}
-                                  title="Reset password"
+                                  title="Genera nuova password"
                                   disabled={resettingPassword === utente.id}
                                 >
                                   {resettingPassword === utente.id ? (
@@ -682,18 +748,18 @@ export default function GestioneUtentiPage() {
             <Card className="mt-6">
               <CardContent className="py-4">
                 <div className="flex items-start gap-3 text-sm">
-                  <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-gray-900 mb-2">📧 Azioni disponibili:</p>
+                    <p className="font-semibold text-gray-900 mb-2">🔑 Sistema Password Temporanea:</p>
                     <ul className="space-y-1 text-gray-700">
-                      <li><strong>✏️ Modifica</strong> - Aggiorna dati utente</li>
-                      <li><strong>📨 Reinvia Invito</strong> - Invia nuova email di configurazione account</li>
-                      <li><strong>🔄 Reset Password</strong> - Invia email per reimpostare password</li>
-                      <li><strong>👤 Disattiva/Riattiva</strong> - Gestisce l'accesso al sistema (dati e assegnazioni rimangono intatti)</li>
+                      <li><strong>✏️ Modifica</strong> - Aggiorna dati utente (nome, tipo, ruolo, stato)</li>
+                      <li><strong>🔄 Reset Password</strong> - Genera nuova password temporanea casuale</li>
+                      <li><strong>👤 Disattiva/Riattiva</strong> - Gestisce accesso (dati rimangono intatti)</li>
                     </ul>
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded">
-                      <p className="text-amber-900 text-xs">
-                        ℹ️ <strong>Disattivare un utente</strong> è la scelta consigliata invece di eliminarlo: impedisce l'accesso ma mantiene intatti tutti i dati storici (clienti assegnati, scadenze, appuntamenti).
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-blue-900 text-xs">
+                        💡 <strong>Le password sono sicure:</strong> 12 caratteri con maiuscole, minuscole, numeri e simboli. 
+                        L'utente può cambiarla dopo il primo login.
                       </p>
                     </div>
                   </div>
