@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -96,7 +95,8 @@ export default function ContattiPage() {
       filtered = filtered.filter(c =>
         c.nome.toLowerCase().includes(query) ||
         c.cognome.toLowerCase().includes(query) ||
-        (c.email?.toLowerCase() || "").includes(query)
+        (c.email?.toLowerCase() || "").includes(query) ||
+        (c.cell?.toLowerCase() || "").includes(query)
       );
     }
 
@@ -409,6 +409,12 @@ export default function ContattiPage() {
     }
   };
 
+  const getInitials = (nome: string, cognome: string): string => {
+    return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
+  };
+
+  const contattiConCassetto = contatti.filter(c => c.cassetto_fiscale).length;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -425,432 +431,469 @@ export default function ContattiPage() {
       <Header />
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Rubrica Contatti</h1>
-                <p className="text-gray-500 mt-1">Gestisci i contatti della rubrica</p>
-              </div>
-              <div className="flex gap-3">
-                <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Importa CSV
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Importazione Contatti da CSV</DialogTitle>
-                      <DialogDescription>
-                        Carica un file CSV per importare più contatti contemporaneamente
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-6">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-sm text-blue-900">
-                            <p className="font-semibold mb-2">📋 Come funziona:</p>
-                            <ol className="list-decimal list-inside space-y-1">
-                              <li>Scarica il template CSV cliccando il pulsante qui sotto</li>
-                              <li>Compila il file seguendo l'esempio fornito</li>
-                              <li>Carica il file compilato</li>
-                              <li>Verifica l'anteprima e conferma l'importazione</li>
-                            </ol>
-                          </div>
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={downloadTemplate}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Scarica Template CSV
+            {/* Header Mobile Responsive */}
+            <div className="mb-6 md:mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rubrica Contatti</h1>
+                  <p className="text-sm md:text-base text-gray-500 mt-1">Gestisci i contatti della rubrica</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importa CSV
                       </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+                      <DialogHeader>
+                        <DialogTitle>Importazione Contatti da CSV</DialogTitle>
+                        <DialogDescription>
+                          Carica un file CSV per importare più contatti contemporaneamente
+                        </DialogDescription>
+                      </DialogHeader>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="csv-file">Carica File CSV</Label>
-                        <Input
-                          id="csv-file"
-                          type="file"
-                          accept=".csv"
-                          onChange={handleFileChange}
-                          className="cursor-pointer"
-                        />
-                      </div>
-
-                      {previewData.length > 0 && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold">Anteprima Dati ({previewData.length} righe)</h3>
-                            <Badge variant="secondary">{csvFile?.name}</Badge>
-                          </div>
-
-                          <div className="border rounded-lg overflow-hidden">
-                            <div className="overflow-x-auto max-h-96">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-12">#</TableHead>
-                                    <TableHead>Nome</TableHead>
-                                    <TableHead>Cognome</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Cell</TableHead>
-                                    <TableHead>Tel</TableHead>
-                                    <TableHead>Cassetto</TableHead>
-                                    <TableHead>Stato</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {previewData.slice(0, 10).map((row, index) => {
-                                    const validation = validateContatto(row);
-                                    return (
-                                      <TableRow key={index} className={!validation.valid ? "bg-red-50" : ""}>
-                                        <TableCell className="font-mono text-xs">{row._lineNumber}</TableCell>
-                                        <TableCell>{row.nome || "-"}</TableCell>
-                                        <TableCell>{row.cognome || "-"}</TableCell>
-                                        <TableCell className="text-xs">{row.email || "-"}</TableCell>
-                                        <TableCell className="text-xs">{row.cell || "-"}</TableCell>
-                                        <TableCell className="text-xs">{row.tel || "-"}</TableCell>
-                                        <TableCell>
-                                          {row.cassetto_fiscale?.toLowerCase() === "true" ? (
-                                            <Badge variant="default" className="text-xs">Sì</Badge>
-                                          ) : (
-                                            <Badge variant="secondary" className="text-xs">No</Badge>
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {validation.valid ? (
-                                            <Badge variant="default" className="bg-green-600 text-xs">✓ OK</Badge>
-                                          ) : (
-                                            <Badge variant="destructive" className="text-xs">
-                                              <AlertCircle className="h-3 w-3 mr-1" />
-                                              Errore
-                                            </Badge>
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-                                    );
-                                  })}
-                                </TableBody>
-                              </Table>
+                      <div className="space-y-6">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-sm text-blue-900">
+                              <p className="font-semibold mb-2">📋 Come funziona:</p>
+                              <ol className="list-decimal list-inside space-y-1">
+                                <li>Scarica il template CSV cliccando il pulsante qui sotto</li>
+                                <li>Compila il file seguendo l'esempio fornito</li>
+                                <li>Carica il file compilato</li>
+                                <li>Verifica l'anteprima e conferma l'importazione</li>
+                              </ol>
                             </div>
                           </div>
+                        </div>
 
-                          {previewData.length > 10 && (
-                            <p className="text-sm text-gray-500 text-center">
-                              ... e altri {previewData.length - 10} contatti
-                            </p>
-                          )}
+                        <Button
+                          onClick={downloadTemplate}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Scarica Template CSV
+                        </Button>
 
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                              <div className="text-sm text-amber-900">
-                                <p className="font-semibold mb-1">⚠️ Attenzione:</p>
-                                <ul className="list-disc list-inside space-y-1">
-                                  <li>Le righe con errori di validazione verranno saltate</li>
-                                  <li>I contatti validi verranno importati</li>
-                                  <li>Riceverai un report finale con successi ed errori</li>
-                                </ul>
+                        <div className="space-y-2">
+                          <Label htmlFor="csv-file">Carica File CSV</Label>
+                          <Input
+                            id="csv-file"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                            className="cursor-pointer"
+                          />
+                        </div>
+
+                        {previewData.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold">Anteprima Dati ({previewData.length} righe)</h3>
+                              <Badge variant="secondary">{csvFile?.name}</Badge>
+                            </div>
+
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                              <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm text-amber-900">
+                                  <p className="font-semibold mb-1">⚠️ Attenzione:</p>
+                                  <ul className="list-disc list-inside space-y-1">
+                                    <li>Le righe con errori di validazione verranno saltate</li>
+                                    <li>I contatti validi verranno importati</li>
+                                    <li>Riceverai un report finale con successi ed errori</li>
+                                  </ul>
+                                </div>
                               </div>
                             </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                              <Button
+                                onClick={handleImport}
+                                disabled={importing}
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                              >
+                                {importing ? (
+                                  <>
+                                    <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                    Importazione in corso...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Importa {previewData.length} Contatti
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setImportDialogOpen(false);
+                                  setCsvFile(null);
+                                  setPreviewData([]);
+                                }}
+                                disabled={importing}
+                                className="w-full sm:w-auto"
+                              >
+                                Annulla
+                              </Button>
+                            </div>
                           </div>
-
-                          <div className="flex gap-3 pt-4">
-                            <Button
-                              onClick={handleImport}
-                              disabled={importing}
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                            >
-                              {importing ? (
-                                <>
-                                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                  Importazione in corso...
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Importa {previewData.length} Contatti
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setImportDialogOpen(false);
-                                setCsvFile(null);
-                                setPreviewData([]);
-                              }}
-                              disabled={importing}
-                            >
-                              Annulla
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={dialogOpen} onOpenChange={(open) => {
-                  setDialogOpen(open);
-                  if (!open) resetForm();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuovo Contatto
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Inserisci i dati del contatto
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="nome">Nome *</Label>
-                          <Input
-                            id="nome"
-                            value={formData.nome}
-                            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cognome">Cognome *</Label>
-                          <Input
-                            id="cognome"
-                            value={formData.cognome}
-                            onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
-                            required
-                          />
-                        </div>
+                        )}
                       </div>
+                    </DialogContent>
+                  </Dialog>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="cell">Cellulare</Label>
-                          <Input
-                            id="cell"
-                            type="tel"
-                            value={formData.cell}
-                            onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tel">Telefono</Label>
-                          <Input
-                            id="tel"
-                            type="tel"
-                            value={formData.tel}
-                            onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="note">Note</Label>
-                        <Textarea
-                          id="note"
-                          value={formData.note}
-                          onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                          rows={3}
-                        />
-                      </div>
-
-                      <div className="border-t pt-4">
-                        <h3 className="font-semibold mb-3">Credenziali Cassetto Fiscale</h3>
-                        
-                        <div className="flex items-center space-x-2 mb-4">
-                          <input
-                            type="checkbox"
-                            id="cassetto_fiscale"
-                            checked={formData.cassetto_fiscale}
-                            onChange={(e) => setFormData({ ...formData, cassetto_fiscale: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="cassetto_fiscale" className="cursor-pointer">Ha Cassetto Fiscale</Label>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                  <Dialog open={dialogOpen} onOpenChange={(open) => {
+                    setDialogOpen(open);
+                    if (!open) resetForm();
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Contatto
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+                      <DialogHeader>
+                        <DialogTitle>
+                          {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
+                        </DialogTitle>
+                        <DialogDescription>
+                          Inserisci i dati del contatto
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="utente">Utente</Label>
+                            <Label htmlFor="nome">Nome *</Label>
                             <Input
-                              id="utente"
-                              value={formData.utente}
-                              onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
+                              id="nome"
+                              value={formData.nome}
+                              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                              required
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="pin">PIN</Label>
+                            <Label htmlFor="cognome">Cognome *</Label>
                             <Input
-                              id="pin"
-                              value={formData.pin}
-                              onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                              id="cognome"
+                              value={formData.cognome}
+                              onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
+                              required
                             />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="cell">Cellulare</Label>
                             <Input
-                              id="password"
-                              type="password"
-                              value={formData.password}
-                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              id="cell"
+                              type="tel"
+                              value={formData.cell}
+                              onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="password_iniziale">Password Iniziale</Label>
+                            <Label htmlFor="tel">Telefono</Label>
                             <Input
-                              id="password_iniziale"
-                              value={formData.password_iniziale}
-                              onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
+                              id="tel"
+                              type="tel"
+                              value={formData.tel}
+                              onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
                             />
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex gap-3 pt-4">
-                        <Button type="submit" className="flex-1">
-                          {editingContatto ? "Aggiorna" : "Crea"} Contatto
-                        </Button>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setDialogOpen(false)}
-                        >
-                          Annulla
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                        <div className="space-y-2">
+                          <Label htmlFor="note">Note</Label>
+                          <Textarea
+                            id="note"
+                            value={formData.note}
+                            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="border-t pt-4">
+                          <h3 className="font-semibold mb-3">Credenziali Cassetto Fiscale</h3>
+                          
+                          <div className="flex items-center space-x-2 mb-4">
+                            <input
+                              type="checkbox"
+                              id="cassetto_fiscale"
+                              checked={formData.cassetto_fiscale}
+                              onChange={(e) => setFormData({ ...formData, cassetto_fiscale: e.target.checked })}
+                              className="rounded w-5 h-5"
+                            />
+                            <Label htmlFor="cassetto_fiscale" className="cursor-pointer">Ha Cassetto Fiscale</Label>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="utente">Utente</Label>
+                              <Input
+                                id="utente"
+                                value={formData.utente}
+                                onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="pin">PIN</Label>
+                              <Input
+                                id="pin"
+                                value={formData.pin}
+                                onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="password">Password</Label>
+                              <Input
+                                id="password"
+                                type="password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="password_iniziale">Password Iniziale</Label>
+                              <Input
+                                id="password_iniziale"
+                                value={formData.password_iniziale}
+                                onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                          <Button type="submit" className="flex-1">
+                            {editingContatto ? "Aggiorna" : "Crea"} Contatto
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => setDialogOpen(false)}
+                            className="w-full sm:w-auto"
+                          >
+                            Annulla
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </div>
 
-            <Card>
-              <CardHeader>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Cerca per nome, cognome o email..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <UserCircle className="h-4 w-4" />
+                    Totale Contatti
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-900">{contatti.length}</div>
+                </CardContent>
+              </Card>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant={letterFilter === "" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setLetterFilter("")}
-                    >
-                      Tutti
-                    </Button>
-                    {alphabet.map(letter => (
-                      <Button
-                        key={letter}
-                        variant={letterFilter === letter ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setLetterFilter(letter)}
-                        className="w-10"
-                      >
-                        {letter}
-                      </Button>
-                    ))}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Con Cassetto Fiscale
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-600">{contattiConCassetto}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="sm:col-span-2 lg:col-span-1">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">Percentuale</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">
+                    {contatti.length > 0 ? Math.round((contattiConCassetto / contatti.length) * 100) : 0}%
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search and Filters */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-base md:text-lg">Ricerca e Filtri</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Cognome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Cellulare</TableHead>
-                      <TableHead>Telefono</TableHead>
-                      <TableHead>Cassetto Fiscale</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredContatti.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nessun contatto trovato
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredContatti.map((contatto) => (
-                        <TableRow key={contatto.id}>
-                          <TableCell className="font-medium">{contatto.nome}</TableCell>
-                          <TableCell>{contatto.cognome}</TableCell>
-                          <TableCell>{contatto.email || "-"}</TableCell>
-                          <TableCell>{contatto.cell || "-"}</TableCell>
-                          <TableCell>{contatto.tel || "-"}</TableCell>
-                          <TableCell>
-                            {contatto.cassetto_fiscale ? (
-                              <Badge variant="default">Sì</Badge>
-                            ) : (
-                              <Badge variant="secondary">No</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Cerca per nome, cognome, email o telefono..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-12"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={letterFilter === "" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setLetterFilter("")}
+                    className="min-w-[44px]"
+                  >
+                    Tutti
+                  </Button>
+                  {alphabet.map(letter => (
+                    <Button
+                      key={letter}
+                      variant={letterFilter === letter ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setLetterFilter(letter)}
+                      className="w-10 h-10"
+                    >
+                      {letter}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Cards List */}
+            <div className="space-y-3">
+              {filteredContatti.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <UserCircle className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-500 text-lg">Nessun contatto trovato</p>
+                    <p className="text-gray-400 text-sm mt-2">
+                      {searchQuery || letterFilter ? "Prova a modificare i filtri di ricerca" : "Inizia aggiungendo il tuo primo contatto"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredContatti.map((contatto) => (
+                  <Card key={contatto.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg md:text-xl">
+                            {getInitials(contatto.nome, contatto.cognome)}
+                          </div>
+                        </div>
+
+                        {/* Main Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                            <div>
+                              <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+                                {contatto.nome} {contatto.cognome}
+                              </h3>
+                              {contatto.cassetto_fiscale && (
+                                <Badge variant="default" className="mt-1">
+                                  <FileSpreadsheet className="h-3 w-3 mr-1" />
+                                  Cassetto Fiscale
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleEdit(contatto)}
+                                className="h-10 w-10"
+                                title="Modifica"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-5 w-5 text-blue-600" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleDelete(contatto.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="h-10 w-10 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Elimina"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                          </div>
+
+                          {/* Contact Info */}
+                          <div className="space-y-2">
+                            {contatto.email && (
+                              <a 
+                                href={`mailto:${contatto.email}`}
+                                className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-blue-600 transition-colors group"
+                              >
+                                <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                                <span className="truncate">{contatto.email}</span>
+                              </a>
+                            )}
+                            
+                            {contatto.cell && (
+                              <a 
+                                href={`tel:${contatto.cell}`}
+                                className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-green-600 transition-colors group"
+                              >
+                                <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
+                                <span>{contatto.cell}</span>
+                              </a>
+                            )}
+                            
+                            {contatto.tel && (
+                              <a 
+                                href={`tel:${contatto.tel}`}
+                                className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-green-600 transition-colors group"
+                              >
+                                <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
+                                <span>{contatto.tel}</span>
+                              </a>
+                            )}
+
+                            {contatto.note && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-sm text-gray-600 line-clamp-2">
+                                  <span className="font-semibold">Note:</span> {contatto.note}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
         </main>
       </div>
