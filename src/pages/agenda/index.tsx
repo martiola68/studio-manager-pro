@@ -426,6 +426,28 @@ export default function AgendaPage() {
     setDataSelezionata(nuovaData);
   };
 
+  const cambiaMese = (direzione: number) => {
+    const nuovaData = new Date(dataSelezionata);
+    nuovaData.setMonth(nuovaData.getMonth() + direzione);
+    setDataSelezionata(nuovaData);
+  };
+
+  const getEventiMese = () => {
+    const anno = dataSelezionata.getFullYear();
+    const mese = dataSelezionata.getMonth();
+    
+    return eventi.filter(e => {
+      const dataEvento = new Date(e.data_inizio);
+      const matchData = dataEvento.getFullYear() === anno && dataEvento.getMonth() === mese;
+      const matchUtente = filtroUtente === "__all__" || e.utente_id === filtroUtente;
+      const matchSearch = searchQuery === "" || 
+        e.titolo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (e.descrizione || "").toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchData && matchUtente && matchSearch;
+    });
+  };
+
   const getEventiSettimana = () => {
     const inizioSettimana = new Date(dataSelezionata);
     inizioSettimana.setDate(dataSelezionata.getDate() - dataSelezionata.getDay());
@@ -467,6 +489,43 @@ export default function AgendaPage() {
     return gruppi;
   };
 
+  const getGiorniMese = () => {
+    const anno = dataSelezionata.getFullYear();
+    const mese = dataSelezionata.getMonth();
+    
+    const primoGiorno = new Date(anno, mese, 1);
+    const ultimoGiorno = new Date(anno, mese + 1, 0);
+    
+    const giorni: Date[] = [];
+    
+    const inizioSettimana = primoGiorno.getDay();
+    for (let i = inizioSettimana - 1; i >= 0; i--) {
+      const data = new Date(anno, mese, -i);
+      giorni.push(data);
+    }
+    
+    for (let giorno = 1; giorno <= ultimoGiorno.getDate(); giorno++) {
+      giorni.push(new Date(anno, mese, giorno));
+    }
+    
+    const giorniRimanenti = 42 - giorni.length;
+    for (let i = 1; i <= giorniRimanenti; i++) {
+      giorni.push(new Date(anno, mese + 1, i));
+    }
+    
+    return giorni;
+  };
+
+  const getEventiGiorno = (data: Date) => {
+    const eventiMese = getEventiMese();
+    return eventiMese.filter(e => {
+      const dataEvento = new Date(e.data_inizio);
+      return dataEvento.getDate() === data.getDate() &&
+             dataEvento.getMonth() === data.getMonth() &&
+             dataEvento.getFullYear() === data.getFullYear();
+    });
+  };
+
   const getClienteNome = (clienteId: string | null): string => {
     if (!clienteId) return "Evento Generico";
     const cliente = clienti.find(c => c.id === clienteId);
@@ -479,10 +538,15 @@ export default function AgendaPage() {
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
-  const isToday = (dateString: string): boolean => {
-    const date = new Date(dateString);
+  const isToday = (date: Date): boolean => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const isSameMonth = (date: Date): boolean => {
+    return date.getMonth() === dataSelezionata.getMonth();
   };
 
   const getWeekRange = () => {
@@ -500,8 +564,9 @@ export default function AgendaPage() {
   };
 
   const eventiPerGiorno = getEventiPerGiorno();
-  const totalEventi = getEventiSettimana().length;
+  const totalEventi = viewMode === "list" ? getEventiSettimana().length : getEventiMese().length;
   const weekRange = getWeekRange();
+  const giorniMese = getGiorniMese();
 
   if (loading) {
     return (
@@ -853,7 +918,9 @@ export default function AgendaPage() {
                   <div className="flex items-center gap-3">
                     <Calendar className="h-5 w-5 text-blue-600" />
                     <div>
-                      <p className="text-sm text-gray-600">Appuntamenti questa settimana</p>
+                      <p className="text-sm text-gray-600">
+                        Appuntamenti {viewMode === "list" ? "questa settimana" : "questo mese"}
+                      </p>
                       <p className="text-2xl font-bold text-gray-900">{totalEventi}</p>
                     </div>
                   </div>
@@ -875,78 +942,82 @@ export default function AgendaPage() {
               </CardContent>
             </Card>
 
-            {/* Filtri + View Toggle */}
+            {/* Filtri + View Toggle + Navigation */}
             <Card className="mb-6">
               <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <CardTitle className="text-base md:text-lg">Filtri e Navigazione</CardTitle>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <CardTitle className="text-base md:text-lg">
+                        {viewMode === "list" ? "Filtri e Navigazione" : "Filtri e Calendario"}
+                      </CardTitle>
+                      
+                      {/* View Mode Toggle */}
+                      <div className="flex items-center gap-2 border rounded-lg p-1">
+                        <Button
+                          variant={viewMode === "calendar" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setViewMode("calendar")}
+                          className="h-8"
+                        >
+                          <Grid3x3 className="h-4 w-4 mr-2" />
+                          Calendario
+                        </Button>
+                        <Button
+                          variant={viewMode === "list" ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setViewMode("list")}
+                          className="h-8"
+                        >
+                          <List className="h-4 w-4 mr-2" />
+                          Elenco
+                        </Button>
+                      </div>
+                    </div>
                     
-                    {/* View Mode Toggle */}
-                    <div className="flex items-center gap-2 border rounded-lg p-1">
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant={viewMode === "calendar" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setViewMode("calendar")}
-                        className="h-8"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => viewMode === "list" ? cambiaSettimana(-1) : cambiaMese(-1)}
+                        className="h-10 w-10"
                       >
-                        <Grid3x3 className="h-4 w-4 mr-2" />
-                        Calendario
+                        <ChevronLeft className="h-5 w-5" />
                       </Button>
                       <Button
-                        variant={viewMode === "list" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setViewMode("list")}
-                        className="h-8"
+                        variant="outline"
+                        onClick={() => setDataSelezionata(new Date())}
+                        className="px-4"
                       >
-                        <List className="h-4 w-4 mr-2" />
-                        Elenco
+                        Oggi
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => viewMode === "list" ? cambiaSettimana(1) : cambiaMese(1)}
+                        className="h-10 w-10"
+                      >
+                        <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => cambiaSettimana(-1)}
-                      className="h-10 w-10"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setDataSelezionata(new Date())}
-                      className="px-4"
-                    >
-                      Oggi
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => cambiaSettimana(1)}
-                      className="h-10 w-10"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
+
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-gray-900">
+                      {dataSelezionata.toLocaleDateString("it-IT", { 
+                        month: "long", 
+                        year: "numeric" 
+                      })}
+                    </p>
+                    {viewMode === "list" && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Settimana: {weekRange}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-gray-900">
-                    {dataSelezionata.toLocaleDateString("it-IT", { 
-                      month: "long", 
-                      year: "numeric" 
-                    })}
-                  </p>
-                  {viewMode === "list" && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      Settimana: {weekRange}
-                    </p>
-                  )}
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -975,8 +1046,89 @@ export default function AgendaPage() {
               </CardContent>
             </Card>
 
-            {/* Vista Elenco Timeline */}
-            {viewMode === "list" ? (
+            {/* Vista Calendario Mensile */}
+            {viewMode === "calendar" ? (
+              <Card>
+                <CardContent className="p-4">
+                  {/* Header giorni settimana */}
+                  <div className="grid grid-cols-7 gap-2 mb-2">
+                    {["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"].map((giorno) => (
+                      <div key={giorno} className="text-center font-semibold text-sm text-gray-700 py-2">
+                        {giorno}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Grid calendario */}
+                  <div className="grid grid-cols-7 gap-2">
+                    {giorniMese.map((data, index) => {
+                      const eventiGiorno = getEventiGiorno(data);
+                      const isOggi = isToday(data);
+                      const stessoMese = isSameMonth(data);
+
+                      return (
+                        <div
+                          key={index}
+                          className={`
+                            min-h-[100px] border rounded-lg p-2
+                            ${isOggi ? "bg-blue-50 border-blue-500 border-2" : "bg-white"}
+                            ${!stessoMese ? "opacity-40" : ""}
+                            hover:shadow-md transition-shadow cursor-pointer
+                          `}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`
+                              text-sm font-semibold
+                              ${isOggi ? "bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
+                              ${!stessoMese ? "text-gray-400" : "text-gray-700"}
+                            `}>
+                              {data.getDate()}
+                            </span>
+                            {eventiGiorno.length > 0 && (
+                              <span className="text-xs bg-gray-200 rounded-full px-2 py-0.5">
+                                {eventiGiorno.length}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Eventi del giorno */}
+                          <div className="space-y-1">
+                            {eventiGiorno.slice(0, 3).map((evento) => (
+                              <div
+                                key={evento.id}
+                                onClick={() => handleEdit(evento)}
+                                className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
+                                style={{ 
+                                  backgroundColor: evento.colore || "#3B82F6",
+                                  color: "white"
+                                }}
+                                title={evento.titolo}
+                              >
+                                {!evento.tutto_giorno && (
+                                  <span className="font-semibold mr-1">
+                                    {new Date(evento.data_inizio).toLocaleTimeString("it-IT", {
+                                      hour: "2-digit",
+                                      minute: "2-digit"
+                                    })}
+                                  </span>
+                                )}
+                                {evento.titolo}
+                              </div>
+                            ))}
+                            {eventiGiorno.length > 3 && (
+                              <div className="text-xs text-gray-500 text-center">
+                                +{eventiGiorno.length - 3} altri
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              /* Vista Elenco Timeline */
               <div className="space-y-4">
                 {Object.keys(eventiPerGiorno).length === 0 ? (
                   <Card>
@@ -991,7 +1143,7 @@ export default function AgendaPage() {
                 ) : (
                   Object.entries(eventiPerGiorno).map(([dataKey, eventiGiorno]) => {
                     const dataEvento = new Date(eventiGiorno[0].data_inizio);
-                    const isOggi = isToday(eventiGiorno[0].data_inizio);
+                    const isOggi = isToday(dataEvento);
 
                     return (
                       <div key={dataKey}>
@@ -1150,17 +1302,6 @@ export default function AgendaPage() {
                   })
                 )}
               </div>
-            ) : (
-              /* Vista Calendario - TODO: Implementare vista calendario mensile/settimanale */
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500 text-lg">Vista Calendario in sviluppo</p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Usa la Vista Elenco per visualizzare gli appuntamenti
-                  </p>
-                </CardContent>
-              </Card>
             )}
           </div>
         </main>
