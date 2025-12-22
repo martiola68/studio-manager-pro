@@ -16,6 +16,12 @@ import type { Database } from "@/integrations/supabase/types";
 type ScadenzaAntiric = Database["public"]["Tables"]["tbscadantiric"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
+const TIPO_PRESTAZIONE_OPTIONS = [
+  "Assistenza e consulenza societaria continuativa e generica",
+  "Consulenza del Lavoro",
+  "Altre attività"
+];
+
 export default function ScadenzeAntiriciclaggioPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -25,8 +31,15 @@ export default function ScadenzeAntiriciclaggioPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
 
-  // Stats
-  const [stats, setStats] = useState({
+  // Stats separate per A e B
+  const [statsA, setStatsA] = useState({
+    totale: 0,
+    scadute: 0,
+    prossime30gg: 0,
+    ok: 0
+  });
+
+  const [statsB, setStatsB] = useState({
     totale: 0,
     scadute: 0,
     prossime30gg: 0,
@@ -98,28 +111,58 @@ export default function ScadenzeAntiriciclaggioPage() {
     const tra30gg = new Date();
     tra30gg.setDate(oggi.getDate() + 30);
 
-    let scadute = 0;
-    let prossime30gg = 0;
-    let ok = 0;
+    // Stats Verifica A
+    let scaduteA = 0;
+    let prossime30ggA = 0;
+    let okA = 0;
+    let totaleA = 0;
+
+    // Stats Verifica B
+    let scaduteB = 0;
+    let prossime30ggB = 0;
+    let okB = 0;
+    let totaleB = 0;
 
     scadenzeData.forEach(s => {
+      // Calcolo Verifica A
       if (s.data_scadenza) {
-        const dataScad = new Date(s.data_scadenza);
-        if (dataScad < oggi) {
-          scadute++;
-        } else if (dataScad <= tra30gg) {
-          prossime30gg++;
+        totaleA++;
+        const dataScadA = new Date(s.data_scadenza);
+        if (dataScadA < oggi) {
+          scaduteA++;
+        } else if (dataScadA <= tra30gg) {
+          prossime30ggA++;
         } else {
-          ok++;
+          okA++;
+        }
+      }
+
+      // Calcolo Verifica B
+      if (s.data_scadenza_b) {
+        totaleB++;
+        const dataScadB = new Date(s.data_scadenza_b);
+        if (dataScadB < oggi) {
+          scaduteB++;
+        } else if (dataScadB <= tra30gg) {
+          prossime30ggB++;
+        } else {
+          okB++;
         }
       }
     });
 
-    setStats({
-      totale: scadenzeData.length,
-      scadute,
-      prossime30gg,
-      ok
+    setStatsA({
+      totale: totaleA,
+      scadute: scaduteA,
+      prossime30gg: prossime30ggA,
+      ok: okA
+    });
+
+    setStatsB({
+      totale: totaleB,
+      scadute: scaduteB,
+      prossime30gg: prossime30ggB,
+      ok: okB
     });
   };
 
@@ -135,14 +178,22 @@ export default function ScadenzeAntiriciclaggioPage() {
 
       if (error) throw error;
 
-      // Se aggiorno data_ultima_verifica o data_scadenza, aggiorno anche il cliente
-      if (field === "data_ultima_verifica" || field === "data_scadenza") {
+      // Aggiorna anche il cliente se sono campi data o tipo prestazione
+      if (field === "data_ultima_verifica" || field === "data_scadenza" || 
+          field === "tipo_prestazione_a" || field === "tipo_prestazione_b" ||
+          field === "data_ultima_verifica_b" || field === "data_scadenza_b") {
+        
+        const clienteUpdates: any = {};
+        if (field === "data_ultima_verifica") clienteUpdates.data_ultima_verifica_antiric = value;
+        if (field === "data_scadenza") clienteUpdates.scadenza_antiric = value;
+        if (field === "tipo_prestazione_a") clienteUpdates.tipo_prestazione_a = value;
+        if (field === "tipo_prestazione_b") clienteUpdates.tipo_prestazione_b = value;
+        if (field === "data_ultima_verifica_b") clienteUpdates.data_ultima_verifica_b = value;
+        if (field === "data_scadenza_b") clienteUpdates.scadenza_antiric_b = value;
+
         const { error: clienteError } = await supabase
           .from("tbclienti")
-          .update({
-            data_ultima_verifica_antiric: field === "data_ultima_verifica" ? value : undefined,
-            scadenza_antiric: field === "data_scadenza" ? value : undefined
-          })
+          .update(clienteUpdates)
           .eq("id", scadenzaId);
 
         if (clienteError) {
@@ -188,20 +239,29 @@ export default function ScadenzeAntiriciclaggioPage() {
   };
 
   const getRowColor = (scadenza: ScadenzaAntiric): string => {
-    if (!scadenza.data_scadenza) return "bg-gray-50";
-    
     const oggi = new Date();
-    const dataScad = new Date(scadenza.data_scadenza);
     const tra30gg = new Date();
     tra30gg.setDate(oggi.getDate() + 30);
 
-    if (dataScad < oggi) return "bg-red-50"; // Scaduta
-    if (dataScad <= tra30gg) return "bg-yellow-50"; // Prossima scadenza
-    return "bg-white hover:bg-gray-50"; // OK
+    // Priorità alla verifica A
+    if (scadenza.data_scadenza) {
+      const dataScadA = new Date(scadenza.data_scadenza);
+      if (dataScadA < oggi) return "bg-red-50";
+      if (dataScadA <= tra30gg) return "bg-yellow-50";
+    }
+
+    // Controlla verifica B se A è ok
+    if (scadenza.data_scadenza_b) {
+      const dataScadB = new Date(scadenza.data_scadenza_b);
+      if (dataScadB < oggi) return "bg-orange-50";
+      if (dataScadB <= tra30gg) return "bg-yellow-50";
+    }
+
+    return "bg-white hover:bg-gray-50";
   };
 
-  const getStatusBadge = (scadenza: ScadenzaAntiric) => {
-    if (!scadenza.data_scadenza) {
+  const getStatusBadge = (dataScadenza: string | null) => {
+    if (!dataScadenza) {
       return (
         <div className="flex items-center gap-2 text-gray-400">
           <Clock className="h-4 w-4" />
@@ -211,7 +271,7 @@ export default function ScadenzeAntiriciclaggioPage() {
     }
 
     const oggi = new Date();
-    const dataScad = new Date(scadenza.data_scadenza);
+    const dataScad = new Date(dataScadenza);
     const tra30gg = new Date();
     tra30gg.setDate(oggi.getDate() + 30);
 
@@ -273,53 +333,62 @@ export default function ScadenzeAntiriciclaggioPage() {
           <div className="max-w-full mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Scadenzario Antiriciclaggio</h1>
-              <p className="text-gray-500 mt-1">Monitoraggio adeguata verifica clientela</p>
+              <p className="text-gray-500 mt-1">Monitoraggio adeguata verifica clientela A e B</p>
             </div>
 
-            {/* Dashboard Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">Totale Clienti</CardTitle>
+            {/* Dashboard Stats - Doppio per A e B */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Stats Verifica A */}
+              <Card className="border-l-4 border-l-blue-600">
+                <CardHeader>
+                  <CardTitle className="text-lg text-blue-900">📋 Verifica A (Principale)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Totale</p>
+                      <p className="text-2xl font-bold text-gray-900">{statsA.totale}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-600 mb-1">Scadute</p>
+                      <p className="text-2xl font-bold text-red-600">{statsA.scadute}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-yellow-600 mb-1">30gg</p>
+                      <p className="text-2xl font-bold text-yellow-600">{statsA.prossime30gg}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-green-600 mb-1">OK</p>
+                      <p className="text-2xl font-bold text-green-600">{statsA.ok}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-red-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-red-600 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Verifiche Scadute
-                  </CardTitle>
+              {/* Stats Verifica B */}
+              <Card className="border-l-4 border-l-green-600">
+                <CardHeader>
+                  <CardTitle className="text-lg text-green-900">📋 Verifica B (Secondaria)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-red-600">{stats.scadute}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-yellow-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-yellow-600 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    In Scadenza (30gg)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-yellow-600">{stats.prossime30gg}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-green-600 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    In Regola
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600">{stats.ok}</div>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-600 mb-1">Totale</p>
+                      <p className="text-2xl font-bold text-gray-900">{statsB.totale}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-600 mb-1">Scadute</p>
+                      <p className="text-2xl font-bold text-red-600">{statsB.scadute}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-yellow-600 mb-1">30gg</p>
+                      <p className="text-2xl font-bold text-yellow-600">{statsB.prossime30gg}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-green-600 mb-1">OK</p>
+                      <p className="text-2xl font-bold text-green-600">{statsB.ok}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -371,16 +440,42 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableRow>
                         <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
                         <TableHead className="min-w-[150px]">Operatore</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Data Ultima Verifica</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Data Scadenza</TableHead>
-                        <TableHead className="text-center min-w-[150px]">Stato</TableHead>
+                        
+                        {/* Sezione A */}
+                        <TableHead colSpan={4} className="text-center bg-blue-50 border-l-2 border-l-blue-400">
+                          📋 Verifica A (Principale)
+                        </TableHead>
+                        
+                        {/* Sezione B */}
+                        <TableHead colSpan={4} className="text-center bg-green-50 border-l-2 border-l-green-400">
+                          📋 Verifica B (Secondaria)
+                        </TableHead>
+                        
                         <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                      </TableRow>
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-white z-20 border-r"></TableHead>
+                        <TableHead></TableHead>
+                        
+                        {/* Colonne A */}
+                        <TableHead className="text-center min-w-[200px] bg-blue-50">Tipo Prestazione A</TableHead>
+                        <TableHead className="text-center min-w-[150px] bg-blue-50">Data Verifica A</TableHead>
+                        <TableHead className="text-center min-w-[150px] bg-blue-50">Scadenza A</TableHead>
+                        <TableHead className="text-center min-w-[120px] bg-blue-50">Stato A</TableHead>
+                        
+                        {/* Colonne B */}
+                        <TableHead className="text-center min-w-[200px] bg-green-50 border-l-2 border-l-green-400">Tipo Prestazione B</TableHead>
+                        <TableHead className="text-center min-w-[150px] bg-green-50">Data Verifica B</TableHead>
+                        <TableHead className="text-center min-w-[150px] bg-green-50">Scadenza B</TableHead>
+                        <TableHead className="text-center min-w-[120px] bg-green-50">Stato B</TableHead>
+                        
+                        <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredScadenze.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={11} className="text-center py-8 text-gray-500">
                             Nessuna scadenza trovata
                           </TableCell>
                         </TableRow>
@@ -393,7 +488,31 @@ export default function ScadenzeAntiriciclaggioPage() {
                             <TableCell className="text-sm">
                               {getUtenteNome(scadenza.utente_operatore_id)}
                             </TableCell>
-                            <TableCell className="text-center">
+                            
+                            {/* VERIFICA A */}
+                            <TableCell className="text-center bg-blue-50/50">
+                              <Select
+                                value={scadenza.tipo_prestazione_a || "__none__"}
+                                onValueChange={(value) => handleUpdateField(
+                                  scadenza.id, 
+                                  "tipo_prestazione_a", 
+                                  value === "__none__" ? null : value
+                                )}
+                              >
+                                <SelectTrigger className="w-full text-xs">
+                                  <SelectValue placeholder="Seleziona..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Nessuna</SelectItem>
+                                  {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-center bg-blue-50/50">
                               <Input
                                 type="date"
                                 value={scadenza.data_ultima_verifica || ""}
@@ -401,7 +520,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                                 className="w-40 text-xs mx-auto"
                               />
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center bg-blue-50/50">
                               <Input
                                 type="date"
                                 value={scadenza.data_scadenza || ""}
@@ -409,9 +528,54 @@ export default function ScadenzeAntiriciclaggioPage() {
                                 className="w-40 text-xs mx-auto"
                               />
                             </TableCell>
-                            <TableCell className="text-center">
-                              {getStatusBadge(scadenza)}
+                            <TableCell className="text-center bg-blue-50/50">
+                              {getStatusBadge(scadenza.data_scadenza)}
                             </TableCell>
+                            
+                            {/* VERIFICA B */}
+                            <TableCell className="text-center bg-green-50/50 border-l-2 border-l-green-400">
+                              <Select
+                                value={scadenza.tipo_prestazione_b || "__none__"}
+                                onValueChange={(value) => handleUpdateField(
+                                  scadenza.id, 
+                                  "tipo_prestazione_b", 
+                                  value === "__none__" ? null : value
+                                )}
+                              >
+                                <SelectTrigger className="w-full text-xs">
+                                  <SelectValue placeholder="Seleziona..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Nessuna</SelectItem>
+                                  {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>
+                                      {opt}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-center bg-green-50/50">
+                              <Input
+                                type="date"
+                                value={scadenza.data_ultima_verifica_b || ""}
+                                onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica_b", e.target.value)}
+                                className="w-40 text-xs mx-auto"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center bg-green-50/50">
+                              <Input
+                                type="date"
+                                value={scadenza.data_scadenza_b || ""}
+                                onChange={(e) => handleUpdateField(scadenza.id, "data_scadenza_b", e.target.value)}
+                                className="w-40 text-xs mx-auto"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center bg-green-50/50">
+                              {getStatusBadge(scadenza.data_scadenza_b)}
+                            </TableCell>
+                            
+                            {/* Azioni */}
                             <TableCell className="text-center">
                               <Button
                                 variant="ghost"
@@ -435,32 +599,56 @@ export default function ScadenzeAntiriciclaggioPage() {
             <Card className="mt-4">
               <CardContent className="py-4">
                 <div className="space-y-3">
-                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Stati Verifica:</div>
+                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Scadenzario Antiriciclaggio:</div>
                   
-                  <div className="flex items-center gap-6 text-sm flex-wrap">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-blue-900 mb-2">📋 Verifica A (Principale):</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        <li>Tipo Prestazione A</li>
+                        <li>Data Ultima Verifica A</li>
+                        <li>Scadenza Antiriciclaggio A</li>
+                        <li>Stato verifica (SCADUTA/In scadenza/OK)</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium text-green-900 mb-2">📋 Verifica B (Secondaria):</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                        <li>Tipo Prestazione B</li>
+                        <li>Data Ultima Verifica B</li>
+                        <li>Scadenza Antiriciclaggio B</li>
+                        <li>Stato verifica (SCADUTA/In scadenza/OK)</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 text-sm flex-wrap pt-3 border-t">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-red-50 border border-red-200 rounded"></div>
                       <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <span>SCADUTA - Verifica urgente richiesta</span>
+                      <span>SCADUTA A</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-orange-50 border border-orange-200 rounded"></div>
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <span>SCADUTA B (A OK)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-yellow-50 border border-yellow-200 rounded"></div>
                       <Clock className="h-4 w-4 text-yellow-600" />
-                      <span>In scadenza entro 30 giorni</span>
+                      <span>In scadenza (30gg)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span>In regola (oltre 30 giorni)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gray-50 border border-gray-300 rounded"></div>
-                      <span className="text-gray-500">Scadenza non definita</span>
+                      <span>Tutte OK</span>
                     </div>
                   </div>
 
                   <div className="text-xs text-gray-600 pt-3 border-t">
                     <strong>Nota:</strong> L'aggiornamento delle date in questo scadenzario aggiorna automaticamente anche la scheda del cliente.
+                    I campi possono rimanere vuoti. Verifica B è opzionale e indipendente da A.
                   </div>
                 </div>
               </CardContent>

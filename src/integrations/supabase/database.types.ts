@@ -489,9 +489,13 @@ export type Database = {
           created_at: string | null
           data_scadenza: string | null
           data_ultima_verifica: string | null
+          data_ultima_verifica_b: string | null
           id: string
           nominativo: string
           note: string | null
+          scadenza_antiric_b: string | null
+          tipo_prestazione_a: string | null
+          tipo_prestazione_b: string | null
           updated_at: string | null
           utente_operatore_id: string | null
         }
@@ -499,9 +503,13 @@ export type Database = {
           created_at?: string | null
           data_scadenza?: string | null
           data_ultima_verifica?: string | null
+          data_ultima_verifica_b?: string | null
           id: string
           nominativo: string
           note?: string | null
+          scadenza_antiric_b?: string | null
+          tipo_prestazione_a?: string | null
+          tipo_prestazione_b?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
         }
@@ -509,9 +517,13 @@ export type Database = {
           created_at?: string | null
           data_scadenza?: string | null
           data_ultima_verifica?: string | null
+          data_ultima_verifica_b?: string | null
           id?: string
           nominativo?: string
           note?: string | null
+          scadenza_antiric_b?: string | null
+          tipo_prestazione_a?: string | null
+          tipo_prestazione_b?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
         }
