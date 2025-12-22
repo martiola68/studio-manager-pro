@@ -518,7 +518,6 @@ export default function ScadenzeLipePage() {
                                 <Select
                                   value={acconto}
                                   onValueChange={(value) => handleUpdateField(scadenza.id, "acconto", value)}
-                                  disabled={tipoLiq === "CL"}
                                 >
                                   <SelectTrigger className="w-full text-xs">
                                     <SelectValue />
@@ -534,7 +533,7 @@ export default function ScadenzeLipePage() {
                                   type="checkbox"
                                   checked={scadenza.acconto_com || false}
                                   onChange={() => handleToggleField(scadenza.id, "acconto_com", scadenza.acconto_com)}
-                                  disabled={!isAccontoComEnabled || tipoLiq === "CL"}
+                                  disabled={!isAccontoComEnabled}
                                   className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                 />
                               </TableCell>
@@ -607,7 +606,7 @@ export default function ScadenzeLipePage() {
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
                         <li><strong>Dovuto</strong>: Acconto Com abilitato</li>
                         <li><strong>Non dovuto</strong>: Acconto Com disabilitato</li>
-                        <li><strong>CL</strong>: Campo Acconto disabilitato</li>
+                        <li><strong>CL</strong>: Campo Acconto attivo</li>
                       </ul>
                     </div>
                   </div>
