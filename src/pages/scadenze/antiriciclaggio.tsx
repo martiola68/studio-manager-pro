@@ -138,9 +138,9 @@ export default function ScadenzeAntiriciclaggioPage() {
       }
 
       // Calcolo Verifica B
-      if (s.data_scadenza_b) {
+      if (s.scadenza_antiric_b) {
         totaleB++;
-        const dataScadB = new Date(s.data_scadenza_b);
+        const dataScadB = new Date(s.scadenza_antiric_b);
         if (dataScadB < oggi) {
           scaduteB++;
         } else if (dataScadB <= tra30gg) {
@@ -181,7 +181,7 @@ export default function ScadenzeAntiriciclaggioPage() {
       // Aggiorna anche il cliente se sono campi data o tipo prestazione
       if (field === "data_ultima_verifica" || field === "data_scadenza" || 
           field === "tipo_prestazione_a" || field === "tipo_prestazione_b" ||
-          field === "data_ultima_verifica_b" || field === "data_scadenza_b") {
+          field === "data_ultima_verifica_b" || field === "scadenza_antiric_b") {
         
         const clienteUpdates: any = {};
         if (field === "data_ultima_verifica") clienteUpdates.data_ultima_verifica_antiric = value;
@@ -189,7 +189,7 @@ export default function ScadenzeAntiriciclaggioPage() {
         if (field === "tipo_prestazione_a") clienteUpdates.tipo_prestazione_a = value;
         if (field === "tipo_prestazione_b") clienteUpdates.tipo_prestazione_b = value;
         if (field === "data_ultima_verifica_b") clienteUpdates.data_ultima_verifica_b = value;
-        if (field === "data_scadenza_b") clienteUpdates.scadenza_antiric_b = value;
+        if (field === "scadenza_antiric_b") clienteUpdates.scadenza_antiric_b = value;
 
         const { error: clienteError } = await supabase
           .from("tbclienti")
@@ -251,8 +251,8 @@ export default function ScadenzeAntiriciclaggioPage() {
     }
 
     // Controlla verifica B se A è ok
-    if (scadenza.data_scadenza_b) {
-      const dataScadB = new Date(scadenza.data_scadenza_b);
+    if (scadenza.scadenza_antiric_b) {
+      const dataScadB = new Date(scadenza.scadenza_antiric_b);
       if (dataScadB < oggi) return "bg-orange-50";
       if (dataScadB <= tra30gg) return "bg-yellow-50";
     }
@@ -566,13 +566,13 @@ export default function ScadenzeAntiriciclaggioPage() {
                             <TableCell className="text-center bg-green-50/50">
                               <Input
                                 type="date"
-                                value={scadenza.data_scadenza_b || ""}
-                                onChange={(e) => handleUpdateField(scadenza.id, "data_scadenza_b", e.target.value)}
+                                value={scadenza.scadenza_antiric_b || ""}
+                                onChange={(e) => handleUpdateField(scadenza.id, "scadenza_antiric_b", e.target.value)}
                                 className="w-40 text-xs mx-auto"
                               />
                             </TableCell>
                             <TableCell className="text-center bg-green-50/50">
-                              {getStatusBadge(scadenza.data_scadenza_b)}
+                              {getStatusBadge(scadenza.scadenza_antiric_b)}
                             </TableCell>
                             
                             {/* Azioni */}
