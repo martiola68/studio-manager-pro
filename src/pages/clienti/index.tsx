@@ -110,6 +110,10 @@ export default function ClientiPage() {
     tipo_cliente: "Esterno",
     tipo_redditi: "",
     data_ultima_verifica_antiric: "",
+    tipo_prestazione_a: "",
+    tipo_prestazione_b: "",
+    data_ultima_verifica_b: "",
+    scadenza_antiric_b: "",
     flag_iva: true,
     flag_cu: true,
     flag_bilancio: true,
@@ -632,6 +636,10 @@ export default function ClientiPage() {
       tipo_cliente: cliente.tipo_cliente || "Esterno",
       tipo_redditi: cliente.tipo_redditi || "",
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric || "",
+      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
+      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
+      data_ultima_verifica_b: cliente.data_ultima_verifica_b || "",
+      scadenza_antiric_b: cliente.scadenza_antiric_b || "",
       flag_iva: cliente.flag_iva ?? true,
       flag_cu: cliente.flag_cu ?? true,
       flag_bilancio: cliente.flag_bilancio ?? true,
@@ -689,6 +697,10 @@ export default function ClientiPage() {
       tipo_cliente: "Esterno",
       tipo_redditi: "",
       data_ultima_verifica_antiric: "",
+      tipo_prestazione_a: "",
+      tipo_prestazione_b: "",
+      data_ultima_verifica_b: "",
+      scadenza_antiric_b: "",
       flag_iva: true,
       flag_cu: true,
       flag_bilancio: true,
@@ -1288,27 +1300,111 @@ export default function ClientiPage() {
                           </div>
 
                           <div className="border-t pt-4 mt-4">
-                            <h3 className="font-semibold mb-3">Antiriciclaggio</h3>
+                            <h3 className="font-semibold mb-4 text-lg">Adeguata Verifica Clientela (Antiriciclaggio)</h3>
                             
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica</Label>
-                                <Input
-                                  id="data_ultima_verifica_antiric"
-                                  type="date"
-                                  value={formData.data_ultima_verifica_antiric}
-                                  onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
-                                />
-                              </div>
+                            {/* Sezione A */}
+                            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                              <h4 className="font-semibold mb-3 text-blue-900">📋 Verifica A (Principale)</h4>
+                              
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="tipo_prestazione_a">Tipo Prestazione A</Label>
+                                  <Select
+                                    value={formData.tipo_prestazione_a || "__none__"}
+                                    onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_a: value === "__none__" ? "" : value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleziona tipo prestazione" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__none__">Nessuna</SelectItem>
+                                      <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
+                                        Assistenza e consulenza societaria continuativa e generica
+                                      </SelectItem>
+                                      <SelectItem value="Consulenza del Lavoro">
+                                        Consulenza del Lavoro
+                                      </SelectItem>
+                                      <SelectItem value="Altre attività">
+                                        Altre attività
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
 
-                              <div className="space-y-2">
-                                <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio</Label>
-                                <Input
-                                  id="scadenza_antiric"
-                                  type="date"
-                                  value={formData.scadenza_antiric}
-                                  onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
-                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica A</Label>
+                                    <Input
+                                      id="data_ultima_verifica_antiric"
+                                      type="date"
+                                      value={formData.data_ultima_verifica_antiric}
+                                      onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio A</Label>
+                                    <Input
+                                      id="scadenza_antiric"
+                                      type="date"
+                                      value={formData.scadenza_antiric}
+                                      onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Sezione B */}
+                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                              <h4 className="font-semibold mb-3 text-green-900">📋 Verifica B (Secondaria)</h4>
+                              
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="tipo_prestazione_b">Tipo Prestazione B</Label>
+                                  <Select
+                                    value={formData.tipo_prestazione_b || "__none__"}
+                                    onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_b: value === "__none__" ? "" : value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Seleziona tipo prestazione" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__none__">Nessuna</SelectItem>
+                                      <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
+                                        Assistenza e consulenza societaria continuativa e generica
+                                      </SelectItem>
+                                      <SelectItem value="Consulenza del Lavoro">
+                                        Consulenza del Lavoro
+                                      </SelectItem>
+                                      <SelectItem value="Altre attività">
+                                        Altre attività
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="data_ultima_verifica_b">Data Ultima Verifica B</Label>
+                                    <Input
+                                      id="data_ultima_verifica_b"
+                                      type="date"
+                                      value={formData.data_ultima_verifica_b}
+                                      onChange={(e) => setFormData({ ...formData, data_ultima_verifica_b: e.target.value })}
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="scadenza_antiric_b">Scadenza Antiriciclaggio B</Label>
+                                    <Input
+                                      id="scadenza_antiric_b"
+                                      type="date"
+                                      value={formData.scadenza_antiric_b}
+                                      onChange={(e) => setFormData({ ...formData, scadenza_antiric_b: e.target.value })}
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>

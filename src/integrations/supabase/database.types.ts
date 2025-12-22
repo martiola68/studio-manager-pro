@@ -123,6 +123,7 @@ export type Database = {
           created_at: string | null
           data_creazione: string | null
           data_ultima_verifica_antiric: string | null
+          data_ultima_verifica_b: string | null
           email: string
           flag_770: boolean | null
           flag_bilancio: boolean | null
@@ -143,7 +144,10 @@ export type Database = {
           provincia: string
           ragione_sociale: string
           scadenza_antiric: string | null
+          scadenza_antiric_b: string | null
           tipo_cliente: string | null
+          tipo_prestazione_a: string | null
+          tipo_prestazione_b: string | null
           tipo_prestazione_id: string | null
           tipo_redditi: string | null
           updated_at: string | null
@@ -161,6 +165,7 @@ export type Database = {
           created_at?: string | null
           data_creazione?: string | null
           data_ultima_verifica_antiric?: string | null
+          data_ultima_verifica_b?: string | null
           email: string
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -181,7 +186,10 @@ export type Database = {
           provincia: string
           ragione_sociale: string
           scadenza_antiric?: string | null
+          scadenza_antiric_b?: string | null
           tipo_cliente?: string | null
+          tipo_prestazione_a?: string | null
+          tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
           updated_at?: string | null
@@ -199,6 +207,7 @@ export type Database = {
           created_at?: string | null
           data_creazione?: string | null
           data_ultima_verifica_antiric?: string | null
+          data_ultima_verifica_b?: string | null
           email?: string
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -219,7 +228,10 @@ export type Database = {
           provincia?: string
           ragione_sociale?: string
           scadenza_antiric?: string | null
+          scadenza_antiric_b?: string | null
           tipo_cliente?: string | null
+          tipo_prestazione_a?: string | null
+          tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
           updated_at?: string | null
