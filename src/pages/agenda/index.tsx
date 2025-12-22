@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight, Search, User } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight, Search, User, List, Grid3x3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -36,6 +36,7 @@ export default function AgendaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEvento, setEditingEvento] = useState<EventoAgenda | null>(null);
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const [formData, setFormData] = useState({
     titolo: "",
@@ -425,7 +426,6 @@ export default function AgendaPage() {
     setDataSelezionata(nuovaData);
   };
 
-  // Filtro eventi per settimana corrente
   const getEventiSettimana = () => {
     const inizioSettimana = new Date(dataSelezionata);
     inizioSettimana.setDate(dataSelezionata.getDate() - dataSelezionata.getDay());
@@ -447,7 +447,6 @@ export default function AgendaPage() {
     }).sort((a, b) => new Date(a.data_inizio).getTime() - new Date(b.data_inizio).getTime());
   };
 
-  // Raggruppa eventi per giorno
   const getEventiPerGiorno = () => {
     const eventiSettimana = getEventiSettimana();
     const gruppi: { [key: string]: EventoAgenda[] } = {};
@@ -486,8 +485,23 @@ export default function AgendaPage() {
     return date.toDateString() === today.toDateString();
   };
 
+  const getWeekRange = () => {
+    const inizioSettimana = new Date(dataSelezionata);
+    inizioSettimana.setDate(dataSelezionata.getDate() - dataSelezionata.getDay());
+    
+    const fineSettimana = new Date(inizioSettimana);
+    fineSettimana.setDate(inizioSettimana.getDate() + 6);
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
+    };
+
+    return `${formatDate(inizioSettimana)} - ${formatDate(fineSettimana)}`;
+  };
+
   const eventiPerGiorno = getEventiPerGiorno();
   const totalEventi = getEventiSettimana().length;
+  const weekRange = getWeekRange();
 
   if (loading) {
     return (
@@ -861,11 +875,36 @@ export default function AgendaPage() {
               </CardContent>
             </Card>
 
-            {/* Filtri */}
+            {/* Filtri + View Toggle */}
             <Card className="mb-6">
               <CardHeader>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <CardTitle className="text-base md:text-lg">Filtri e Navigazione</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <CardTitle className="text-base md:text-lg">Filtri e Navigazione</CardTitle>
+                    
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center gap-2 border rounded-lg p-1">
+                      <Button
+                        variant={viewMode === "calendar" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setViewMode("calendar")}
+                        className="h-8"
+                      >
+                        <Grid3x3 className="h-4 w-4 mr-2" />
+                        Calendario
+                      </Button>
+                      <Button
+                        variant={viewMode === "list" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setViewMode("list")}
+                        className="h-8"
+                      >
+                        <List className="h-4 w-4 mr-2" />
+                        Elenco
+                      </Button>
+                    </div>
+                  </div>
+                  
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
@@ -901,6 +940,11 @@ export default function AgendaPage() {
                       year: "numeric" 
                     })}
                   </p>
+                  {viewMode === "list" && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Settimana: {weekRange}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -931,180 +975,193 @@ export default function AgendaPage() {
               </CardContent>
             </Card>
 
-            {/* Lista Eventi Timeline */}
-            <div className="space-y-4">
-              {Object.keys(eventiPerGiorno).length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                    <p className="text-gray-500 text-lg">Nessun appuntamento questa settimana</p>
-                    <p className="text-gray-400 text-sm mt-2">
-                      Clicca su "Nuovo Evento" per aggiungere un appuntamento
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                Object.entries(eventiPerGiorno).map(([dataKey, eventiGiorno]) => {
-                  const dataEvento = new Date(eventiGiorno[0].data_inizio);
-                  const isOggi = isToday(eventiGiorno[0].data_inizio);
+            {/* Vista Elenco Timeline */}
+            {viewMode === "list" ? (
+              <div className="space-y-4">
+                {Object.keys(eventiPerGiorno).length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                      <p className="text-gray-500 text-lg">Nessun appuntamento questa settimana</p>
+                      <p className="text-gray-400 text-sm mt-2">
+                        Clicca su "Nuovo Evento" per aggiungere un appuntamento
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  Object.entries(eventiPerGiorno).map(([dataKey, eventiGiorno]) => {
+                    const dataEvento = new Date(eventiGiorno[0].data_inizio);
+                    const isOggi = isToday(eventiGiorno[0].data_inizio);
 
-                  return (
-                    <div key={dataKey}>
-                      {/* Header Giorno */}
-                      <div className={`flex items-center gap-4 mb-3 ${isOggi ? 'bg-blue-50 border-l-4 border-blue-600 pl-4 py-2 rounded' : ''}`}>
-                        <div className="text-center min-w-[80px]">
-                          <p className="text-sm text-gray-500 uppercase">
-                            {dataEvento.toLocaleDateString("it-IT", { weekday: "short" })}
-                          </p>
-                          <p className="text-3xl font-bold text-gray-900">
-                            {dataEvento.getDate()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {dataEvento.toLocaleDateString("it-IT", { month: "short" })}
+                    return (
+                      <div key={dataKey}>
+                        {/* Header Giorno */}
+                        <div className={`flex items-center gap-4 mb-3 ${isOggi ? 'bg-blue-50 border-l-4 border-blue-600 pl-4 py-2 rounded' : ''}`}>
+                          <div className="text-center min-w-[80px]">
+                            <p className="text-sm text-gray-500 uppercase">
+                              {dataEvento.toLocaleDateString("it-IT", { weekday: "short" })}
+                            </p>
+                            <p className="text-3xl font-bold text-gray-900">
+                              {dataEvento.getDate()}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {dataEvento.toLocaleDateString("it-IT", { month: "short" })}
+                            </p>
+                          </div>
+                          <div className="flex-1 border-t border-gray-300"></div>
+                          <p className="text-sm text-gray-600 font-medium">
+                            {eventiGiorno.length} {eventiGiorno.length === 1 ? "appuntamento" : "appuntamenti"}
                           </p>
                         </div>
-                        <div className="flex-1 border-t border-gray-300"></div>
-                        <p className="text-sm text-gray-600 font-medium">
-                          {eventiGiorno.length} {eventiGiorno.length === 1 ? "appuntamento" : "appuntamenti"}
-                        </p>
-                      </div>
 
-                      {/* Lista Eventi del Giorno */}
-                      <div className="space-y-3 ml-0 md:ml-[100px]">
-                        {eventiGiorno.map((evento) => {
-                          const cliente = getClienteNome(evento.cliente_id);
-                          const responsabile = getUtenteNome(evento.utente_id);
-                          const partecipanti = getPartecipantiEvento(evento);
-                          const dataInizio = new Date(evento.data_inizio);
-                          const dataFine = new Date(evento.data_fine);
+                        {/* Lista Eventi del Giorno */}
+                        <div className="space-y-3 ml-0 md:ml-[100px]">
+                          {eventiGiorno.map((evento) => {
+                            const cliente = getClienteNome(evento.cliente_id);
+                            const responsabile = getUtenteNome(evento.utente_id);
+                            const partecipanti = getPartecipantiEvento(evento);
+                            const dataInizio = new Date(evento.data_inizio);
+                            const dataFine = new Date(evento.data_fine);
 
-                          return (
-                            <Card 
-                              key={evento.id} 
-                              className="hover:shadow-md transition-shadow cursor-pointer"
-                              onClick={() => handleEdit(evento)}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-start gap-4">
-                                  {/* Indicatore Colore */}
-                                  <div 
-                                    className="w-1 h-full rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: evento.colore || "#3B82F6", minHeight: "60px" }}
-                                  ></div>
+                            return (
+                              <Card 
+                                key={evento.id} 
+                                className="hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => handleEdit(evento)}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-4">
+                                    {/* Indicatore Colore */}
+                                    <div 
+                                      className="w-1 h-full rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: evento.colore || "#3B82F6", minHeight: "60px" }}
+                                    ></div>
 
-                                  {/* Contenuto */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
-                                      <div className="flex-1 min-w-0">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">
-                                          {evento.titolo}
-                                        </h3>
-                                        <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mb-2">
-                                          <User className="h-4 w-4 flex-shrink-0" />
-                                          <span className="truncate">{cliente}</span>
+                                    {/* Contenuto */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                                        <div className="flex-1 min-w-0">
+                                          <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                            {evento.titolo}
+                                          </h3>
+                                          <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mb-2">
+                                            <User className="h-4 w-4 flex-shrink-0" />
+                                            <span className="truncate">{cliente}</span>
+                                          </div>
                                         </div>
-                                      </div>
 
-                                      {/* Azioni */}
-                                      <div className="flex gap-2 flex-shrink-0">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEdit(evento);
-                                          }}
-                                          className="h-9 w-9"
-                                        >
-                                          <Edit className="h-4 w-4 text-blue-600" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(evento.id);
-                                          }}
-                                          className="h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    {/* Dettagli */}
-                                    <div className="space-y-2 text-sm">
-                                      {!evento.tutto_giorno && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                          <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                          <span>
-                                            {dataInizio.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                                            {" - "}
-                                            {dataFine.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {evento.in_sede && evento.sala && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                          <Building2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                          <span>Sala: {evento.sala}</span>
-                                        </div>
-                                      )}
-
-                                      {evento.luogo && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                          <MapPin className="h-4 w-4 text-red-600 flex-shrink-0" />
-                                          <span className="truncate">{evento.luogo}</span>
+                                        {/* Azioni */}
+                                        <div className="flex gap-2 flex-shrink-0">
                                           <Button
                                             variant="ghost"
-                                            size="sm"
+                                            size="icon"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              apriGoogleMaps(evento.luogo || "");
+                                              handleEdit(evento);
                                             }}
-                                            className="h-6 px-2 text-xs"
+                                            className="h-9 w-9"
                                           >
-                                            <Navigation className="h-3 w-3 mr-1" />
-                                            Percorso
+                                            <Edit className="h-4 w-4 text-blue-600" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDelete(evento.id);
+                                            }}
+                                            className="h-9 w-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
                                           </Button>
                                         </div>
-                                      )}
+                                      </div>
 
-                                      {responsabile !== "-" && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                          <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                                          <span>Responsabile: {responsabile}</span>
-                                        </div>
-                                      )}
+                                      {/* Dettagli */}
+                                      <div className="space-y-2 text-sm">
+                                        {!evento.tutto_giorno && (
+                                          <div className="flex items-center gap-2 text-gray-700">
+                                            <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            <span>
+                                              {dataInizio.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                                              {" - "}
+                                              {dataFine.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                                            </span>
+                                          </div>
+                                        )}
 
-                                      {partecipanti.length > 0 && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                          <Users className="h-4 w-4 text-purple-600 flex-shrink-0" />
-                                          <span>{partecipanti.length} partecipant{partecipanti.length > 1 ? "i" : "e"}</span>
-                                        </div>
-                                      )}
+                                        {evento.in_sede && evento.sala && (
+                                          <div className="flex items-center gap-2 text-gray-700">
+                                            <Building2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                            <span>Sala: {evento.sala}</span>
+                                          </div>
+                                        )}
 
-                                      {evento.descrizione && (
-                                        <div className="mt-3 pt-3 border-t">
-                                          <p className="text-gray-600 line-clamp-2">
-                                            {evento.descrizione}
-                                          </p>
-                                        </div>
-                                      )}
+                                        {evento.luogo && (
+                                          <div className="flex items-center gap-2 text-gray-700">
+                                            <MapPin className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                            <span className="truncate">{evento.luogo}</span>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                apriGoogleMaps(evento.luogo || "");
+                                              }}
+                                              className="h-6 px-2 text-xs"
+                                            >
+                                              <Navigation className="h-3 w-3 mr-1" />
+                                              Percorso
+                                            </Button>
+                                          </div>
+                                        )}
+
+                                        {responsabile !== "-" && (
+                                          <div className="flex items-center gap-2 text-gray-700">
+                                            <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                                            <span>Responsabile: {responsabile}</span>
+                                          </div>
+                                        )}
+
+                                        {partecipanti.length > 0 && (
+                                          <div className="flex items-center gap-2 text-gray-700">
+                                            <Users className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                            <span>{partecipanti.length} partecipant{partecipanti.length > 1 ? "i" : "e"}</span>
+                                          </div>
+                                        )}
+
+                                        {evento.descrizione && (
+                                          <div className="mt-3 pt-3 border-t">
+                                            <p className="text-gray-600 line-clamp-2">
+                                              {evento.descrizione}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              /* Vista Calendario - TODO: Implementare vista calendario mensile/settimanale */
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Calendar className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">Vista Calendario in sviluppo</p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Usa la Vista Elenco per visualizzare gli appuntamenti
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </main>
       </div>
