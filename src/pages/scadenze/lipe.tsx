@@ -178,6 +178,9 @@ export default function ScadenzeLipePage() {
   const isMeseEnabled = (scadenza: ScadenzaLipe, mese: string): boolean => {
     const tipoLiq = scadenza.tipo_liq;
     
+    // Se CL (Contribuenti Lipe), TUTTI i mesi sono disabilitati
+    if (tipoLiq === "CL") return false;
+    
     // Se Mensile (M), tutti i mesi sono attivi
     if (tipoLiq === "M") return true;
     
@@ -209,7 +212,7 @@ export default function ScadenzeLipePage() {
         <main className="flex-1 p-8">
           <div className="max-w-full mx-auto">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Scadenzario Iva per. e Lipe</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Scadenzario Liq. Iva e Lipe</h1>
               <p className="text-gray-500 mt-1">Gestione liquidazioni IVA mensili/trimestrali e comunicazioni LIPE</p>
             </div>
 
@@ -350,6 +353,7 @@ export default function ScadenzeLipePage() {
                                   <SelectContent>
                                     <SelectItem value="M">M</SelectItem>
                                     <SelectItem value="T">T</SelectItem>
+                                    <SelectItem value="CL">CL</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -514,6 +518,7 @@ export default function ScadenzeLipePage() {
                                 <Select
                                   value={acconto}
                                   onValueChange={(value) => handleUpdateField(scadenza.id, "acconto", value)}
+                                  disabled={tipoLiq === "CL"}
                                 >
                                   <SelectTrigger className="w-full text-xs">
                                     <SelectValue />
@@ -529,7 +534,7 @@ export default function ScadenzeLipePage() {
                                   type="checkbox"
                                   checked={scadenza.acconto_com || false}
                                   onChange={() => handleToggleField(scadenza.id, "acconto_com", scadenza.acconto_com)}
-                                  disabled={!isAccontoComEnabled}
+                                  disabled={!isAccontoComEnabled || tipoLiq === "CL"}
                                   className="rounded w-4 h-4 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                 />
                               </TableCell>
@@ -593,6 +598,7 @@ export default function ScadenzeLipePage() {
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
                         <li><strong>M (Mensile)</strong>: Tutti i mesi attivi</li>
                         <li><strong>T (Trimestrale)</strong>: Solo Mar, Giu, Set, Dic attivi</li>
+                        <li><strong>CL (Contribuenti Lipe)</strong>: Solo Lipe attivi, mesi disabilitati</li>
                       </ul>
                     </div>
                     
@@ -601,6 +607,7 @@ export default function ScadenzeLipePage() {
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
                         <li><strong>Dovuto</strong>: Acconto Com abilitato</li>
                         <li><strong>Non dovuto</strong>: Acconto Com disabilitato</li>
+                        <li><strong>CL</strong>: Campo Acconto disabilitato</li>
                       </ul>
                     </div>
                   </div>
