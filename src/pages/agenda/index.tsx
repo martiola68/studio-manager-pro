@@ -1360,7 +1360,7 @@ export default function AgendaPage() {
                                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                                         <div className="flex-1 min-w-0">
                                           <h3 className="text-lg font-bold text-gray-900 mb-1">
-                                            {evento.titolo}
+                                            {responsabile !== "-" ? `${responsabile} - ` : ""}{evento.titolo}
                                           </h3>
                                           <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mb-2">
                                             <User className="h-4 w-4 flex-shrink-0" />
