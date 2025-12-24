@@ -432,9 +432,15 @@ export default function AgendaPage() {
       // Invia notifiche email
       if (!editingEvento && (partecipantiFinal.length > 0 || formData.utente_id || formData.cliente_id)) {
         try {
+          console.log("🔍 DEBUG - Inizio invio notifiche email");
+          
           const responsabile = utenti.find(u => u.id === formData.utente_id);
           const cliente = clienti.find(c => c.id === formData.cliente_id);
           const partecipantiUtenti = utenti.filter(u => partecipantiFinal.includes(u.id));
+
+          console.log("👤 Responsabile:", responsabile);
+          console.log("🏢 Cliente:", cliente);
+          console.log("👥 Partecipanti:", partecipantiUtenti);
 
           const dataInizio = new Date(formData.data_inizio);
           const dataFine = new Date(formData.data_fine);
@@ -455,7 +461,14 @@ export default function AgendaPage() {
             clienteNome: cliente?.ragione_sociale || undefined
           };
 
+          console.log("📧 Dati email preparati:", emailData);
+          console.log("📬 Email totali da inviare:", 
+            [emailData.responsabileEmail, ...emailData.partecipantiEmails, emailData.clienteEmail].filter(Boolean).length
+          );
+
           const risultato = await sendEventNotification(emailData);
+
+          console.log("✅ Risultato invio email:", risultato);
 
           if (risultato.success) {
             toast({
@@ -463,6 +476,7 @@ export default function AgendaPage() {
               description: `${risultato.sent} notifica${risultato.sent > 1 ? "e" : ""} email inviata${risultato.sent > 1 ? "e" : ""} con successo`,
             });
           } else {
+            console.error("❌ Errore invio email:", risultato.error);
             toast({
               title: "⚠️ Attenzione",
               description: `Evento salvato ma errore nell'invio delle email: ${risultato.error}`,
@@ -470,7 +484,7 @@ export default function AgendaPage() {
             });
           }
         } catch (emailError) {
-          console.error("Errore invio email:", emailError);
+          console.error("❌ Errore invio email (catch):", emailError);
           toast({
             title: "⚠️ Attenzione",
             description: "Evento salvato ma impossibile inviare le notifiche email",
