@@ -13,7 +13,12 @@ import { Search, Trash2, AlertTriangle, CheckCircle, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type ScadenzaAntiric = Database["public"]["Tables"]["tbscadantiric"]["Row"];
+type ScadenzaAntiric = Database["public"]["Tables"]["tbscadantiric"]["Row"] & {
+  tbclienti?: {
+    tipo_prestazione_a: string | null;
+    tipo_prestazione_b: string | null;
+  };
+};
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 const TIPO_PRESTAZIONE_OPTIONS = [
@@ -89,7 +94,13 @@ export default function ScadenzeAntiriciclaggioPage() {
   const loadScadenze = async (): Promise<ScadenzaAntiric[]> => {
     const { data, error } = await supabase
       .from("tbscadantiric")
-      .select("*")
+      .select(`
+        *,
+        tbclienti!inner(
+          tipo_prestazione_a,
+          tipo_prestazione_b
+        )
+      `)
       .order("nominativo", { ascending: true });
     
     if (error) throw error;
@@ -313,6 +324,13 @@ export default function ScadenzeAntiriciclaggioPage() {
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
+  const getTipoPrestazione = (scadenza: ScadenzaAntiric, tipo: "a" | "b"): string => {
+    if (tipo === "a") {
+      return scadenza.tipo_prestazione_a || scadenza.tbclienti?.tipo_prestazione_a || "__none__";
+    }
+    return scadenza.tipo_prestazione_b || scadenza.tbclienti?.tipo_prestazione_b || "__none__";
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -492,7 +510,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                             {/* VERIFICA A */}
                             <TableCell className="text-center bg-blue-50/50">
                               <Select
-                                value={scadenza.tipo_prestazione_a || "__none__"}
+                                value={getTipoPrestazione(scadenza, "a")}
                                 onValueChange={(value) => handleUpdateField(
                                   scadenza.id, 
                                   "tipo_prestazione_a", 
@@ -535,7 +553,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                             {/* VERIFICA B */}
                             <TableCell className="text-center bg-green-50/50 border-l-2 border-l-green-400">
                               <Select
-                                value={scadenza.tipo_prestazione_b || "__none__"}
+                                value={getTipoPrestazione(scadenza, "b")}
                                 onValueChange={(value) => handleUpdateField(
                                   scadenza.id, 
                                   "tipo_prestazione_b", 
@@ -605,7 +623,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                     <div>
                       <p className="font-medium text-blue-900 mb-2">📋 Verifica A (Principale):</p>
                       <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                        <li>Tipo Prestazione A</li>
+                        <li>Tipo Prestazione A (importato da cliente)</li>
                         <li>Data Ultima Verifica A</li>
                         <li>Scadenza Antiriciclaggio A</li>
                         <li>Stato verifica (SCADUTA/In scadenza/OK)</li>
@@ -615,7 +633,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                     <div>
                       <p className="font-medium text-green-900 mb-2">📋 Verifica B (Secondaria):</p>
                       <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                        <li>Tipo Prestazione B</li>
+                        <li>Tipo Prestazione B (importato da cliente)</li>
                         <li>Data Ultima Verifica B</li>
                         <li>Scadenza Antiriciclaggio B</li>
                         <li>Stato verifica (SCADUTA/In scadenza/OK)</li>
@@ -647,7 +665,8 @@ export default function ScadenzeAntiriciclaggioPage() {
                   </div>
 
                   <div className="text-xs text-gray-600 pt-3 border-t">
-                    <strong>Nota:</strong> L'aggiornamento delle date in questo scadenzario aggiorna automaticamente anche la scheda del cliente.
+                    <strong>Nota:</strong> I tipi di prestazione vengono importati automaticamente dalla scheda cliente.
+                    L'aggiornamento delle date e tipi prestazione in questo scadenzario aggiorna automaticamente anche la scheda del cliente.
                     I campi possono rimanere vuoti. Verifica B è opzionale e indipendente da A.
                   </div>
                 </div>
