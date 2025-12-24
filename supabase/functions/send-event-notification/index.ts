@@ -5,11 +5,14 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// CORS Headers - MUST be defined before use
+// CORS Headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
+
+// TEST MODE: Solo questo indirizzo riceverà le email
+const TEST_EMAIL = "martiola68@tiscali.it";
 
 interface EventNotificationRequest {
   eventoId: string;
@@ -34,7 +37,8 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🚀 Starting email notification process...");
+    console.log("🚀 Starting email notification process (TEST MODE)...");
+    console.log(`📧 TEST MODE: All emails will be sent to ${TEST_EMAIL}`);
     
     // Check Resend API Key
     if (!RESEND_API_KEY) {
@@ -63,7 +67,7 @@ serve(async (req) => {
     // Generate confirmation tokens
     const confirmationTokens = new Map<string, string>();
     
-    // Prepare recipients list
+    // Prepare recipients list (ORIGINAL - for display in email)
     const recipients: Array<{ email: string; name: string; role: string }> = [];
     
     // Add responsabile
@@ -97,7 +101,8 @@ serve(async (req) => {
       });
     }
 
-    console.log(`📬 Total recipients: ${recipients.length}`);
+    console.log(`📬 Original recipients: ${recipients.length}`);
+    console.log(`⚠️ TEST MODE: Sending consolidated email to ${TEST_EMAIL}`);
 
     // Store confirmation tokens in database (if table exists)
     try {
@@ -134,90 +139,69 @@ serve(async (req) => {
       day: "numeric"
     });
 
-    // Send emails to all recipients
-    console.log("📤 Starting email sending...");
-    const emailPromises = recipients.map(async (recipient) => {
-      const token = confirmationTokens.get(recipient.email)!;
-      const confirmUrl = `${SUPABASE_URL}/functions/v1/confirm-event-participation?token=${token}`;
-      
-      const emailHtml = generateEmailTemplate({
-        recipientName: recipient.name,
-        recipientRole: recipient.role,
-        eventoTitolo: request.eventoTitolo,
-        eventoData: formattedDate,
-        eventoOraInizio: request.eventoOraInizio,
-        eventoOraFine: request.eventoOraFine,
-        eventoLuogo: request.eventoLuogo,
-        eventoDescrizione: request.eventoDescrizione,
-        responsabileNome: request.responsabileNome,
-        partecipantiNomi: request.partecipantiNomi || [],
-        clienteNome: request.clienteNome,
-        confirmUrl
-      });
-
-      console.log(`📧 Sending to ${recipient.email} (${recipient.role})...`);
-
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          from: "Studio Manager Pro <onboarding@resend.dev>",
-          to: [recipient.email],
-          subject: `📅 Nuovo Evento: ${request.eventoTitolo}`,
-          html: emailHtml
-        })
-      });
-
-      const responseText = await response.text();
-      console.log(`📬 Resend API Response (${recipient.email}):`, {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText
-      });
-
-      if (!response.ok) {
-        console.error(`❌ Failed to send email to ${recipient.email}:`, responseText);
-        throw new Error(`Failed to send email to ${recipient.email}: ${response.status} ${responseText}`);
-      }
-
-      const result = JSON.parse(responseText);
-      console.log(`✅ Email sent successfully to ${recipient.email}:`, result);
-      return result;
+    // In TEST MODE: Send ONE consolidated email to TEST_EMAIL showing all recipients
+    console.log(`📤 Sending test email to ${TEST_EMAIL}...`);
+    
+    const emailHtml = generateTestEmailTemplate({
+      recipients: recipients,
+      eventoTitolo: request.eventoTitolo,
+      eventoData: formattedDate,
+      eventoOraInizio: request.eventoOraInizio,
+      eventoOraFine: request.eventoOraFine,
+      eventoLuogo: request.eventoLuogo,
+      eventoDescrizione: request.eventoDescrizione,
+      responsabileNome: request.responsabileNome,
+      partecipantiNomi: request.partecipantiNomi || [],
+      clienteNome: request.clienteNome
     });
 
-    const results = await Promise.allSettled(emailPromises);
-    const successful = results.filter(r => r.status === "fulfilled").length;
-    const failed = results.filter(r => r.status === "rejected").length;
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Studio Manager Pro <onboarding@resend.dev>",
+        to: [TEST_EMAIL],
+        subject: `🧪 [TEST] Nuovo Evento: ${request.eventoTitolo}`,
+        html: emailHtml
+      })
+    });
 
-    console.log(`📊 Results: ${successful} sent, ${failed} failed`);
+    const responseText = await response.text();
+    console.log(`📬 Resend API Response:`, {
+      status: response.status,
+      statusText: response.statusText,
+      body: responseText
+    });
 
-    if (failed > 0) {
-      console.error("❌ Some emails failed:");
-      results.forEach((result, index) => {
-        if (result.status === "rejected") {
-          console.error(`  - ${recipients[index].email}: ${result.reason}`);
-        }
-      });
+    if (!response.ok) {
+      console.error(`❌ Failed to send test email:`, responseText);
+      throw new Error(`Failed to send test email: ${response.status} ${responseText}`);
     }
+
+    const result = JSON.parse(responseText);
+    console.log(`✅ Test email sent successfully:`, result);
 
     return new Response(
       JSON.stringify({
-        success: successful > 0,
-        sent: successful,
-        failed: failed,
+        success: true,
+        sent: 1,
+        failed: 0,
         total: recipients.length,
-        details: results.map((r, i) => ({
-          email: recipients[i].email,
-          status: r.status,
-          error: r.status === "rejected" ? r.reason.message : null
-        }))
+        testMode: true,
+        testEmail: TEST_EMAIL,
+        message: `TEST MODE: Email inviata a ${TEST_EMAIL} con riepilogo di tutti i destinatari`,
+        details: [{
+          email: TEST_EMAIL,
+          status: "fulfilled",
+          originalRecipients: recipients.map(r => `${r.name} (${r.role})`)
+        }]
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: failed > 0 ? 207 : 200 // 207 Multi-Status if partial success
+        status: 200
       }
     );
 
@@ -229,7 +213,9 @@ serve(async (req) => {
         error: error.message || "Unknown error",
         sent: 0,
         failed: 0,
-        total: 0
+        total: 0,
+        testMode: true,
+        testEmail: TEST_EMAIL
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -239,9 +225,8 @@ serve(async (req) => {
   }
 });
 
-function generateEmailTemplate(data: {
-  recipientName: string;
-  recipientRole: string;
+function generateTestEmailTemplate(data: {
+  recipients: Array<{ email: string; name: string; role: string }>;
   eventoTitolo: string;
   eventoData: string;
   eventoOraInizio: string;
@@ -251,21 +236,14 @@ function generateEmailTemplate(data: {
   responsabileNome: string;
   partecipantiNomi: string[];
   clienteNome?: string;
-  confirmUrl: string;
 }): string {
-  const roleLabel = data.recipientRole === "responsabile" 
-    ? "Responsabile" 
-    : data.recipientRole === "cliente" 
-    ? "Cliente" 
-    : "Partecipante";
-
   return `
 <!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nuovo Evento in Agenda</title>
+  <title>Nuovo Evento in Agenda (TEST)</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -273,6 +251,15 @@ function generateEmailTemplate(data: {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           
+          <!-- TEST MODE Banner -->
+          <tr>
+            <td style="background-color: #fef3c7; border-bottom: 3px solid #f59e0b; padding: 15px 30px; text-align: center;">
+              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 700;">
+                🧪 MODALITÀ TEST - Questa è l'anteprima dell'email che verrà inviata ai destinatari
+              </p>
+            </td>
+          </tr>
+
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
@@ -290,13 +277,21 @@ function generateEmailTemplate(data: {
             </td>
           </tr>
 
-          <!-- Greeting -->
+          <!-- Recipients Info (TEST MODE) -->
           <tr>
             <td style="padding: 0 30px 20px 30px;">
-              <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                Ciao <strong>${data.recipientName}</strong>,<br>
-                Sei stato invitato come <strong>${roleLabel}</strong> al seguente evento:
-              </p>
+              <div style="background-color: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; padding: 20px;">
+                <p style="margin: 0 0 10px 0; color: #15803d; font-size: 14px; font-weight: 700;">
+                  📬 Destinatari che riceveranno questa email in produzione:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; color: #166534;">
+                  ${data.recipients.map(r => `
+                    <li style="margin: 5px 0;">
+                      <strong>${r.name}</strong> (${r.role}) - ${r.email}
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
             </td>
           </tr>
 
@@ -379,34 +374,38 @@ function generateEmailTemplate(data: {
           </tr>
           ` : ''}
 
-          <!-- CTA Buttons -->
+          <!-- CTA Buttons (DISABLED IN TEST) -->
           <tr>
             <td style="padding: 0 30px 30px 30px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom: 15px;">
-                    <a href="${data.confirmUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
-                      ✅ Conferma Partecipazione
-                    </a>
+                    <div style="display: inline-block; background-color: #e5e7eb; color: #6b7280; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                      ✅ Conferma Partecipazione (disabilitato in test)
+                    </div>
                   </td>
                 </tr>
                 <tr>
                   <td align="center">
-                    <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(data.eventoTitolo)}&dates=${data.eventoData}/${data.eventoData}&details=${encodeURIComponent(data.eventoDescrizione || '')}" target="_blank" style="display: inline-block; background-color: #f3f4f6; color: #374151; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 14px; font-weight: 500; border: 2px solid #e5e7eb;">
-                      📅 Aggiungi a Google Calendar
-                    </a>
+                    <div style="display: inline-block; background-color: #f3f4f6; color: #9ca3af; padding: 14px 35px; border-radius: 8px; font-size: 14px; font-weight: 500; border: 2px solid #e5e7eb;">
+                      📅 Aggiungi a Google Calendar (disabilitato in test)
+                    </div>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Reminder Notice -->
+          <!-- Test Mode Notice -->
           <tr>
             <td style="padding: 0 30px 30px 30px;">
               <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 6px;">
-                <p style="margin: 0; color: #92400e; font-size: 14px;">
-                  💡 <strong>Promemoria:</strong> Riceverai un reminder 24 ore prima dell'evento.
+                <p style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: 700;">
+                  🧪 Modalità Test Attiva
+                </p>
+                <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.6;">
+                  Questa email è stata inviata solo a <strong>martiola68@tiscali.it</strong> per test.<br>
+                  Per abilitare l'invio a tutti i destinatari, verifica un dominio su Resend.
                 </p>
               </div>
             </td>
