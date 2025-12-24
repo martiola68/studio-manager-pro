@@ -5,6 +5,12 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// CORS Headers - MUST be defined before use
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+};
+
 interface EventNotificationRequest {
   eventoId: string;
   eventoTitolo: string;
@@ -22,6 +28,7 @@ interface EventNotificationRequest {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -29,9 +36,13 @@ serve(async (req) => {
   try {
     console.log("🚀 Starting email notification process...");
     
+    // Check Resend API Key
     if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY not configured");
+      console.error("❌ RESEND_API_KEY not configured");
+      throw new Error("RESEND_API_KEY not configured - Please add it in Supabase Edge Functions Secrets");
     }
+
+    console.log("✅ RESEND_API_KEY found");
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const request: EventNotificationRequest = await req.json();
@@ -40,9 +51,14 @@ serve(async (req) => {
       eventoId: request.eventoId,
       eventoTitolo: request.eventoTitolo,
       responsabileEmail: request.responsabileEmail,
-      partecipantiCount: request.partecipantiEmails.length,
+      partecipantiCount: request.partecipantiEmails?.length || 0,
       hasCliente: !!request.clienteEmail
     });
+
+    // Validate required fields
+    if (!request.eventoId || !request.eventoTitolo || !request.responsabileEmail) {
+      throw new Error("Missing required fields: eventoId, eventoTitolo, or responsabileEmail");
+    }
 
     // Generate confirmation tokens
     const confirmationTokens = new Map<string, string>();
@@ -55,17 +71,19 @@ serve(async (req) => {
     confirmationTokens.set(request.responsabileEmail, respToken);
     recipients.push({
       email: request.responsabileEmail,
-      name: request.responsabileNome,
+      name: request.responsabileNome || request.responsabileEmail,
       role: "responsabile"
     });
 
     // Add partecipanti
-    for (let i = 0; i < request.partecipantiEmails.length; i++) {
-      const email = request.partecipantiEmails[i];
-      const name = request.partecipantiNomi[i];
-      const token = crypto.randomUUID();
-      confirmationTokens.set(email, token);
-      recipients.push({ email, name, role: "partecipante" });
+    if (request.partecipantiEmails && request.partecipantiEmails.length > 0) {
+      for (let i = 0; i < request.partecipantiEmails.length; i++) {
+        const email = request.partecipantiEmails[i];
+        const name = request.partecipantiNomi?.[i] || email;
+        const token = crypto.randomUUID();
+        confirmationTokens.set(email, token);
+        recipients.push({ email, name, role: "partecipante" });
+      }
     }
 
     // Add cliente if present
@@ -81,26 +99,30 @@ serve(async (req) => {
 
     console.log(`📬 Total recipients: ${recipients.length}`);
 
-    // Store confirmation tokens in database
-    const confirmations = Array.from(confirmationTokens.entries()).map(([email, token]) => {
-      const recipient = recipients.find(r => r.email === email);
-      return {
-        evento_id: request.eventoId,
-        user_email: email,
-        user_name: recipient?.name || email,
-        token: token,
-        confirmed: false
-      };
-    });
+    // Store confirmation tokens in database (if table exists)
+    try {
+      const confirmations = Array.from(confirmationTokens.entries()).map(([email, token]) => {
+        const recipient = recipients.find(r => r.email === email);
+        return {
+          evento_id: request.eventoId,
+          user_email: email,
+          user_name: recipient?.name || email,
+          token: token,
+          confirmed: false
+        };
+      });
 
-    const { error: insertError } = await supabase
-      .from("event_confirmations")
-      .insert(confirmations);
+      const { error: insertError } = await supabase
+        .from("event_confirmations")
+        .insert(confirmations);
 
-    if (insertError) {
-      console.error("❌ Error storing confirmations:", insertError);
-    } else {
-      console.log("✅ Confirmations stored in database");
+      if (insertError) {
+        console.warn("⚠️ Could not store confirmations (table may not exist):", insertError.message);
+      } else {
+        console.log("✅ Confirmations stored in database");
+      }
+    } catch (dbError) {
+      console.warn("⚠️ Database operation failed:", dbError);
     }
 
     // Format date and time for display
@@ -128,7 +150,7 @@ serve(async (req) => {
         eventoLuogo: request.eventoLuogo,
         eventoDescrizione: request.eventoDescrizione,
         responsabileNome: request.responsabileNome,
-        partecipantiNomi: request.partecipantiNomi,
+        partecipantiNomi: request.partecipantiNomi || [],
         clienteNome: request.clienteNome,
         confirmUrl
       });
@@ -149,13 +171,19 @@ serve(async (req) => {
         })
       });
 
+      const responseText = await response.text();
+      console.log(`📬 Resend API Response (${recipient.email}):`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText
+      });
+
       if (!response.ok) {
-        const error = await response.text();
-        console.error(`❌ Failed to send email to ${recipient.email}:`, error);
-        throw new Error(`Failed to send email to ${recipient.email}: ${error}`);
+        console.error(`❌ Failed to send email to ${recipient.email}:`, responseText);
+        throw new Error(`Failed to send email to ${recipient.email}: ${response.status} ${responseText}`);
       }
 
-      const result = await response.json();
+      const result = JSON.parse(responseText);
       console.log(`✅ Email sent successfully to ${recipient.email}:`, result);
       return result;
     });
@@ -166,25 +194,39 @@ serve(async (req) => {
 
     console.log(`📊 Results: ${successful} sent, ${failed} failed`);
 
+    if (failed > 0) {
+      console.error("❌ Some emails failed:");
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          console.error(`  - ${recipients[index].email}: ${result.reason}`);
+        }
+      });
+    }
+
     return new Response(
       JSON.stringify({
-        success: true,
+        success: successful > 0,
         sent: successful,
         failed: failed,
-        total: recipients.length
+        total: recipients.length,
+        details: results.map((r, i) => ({
+          email: recipients[i].email,
+          status: r.status,
+          error: r.status === "rejected" ? r.reason.message : null
+        }))
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
+        status: failed > 0 ? 207 : 200 // 207 Multi-Status if partial success
       }
     );
 
   } catch (error) {
-    console.error("💥 Error:", error);
+    console.error("💥 Critical Error:", error);
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: error.message || "Unknown error",
         sent: 0,
         failed: 0,
         total: 0
@@ -196,11 +238,6 @@ serve(async (req) => {
     );
   }
 });
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
-};
 
 function generateEmailTemplate(data: {
   recipientName: string;
@@ -320,7 +357,7 @@ function generateEmailTemplate(data: {
             </td>
           </tr>
 
-          ${data.partecipantiNomi.length > 0 ? `
+          ${data.partecipantiNomi && data.partecipantiNomi.length > 0 ? `
           <!-- Partecipanti -->
           <tr>
             <td style="padding: 0 30px 20px 30px;">
