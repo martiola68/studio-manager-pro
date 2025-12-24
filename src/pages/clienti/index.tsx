@@ -101,17 +101,17 @@ export default function ClientiPage() {
     email: "",
     note: "",
     attivo: true,
-    utente_operatore_id: "",
-    utente_professionista_id: "",
-    contatto1_id: "",
-    contatto2_id: "",
+    utente_operatore_id: "__none__",
+    utente_professionista_id: "__none__",
+    contatto1_id: "__none__",
+    contatto2_id: "__none__",
     scadenza_antiric: "",
-    tipo_prestazione_id: "",
+    tipo_prestazione_id: "__none__",
     tipo_cliente: "Esterno",
-    tipo_redditi: "",
+    tipo_redditi: "__none__",
     data_ultima_verifica_antiric: "",
-    tipo_prestazione_a: "",
-    tipo_prestazione_b: "",
+    tipo_prestazione_a: "__none__",
+    tipo_prestazione_b: "__none__",
     data_ultima_verifica_b: "",
     scadenza_antiric_b: "",
     flag_iva: true,
@@ -426,12 +426,18 @@ export default function ClientiPage() {
     try {
       const dataToSave = {
         ...formData,
-        utente_operatore_id: formData.utente_operatore_id || null,
-        utente_professionista_id: formData.utente_professionista_id || null,
-        contatto1_id: formData.contatto1_id || null,
-        contatto2_id: formData.contatto2_id || null,
-        tipo_prestazione_id: formData.tipo_prestazione_id || null,
-        scadenza_antiric: formData.scadenza_antiric || null
+        utente_operatore_id: formData.utente_operatore_id && formData.utente_operatore_id !== "__none__" ? formData.utente_operatore_id : null,
+        utente_professionista_id: formData.utente_professionista_id && formData.utente_professionista_id !== "__none__" ? formData.utente_professionista_id : null,
+        contatto1_id: formData.contatto1_id && formData.contatto1_id !== "__none__" ? formData.contatto1_id : null,
+        contatto2_id: formData.contatto2_id && formData.contatto2_id !== "__none__" ? formData.contatto2_id : null,
+        tipo_prestazione_id: formData.tipo_prestazione_id && formData.tipo_prestazione_id !== "__none__" ? formData.tipo_prestazione_id : null,
+        scadenza_antiric: formData.scadenza_antiric || null,
+        tipo_redditi: formData.tipo_redditi && formData.tipo_redditi !== "__none__" ? formData.tipo_redditi : null,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric || null,
+        tipo_prestazione_a: formData.tipo_prestazione_a && formData.tipo_prestazione_a !== "__none__" ? formData.tipo_prestazione_a : null,
+        tipo_prestazione_b: formData.tipo_prestazione_b && formData.tipo_prestazione_b !== "__none__" ? formData.tipo_prestazione_b : null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b || null,
+        scadenza_antiric_b: formData.scadenza_antiric_b || null
       };
 
       if (editingCliente) {
@@ -472,10 +478,6 @@ export default function ClientiPage() {
 
     const scadenzariSelezionati = [];
     if (cliente.flag_iva) scadenzariSelezionati.push("IVA");
-    if (cliente.flag_ccgg) scadenzariSelezionati.push("CCGG");
-    if (cliente.flag_cu) scadenzariSelezionati.push("CU");
-    if (cliente.flag_fiscali) scadenzariSelezionati.push("Fiscali");
-    if (cliente.flag_bilancio) scadenzariSelezionati.push("Bilanci");
     if (cliente.flag_770) scadenzariSelezionati.push("770");
     if (cliente.flag_lipe) scadenzariSelezionati.push("Lipe");
     if (cliente.flag_esterometro) scadenzariSelezionati.push("Esterometro");
@@ -496,54 +498,6 @@ export default function ClientiPage() {
       if (cliente.flag_iva) {
         promises.push(
           supabase.from("tbscadiva").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_ccgg) {
-        promises.push(
-          supabase.from("tbscadccgg").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_cu) {
-        promises.push(
-          supabase.from("tbscadcu").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_fiscali) {
-        promises.push(
-          supabase.from("tbscadfiscali").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_bilancio) {
-        promises.push(
-          supabase.from("tbscadbilanci").upsert({
             id: cliente.id,
             nominativo: cliente.ragione_sociale,
             utente_operatore_id: cliente.utente_operatore_id,
@@ -627,17 +581,17 @@ export default function ClientiPage() {
       email: cliente.email,
       note: cliente.note || "",
       attivo: cliente.attivo ?? true,
-      utente_operatore_id: cliente.utente_operatore_id || "",
-      utente_professionista_id: cliente.utente_professionista_id || "",
-      contatto1_id: cliente.contatto1_id || "",
-      contatto2_id: cliente.contatto2_id || "",
+      utente_operatore_id: cliente.utente_operatore_id || "__none__",
+      utente_professionista_id: cliente.utente_professionista_id || "__none__",
+      contatto1_id: cliente.contatto1_id || "__none__",
+      contatto2_id: cliente.contatto2_id || "__none__",
       scadenza_antiric: cliente.scadenza_antiric || "",
-      tipo_prestazione_id: cliente.tipo_prestazione_id || "",
+      tipo_prestazione_id: cliente.tipo_prestazione_id || "__none__",
       tipo_cliente: cliente.tipo_cliente || "Esterno",
-      tipo_redditi: cliente.tipo_redditi || "",
+      tipo_redditi: cliente.tipo_redditi || "__none__",
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric || "",
-      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
-      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
+      tipo_prestazione_a: cliente.tipo_prestazione_a || "__none__",
+      tipo_prestazione_b: cliente.tipo_prestazione_b || "__none__",
       data_ultima_verifica_b: cliente.data_ultima_verifica_b || "",
       scadenza_antiric_b: cliente.scadenza_antiric_b || "",
       flag_iva: cliente.flag_iva ?? true,
@@ -688,17 +642,17 @@ export default function ClientiPage() {
       email: "",
       note: "",
       attivo: true,
-      utente_operatore_id: "",
-      utente_professionista_id: "",
-      contatto1_id: "",
-      contatto2_id: "",
+      utente_operatore_id: "__none__",
+      utente_professionista_id: "__none__",
+      contatto1_id: "__none__",
+      contatto2_id: "__none__",
       scadenza_antiric: "",
-      tipo_prestazione_id: "",
+      tipo_prestazione_id: "__none__",
       tipo_cliente: "Esterno",
-      tipo_redditi: "",
+      tipo_redditi: "__none__",
       data_ultima_verifica_antiric: "",
-      tipo_prestazione_a: "",
-      tipo_prestazione_b: "",
+      tipo_prestazione_a: "__none__",
+      tipo_prestazione_b: "__none__",
       data_ultima_verifica_b: "",
       scadenza_antiric_b: "",
       flag_iva: true,
