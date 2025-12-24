@@ -27,8 +27,22 @@ serve(async (req) => {
   }
 
   try {
+    console.log("🚀 Starting email notification process...");
+    
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY not configured");
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const request: EventNotificationRequest = await req.json();
+
+    console.log("📧 Request received:", {
+      eventoId: request.eventoId,
+      eventoTitolo: request.eventoTitolo,
+      responsabileEmail: request.responsabileEmail,
+      partecipantiCount: request.partecipantiEmails.length,
+      hasCliente: !!request.clienteEmail
+    });
 
     // Generate confirmation tokens
     const confirmationTokens = new Map<string, string>();
@@ -65,6 +79,8 @@ serve(async (req) => {
       });
     }
 
+    console.log(`📬 Total recipients: ${recipients.length}`);
+
     // Store confirmation tokens in database
     const confirmations = Array.from(confirmationTokens.entries()).map(([email, token]) => {
       const recipient = recipients.find(r => r.email === email);
@@ -77,7 +93,15 @@ serve(async (req) => {
       };
     });
 
-    await supabase.from("event_confirmations").insert(confirmations);
+    const { error: insertError } = await supabase
+      .from("event_confirmations")
+      .insert(confirmations);
+
+    if (insertError) {
+      console.error("❌ Error storing confirmations:", insertError);
+    } else {
+      console.log("✅ Confirmations stored in database");
+    }
 
     // Format date and time for display
     const eventDate = new Date(request.eventoData);
@@ -89,9 +113,10 @@ serve(async (req) => {
     });
 
     // Send emails to all recipients
+    console.log("📤 Starting email sending...");
     const emailPromises = recipients.map(async (recipient) => {
       const token = confirmationTokens.get(recipient.email)!;
-      const confirmUrl = `${SUPABASE_URL.replace('.supabase.co', '')}/functions/v1/confirm-event-participation?token=${token}`;
+      const confirmUrl = `${SUPABASE_URL}/functions/v1/confirm-event-participation?token=${token}`;
       
       const emailHtml = generateEmailTemplate({
         recipientName: recipient.name,
@@ -108,6 +133,8 @@ serve(async (req) => {
         confirmUrl
       });
 
+      console.log(`📧 Sending to ${recipient.email} (${recipient.role})...`);
+
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -115,7 +142,7 @@ serve(async (req) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          from: "Revisioni Commerciali <info@revisionicommerciali.it>",
+          from: "Studio Manager Pro <onboarding@resend.dev>",
           to: [recipient.email],
           subject: `📅 Nuovo Evento: ${request.eventoTitolo}`,
           html: emailHtml
@@ -124,16 +151,20 @@ serve(async (req) => {
 
       if (!response.ok) {
         const error = await response.text();
-        console.error(`Failed to send email to ${recipient.email}:`, error);
-        throw new Error(`Failed to send email to ${recipient.email}`);
+        console.error(`❌ Failed to send email to ${recipient.email}:`, error);
+        throw new Error(`Failed to send email to ${recipient.email}: ${error}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log(`✅ Email sent successfully to ${recipient.email}:`, result);
+      return result;
     });
 
     const results = await Promise.allSettled(emailPromises);
     const successful = results.filter(r => r.status === "fulfilled").length;
     const failed = results.filter(r => r.status === "rejected").length;
+
+    console.log(`📊 Results: ${successful} sent, ${failed} failed`);
 
     return new Response(
       JSON.stringify({
@@ -149,9 +180,15 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error("Error:", error);
+    console.error("💥 Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message,
+        sent: 0,
+        failed: 0,
+        total: 0
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500
