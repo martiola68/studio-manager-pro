@@ -15,6 +15,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_confirmations: {
+        Row: {
+          confirmed: boolean | null
+          confirmed_at: string | null
+          created_at: string | null
+          evento_id: string
+          id: string
+          token: string
+          user_email: string
+          user_name: string | null
+        }
+        Insert: {
+          confirmed?: boolean | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          evento_id: string
+          id?: string
+          token: string
+          user_email: string
+          user_name?: string | null
+        }
+        Update: {
+          confirmed?: boolean | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          evento_id?: string
+          id?: string
+          token?: string
+          user_email?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_confirmations_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "tbagenda"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reminders: {
+        Row: {
+          evento_id: string
+          id: string
+          sent_at: string | null
+          sent_to: string
+        }
+        Insert: {
+          evento_id: string
+          id?: string
+          sent_at?: string | null
+          sent_to: string
+        }
+        Update: {
+          evento_id?: string
+          id?: string
+          sent_at?: string | null
+          sent_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reminders_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "tbagenda"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

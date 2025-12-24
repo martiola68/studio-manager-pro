@@ -24,7 +24,7 @@ serve(async (req) => {
     // Find confirmation by token
     const { data: confirmation, error } = await supabase
       .from("event_confirmations")
-      .select("*, evento:tbeventi(*)")
+      .select("*, evento:tbagenda(*)")
       .eq("token", token)
       .single();
 
@@ -79,13 +79,16 @@ serve(async (req) => {
 });
 
 function getSuccessPage(confirmation: any, alreadyConfirmed: boolean): string {
-  const eventDate = new Date(confirmation.evento.data_evento);
+  const eventDate = new Date(confirmation.evento.data_inizio);
   const formattedDate = eventDate.toLocaleDateString("it-IT", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric"
   });
+  
+  const oraInizio = new Date(confirmation.evento.data_inizio).toLocaleTimeString("it-IT", { hour: '2-digit', minute: '2-digit' });
+  const oraFine = new Date(confirmation.evento.data_fine).toLocaleTimeString("it-IT", { hour: '2-digit', minute: '2-digit' });
 
   return `
 <!DOCTYPE html>
@@ -220,7 +223,7 @@ function getSuccessPage(confirmation: any, alreadyConfirmed: boolean): string {
         <div class="detail-icon">⏰</div>
         <div class="detail-content">
           <div class="detail-label">Orario</div>
-          <div class="detail-value">${confirmation.evento.ora_inizio || 'N/D'} - ${confirmation.evento.ora_fine || 'N/D'}</div>
+          <div class="detail-value">${oraInizio} - ${oraFine}</div>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { eventoService } from "@/services/eventoService";
 import { clienteService } from "@/services/clienteService";
 import { utenteService } from "@/services/utenteService";
+import { sendEventNotification } from "@/services/emailService";
 import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -410,32 +411,69 @@ export default function AgendaPage() {
         partecipanti: partecipantiFinal
       };
 
+      let savedEventoId: string;
+
       if (editingEvento) {
         await eventoService.updateEvento(editingEvento.id, dataToSave);
+        savedEventoId = editingEvento.id;
         toast({
           title: "Successo",
           description: "Evento aggiornato con successo"
         });
       } else {
-        await eventoService.createEvento(dataToSave);
+        const nuovoEvento = await eventoService.createEvento(dataToSave);
+        savedEventoId = nuovoEvento.id;
         toast({
           title: "Successo",
           description: "Evento creato con successo"
         });
       }
 
-      if (partecipantiFinal.length > 0) {
+      // Invia notifiche email
+      if (!editingEvento && (partecipantiFinal.length > 0 || formData.utente_id || formData.cliente_id)) {
         try {
-          const risultatoEmail = await inviaEmailPartecipanti(partecipantiFinal, dataToSave);
-          toast({
-            title: "Email preparate",
-            description: `Sistema pronto per inviare ${risultatoEmail.destinatari} email di notifica`,
-          });
+          const responsabile = utenti.find(u => u.id === formData.utente_id);
+          const cliente = clienti.find(c => c.id === formData.cliente_id);
+          const partecipantiUtenti = utenti.filter(u => partecipantiFinal.includes(u.id));
+
+          const dataInizio = new Date(formData.data_inizio);
+          const dataFine = new Date(formData.data_fine);
+
+          const emailData = {
+            eventoId: savedEventoId,
+            eventoTitolo: formData.titolo,
+            eventoData: dataInizio.toISOString(),
+            eventoOraInizio: dataInizio.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+            eventoOraFine: dataFine.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
+            eventoLuogo: formData.luogo || (formData.in_sede && formData.sala ? `Sede - ${formData.sala}` : undefined),
+            eventoDescrizione: formData.descrizione || undefined,
+            responsabileEmail: responsabile?.email || "",
+            responsabileNome: responsabile ? `${responsabile.nome} ${responsabile.cognome}` : "Studio",
+            partecipantiEmails: partecipantiUtenti.map(u => u.email).filter(Boolean),
+            partecipantiNomi: partecipantiUtenti.map(u => `${u.nome} ${u.cognome}`),
+            clienteEmail: cliente?.email || undefined,
+            clienteNome: cliente?.ragione_sociale || undefined
+          };
+
+          const risultato = await sendEventNotification(emailData);
+
+          if (risultato.success) {
+            toast({
+              title: "✅ Email Inviate",
+              description: `${risultato.sent} notifica${risultato.sent > 1 ? "e" : ""} email inviata${risultato.sent > 1 ? "e" : ""} con successo`,
+            });
+          } else {
+            toast({
+              title: "⚠️ Attenzione",
+              description: `Evento salvato ma errore nell'invio delle email: ${risultato.error}`,
+              variant: "destructive"
+            });
+          }
         } catch (emailError) {
           console.error("Errore invio email:", emailError);
           toast({
-            title: "Attenzione",
-            description: "Evento salvato ma errore nell'invio delle email",
+            title: "⚠️ Attenzione",
+            description: "Evento salvato ma impossibile inviare le notifiche email",
             variant: "destructive"
           });
         }
@@ -1363,7 +1401,7 @@ export default function AgendaPage() {
                                             {responsabile !== "-" ? `${responsabile} - ` : ""}{evento.titolo}
                                           </h3>
                                           <div className="flex items-center gap-2 text-sm text-blue-700 font-semibold mb-2">
-                                            <User className="h-4 w-4 flex-shrink-0" />
+                                            <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                             <span className="truncate">{cliente}</span>
                                           </div>
                                         </div>
