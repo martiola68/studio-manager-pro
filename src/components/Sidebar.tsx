@@ -99,6 +99,7 @@ export function Sidebar() {
       label: "Scadenze",
       icon: <FileText className="h-5 w-5" />,
       children: [
+        { label: "Calendario", href: "/scadenze/calendario", icon: null },
         { label: "IVA", href: "/scadenze/iva", icon: null },
         { label: "CCGG", href: "/scadenze/ccgg", icon: null },
         { label: "CU", href: "/scadenze/cu", icon: null },

@@ -174,6 +174,27 @@ export default function ImpostazioniPage() {
                   </CardContent>
                 </Card>
               </Link>
+
+              <Link href="/impostazioni/tipi-scadenze">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-teal-600">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-teal-100 rounded-lg">
+                        <CalendarCog className="h-6 w-6 text-teal-600" />
+                      </div>
+                      <div>
+                        <CardTitle>Tipi Scadenze</CardTitle>
+                        <CardDescription>Configura date e preavvisi</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600">
+                      Gestisci le date di scadenza centralizzate e le regole di notifica
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           </div>
         </main>
