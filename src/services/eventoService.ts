@@ -120,12 +120,17 @@ export const eventoService = {
       // Recupera i dati dei partecipanti (se presenti)
       let partecipantiEmails: string[] = [];
       let partecipantiNomi: string[] = [];
+      
+      // Cast sicuro per partecipanti (Json -> string[])
+      const partecipantiIds = Array.isArray(evento.partecipanti) 
+        ? (evento.partecipanti as string[]) 
+        : [];
 
-      if (evento.partecipanti_ids && evento.partecipanti_ids.length > 0) {
+      if (partecipantiIds.length > 0) {
         const { data: partecipanti } = await supabase
           .from("tbutenti")
           .select("nome, cognome, email")
-          .in("id", evento.partecipanti_ids);
+          .in("id", partecipantiIds);
 
         if (partecipanti) {
           partecipantiEmails = partecipanti
@@ -154,13 +159,30 @@ export const eventoService = {
         }
       }
 
+      // Helper per formattare data e ora
+      const formatDate = (dateStr: string) => {
+        try {
+          return new Date(dateStr).toLocaleDateString('it-IT');
+        } catch (e) {
+          return dateStr;
+        }
+      };
+      
+      const formatTime = (dateStr: string) => {
+        try {
+          return new Date(dateStr).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+          return "00:00";
+        }
+      };
+
       // Prepara i dati per la notifica
       const notificationData = {
         eventoId: evento.id,
         eventoTitolo: evento.titolo || "Evento senza titolo",
-        eventoData: evento.data_inizio.split("T")[0],
-        eventoOraInizio: evento.ora_inizio || "00:00",
-        eventoOraFine: evento.ora_fine || "23:59",
+        eventoData: formatDate(evento.data_inizio),
+        eventoOraInizio: formatTime(evento.data_inizio),
+        eventoOraFine: formatTime(evento.data_fine),
         eventoLuogo: evento.luogo || undefined,
         eventoDescrizione: evento.descrizione || undefined,
         responsabileEmail: responsabile.email,
