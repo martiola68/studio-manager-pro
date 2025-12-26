@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
+import { studioService } from "@/services/studioService";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -92,18 +93,20 @@ export default function TipiScadenzePage() {
         return;
       }
 
-      const profilo = await authService.getUserProfile(user.id);
-      if (!profilo?.studio_id) {
+      // Recupera lo studio direttamente dal service
+      const studio = await studioService.getStudio();
+      
+      if (!studio) {
         toast({
-          title: "Errore",
-          description: "Studio non trovato",
+          title: "Attenzione",
+          description: "Nessuno studio configurato. Contatta l'amministratore.",
           variant: "destructive",
         });
         return;
       }
 
-      setStudioId(profilo.studio_id);
-      await loadTipiScadenze(profilo.studio_id);
+      setStudioId(studio.id);
+      await loadTipiScadenze(studio.id);
     } catch (error) {
       console.error("Errore autenticazione:", error);
       router.push("/login");
