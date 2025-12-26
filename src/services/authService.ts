@@ -177,5 +177,20 @@ export const authService = {
   // Listen to auth state changes
   onAuthStateChange(callback: (event: string, session: Session | null) => void) {
     return supabase.auth.onAuthStateChange(callback);
+  },
+
+  // Get user profile
+  async getUserProfile(userId: string) {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+    return data;
   }
 };
