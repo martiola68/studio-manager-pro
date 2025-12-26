@@ -87,7 +87,115 @@ export const eventoService = {
       console.error("Error creating evento:", error);
       throw error;
     }
+
+    // Invia notifica email dopo la creazione dell'evento
+    if (data) {
+      try {
+        await this.sendEventNotification(data);
+      } catch (emailError) {
+        console.error("Error sending event notification:", emailError);
+        // Non bloccare la creazione dell'evento se l'invio email fallisce
+      }
+    }
+
     return data;
+  },
+
+  async sendEventNotification(evento: EventoAgenda): Promise<void> {
+    try {
+      console.log("📧 Preparing to send event notification for:", evento.id);
+
+      // Recupera i dati del responsabile
+      const { data: responsabile } = await supabase
+        .from("tbutenti")
+        .select("nome, cognome, email")
+        .eq("id", evento.utente_id)
+        .single();
+
+      if (!responsabile || !responsabile.email) {
+        console.error("❌ Responsabile email not found");
+        return;
+      }
+
+      // Recupera i dati dei partecipanti (se presenti)
+      let partecipantiEmails: string[] = [];
+      let partecipantiNomi: string[] = [];
+
+      if (evento.partecipanti_ids && evento.partecipanti_ids.length > 0) {
+        const { data: partecipanti } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome, email")
+          .in("id", evento.partecipanti_ids);
+
+        if (partecipanti) {
+          partecipantiEmails = partecipanti
+            .filter(p => p.email)
+            .map(p => p.email!);
+          partecipantiNomi = partecipanti.map(p => 
+            `${p.nome || ""} ${p.cognome || ""}`.trim() || p.email || "Utente"
+          );
+        }
+      }
+
+      // Recupera i dati del cliente (se presente)
+      let clienteEmail: string | undefined;
+      let clienteNome: string | undefined;
+
+      if (evento.cliente_id) {
+        const { data: cliente } = await supabase
+          .from("tbclienti")
+          .select("ragione_sociale, email")
+          .eq("id", evento.cliente_id)
+          .single();
+
+        if (cliente && cliente.email) {
+          clienteEmail = cliente.email;
+          clienteNome = cliente.ragione_sociale || "Cliente";
+        }
+      }
+
+      // Prepara i dati per la notifica
+      const notificationData = {
+        eventoId: evento.id,
+        eventoTitolo: evento.titolo || "Evento senza titolo",
+        eventoData: evento.data_inizio.split("T")[0],
+        eventoOraInizio: evento.ora_inizio || "00:00",
+        eventoOraFine: evento.ora_fine || "23:59",
+        eventoLuogo: evento.luogo || undefined,
+        eventoDescrizione: evento.descrizione || undefined,
+        responsabileEmail: responsabile.email,
+        responsabileNome: `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() || responsabile.email,
+        partecipantiEmails,
+        partecipantiNomi,
+        clienteEmail,
+        clienteNome
+      };
+
+      console.log("📧 Sending notification with data:", {
+        eventoId: notificationData.eventoId,
+        responsabileEmail: notificationData.responsabileEmail,
+        partecipantiCount: partecipantiEmails.length,
+        hasCliente: !!clienteEmail
+      });
+
+      // Invoca la Edge Function
+      const { data: result, error: invokeError } = await supabase.functions.invoke(
+        "send-event-notification",
+        {
+          body: notificationData
+        }
+      );
+
+      if (invokeError) {
+        console.error("❌ Error invoking send-event-notification:", invokeError);
+        throw invokeError;
+      }
+
+      console.log("✅ Event notification sent successfully:", result);
+    } catch (error) {
+      console.error("💥 Critical error in sendEventNotification:", error);
+      throw error;
+    }
   },
 
   async updateEvento(id: string, updates: EventoAgendaUpdate): Promise<EventoAgenda | null> {
