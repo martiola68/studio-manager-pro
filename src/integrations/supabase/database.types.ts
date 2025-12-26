@@ -492,6 +492,7 @@ export type Database = {
           note: string | null
           ricevuta: boolean | null
           tipo_invio: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -509,6 +510,7 @@ export type Database = {
           note?: string | null
           ricevuta?: boolean | null
           tipo_invio?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -526,6 +528,7 @@ export type Database = {
           note?: string | null
           ricevuta?: boolean | null
           tipo_invio?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -536,6 +539,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscad770_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -566,6 +576,7 @@ export type Database = {
           scadenza_antiric_b: string | null
           tipo_prestazione_a: string | null
           tipo_prestazione_b: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
         }
@@ -580,6 +591,7 @@ export type Database = {
           scadenza_antiric_b?: string | null
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
         }
@@ -594,6 +606,7 @@ export type Database = {
           scadenza_antiric_b?: string | null
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
         }
@@ -603,6 +616,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadantiric_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -631,6 +651,7 @@ export type Database = {
           relazione_revisore: boolean | null
           relazione_sindaci: boolean | null
           ricevuta: boolean | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -652,6 +673,7 @@ export type Database = {
           relazione_revisore?: boolean | null
           relazione_sindaci?: boolean | null
           ricevuta?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -673,6 +695,7 @@ export type Database = {
           relazione_revisore?: boolean | null
           relazione_sindaci?: boolean | null
           ricevuta?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -684,6 +707,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadbilanci_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -713,6 +743,7 @@ export type Database = {
           importo_calcolato: boolean | null
           nominativo: string
           note: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -727,6 +758,7 @@ export type Database = {
           importo_calcolato?: boolean | null
           nominativo: string
           note?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -741,6 +773,7 @@ export type Database = {
           importo_calcolato?: boolean | null
           nominativo?: string
           note?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -751,6 +784,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadccgg_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -782,6 +822,7 @@ export type Database = {
           nominativo: string
           note: string | null
           num_cu: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -798,6 +839,7 @@ export type Database = {
           nominativo: string
           note?: string | null
           num_cu?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -814,6 +856,7 @@ export type Database = {
           nominativo?: string
           note?: string | null
           num_cu?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -824,6 +867,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadcu_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -883,6 +933,7 @@ export type Database = {
           ott_previsto: boolean | null
           set_invio: boolean | null
           set_previsto: boolean | null
+          tipo_scadenza_id: string | null
           tot_doc: number | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -928,6 +979,7 @@ export type Database = {
           ott_previsto?: boolean | null
           set_invio?: boolean | null
           set_previsto?: boolean | null
+          tipo_scadenza_id?: string | null
           tot_doc?: number | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -973,6 +1025,7 @@ export type Database = {
           ott_previsto?: boolean | null
           set_invio?: boolean | null
           set_previsto?: boolean | null
+          tipo_scadenza_id?: string | null
           tot_doc?: number | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -984,6 +1037,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadestero_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -1025,6 +1085,7 @@ export type Database = {
           ricevuta_r: boolean | null
           saldo_acc_cciaa: boolean | null
           tipo_redditi: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -1051,6 +1112,7 @@ export type Database = {
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
           tipo_redditi?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1077,6 +1139,7 @@ export type Database = {
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
           tipo_redditi?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1087,6 +1150,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadfiscali_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -1117,6 +1187,7 @@ export type Database = {
           nominativo: string
           note: string | null
           ricevuta: boolean | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -1132,6 +1203,7 @@ export type Database = {
           nominativo: string
           note?: string | null
           ricevuta?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1147,6 +1219,7 @@ export type Database = {
           nominativo?: string
           note?: string | null
           ricevuta?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1157,6 +1230,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadiva_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -1203,6 +1283,7 @@ export type Database = {
           ott: boolean | null
           set: boolean | null
           tipo_liq: string | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -1234,6 +1315,7 @@ export type Database = {
           ott?: boolean | null
           set?: boolean | null
           tipo_liq?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1265,6 +1347,7 @@ export type Database = {
           ott?: boolean | null
           set?: boolean | null
           tipo_liq?: string | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1275,6 +1358,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadlipe_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -1310,6 +1400,7 @@ export type Database = {
           novembre: boolean | null
           ottobre: boolean | null
           settembre: boolean | null
+          tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
           utente_professionista_id: string | null
@@ -1330,6 +1421,7 @@ export type Database = {
           novembre?: boolean | null
           ottobre?: boolean | null
           settembre?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1350,6 +1442,7 @@ export type Database = {
           novembre?: boolean | null
           ottobre?: boolean | null
           settembre?: boolean | null
+          tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_professionista_id?: string | null
@@ -1360,6 +1453,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadproforma_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
             referencedColumns: ["id"]
           },
           {
@@ -1440,6 +1540,59 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tbtipi_scadenze: {
+        Row: {
+          attivo: boolean | null
+          created_at: string | null
+          data_scadenza: string
+          descrizione: string | null
+          giorni_preavviso_1: number | null
+          giorni_preavviso_2: number | null
+          id: string
+          nome: string
+          ricorrente: boolean | null
+          studio_id: string | null
+          tipo_scadenza: string
+          updated_at: string | null
+        }
+        Insert: {
+          attivo?: boolean | null
+          created_at?: string | null
+          data_scadenza: string
+          descrizione?: string | null
+          giorni_preavviso_1?: number | null
+          giorni_preavviso_2?: number | null
+          id?: string
+          nome: string
+          ricorrente?: boolean | null
+          studio_id?: string | null
+          tipo_scadenza: string
+          updated_at?: string | null
+        }
+        Update: {
+          attivo?: boolean | null
+          created_at?: string | null
+          data_scadenza?: string
+          descrizione?: string | null
+          giorni_preavviso_1?: number | null
+          giorni_preavviso_2?: number | null
+          id?: string
+          nome?: string
+          ricorrente?: boolean | null
+          studio_id?: string | null
+          tipo_scadenza?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbtipi_scadenze_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbutenti: {
         Row: {
