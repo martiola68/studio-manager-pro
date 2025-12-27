@@ -361,4 +361,38 @@ export const messaggioService = {
   unsubscribeFromMessaggi(channel: any) {
     supabase.removeChannel(channel);
   },
+
+  async getMessaggiNonLettiCount(userId: string): Promise<number> {
+    try {
+      // Ottieni tutte le conversazioni dell'utente
+      const { data: conversazioni, error: convError } = await supabase
+        .from("tbconversazioni_utenti")
+        .select("conversazione_id, ultimo_letto_at")
+        .eq("utente_id", userId);
+
+      if (convError) throw convError;
+      if (!conversazioni || conversazioni.length === 0) return 0;
+
+      // Per ogni conversazione, conta i messaggi non letti
+      let totalNonLetti = 0;
+
+      for (const conv of conversazioni) {
+        const ultimoLetto = conv.ultimo_letto_at || "1970-01-01";
+
+        const { count } = await supabase
+          .from("tbmessaggi")
+          .select("*", { count: "exact", head: true })
+          .eq("conversazione_id", conv.conversazione_id)
+          .neq("mittente_id", userId)
+          .gt("created_at", ultimoLetto);
+
+        totalNonLetti += count || 0;
+      }
+
+      return totalNonLetti;
+    } catch (error) {
+      console.error("Errore conteggio messaggi non letti:", error);
+      return 0;
+    }
+  },
 };

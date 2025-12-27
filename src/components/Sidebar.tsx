@@ -33,10 +33,20 @@ export function Sidebar() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
 
   useEffect(() => {
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadMessaggiNonLetti();
+      // Aggiorna ogni 30 secondi
+      const interval = setInterval(loadMessaggiNonLetti, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
 
   const loadCurrentUser = async () => {
     try {
@@ -57,6 +67,18 @@ export function Sidebar() {
       console.error("Errore caricamento utente:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMessaggiNonLetti = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { messaggioService } = await import("@/services/messaggioService");
+      const count = await messaggioService.getMessaggiNonLettiCount(currentUser.id);
+      setMessaggiNonLetti(count);
+    } catch (error) {
+      console.error("Errore caricamento messaggi non letti:", error);
     }
   };
 
@@ -172,12 +194,15 @@ export function Sidebar() {
       );
     }
 
+    // Badge per messaggi non letti
+    const showBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+
     return (
       <Link
         key={item.label}
         href={item.href || "#"}
         className={cn(
-          "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+          "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative",
           depth > 0 && "pl-12 text-sm",
           isActive(item.href || "")
             ? "bg-blue-600 text-white font-semibold"
@@ -186,6 +211,11 @@ export function Sidebar() {
       >
         {item.icon}
         <span className={depth === 0 ? "font-medium" : ""}>{item.label}</span>
+        {showBadge && (
+          <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+            {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+          </span>
+        )}
       </Link>
     );
   };

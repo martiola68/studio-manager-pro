@@ -28,10 +28,25 @@ export default function DashboardPage() {
     scadenzeBilanciConfermate: 0
   });
   const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>([]);
+  const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndLoadData();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadDashboardData();
+      // Aggiorna messaggi non letti ogni 30 secondi
+      const interval = setInterval(async () => {
+        const { messaggioService } = await import("@/services/messaggioService");
+        const nonLetti = await messaggioService.getMessaggiNonLettiCount(currentUserId);
+        setMessaggiNonLetti(nonLetti);
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUserId]);
 
   const checkAuthAndLoadData = async () => {
     try {
@@ -40,6 +55,19 @@ export default function DashboardPage() {
       if (!session) {
         router.push("/login");
         return;
+      }
+
+      // Ottieni l'utente corrente per l'ID
+      if (session.user.email) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("id")
+          .eq("email", session.user.email)
+          .single();
+        
+        if (utente) {
+          setCurrentUserId(utente.id);
+        }
       }
 
       await loadDashboardData();
@@ -70,6 +98,13 @@ export default function DashboardPage() {
       setProssimiAppuntamenti(prossimi.slice(0, 5));
 
       const counts = await scadenzaService.getAllScadenzeCounts();
+
+      // Carica messaggi non letti
+      if (currentUserId) {
+        const { messaggioService } = await import("@/services/messaggioService");
+        const nonLetti = await messaggioService.getMessaggiNonLettiCount(currentUserId);
+        setMessaggiNonLetti(nonLetti);
+      }
 
       setStats({
         clientiAttivi,
@@ -263,9 +298,14 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Link href="/messaggi">
-                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2 relative">
                       <MessageSquare className="h-8 w-8 text-blue-600" />
                       <span className="text-sm font-medium">Messaggi</span>
+                      {messaggiNonLetti > 0 && (
+                        <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                          {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+                        </span>
+                      )}
                     </Button>
                   </Link>
                   <Link href="/agenda">
