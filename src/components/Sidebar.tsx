@@ -31,7 +31,7 @@ interface MenuItem {
 export function Sidebar() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["scadenze"]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["Scadenzario", "Impostazioni"]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -75,9 +75,14 @@ export function Sidebar() {
       href: "/dashboard"
     },
     {
-      label: "Clienti",
-      icon: <Users className="h-5 w-5" />,
-      href: "/clienti"
+      label: "Messaggi",
+      href: "/messaggi",
+      icon: <MessageSquare className="h-5 w-5" />,
+    },
+    {
+      label: "Agenda",
+      icon: <Calendar className="h-5 w-5" />,
+      href: "/agenda"
     },
     {
       label: "Contatti",
@@ -85,19 +90,7 @@ export function Sidebar() {
       href: "/contatti"
     },
     {
-      label: "Utenti",
-      icon: <Users className="h-5 w-5" />,
-      href: "/impostazioni/utenti",
-      adminOnly: true
-    },
-    {
-      label: "Dati Studio",
-      icon: <Building2 className="h-5 w-5" />,
-      href: "/impostazioni/studio",
-      adminOnly: true
-    },
-    {
-      label: "Scadenze",
+      label: "Scadenzario",
       icon: <FileText className="h-5 w-5" />,
       children: [
         { label: "Calendario", href: "/scadenze/calendario", icon: null },
@@ -119,16 +112,6 @@ export function Sidebar() {
       href: "/cassetti-fiscali"
     },
     {
-      label: "Messaggi",
-      href: "/messaggi",
-      icon: <MessageSquare className="h-5 w-5" />,
-    },
-    {
-      label: "Agenda",
-      icon: <Calendar className="h-5 w-5" />,
-      href: "/agenda"
-    },
-    {
       label: "Comunicazioni",
       icon: <Mail className="h-5 w-5" />,
       href: "/comunicazioni"
@@ -136,8 +119,16 @@ export function Sidebar() {
     {
       label: "Impostazioni",
       icon: <Settings className="h-5 w-5" />,
-      href: "/impostazioni",
-      adminOnly: true
+      adminOnly: true,
+      children: [
+        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
+        { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+        { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+        { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+        { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> }
+      ]
     }
   ];
 

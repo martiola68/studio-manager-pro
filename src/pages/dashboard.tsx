@@ -7,7 +7,7 @@ import { scadenzaService } from "@/services/scadenzaService";
 import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, UserCog } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/integrations/supabase/types";
@@ -262,34 +262,28 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Link href="/clienti">
+                  <Link href="/messaggi">
                     <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <Users className="h-8 w-8 text-blue-600" />
-                      <span className="text-sm font-medium">Clienti</span>
-                    </Button>
-                  </Link>
-                  <Link href="/contatti">
-                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <Users className="h-8 w-8 text-green-600" />
-                      <span className="text-sm font-medium">Contatti</span>
+                      <MessageSquare className="h-8 w-8 text-blue-600" />
+                      <span className="text-sm font-medium">Messaggi</span>
                     </Button>
                   </Link>
                   <Link href="/agenda">
                     <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <Calendar className="h-8 w-8 text-purple-600" />
+                      <Calendar className="h-8 w-8 text-green-600" />
                       <span className="text-sm font-medium">Agenda</span>
+                    </Button>
+                  </Link>
+                  <Link href="/contatti">
+                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+                      <Users className="h-8 w-8 text-purple-600" />
+                      <span className="text-sm font-medium">Contatti</span>
                     </Button>
                   </Link>
                   <Link href="/comunicazioni">
                     <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <FileText className="h-8 w-8 text-orange-600" />
+                      <Mail className="h-8 w-8 text-orange-600" />
                       <span className="text-sm font-medium">Comunicazioni</span>
-                    </Button>
-                  </Link>
-                  <Link href="/impostazioni/utenti">
-                    <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
-                      <UserCog className="h-8 w-8 text-indigo-600" />
-                      <span className="text-sm font-medium">Utenti</span>
                     </Button>
                   </Link>
                 </div>
