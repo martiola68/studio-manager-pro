@@ -25,6 +25,7 @@ export default function MessaggiPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [studioId, setStudioId] = useState<string | null>(null);
   const [conversazioni, setConversazioni] = useState<any[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
@@ -61,6 +62,8 @@ export default function MessaggiPage() {
         return;
       }
 
+      setAuthUserId(authUser.id);
+
       const profile = await authService.getUserProfile(authUser.id);
       if (!profile) {
         router.push("/login");
@@ -74,7 +77,7 @@ export default function MessaggiPage() {
         loadUtentiStudio(studio.id);
       }
       
-      loadConversazioni(profile.id);
+      loadConversazioni(authUser.id);
     } catch (error) {
       console.error("Auth error:", error);
       router.push("/login");
@@ -96,12 +99,12 @@ export default function MessaggiPage() {
   };
 
   const loadMessaggi = async (convId: string) => {
-    if (!user) return;
+    if (!authUserId) return;
     const data = await messaggioService.getMessaggi(convId);
     setMessaggi(data);
     
-    await messaggioService.segnaComeLetto(convId, user.id);
-    loadConversazioni(user.id);
+    await messaggioService.segnaComeLetto(convId, authUserId);
+    loadConversazioni(authUserId);
   };
 
   const subscribeToChat = (convId: string) => {
@@ -120,7 +123,7 @@ export default function MessaggiPage() {
           filter: `conversazione_id=eq.${convId}`,
         },
         async (payload) => {
-          if (payload.new.mittente_id !== user?.id) {
+          if (payload.new.mittente_id !== authUserId) {
             const { data: sender } = await supabase
               .from("tbutenti")
               .select("id, nome, cognome, email")
@@ -131,24 +134,24 @@ export default function MessaggiPage() {
             setMessaggi((prev) => [...prev, newMessage]);
             
             if (document.visibilityState === "visible") {
-              await messaggioService.segnaComeLetto(convId, user?.id);
+              await messaggioService.segnaComeLetto(convId, authUserId);
             }
           }
-          loadConversazioni(user?.id);
+          loadConversazioni(authUserId);
         }
       )
       .subscribe();
   };
 
   const handleSendMessage = async (testo: string, files?: File[]) => {
-    if (!user || !selectedConvId) return;
+    if (!authUserId || !selectedConvId) return;
 
     try {
-      const sentMsg = await messaggioService.inviaMessaggio(selectedConvId, user.id, testo);
+      const sentMsg = await messaggioService.inviaMessaggio(selectedConvId, authUserId, testo);
       
       if (sentMsg && files && files.length > 0) {
         await Promise.all(
-          files.map((file) => messaggioService.uploadAllegato(file, sentMsg.id, user.id))
+          files.map((file) => messaggioService.uploadAllegato(file, sentMsg.id, authUserId))
         );
       }
 
@@ -156,7 +159,7 @@ export default function MessaggiPage() {
         const optimisticMsg = {
           ...sentMsg,
           mittente: {
-            id: user.id,
+            id: authUserId,
             nome: user.nome,
             cognome: user.cognome,
             email: user.email,
@@ -164,9 +167,8 @@ export default function MessaggiPage() {
           allegati: [],
         };
         setMessaggi((prev) => [...prev, optimisticMsg]);
-        loadConversazioni(user.id);
+        loadConversazioni(authUserId);
         
-        // Ricarica messaggi per aggiornare allegati
         if (files && files.length > 0) {
           setTimeout(() => loadMessaggi(selectedConvId), 500);
         }
@@ -182,7 +184,7 @@ export default function MessaggiPage() {
   };
 
   const startDirectChat = async (targetUserId: string) => {
-    if (!user || !studioId) {
+    if (!authUserId || !studioId) {
       toast({
         title: "Errore",
         description: "Dati utente non disponibili. Riprova ad effettuare il login.",
@@ -195,13 +197,13 @@ export default function MessaggiPage() {
 
     try {
       console.log("Avvio chat diretta:", {
-        currentUserId: user.id,
+        currentUserId: authUserId,
         targetUserId,
         studioId,
       });
 
       const conv = await messaggioService.getOrCreateConversazioneDiretta(
-        user.id,
+        authUserId,
         targetUserId,
         studioId
       );
@@ -212,7 +214,7 @@ export default function MessaggiPage() {
 
       console.log("Conversazione ottenuta:", conv);
       setSelectedConvId(conv.id);
-      await loadConversazioni(user.id);
+      await loadConversazioni(authUserId);
       
       toast({
         title: "✅ Chat creata",
@@ -229,7 +231,7 @@ export default function MessaggiPage() {
   };
 
   const createGroupChat = async () => {
-    if (!user || !studioId || !groupTitle.trim() || selectedMembers.length < 2) {
+    if (!authUserId || !studioId || !groupTitle.trim() || selectedMembers.length < 2) {
       toast({
         variant: "destructive",
         title: "Errore",
@@ -239,14 +241,13 @@ export default function MessaggiPage() {
     }
 
     try {
-      // Aggiungi il creatore ai membri se non già presente
-      const allMembers = selectedMembers.includes(user.id) 
+      const allMembers = selectedMembers.includes(authUserId) 
         ? selectedMembers 
-        : [user.id, ...selectedMembers];
+        : [authUserId, ...selectedMembers];
 
       const conv = await messaggioService.creaConversazioneGruppo(
         groupTitle,
-        user.id,
+        authUserId,
         studioId,
         allMembers
       );
@@ -255,7 +256,7 @@ export default function MessaggiPage() {
         setIsNewChatOpen(false);
         setGroupTitle("");
         setSelectedMembers([]);
-        await loadConversazioni(user.id);
+        await loadConversazioni(authUserId);
         setSelectedConvId(conv.id);
         
         toast({
@@ -331,7 +332,7 @@ export default function MessaggiPage() {
                 <ChatArea
                   conversazioneId={selectedConvId}
                   messaggi={messaggi}
-                  currentUserId={user?.id}
+                  currentUserId={authUserId}
                   partnerName={getPartnerName()}
                   onSendMessage={handleSendMessage}
                   onBack={() => setSelectedConvId(null)}
