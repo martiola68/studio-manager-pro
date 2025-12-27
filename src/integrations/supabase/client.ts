@@ -8,4 +8,24 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true, // Mantieni la sessione in localStorage
+    autoRefreshToken: true, // Aggiorna automaticamente il token
+    detectSessionInUrl: true, // Rileva sessione da URL (per OAuth)
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  }
+});
+
+// Inizializza la sessione al caricamento (solo client-side)
+if (typeof window !== 'undefined') {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      console.log('✅ Sessione Supabase recuperata:', session.user.id);
+    } else {
+      console.log('⚠️ Nessuna sessione attiva');
+    }
+  }).catch((error) => {
+    console.error('❌ Errore recupero sessione:', error);
+  });
+}
