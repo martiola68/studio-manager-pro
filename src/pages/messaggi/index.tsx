@@ -46,7 +46,13 @@ export default function MessaggiPage() {
 
   const checkAuth = async () => {
     try {
-      const profile = await authService.getUserProfile();
+      const authUser = await authService.getCurrentUser();
+      if (!authUser) {
+        router.push("/login");
+        return;
+      }
+
+      const profile = await authService.getUserProfile(authUser.id);
       if (!profile) {
         router.push("/login");
         return;
