@@ -1,294 +1,267 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type Conversazione = Database["public"]["Tables"]["tbconversazioni"]["Row"];
-type ConversazioneInsert = Database["public"]["Tables"]["tbconversazioni"]["Insert"];
-type ConversazioneUtente = Database["public"]["Tables"]["tbconversazioni_utenti"]["Row"];
 type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
-type MessaggioInsert = Database["public"]["Tables"]["tbmessaggi"]["Insert"];
-
-interface ConversazioneConDettagli extends Conversazione {
-  partecipanti?: Array<{
-    utente_id: string;
-    ultimo_letto_at: string | null;
-    tbutenti: {
-      id: string;
-      nome: string;
-      cognome: string;
-      email: string;
-    } | null;
-  }>;
-  ultimo_messaggio?: Messaggio | null;
-  non_letti?: number;
-}
-
-interface MessaggioConMittente extends Messaggio {
-  mittente?: {
-    id: string;
-    nome: string;
-    cognome: string;
-    email: string;
-  } | null;
-}
+type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
 export const messaggioService = {
-  // Ottieni o crea conversazione diretta tra due utenti
+  async getConversazioni(userId: string) {
+    const { data, error } = await supabase
+      .from("tbconversazioni")
+      .select(`
+        *,
+        partecipanti:tbconversazioni_utenti(
+          utente_id,
+          ultimo_letto_at,
+          tbutenti(id, nome, cognome, email)
+        ),
+        ultimo_messaggio:tbmessaggi(
+          id,
+          testo,
+          created_at,
+          mittente_id
+        )
+      `)
+      .order("updated_at", { ascending: false });
+
+    if (error) throw error;
+
+    // Per ogni conversazione, conta i messaggi non letti
+    const conversazioniConNonLetti = await Promise.all(
+      (data || []).map(async (conv) => {
+        const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
+        const ultimoLetto = partecipante?.ultimo_letto_at;
+
+        const { count } = await supabase
+          .from("tbmessaggi")
+          .select("*", { count: "exact", head: true })
+          .eq("conversazione_id", conv.id)
+          .neq("mittente_id", userId)
+          .gt("created_at", ultimoLetto || "1970-01-01");
+
+        // Prendi solo l'ultimo messaggio (array restituisce tutti)
+        const ultimoMsg = Array.isArray(conv.ultimo_messaggio) 
+          ? conv.ultimo_messaggio[0] 
+          : conv.ultimo_messaggio;
+
+        return {
+          ...conv,
+          ultimo_messaggio: ultimoMsg || null,
+          non_letti: count || 0,
+        };
+      })
+    );
+
+    return conversazioniConNonLetti;
+  },
+
+  async getMessaggi(conversazioneId: string) {
+    const { data, error } = await supabase
+      .from("tbmessaggi")
+      .select(`
+        *,
+        mittente:tbutenti(id, nome, cognome, email),
+        allegati:tbmessaggi_allegati(*)
+      `)
+      .eq("conversazione_id", conversazioneId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async inviaMessaggio(conversazioneId: string, mittenteId: string, testo: string) {
+    // Prima aggiorna il timestamp della conversazione
+    await supabase
+      .from("tbconversazioni")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", conversazioneId);
+
+    // Poi inserisci il messaggio
+    const { data, error } = await supabase
+      .from("tbmessaggi")
+      .insert({
+        conversazione_id: conversazioneId,
+        mittente_id: mittenteId,
+        testo,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async segnaComeLetto(conversazioneId: string, utenteId: string) {
+    const { error } = await supabase
+      .from("tbconversazioni_utenti")
+      .update({ ultimo_letto_at: new Date().toISOString() })
+      .eq("conversazione_id", conversazioneId)
+      .eq("utente_id", utenteId);
+
+    if (error) console.error("Errore aggiornamento lettura:", error);
+  },
+
   async getOrCreateConversazioneDiretta(
-    utenteId1: string,
-    utenteId2: string,
+    userId1: string,
+    userId2: string,
     studioId: string
   ): Promise<Conversazione | null> {
     try {
-      // Cerca conversazione esistente
-      const { data: existing, error: searchError } = await supabase
+      // Cerca conversazione esistente tra questi due utenti
+      const { data: esistenti, error: searchError } = await supabase
         .from("tbconversazioni")
         .select(`
           *,
-          tbconversazioni_utenti!inner(utente_id)
+          partecipanti:tbconversazioni_utenti(utente_id)
         `)
         .eq("tipo", "diretta")
         .eq("studio_id", studioId);
 
       if (searchError) throw searchError;
 
-      // Trova conversazione che contiene entrambi gli utenti
-      const conversazione = existing?.find((conv: any) => {
-        const partecipanti = conv.tbconversazioni_utenti.map((p: any) => p.utente_id);
+      // Trova conversazione con esattamente questi 2 utenti
+      const conversazioneEsistente = esistenti?.find((conv: any) => {
+        const utentiIds = conv.partecipanti?.map((p: any) => p.utente_id) || [];
         return (
-          partecipanti.length === 2 &&
-          partecipanti.includes(utenteId1) &&
-          partecipanti.includes(utenteId2)
+          utentiIds.length === 2 &&
+          utentiIds.includes(userId1) &&
+          utentiIds.includes(userId2)
         );
       });
 
-      if (conversazione) {
-        return conversazione as Conversazione;
+      if (conversazioneEsistente) {
+        return conversazioneEsistente;
       }
 
       // Crea nuova conversazione
-      const { data: newConv, error: createError } = await supabase
+      const { data: nuovaConv, error: createError } = await supabase
         .from("tbconversazioni")
         .insert({
-          tipo: "diretta",
           studio_id: studioId,
+          tipo: "diretta",
+          creato_da: userId1,
         })
         .select()
         .single();
 
       if (createError) throw createError;
 
-      // Aggiungi partecipanti
-      const { error: participantsError } = await supabase
+      // Aggiungi i 2 partecipanti
+      const { error: parteciError } = await supabase
         .from("tbconversazioni_utenti")
         .insert([
-          { conversazione_id: newConv.id, utente_id: utenteId1 },
-          { conversazione_id: newConv.id, utente_id: utenteId2 },
+          { conversazione_id: nuovaConv.id, utente_id: userId1 },
+          { conversazione_id: nuovaConv.id, utente_id: userId2 },
         ]);
 
-      if (participantsError) throw participantsError;
+      if (parteciError) throw parteciError;
 
-      return newConv;
+      return nuovaConv;
     } catch (error) {
-      console.error("Error getting/creating conversation:", error);
+      console.error("Errore creazione conversazione:", error);
       return null;
     }
   },
 
-  // Ottieni tutte le conversazioni dell'utente con dettagli
-  async getConversazioni(utenteId: string): Promise<ConversazioneConDettagli[]> {
+  async creaConversazioneGruppo(
+    titolo: string,
+    creatoId: string,
+    studioId: string,
+    membriIds: string[]
+  ): Promise<Conversazione | null> {
     try {
-      const { data, error } = await supabase
+      // Crea conversazione gruppo
+      const { data: nuovaConv, error: createError } = await supabase
         .from("tbconversazioni")
-        .select(`
-          *,
-          partecipanti:tbconversazioni_utenti(
-            utente_id,
-            ultimo_letto_at,
-            tbutenti(id, nome, cognome, email)
-          )
-        `)
-        .order("updated_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Per ogni conversazione, ottieni l'ultimo messaggio e conta i non letti
-      const conversazioniConDettagli = await Promise.all(
-        (data || []).map(async (conv) => {
-          // Ultimo messaggio
-          const { data: ultimoMsg } = await supabase
-            .from("tbmessaggi")
-            .select("*")
-            .eq("conversazione_id", conv.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-
-          // Conta messaggi non letti
-          const partecipante = conv.partecipanti?.find(
-            (p: any) => p.utente_id === utenteId
-          );
-          const ultimoLetto = partecipante?.ultimo_letto_at;
-
-          let nonLetti = 0;
-          if (ultimoLetto) {
-            const { count } = await supabase
-              .from("tbmessaggi")
-              .select("*", { count: "exact", head: true })
-              .eq("conversazione_id", conv.id)
-              .neq("mittente_id", utenteId)
-              .gt("created_at", ultimoLetto);
-
-            nonLetti = count || 0;
-          } else {
-            // Se non ha mai letto, conta tutti i messaggi degli altri
-            const { count } = await supabase
-              .from("tbmessaggi")
-              .select("*", { count: "exact", head: true })
-              .eq("conversazione_id", conv.id)
-              .neq("mittente_id", utenteId);
-
-            nonLetti = count || 0;
-          }
-
-          return {
-            ...conv,
-            ultimo_messaggio: ultimoMsg,
-            non_letti: nonLetti,
-          };
+        .insert({
+          studio_id: studioId,
+          tipo: "gruppo",
+          titolo,
+          creato_da: creatoId,
         })
-      );
+        .select()
+        .single();
 
-      return conversazioniConDettagli;
+      if (createError) throw createError;
+
+      // Aggiungi tutti i membri (incluso il creatore)
+      const partecipanti = membriIds.map((uid) => ({
+        conversazione_id: nuovaConv.id,
+        utente_id: uid,
+      }));
+
+      const { error: parteciError } = await supabase
+        .from("tbconversazioni_utenti")
+        .insert(partecipanti);
+
+      if (parteciError) throw parteciError;
+
+      return nuovaConv;
     } catch (error) {
-      console.error("Error fetching conversations:", error);
-      return [];
+      console.error("Errore creazione gruppo:", error);
+      return null;
     }
   },
 
-  // Ottieni messaggi di una conversazione
-  async getMessaggi(conversazioneId: string): Promise<MessaggioConMittente[]> {
+  async uploadAllegato(file: File, messaggioId: string, userId: string) {
     try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `messaggi-allegati/${fileName}`;
+
+      // Upload file su Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("messaggi-allegati")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Ottieni URL pubblico (firmato per 1 anno)
+      const { data: urlData } = await supabase.storage
+        .from("messaggi-allegati")
+        .createSignedUrl(fileName, 31536000); // 1 anno in secondi
+
+      // Salva metadata nel database
       const { data, error } = await supabase
-        .from("tbmessaggi")
-        .select(`
-          *,
-          mittente:tbutenti(id, nome, cognome, email)
-        `)
-        .eq("conversazione_id", conversazioneId)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      return [];
-    }
-  },
-
-  // Invia messaggio
-  async inviaMessaggio(
-    conversazioneId: string,
-    mittenteId: string,
-    testo: string,
-    clienteId?: string,
-    eventoId?: string
-  ): Promise<Messaggio | null> {
-    try {
-      const messaggio: MessaggioInsert = {
-        conversazione_id: conversazioneId,
-        mittente_id: mittenteId,
-        testo,
-        cliente_id: clienteId || null,
-        evento_id: eventoId || null,
-      };
-
-      const { data, error } = await supabase
-        .from("tbmessaggi")
-        .insert(messaggio)
+        .from("tbmessaggi_allegati")
+        .insert({
+          messaggio_id: messaggioId,
+          nome_file: file.name,
+          tipo_file: file.type,
+          dimensione: file.size,
+          storage_path: fileName,
+          url: urlData?.signedUrl,
+        })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Aggiorna timestamp conversazione
-      await supabase
-        .from("tbconversazioni")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", conversazioneId);
-
       return data;
     } catch (error) {
-      console.error("Error sending message:", error);
-      return null;
+      console.error("Errore upload allegato:", error);
+      throw error;
     }
   },
 
-  // Segna come letto
-  async segnaComeLetto(conversazioneId: string, utenteId: string): Promise<boolean> {
+  async downloadAllegato(storagePath: string) {
     try {
-      const { error } = await supabase
-        .from("tbconversazioni_utenti")
-        .update({ ultimo_letto_at: new Date().toISOString() })
-        .eq("conversazione_id", conversazioneId)
-        .eq("utente_id", utenteId);
+      const { data, error } = await supabase.storage
+        .from("messaggi-allegati")
+        .download(storagePath);
 
       if (error) throw error;
-      return true;
+      return data;
     } catch (error) {
-      console.error("Error marking as read:", error);
-      return false;
+      console.error("Errore download allegato:", error);
+      throw error;
     }
   },
 
-  // Conta totale messaggi non letti
-  async contaNonLetti(utenteId: string): Promise<number> {
-    try {
-      // Ottieni tutte le conversazioni dell'utente
-      const { data: conversazioni } = await supabase
-        .from("tbconversazioni_utenti")
-        .select("conversazione_id, ultimo_letto_at")
-        .eq("utente_id", utenteId);
-
-      if (!conversazioni) return 0;
-
-      let totaleNonLetti = 0;
-
-      for (const conv of conversazioni) {
-        if (conv.ultimo_letto_at) {
-          const { count } = await supabase
-            .from("tbmessaggi")
-            .select("*", { count: "exact", head: true })
-            .eq("conversazione_id", conv.conversazione_id)
-            .neq("mittente_id", utenteId)
-            .gt("created_at", conv.ultimo_letto_at);
-
-          totaleNonLetti += count || 0;
-        } else {
-          const { count } = await supabase
-            .from("tbmessaggi")
-            .select("*", { count: "exact", head: true })
-            .eq("conversazione_id", conv.conversazione_id)
-            .neq("mittente_id", utenteId);
-
-          totaleNonLetti += count || 0;
-        }
-      }
-
-      return totaleNonLetti;
-    } catch (error) {
-      console.error("Error counting unread messages:", error);
-      return 0;
-    }
-  },
-
-  // Subscribe ai nuovi messaggi (Realtime)
-  subscribeToMessaggi(
-    conversazioneId: string,
-    callback: (messaggio: Messaggio) => void
-  ): RealtimeChannel {
-    const channel = supabase
-      .channel(`messaggi:${conversazioneId}`)
+  subscribeToConversazione(conversazioneId: string, onNewMessage: (payload: any) => void) {
+    return supabase
+      .channel(`chat:${conversazioneId}`)
       .on(
         "postgres_changes",
         {
@@ -297,17 +270,12 @@ export const messaggioService = {
           table: "tbmessaggi",
           filter: `conversazione_id=eq.${conversazioneId}`,
         },
-        (payload) => {
-          callback(payload.new as Messaggio);
-        }
+        onNewMessage
       )
       .subscribe();
-
-    return channel;
   },
 
-  // Unsubscribe da Realtime
-  unsubscribeFromMessaggi(channel: RealtimeChannel) {
+  unsubscribeFromMessaggi(channel: any) {
     supabase.removeChannel(channel);
   },
 };

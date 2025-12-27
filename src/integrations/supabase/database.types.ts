@@ -439,6 +439,7 @@ export type Database = {
       tbconversazioni: {
         Row: {
           created_at: string | null
+          creato_da: string | null
           id: string
           studio_id: string
           tipo: string
@@ -447,6 +448,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          creato_da?: string | null
           id?: string
           studio_id: string
           tipo?: string
@@ -455,6 +457,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          creato_da?: string | null
           id?: string
           studio_id?: string
           tipo?: string
@@ -462,6 +465,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tbconversazioni_creato_da_fkey"
+            columns: ["creato_da"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tbconversazioni_studio_id_fkey"
             columns: ["studio_id"]
@@ -562,6 +572,47 @@ export type Database = {
             columns: ["mittente_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbmessaggi_allegati: {
+        Row: {
+          created_at: string | null
+          dimensione: number
+          id: string
+          messaggio_id: string
+          nome_file: string
+          storage_path: string
+          tipo_file: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dimensione: number
+          id?: string
+          messaggio_id: string
+          nome_file: string
+          storage_path: string
+          tipo_file: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dimensione?: number
+          id?: string
+          messaggio_id?: string
+          nome_file?: string
+          storage_path?: string
+          tipo_file?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbmessaggi_allegati_messaggio_id_fkey"
+            columns: ["messaggio_id"]
+            isOneToOne: false
+            referencedRelation: "tbmessaggi"
             referencedColumns: ["id"]
           },
         ]
@@ -1773,7 +1824,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_chat_participant: {
+        Args: { _conversazione_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

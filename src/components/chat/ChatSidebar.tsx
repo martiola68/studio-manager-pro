@@ -48,7 +48,10 @@ export function ChatSidebar({
   const [search, setSearch] = useState("");
 
   const filtered = conversazioni.filter((c) => {
-    // Trova l'altro partecipante per la ricerca
+    if (c.tipo === "gruppo") {
+      return c.titolo?.toLowerCase().includes(search.toLowerCase());
+    }
+    
     const altroUtente = c.partecipanti?.find(
       (p) => p.tbutenti?.email !== currentUserEmail
     )?.tbutenti;
@@ -60,14 +63,32 @@ export function ChatSidebar({
     return nome.toLowerCase().includes(search.toLowerCase());
   });
 
-  const getPartner = (conv: ConversazioneConDettagli) => {
-    return conv.partecipanti?.find(
+  const getDisplayInfo = (conv: ConversazioneConDettagli) => {
+    if (conv.tipo === "gruppo") {
+      return {
+        nome: conv.titolo || "Gruppo",
+        initials: "GP",
+        isGroup: true,
+      };
+    }
+    
+    const partner = conv.partecipanti?.find(
       (p) => p.tbutenti?.email !== currentUserEmail
     )?.tbutenti;
-  };
-
-  const getInitials = (nome: string, cognome: string) => {
-    return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
+    
+    if (partner) {
+      return {
+        nome: `${partner.nome} ${partner.cognome}`,
+        initials: `${partner.nome.charAt(0)}${partner.cognome.charAt(0)}`.toUpperCase(),
+        isGroup: false,
+      };
+    }
+    
+    return {
+      nome: "Utente sconosciuto",
+      initials: "?",
+      isGroup: false,
+    };
   };
 
   return (
@@ -98,10 +119,7 @@ export function ChatSidebar({
             </div>
           ) : (
             filtered.map((conv) => {
-              const partner = getPartner(conv);
-              const nome = partner
-                ? `${partner.nome} ${partner.cognome}`
-                : "Utente sconosciuto";
+              const displayInfo = getDisplayInfo(conv);
               
               return (
                 <button
@@ -114,14 +132,23 @@ export function ChatSidebar({
                 >
                   <Avatar>
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {partner ? getInitials(partner.nome, partner.cognome) : "?"}
+                      {displayInfo.isGroup ? (
+                        <Users className="h-4 w-4" />
+                      ) : (
+                        displayInfo.initials
+                      )}
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1 overflow-hidden">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold truncate text-sm">
-                        {nome}
+                      <span className="font-semibold truncate text-sm flex items-center gap-1">
+                        {displayInfo.nome}
+                        {displayInfo.isGroup && (
+                          <span className="text-xs text-muted-foreground">
+                            ({conv.partecipanti?.length || 0})
+                          </span>
+                        )}
                       </span>
                       {conv.ultimo_messaggio && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
