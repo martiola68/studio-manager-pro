@@ -436,6 +436,136 @@ export type Database = {
         }
         Relationships: []
       }
+      tbconversazioni: {
+        Row: {
+          created_at: string | null
+          id: string
+          studio_id: string
+          tipo: string
+          titolo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          studio_id: string
+          tipo?: string
+          titolo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          studio_id?: string
+          tipo?: string
+          titolo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbconversazioni_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbconversazioni_utenti: {
+        Row: {
+          conversazione_id: string
+          created_at: string | null
+          ultimo_letto_at: string | null
+          utente_id: string
+        }
+        Insert: {
+          conversazione_id: string
+          created_at?: string | null
+          ultimo_letto_at?: string | null
+          utente_id: string
+        }
+        Update: {
+          conversazione_id?: string
+          created_at?: string | null
+          ultimo_letto_at?: string | null
+          utente_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbconversazioni_utenti_conversazione_id_fkey"
+            columns: ["conversazione_id"]
+            isOneToOne: false
+            referencedRelation: "tbconversazioni"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbconversazioni_utenti_utente_id_fkey"
+            columns: ["utente_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbmessaggi: {
+        Row: {
+          cliente_id: string | null
+          conversazione_id: string
+          created_at: string | null
+          evento_id: string | null
+          id: string
+          mittente_id: string
+          testo: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          conversazione_id: string
+          created_at?: string | null
+          evento_id?: string | null
+          id?: string
+          mittente_id: string
+          testo: string
+        }
+        Update: {
+          cliente_id?: string | null
+          conversazione_id?: string
+          created_at?: string | null
+          evento_id?: string | null
+          id?: string
+          mittente_id?: string
+          testo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbmessaggi_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbmessaggi_conversazione_id_fkey"
+            columns: ["conversazione_id"]
+            isOneToOne: false
+            referencedRelation: "tbconversazioni"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbmessaggi_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "tbagenda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbmessaggi_mittente_id_fkey"
+            columns: ["mittente_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbprestazioni: {
         Row: {
           created_at: string | null
