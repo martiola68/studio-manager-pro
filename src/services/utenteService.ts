@@ -75,6 +75,12 @@ export const utenteService = {
     return true;
   },
 
+  async getUtentiStudio(studioId: string): Promise<Utente[]> {
+    // In un sistema multi-studio, qui filtreremmo per studio_id
+    // Dato che lo schema attuale non ha studio_id su tbutenti, restituiamo tutti (single tenant logic)
+    return this.getUtenti();
+  },
+
   async getUtenteByUserId(userId: string): Promise<Utente | null> {
     console.warn("getUtenteByUserId non implementato completamente per il nuovo schema");
     return null; 

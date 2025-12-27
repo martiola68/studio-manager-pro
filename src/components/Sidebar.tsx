@@ -13,7 +13,8 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
-  Building2
+  Building2,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,11 @@ export function Sidebar() {
       label: "Cassetti Fiscali",
       icon: <FileText className="h-5 w-5" />,
       href: "/cassetti-fiscali"
+    },
+    {
+      label: "Messaggi",
+      href: "/messaggi",
+      icon: <MessageSquare className="h-5 w-5" />,
     },
     {
       label: "Agenda",
