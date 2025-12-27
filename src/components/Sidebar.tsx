@@ -31,7 +31,7 @@ interface MenuItem {
 export function Sidebar() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["Scadenzario", "Impostazioni"]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
