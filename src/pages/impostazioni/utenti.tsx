@@ -193,6 +193,7 @@ export default function GestioneUtentiPage() {
         }
 
         // Chiama API per creare utente in Auth
+        // Il trigger on_auth_user_created creerà automaticamente il record in tbutenti!
         const response = await fetch("/api/auth/create-user", {
           method: "POST",
           headers: {
@@ -203,7 +204,10 @@ export default function GestioneUtentiPage() {
             password: passwordToUse,
             nome: formData.nome,
             cognome: formData.cognome,
-            useAutoPassword
+            useAutoPassword,
+            tipo_utente: formData.tipo_utente,
+            ruolo_operatore_id: formData.ruolo_operatore_id || null,
+            attivo: formData.attivo
           })
         });
 
@@ -213,16 +217,17 @@ export default function GestioneUtentiPage() {
           throw new Error(result.details || result.error || "Errore creazione utente");
         }
 
-        // Crea utente nel DB con l'ID restituito dall'API
-        await supabase.from("tbutenti").insert({
-          id: result.userId,
-          nome: formData.nome,
-          cognome: formData.cognome,
-          email: formData.email,
-          tipo_utente: formData.tipo_utente,
-          ruolo_operatore_id: formData.ruolo_operatore_id || null,
-          attivo: formData.attivo
-        });
+        // ✅ NON serve più inserire in tbutenti - il trigger lo fa automaticamente!
+        // Ma dobbiamo aggiornare i campi extra (tipo_utente, ruolo_operatore_id)
+        // che il trigger non può sapere
+        await supabase
+          .from("tbutenti")
+          .update({
+            tipo_utente: formData.tipo_utente,
+            ruolo_operatore_id: formData.ruolo_operatore_id || null,
+            attivo: formData.attivo
+          })
+          .eq("id", result.userId);
         
         // Mostra la password usata
         const message = useAutoPassword 
