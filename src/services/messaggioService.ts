@@ -109,6 +109,12 @@ export const messaggioService = {
     studioId: string
   ): Promise<Conversazione | null> {
     try {
+      // VALIDAZIONE INPUT
+      if (!userId1 || !userId2 || !studioId) {
+        console.error("Parametri mancanti:", { userId1, userId2, studioId });
+        throw new Error("Parametri mancanti per creare conversazione");
+      }
+
       // Cerca conversazione esistente tra questi due utenti
       const { data: esistenti, error: searchError } = await supabase
         .from("tbconversazioni")
@@ -119,7 +125,10 @@ export const messaggioService = {
         .eq("tipo", "diretta")
         .eq("studio_id", studioId);
 
-      if (searchError) throw searchError;
+      if (searchError) {
+        console.error("Errore ricerca conversazioni:", searchError);
+        throw searchError;
+      }
 
       // Trova conversazione con esattamente questi 2 utenti
       const conversazioneEsistente = esistenti?.find((conv: any) => {
@@ -135,6 +144,13 @@ export const messaggioService = {
         return conversazioneEsistente;
       }
 
+      // DEBUG: Log dei valori prima dell'insert
+      console.log("Creazione nuova conversazione con:", {
+        studio_id: studioId,
+        tipo: "diretta",
+        creato_da: userId1,
+      });
+
       // Crea nuova conversazione
       const { data: nuovaConv, error: createError } = await supabase
         .from("tbconversazioni")
@@ -146,7 +162,16 @@ export const messaggioService = {
         .select()
         .single();
 
-      if (createError) throw createError;
+      if (createError) {
+        console.error("Errore creazione conversazione:", createError);
+        throw createError;
+      }
+
+      if (!nuovaConv) {
+        throw new Error("Conversazione creata ma non restituita dal database");
+      }
+
+      console.log("Conversazione creata:", nuovaConv);
 
       // Aggiungi i 2 partecipanti
       const { error: parteciError } = await supabase
@@ -156,7 +181,15 @@ export const messaggioService = {
           { conversazione_id: nuovaConv.id, utente_id: userId2 },
         ]);
 
-      if (parteciError) throw parteciError;
+      if (parteciError) {
+        console.error("Errore aggiunta partecipanti:", parteciError);
+        // Rollback: elimina la conversazione creata
+        await supabase
+          .from("tbconversazioni")
+          .delete()
+          .eq("id", nuovaConv.id);
+        throw parteciError;
+      }
 
       return nuovaConv;
     } catch (error) {

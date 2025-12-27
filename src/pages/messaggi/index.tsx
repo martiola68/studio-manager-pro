@@ -182,27 +182,48 @@ export default function MessaggiPage() {
   };
 
   const startDirectChat = async (targetUserId: string) => {
-    if (!user || !studioId) return;
-    
+    if (!user || !studioId) {
+      toast({
+        title: "Errore",
+        description: "Dati utente non disponibili. Riprova ad effettuare il login.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsNewChatOpen(false);
-    
+
     try {
+      console.log("Avvio chat diretta:", {
+        currentUserId: user.id,
+        targetUserId,
+        studioId,
+      });
+
       const conv = await messaggioService.getOrCreateConversazioneDiretta(
         user.id,
         targetUserId,
         studioId
       );
 
-      if (conv) {
-        await loadConversazioni(user.id);
-        setSelectedConvId(conv.id);
+      if (!conv) {
+        throw new Error("Impossibile creare la conversazione");
       }
-    } catch (error) {
-      console.error("Error creating chat:", error);
+
+      console.log("Conversazione ottenuta:", conv);
+      setSelectedConvId(conv.id);
+      await loadConversazioni(user.id);
+      
       toast({
+        title: "✅ Chat creata",
+        description: "Puoi iniziare a inviare messaggi",
+      });
+    } catch (error: any) {
+      console.error("Errore avvio chat:", error);
+      toast({
+        title: "❌ Errore",
+        description: error.message || "Impossibile creare la chat. Verifica i permessi.",
         variant: "destructive",
-        title: "Errore",
-        description: "Impossibile creare la conversazione.",
       });
     }
   };
