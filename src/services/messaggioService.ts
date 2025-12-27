@@ -111,9 +111,12 @@ export const messaggioService = {
     try {
       // VALIDAZIONE INPUT
       if (!userId1 || !userId2 || !studioId) {
-        console.error("Parametri mancanti:", { userId1, userId2, studioId });
-        throw new Error("Parametri mancanti per creare conversazione");
+        const error = `Parametri mancanti: userId1=${userId1}, userId2=${userId2}, studioId=${studioId}`;
+        console.error(error);
+        throw new Error(error);
       }
+
+      console.log("🔍 Ricerca conversazione esistente tra:", { userId1, userId2, studioId });
 
       // Cerca conversazione esistente tra questi due utenti
       const { data: esistenti, error: searchError } = await supabase
@@ -126,9 +129,11 @@ export const messaggioService = {
         .eq("studio_id", studioId);
 
       if (searchError) {
-        console.error("Errore ricerca conversazioni:", searchError);
-        throw searchError;
+        console.error("❌ Errore ricerca conversazioni:", searchError);
+        throw new Error(`Errore ricerca conversazioni: ${searchError.message}`);
       }
+
+      console.log(`📋 Trovate ${esistenti?.length || 0} conversazioni dirette nello studio`);
 
       // Trova conversazione con esattamente questi 2 utenti
       const conversazioneEsistente = esistenti?.find((conv: any) => {
@@ -141,15 +146,39 @@ export const messaggioService = {
       });
 
       if (conversazioneEsistente) {
+        console.log("✅ Conversazione esistente trovata:", conversazioneEsistente.id);
         return conversazioneEsistente;
       }
 
-      // DEBUG: Log dei valori prima dell'insert
-      console.log("Creazione nuova conversazione con:", {
+      console.log("🆕 Creazione nuova conversazione...");
+
+      // Verifica che userId1 sia l'auth.uid() corrente
+      const { data: { user: currentAuthUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error("❌ Errore verifica auth:", authError);
+        throw new Error(`Errore autenticazione: ${authError.message}`);
+      }
+
+      if (!currentAuthUser) {
+        throw new Error("Utente non autenticato");
+      }
+
+      console.log("👤 Auth user ID:", currentAuthUser.id);
+      console.log("📝 Parametri conversazione:", {
         studio_id: studioId,
         tipo: "diretta",
         creato_da: userId1,
+        auth_uid: currentAuthUser.id,
+        match: userId1 === currentAuthUser.id ? "✅ MATCH" : "❌ MISMATCH"
       });
+
+      if (userId1 !== currentAuthUser.id) {
+        throw new Error(
+          `ERRORE CRITICO: userId1 (${userId1}) non corrisponde a auth.uid() (${currentAuthUser.id}). ` +
+          `La policy RLS richiede che creato_da = auth.uid()`
+        );
+      }
 
       // Crea nuova conversazione
       const { data: nuovaConv, error: createError } = await supabase
@@ -163,17 +192,27 @@ export const messaggioService = {
         .single();
 
       if (createError) {
-        console.error("Errore creazione conversazione:", createError);
-        throw createError;
+        console.error("❌ ERRORE CREAZIONE CONVERSAZIONE:", {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint
+        });
+        throw new Error(
+          `Errore RLS creazione conversazione (${createError.code}): ${createError.message}. ` +
+          `Verifica che l'utente ${userId1} sia autenticato e corrisponda a auth.uid()`
+        );
       }
 
       if (!nuovaConv) {
         throw new Error("Conversazione creata ma non restituita dal database");
       }
 
-      console.log("Conversazione creata:", nuovaConv);
+      console.log("✅ Conversazione creata:", nuovaConv.id);
 
       // Aggiungi i 2 partecipanti
+      console.log("👥 Aggiunta partecipanti:", [userId1, userId2]);
+      
       const { error: parteciError } = await supabase
         .from("tbconversazioni_utenti")
         .insert([
@@ -182,19 +221,30 @@ export const messaggioService = {
         ]);
 
       if (parteciError) {
-        console.error("Errore aggiunta partecipanti:", parteciError);
+        console.error("❌ ERRORE AGGIUNTA PARTECIPANTI:", {
+          code: parteciError.code,
+          message: parteciError.message,
+          details: parteciError.details
+        });
+        
         // Rollback: elimina la conversazione creata
+        console.log("🔄 Rollback conversazione...");
         await supabase
           .from("tbconversazioni")
           .delete()
           .eq("id", nuovaConv.id);
-        throw parteciError;
+        
+        throw new Error(`Errore aggiunta partecipanti: ${parteciError.message}`);
       }
 
+      console.log("✅ Partecipanti aggiunti con successo");
+      console.log("🎉 Conversazione completa creata:", nuovaConv.id);
+
       return nuovaConv;
-    } catch (error) {
-      console.error("Errore creazione conversazione:", error);
-      return null;
+    } catch (error: any) {
+      console.error("💥 ERRORE FATALE getOrCreateConversazioneDiretta:", error);
+      // NON ritornare null - lancia l'errore così il chiamante lo vede
+      throw error;
     }
   },
 
