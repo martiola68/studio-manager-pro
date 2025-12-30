@@ -62,8 +62,9 @@ export const scadenzaAlertService = {
     dataInizio: string,
     dataFine: string
   ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
+    // Cast tabella a any per evitare errori di tipo con Supabase su nomi tabella dinamici
     let query = supabase
-      .from(tabella)
+      .from(tabella as any)
       .select(`
         id,
         data_scadenza,
