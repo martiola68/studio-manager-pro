@@ -123,6 +123,7 @@ export default function ClientiPage() {
     flag_esterometro: true,
     flag_ccgg: true,
     flag_proforma: true,
+    flag_imu: true,
     flag_mail_attivo: true,
     flag_mail_scadenze: true,
     flag_mail_newsletter: true
@@ -482,6 +483,7 @@ export default function ClientiPage() {
     if (cliente.flag_lipe) scadenzariSelezionati.push("Lipe");
     if (cliente.flag_esterometro) scadenzariSelezionati.push("Esterometro");
     if (cliente.flag_proforma) scadenzariSelezionati.push("Proforma");
+    if (cliente.flag_imu) scadenzariSelezionati.push("IMU");
 
     if (scadenzariSelezionati.length === 0) {
       toast({
@@ -552,6 +554,34 @@ export default function ClientiPage() {
         );
       }
 
+      if (cliente.flag_imu) {
+        // Recupera studio_id
+        const { data: studio } = await supabase
+          .from("tbstudio")
+          .select("id")
+          .single();
+
+        if (studio) {
+          promises.push(
+            supabase.from("tbscadimu").upsert({
+              id: cliente.id,
+              nominativo: cliente.ragione_sociale,
+              utente_operatore_id: cliente.utente_operatore_id,
+              utente_professionista_id: cliente.utente_professionista_id,
+              studio_id: studio.id,
+              acconto_imu: false,
+              acconto_dovuto: false,
+              acconto_comunicato: false,
+              saldo_imu: false,
+              saldo_dovuto: false,
+              saldo_comunicato: false,
+              dichiarazione_imu: false,
+              dichiarazione_presentazione: false
+            })
+          );
+        }
+      }
+
       await Promise.all(promises);
 
       toast({
@@ -603,6 +633,7 @@ export default function ClientiPage() {
       flag_esterometro: cliente.flag_esterometro ?? true,
       flag_ccgg: cliente.flag_ccgg ?? true,
       flag_proforma: cliente.flag_proforma ?? true,
+      flag_imu: cliente.flag_imu ?? true,
       flag_mail_attivo: cliente.flag_mail_attivo ?? true,
       flag_mail_scadenze: cliente.flag_mail_scadenze ?? true,
       flag_mail_newsletter: cliente.flag_mail_newsletter ?? true
@@ -664,6 +695,7 @@ export default function ClientiPage() {
       flag_esterometro: true,
       flag_ccgg: true,
       flag_proforma: true,
+      flag_imu: true,
       flag_mail_attivo: true,
       flag_mail_scadenze: true,
       flag_mail_newsletter: true
@@ -1468,6 +1500,17 @@ export default function ClientiPage() {
                                   className="rounded"
                                 />
                                 <Label htmlFor="flag_proforma" className="cursor-pointer">Proforma</Label>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id="flag_imu"
+                                  checked={formData.flag_imu}
+                                  onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
+                                  className="rounded"
+                                />
+                                <Label htmlFor="flag_imu" className="cursor-pointer">IMU</Label>
                               </div>
                             </div>
                           </div>
