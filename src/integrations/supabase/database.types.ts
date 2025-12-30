@@ -201,6 +201,7 @@ export type Database = {
           flag_cu: boolean | null
           flag_esterometro: boolean | null
           flag_fiscali: boolean | null
+          flag_imu: boolean | null
           flag_iva: boolean | null
           flag_lipe: boolean | null
           flag_mail_attivo: boolean | null
@@ -243,6 +244,7 @@ export type Database = {
           flag_cu?: boolean | null
           flag_esterometro?: boolean | null
           flag_fiscali?: boolean | null
+          flag_imu?: boolean | null
           flag_iva?: boolean | null
           flag_lipe?: boolean | null
           flag_mail_attivo?: boolean | null
@@ -285,6 +287,7 @@ export type Database = {
           flag_cu?: boolean | null
           flag_esterometro?: boolean | null
           flag_fiscali?: boolean | null
+          flag_imu?: boolean | null
           flag_iva?: boolean | null
           flag_lipe?: boolean | null
           flag_mail_attivo?: boolean | null

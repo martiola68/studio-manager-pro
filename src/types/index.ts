@@ -13,7 +13,8 @@ export const SCADENZE_KEYS = {
   "770": "770",
   LIPE: "LIPE",
   ESTEROMETRO: "Esterometro",
-  PROFORMA: "Proforma"
+  PROFORMA: "Proforma",
+  IMU: "IMU"
 } as const;
 
 // Tipo derivato dai VALORI (non dalle chiavi)
