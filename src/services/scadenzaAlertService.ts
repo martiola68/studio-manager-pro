@@ -72,7 +72,7 @@ export const scadenzaAlertService = {
         cliente_id,
         utente_assegnato_id,
         tbclienti!inner(ragione_sociale),
-        tbutenti(nome, cognome)
+        tbutenti!utente_assegnato_id(nome, cognome)
       `)
       .gte("data_scadenza", dataInizio)
       .lte("data_scadenza", dataFine)
