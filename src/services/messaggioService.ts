@@ -65,6 +65,7 @@ export const messaggioService = {
         allegati:tbmessaggi_allegati(*)
       `)
       .eq("conversazione_id", conversazioneId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
@@ -338,6 +339,36 @@ export const messaggioService = {
       return data;
     } catch (error) {
       console.error("Errore download allegato:", error);
+      throw error;
+    }
+  },
+
+  async eliminaMessaggio(messaggioId: string, utenteId: string) {
+    try {
+      // Verifica che l'utente sia il mittente del messaggio
+      const { data: messaggio, error: checkError } = await supabase
+        .from("tbmessaggi")
+        .select("mittente_id")
+        .eq("id", messaggioId)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (messaggio.mittente_id !== utenteId) {
+        throw new Error("Non hai i permessi per eliminare questo messaggio");
+      }
+
+      // Soft delete: imposta deleted_at
+      const { error: deleteError } = await supabase
+        .from("tbmessaggi")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", messaggioId);
+
+      if (deleteError) throw deleteError;
+
+      return true;
+    } catch (error) {
+      console.error("Errore eliminazione messaggio:", error);
       throw error;
     }
   },

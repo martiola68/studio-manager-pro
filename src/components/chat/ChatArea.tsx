@@ -3,12 +3,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, ArrowLeft, MoreVertical, Paperclip, File, Download, X } from "lucide-react";
+import { Send, ArrowLeft, MoreVertical, Paperclip, File, Download, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { messaggioService } from "@/services/messaggioService";
 
 type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
@@ -42,13 +53,19 @@ export function ChatArea({
   onBack,
   className,
 }: ChatAreaProps) {
+  const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,6 +122,38 @@ export function ChatArea({
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteMessage = async () => {
+    if (!messageToDelete || !currentUserId) return;
+
+    try {
+      await messaggioService.eliminaMessaggio(messageToDelete, currentUserId);
+      
+      toast({
+        title: "Messaggio eliminato",
+        description: "Il messaggio è stato eliminato con successo.",
+      });
+      
+      setDeleteDialogOpen(false);
+      setMessageToDelete(null);
+    } catch (error: any) {
+      console.error("Errore eliminazione messaggio:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: error.message || "Impossibile eliminare il messaggio.",
+      });
+    }
+  };
+
+  const openDeleteDialog = (messageId: string) => {
+    setMessageToDelete(messageId);
+    setDeleteDialogOpen(true);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -179,55 +228,61 @@ export function ChatArea({
                 return (
                   <div
                     key={msg.id}
-                    className={cn(
-                      "flex gap-2 max-w-[80%]",
-                      isMe ? "ml-auto flex-row-reverse" : ""
-                    )}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"} mb-4`}
                   >
-                    <div
-                      className={cn(
-                        "p-3 rounded-lg shadow-sm text-sm break-words",
-                        isMe
-                          ? "bg-primary text-primary-foreground rounded-tr-none"
-                          : "bg-background border rounded-tl-none"
-                      )}
+                    {!isMe && (
+                      <Avatar className="h-8 w-8 mr-2">
+                        <AvatarFallback className="text-xs">
+                          {msg.mittente?.nome?.[0]}{msg.mittente?.cognome?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    
+                    <div 
+                      className={`max-w-[70%] ${isMe ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-3 relative group`}
+                      onMouseEnter={() => setHoveredMessageId(msg.id)}
+                      onMouseLeave={() => setHoveredMessageId(null)}
                     >
-                      {msg.testo && <p className="whitespace-pre-wrap">{msg.testo}</p>}
+                      {!isMe && (
+                        <p className="text-xs font-semibold mb-1">
+                          {msg.mittente?.nome} {msg.mittente?.cognome}
+                        </p>
+                      )}
                       
-                      {hasAttachments && (
-                        <div className="mt-2 space-y-2">
-                          {msg.allegati?.map((allegato) => (
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.testo}</p>
+                      
+                      {msg.allegati && msg.allegati.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {msg.allegati.map((att: any) => (
                             <a
-                              key={allegato.id}
-                              href={allegato.url || "#"}
+                              key={att.id}
+                              href={att.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={cn(
-                                "flex items-center gap-2 p-2 rounded border",
-                                isMe
-                                  ? "bg-primary-foreground/10 border-primary-foreground/20"
-                                  : "bg-muted border-border"
-                              )}
+                              className="flex items-center gap-2 text-xs underline hover:no-underline"
                             >
-                              <File className="h-4 w-4 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium truncate">{allegato.nome_file}</p>
-                                <p className="text-[10px] opacity-70">{formatFileSize(allegato.dimensione)}</p>
-                              </div>
-                              <Download className="h-3 w-3 flex-shrink-0" />
+                              <Paperclip className="h-3 w-3" />
+                              {att.nome_file}
                             </a>
                           ))}
                         </div>
                       )}
                       
-                      <div
-                        className={cn(
-                          "text-[10px] mt-1 flex justify-end",
-                          isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                        )}
-                      >
-                        {format(new Date(msg.created_at!), "HH:mm")}
-                      </div>
+                      <p className={`text-[10px] mt-1 ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                        {msg.created_at && format(new Date(msg.created_at), "HH:mm", { locale: it })}
+                      </p>
+
+                      {/* Delete button - only for own messages */}
+                      {isMe && hoveredMessageId === msg.id && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute -top-2 -left-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-background border shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => openDeleteDialog(msg.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -308,6 +363,27 @@ export function ChatArea({
           </Button>
         </form>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Messaggio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare questo messaggio? Questa azione è irreversibile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMessage}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

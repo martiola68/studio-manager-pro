@@ -525,6 +525,7 @@ export type Database = {
           cliente_id: string | null
           conversazione_id: string
           created_at: string | null
+          deleted_at: string | null
           evento_id: string | null
           id: string
           mittente_id: string
@@ -534,6 +535,7 @@ export type Database = {
           cliente_id?: string | null
           conversazione_id: string
           created_at?: string | null
+          deleted_at?: string | null
           evento_id?: string | null
           id?: string
           mittente_id: string
@@ -543,6 +545,7 @@ export type Database = {
           cliente_id?: string | null
           conversazione_id?: string
           created_at?: string | null
+          deleted_at?: string | null
           evento_id?: string | null
           id?: string
           mittente_id?: string
