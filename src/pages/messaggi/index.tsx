@@ -5,10 +5,12 @@ import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
+import { AlertScadenze } from "@/components/AlertScadenze";
 import { authService } from "@/services/authService";
 import { messaggioService } from "@/services/messaggioService";
 import { utenteService } from "@/services/utenteService";
 import { studioService } from "@/services/studioService";
+import { scadenzaAlertService } from "@/services/scadenzaAlertService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,7 @@ export default function MessaggiPage() {
   const [user, setUser] = useState<any>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [studioId, setStudioId] = useState<string | null>(null);
+  const [isPartner, setIsPartner] = useState(false);
   const [conversazioni, setConversazioni] = useState<any[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messaggi, setMessaggi] = useState<any[]>([]);
@@ -35,8 +38,10 @@ export default function MessaggiPage() {
   const [utentiStudio, setUtentiStudio] = useState<any[]>([]);
   const [groupTitle, setGroupTitle] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [scadenzeAlert, setScadenzeAlert] = useState<any[]>([]);
   
   const subscriptionRef = useRef<any>(null);
+  const alertIntervalRef = useRef<any>(null);
 
   useEffect(() => {
     checkAuth();
@@ -54,6 +59,23 @@ export default function MessaggiPage() {
     };
   }, [selectedConvId]);
 
+  useEffect(() => {
+    if (authUserId && studioId) {
+      loadScadenzeAlert();
+      
+      // Refresh alert ogni 30 minuti
+      alertIntervalRef.current = setInterval(() => {
+        loadScadenzeAlert();
+      }, 30 * 60 * 1000);
+
+      return () => {
+        if (alertIntervalRef.current) {
+          clearInterval(alertIntervalRef.current);
+        }
+      };
+    }
+  }, [authUserId, studioId, isPartner]);
+
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
@@ -70,6 +92,10 @@ export default function MessaggiPage() {
         return;
       }
       setUser(profile);
+      
+      // Verifica se l'utente è Partner
+      const isPartnerUser = profile.tipo_utente?.toLowerCase() === "partner";
+      setIsPartner(isPartnerUser);
       
       const studio = await studioService.getStudio();
       if (studio) {
@@ -105,6 +131,37 @@ export default function MessaggiPage() {
     
     await messaggioService.segnaComeLetto(convId, authUserId);
     loadConversazioni(authUserId);
+  };
+
+  const loadScadenzeAlert = async () => {
+    if (!authUserId || !studioId) return;
+
+    try {
+      const scadenze = await scadenzaAlertService.getScadenzeInArrivo(
+        authUserId,
+        isPartner,
+        studioId
+      );
+
+      // Filtra scadenze già dismissate
+      const scadenzeNonDismissate = scadenze.filter(
+        s => !scadenzaAlertService.isDismissed(s.id)
+      );
+
+      setScadenzeAlert(scadenzeNonDismissate);
+
+      // Mostra toast per scadenze critiche (solo se ce ne sono di nuove)
+      const critiche = scadenzeNonDismissate.filter(s => s.urgenza === "critica");
+      if (critiche.length > 0) {
+        toast({
+          title: "⚠️ Scadenze Critiche!",
+          description: `${critiche.length} scadenza${critiche.length > 1 ? "e" : ""} in scadenza OGGI!`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading scadenze alert:", error);
+    }
   };
 
   const subscribeToChat = (convId: string) => {
@@ -196,12 +253,6 @@ export default function MessaggiPage() {
     setIsNewChatOpen(false);
 
     try {
-      console.log("Avvio chat diretta:", {
-        currentUserId: authUserId,
-        targetUserId,
-        studioId,
-      });
-
       const conv = await messaggioService.getOrCreateConversazioneDiretta(
         authUserId,
         targetUserId,
@@ -212,7 +263,6 @@ export default function MessaggiPage() {
         throw new Error("Impossibile creare la conversazione");
       }
 
-      console.log("Conversazione ottenuta:", conv);
       setSelectedConvId(conv.id);
       await loadConversazioni(authUserId);
       
@@ -278,6 +328,29 @@ export default function MessaggiPage() {
     setSelectedMembers((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
+  };
+
+  const handleDismissAlert = (scadenzaId: string) => {
+    scadenzaAlertService.dismissAlert(scadenzaId);
+    setScadenzeAlert((prev) => prev.filter(s => s.id !== scadenzaId));
+  };
+
+  const handleViewScadenzaDetails = (scadenzaId: string, tipo: string) => {
+    // Mappa tipo scadenza a URL corretto
+    const tipoUrlMap: Record<string, string> = {
+      "IVA": "/scadenze/iva",
+      "CCGG": "/scadenze/ccgg",
+      "CU": "/scadenze/cu",
+      "Fiscale": "/scadenze/fiscali",
+      "Bilancio": "/scadenze/bilanci",
+      "770": "/scadenze/770",
+      "LIPE": "/scadenze/lipe",
+      "Esterometro": "/scadenze/esterometro",
+      "Proforma": "/scadenze/proforma",
+    };
+
+    const url = tipoUrlMap[tipo] || "/scadenze/iva";
+    router.push(url);
   };
 
   const getPartnerName = () => {
@@ -357,6 +430,16 @@ export default function MessaggiPage() {
                   <p>Seleziona una conversazione per iniziare</p>
                 </div>
               )}
+            </div>
+
+            {/* Alert Scadenze Sidebar */}
+            <div className="hidden lg:block w-80 border-l bg-background p-4 overflow-y-auto">
+              <AlertScadenze
+                scadenze={scadenzeAlert}
+                isPartner={isPartner}
+                onDismiss={handleDismissAlert}
+                onViewDetails={handleViewScadenzaDetails}
+              />
             </div>
           </div>
         </div>
