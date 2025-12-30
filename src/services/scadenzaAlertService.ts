@@ -11,6 +11,19 @@ export interface ScadenzaAlert {
   tabella_origine: string;
 }
 
+// Mappatura delle colonne di completamento per ogni tabella
+const COMPLETION_COLUMNS: Record<string, string | null> = {
+  "tbscadiva": "mod_inviato",
+  "tbscad770": "mod_inviato",
+  "tbscadfiscali": "mod_dual", // Special case: ha mod_r_inviato E mod_i_inviato
+  "tbscadccgg": null, // No completion column
+  "tbscadbilanci": null,
+  "tbscadlipe": null,
+  "tbscadcu": null,
+  "tbscadestero": null,
+  "tbscadproforma": null,
+};
+
 export const scadenzaAlertService = {
   /**
    * Ottiene tutte le scadenze in arrivo per un utente
@@ -28,7 +41,7 @@ export const scadenzaAlertService = {
     const tra7giorniStr = tra7giorni.toISOString().split("T")[0];
     const tra30giorniStr = tra30giorni.toISOString().split("T")[0];
 
-    // Strategia: Query sui tipi di scadenza in arrivo, poi verifichiamo le tabelle associate
+    // Query parallele su tutte le tabelle scadenze
     const scadenzePromises = [
       this.fetchScadenzeFromTable("tbscadiva", "IVA", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchScadenzeFromTable("tbscadccgg", "CCGG", userId, isPartner, studioId, oggiStr, tra30giorniStr),
@@ -44,7 +57,7 @@ export const scadenzaAlertService = {
     const results = await Promise.all(scadenzePromises);
     const tutteScadenze = results.flat();
 
-    // Determina urgenza
+    // Determina urgenza e ordina
     return tutteScadenze.map(scadenza => ({
       ...scadenza,
       urgenza: this.calcolaUrgenza(scadenza.data_scadenza, oggiStr, tra7giorniStr)
@@ -64,14 +77,13 @@ export const scadenzaAlertService = {
     dataFine: string
   ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
     try {
-      // Cast tabella a any per evitare errori di tipo con Supabase su nomi tabella dinamici
+      // Base query con join a tbtipi_scadenze per ottenere la data
       let query = supabase
         .from(tabella as any)
         .select(`
           id,
           nominativo,
           utente_operatore_id,
-          mod_inviato,
           tipo_scadenza_id,
           tbtipi_scadenze!inner(
             nome,
@@ -81,13 +93,23 @@ export const scadenzaAlertService = {
           tbutenti:utente_operatore_id(nome, cognome)
         `)
         .gte("tbtipi_scadenze.data_scadenza", dataInizio)
-        .lte("tbtipi_scadenze.data_scadenza", dataFine)
-        .or("mod_inviato.is.null,mod_inviato.eq.false");
+        .lte("tbtipi_scadenze.data_scadenza", dataFine);
 
-      // Se NON è Partner, filtra per utente operatore
+      // Filtro per ruolo: Partner vede tutto, Operatori solo le proprie
       if (!isPartner) {
         query = query.eq("utente_operatore_id", userId);
       }
+
+      // Aggiungi filtro completamento SOLO se la tabella ha la colonna
+      const completionColumn = COMPLETION_COLUMNS[tabella];
+      if (completionColumn === "mod_inviato") {
+        // Tabelle con mod_inviato (tbscadiva, tbscad770)
+        query = query.or("mod_inviato.is.null,mod_inviato.eq.false");
+      } else if (completionColumn === "mod_dual") {
+        // tbscadfiscali ha mod_r_inviato E mod_i_inviato
+        query = query.or("mod_r_inviato.is.null,mod_r_inviato.eq.false,mod_i_inviato.is.null,mod_i_inviato.eq.false");
+      }
+      // Se completionColumn è null, non aggiungiamo filtri (mostra tutte)
 
       const { data, error } = await query;
 
