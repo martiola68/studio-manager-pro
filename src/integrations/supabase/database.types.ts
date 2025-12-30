@@ -1356,6 +1356,94 @@ export type Database = {
           },
         ]
       }
+      tbscadimu: {
+        Row: {
+          acconto_comunicato: boolean | null
+          acconto_data: string | null
+          acconto_dovuto: boolean | null
+          acconto_imu: boolean | null
+          created_at: string | null
+          dichiarazione_data_pres: string | null
+          dichiarazione_imu: boolean | null
+          dichiarazione_presentazione: boolean | null
+          dichiarazione_scadenza: string | null
+          id: string
+          nominativo: string
+          saldo_comunicato: boolean | null
+          saldo_data: string | null
+          saldo_dovuto: boolean | null
+          saldo_imu: boolean | null
+          studio_id: string
+          updated_at: string | null
+          utente_operatore_id: string | null
+          utente_professionista_id: string | null
+        }
+        Insert: {
+          acconto_comunicato?: boolean | null
+          acconto_data?: string | null
+          acconto_dovuto?: boolean | null
+          acconto_imu?: boolean | null
+          created_at?: string | null
+          dichiarazione_data_pres?: string | null
+          dichiarazione_imu?: boolean | null
+          dichiarazione_presentazione?: boolean | null
+          dichiarazione_scadenza?: string | null
+          id?: string
+          nominativo: string
+          saldo_comunicato?: boolean | null
+          saldo_data?: string | null
+          saldo_dovuto?: boolean | null
+          saldo_imu?: boolean | null
+          studio_id: string
+          updated_at?: string | null
+          utente_operatore_id?: string | null
+          utente_professionista_id?: string | null
+        }
+        Update: {
+          acconto_comunicato?: boolean | null
+          acconto_data?: string | null
+          acconto_dovuto?: boolean | null
+          acconto_imu?: boolean | null
+          created_at?: string | null
+          dichiarazione_data_pres?: string | null
+          dichiarazione_imu?: boolean | null
+          dichiarazione_presentazione?: boolean | null
+          dichiarazione_scadenza?: string | null
+          id?: string
+          nominativo?: string
+          saldo_comunicato?: boolean | null
+          saldo_data?: string | null
+          saldo_dovuto?: boolean | null
+          saldo_imu?: boolean | null
+          studio_id?: string
+          updated_at?: string | null
+          utente_operatore_id?: string | null
+          utente_professionista_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbscadimu_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadimu_utente_operatore_id_fkey"
+            columns: ["utente_operatore_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadimu_utente_professionista_id_fkey"
+            columns: ["utente_professionista_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbscadiva: {
         Row: {
           conferma_riga: boolean | null
