@@ -1,83 +1,55 @@
-import { useState, useEffect } from "react";
-import Head from "next/head";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { Plus, Search, Pencil, Trash2, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import Header from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { imuService } from "@/services/imuService";
-import { utenteService } from "@/services/utenteService";
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-// Tipo base dal DB
-type ScadenzaIMUBase = Database["public"]["Tables"]["tbscadimu"]["Row"];
+type ScadenzaImu = Database["public"]["Tables"]["tbscadimu"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-// Tipo esteso con le relazioni
-interface ScadenzaIMU extends ScadenzaIMUBase {
-  professionista?: { nome: string; cognome: string } | null;
-  operatore?: { nome: string; cognome: string } | null;
-}
-
-export default function ScadenzeIMU() {
+export default function ScadenzeImuPage() {
   const router = useRouter();
   const { toast } = useToast();
-
-  const [scadenze, setScadenze] = useState<ScadenzaIMU[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingScadenza, setEditingScadenza] = useState<ScadenzaIMU | null>(null);
-  const [currentUserStudioId, setCurrentUserStudioId] = useState<string | null>(null);
+  const [scadenze, setScadenze] = useState<ScadenzaImu[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+  const [filterConferma, setFilterConferma] = useState("__all__");
 
-  // Form state
-  const [formData, setFormData] = useState({
-    nominativo: "",
-    utente_professionista_id: "",
-    utente_operatore_id: "",
-    acconto_imu: false,
-    acconto_dovuto: false,
-    acconto_comunicato: false,
-    acconto_data: "",
-    saldo_imu: false,
-    saldo_dovuto: false,
-    saldo_comunicato: false,
-    saldo_data: "",
-    dichiarazione_imu: false,
-    dichiarazione_scadenza: "",
-    dichiarazione_presentazione: false,
-    dichiarazione_data_pres: "",
+  // Stats
+  const [stats, setStats] = useState({
+    totale: 0,
+    confermate: 0,
+    nonConfermate: 0
   });
 
   useEffect(() => {
-    checkAuth();
-    loadData();
+    checkAuthAndLoad();
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+  const checkAuthAndLoad = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      await loadData();
+    } catch (error) {
+      console.error("Errore:", error);
       router.push("/login");
-      return;
-    }
-
-    // Recupera studio_id (assumiamo single tenant o primo studio disponibile)
-    const { data: studio } = await supabase
-      .from("tbstudio")
-      .select("id")
-      .single();
-    
-    if (studio) {
-      setCurrentUserStudioId(studio.id);
     }
   };
 
@@ -85,533 +57,479 @@ export default function ScadenzeIMU() {
     try {
       setLoading(true);
       const [scadenzeData, utentiData] = await Promise.all([
-        imuService.fetchAll(),
-        utenteService.getUtenti()
+        loadScadenze(),
+        loadUtenti()
       ]);
-      // Casting necessario perché il service ritorna i dati con le relazioni ma il tipo base non le ha
-      setScadenze(scadenzeData as unknown as ScadenzaIMU[]);
+      setScadenze(scadenzeData);
       setUtenti(utentiData);
+      
+      // Calculate stats
+      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      setStats({
+        totale: scadenzeData.length,
+        confermate,
+        nonConfermate: scadenzeData.length - confermate
+      });
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Errore caricamento:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const loadScadenze = async (): Promise<ScadenzaImu[]> => {
+    const { data, error } = await supabase
+      .from("tbscadimu")
+      .select("*")
+      .order("nominativo", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  };
 
-    if (!currentUserStudioId) {
-      toast({
-        title: "Errore",
-        description: "Impossibile identificare lo studio dell'utente",
-        variant: "destructive",
-      });
-      return;
-    }
+  const loadUtenti = async (): Promise<Utente[]> => {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  };
 
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
-      // Prepara i dati per il salvataggio
-      const dataToSave = {
-        ...formData,
-        studio_id: currentUserStudioId, // Aggiunge lo studio_id
-        // Gestione date vuote: se stringa vuota manda null (o undefined per il DB)
-        acconto_data: formData.acconto_data || null,
-        saldo_data: formData.saldo_data || null,
-        dichiarazione_scadenza: formData.dichiarazione_scadenza || null,
-        dichiarazione_data_pres: formData.dichiarazione_data_pres || null,
-      };
+      const updates: any = {};
+      updates[field] = !currentValue;
+      
+      const { error } = await supabase
+        .from("tbscadimu")
+        .update(updates)
+        .eq("id", scadenzaId);
 
-      if (editingScadenza) {
-        await imuService.update(editingScadenza.id, dataToSave);
-        toast({
-          title: "Successo",
-          description: "Scadenza IMU aggiornata con successo",
-        });
-      } else {
-        await imuService.create(dataToSave);
-        toast({
-          title: "Successo",
-          description: "Scadenza IMU creata con successo",
-        });
-      }
+      if (error) throw error;
 
-      setIsDialogOpen(false);
-      resetForm();
-      loadData();
+      await loadData();
+      toast({
+        title: "Successo",
+        description: "Campo aggiornato"
+      });
     } catch (error) {
-      console.error("Error saving scadenza:", error);
+      console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile salvare la scadenza",
-        variant: "destructive",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive"
       });
     }
   };
 
-  const handleEdit = (scadenza: ScadenzaIMU) => {
-    setEditingScadenza(scadenza);
-    setFormData({
-      nominativo: scadenza.nominativo || "",
-      utente_professionista_id: scadenza.utente_professionista_id || "",
-      utente_operatore_id: scadenza.utente_operatore_id || "",
-      acconto_imu: scadenza.acconto_imu || false,
-      acconto_dovuto: scadenza.acconto_dovuto || false,
-      acconto_comunicato: scadenza.acconto_comunicato || false,
-      acconto_data: scadenza.acconto_data || "",
-      saldo_imu: scadenza.saldo_imu || false,
-      saldo_dovuto: scadenza.saldo_dovuto || false,
-      saldo_comunicato: scadenza.saldo_comunicato || false,
-      saldo_data: scadenza.saldo_data || "",
-      dichiarazione_imu: scadenza.dichiarazione_imu || false,
-      dichiarazione_scadenza: scadenza.dichiarazione_scadenza || "",
-      dichiarazione_presentazione: scadenza.dichiarazione_presentazione || false,
-      dichiarazione_data_pres: scadenza.dichiarazione_data_pres || "",
-    });
-    setIsDialogOpen(true);
+  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+    try {
+      const updates: any = {};
+      updates[field] = value || null;
+      
+      const { error } = await supabase
+        .from("tbscadimu")
+        .update(updates)
+        .eq("id", scadenzaId);
+
+      if (error) throw error;
+
+      await loadData();
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questa scadenza IMU?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
-      await imuService.delete(id);
+      const { error } = await supabase
+        .from("tbscadimu")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
       toast({
         title: "Successo",
-        description: "Scadenza IMU eliminata con successo",
+        description: "Record eliminato"
       });
-      loadData();
+      await loadData();
     } catch (error) {
-      console.error("Error deleting scadenza:", error);
+      console.error("Errore eliminazione:", error);
       toast({
         title: "Errore",
-        description: "Impossibile eliminare la scadenza",
-        variant: "destructive",
+        description: "Impossibile eliminare il record",
+        variant: "destructive"
       });
     }
   };
 
-  const resetForm = () => {
-    setEditingScadenza(null);
-    setFormData({
-      nominativo: "",
-      utente_professionista_id: "",
-      utente_operatore_id: "",
-      acconto_imu: false,
-      acconto_dovuto: false,
-      acconto_comunicato: false,
-      acconto_data: "",
-      saldo_imu: false,
-      saldo_dovuto: false,
-      saldo_comunicato: false,
-      saldo_data: "",
-      dichiarazione_imu: false,
-      dichiarazione_scadenza: "",
-      dichiarazione_presentazione: false,
-      dichiarazione_data_pres: "",
-    });
+  const filteredScadenze = scadenze.filter(s => {
+    const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
+    const matchConferma = filterConferma === "__all__" || 
+      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
+  });
+
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find(u => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
-  const filteredScadenze = scadenze.filter(scadenza =>
-    scadenza.nominativo?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getStatoBadge = (scadenza: ScadenzaIMU) => {
-    // Logica semplificata per lo stato
-    if (scadenza.dichiarazione_presentazione) {
-      return <Badge className="bg-green-500">Completato</Badge>;
-    }
-    
-    // Se c'è un acconto o saldo dovuto non ancora comunicato
-    if ((scadenza.acconto_dovuto && !scadenza.acconto_comunicato) || 
-        (scadenza.saldo_dovuto && !scadenza.saldo_comunicato)) {
-      return <Badge variant="destructive">Da Comunicare</Badge>;
-    }
-
-    return <Badge className="bg-yellow-500">In Corso</Badge>;
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <Head>
-        <title>Scadenze IMU - Studio Manager Pro</title>
-      </Head>
-
-      <div className="container mx-auto py-6 px-4">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Scadenze IMU</h1>
-            <p className="text-muted-foreground">Gestione scadenze IMU con acconto, saldo e dichiarazione</p>
-          </div>
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuova Scadenza IMU
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingScadenza ? "Modifica Scadenza IMU" : "Nuova Scadenza IMU"}
-                </DialogTitle>
-                <DialogDescription>
-                  Compila tutti i campi per gestire la scadenza IMU
-                </DialogDescription>
-              </DialogHeader>
-
-              <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-                {/* Dati Generali */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">Anagrafica e Assegnazione</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nominativo">Nominativo Cliente *</Label>
-                        <Input
-                          id="nominativo"
-                          value={formData.nominativo}
-                          onChange={(e) => setFormData({ ...formData, nominativo: e.target.value })}
-                          required
-                          placeholder="Es. Mario Rossi"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="professionista">Professionista</Label>
-                        <Select
-                          value={formData.utente_professionista_id}
-                          onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {utenti.map((utente) => (
-                              <SelectItem key={utente.id} value={utente.id}>
-                                {utente.nome} {utente.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="operatore">Operatore</Label>
-                        <Select
-                          value={formData.utente_operatore_id}
-                          onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {utenti.map((utente) => (
-                              <SelectItem key={utente.id} value={utente.id}>
-                                {utente.nome} {utente.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Acconto IMU */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">Acconto IMU (Giugno)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="acconto_imu"
-                          checked={formData.acconto_imu}
-                          onCheckedChange={(checked) => setFormData({ ...formData, acconto_imu: checked as boolean })}
-                        />
-                        <Label htmlFor="acconto_imu" className="font-normal cursor-pointer">Pratica Acconto</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="acconto_dovuto"
-                          checked={formData.acconto_dovuto}
-                          onCheckedChange={(checked) => setFormData({ ...formData, acconto_dovuto: checked as boolean })}
-                        />
-                        <Label htmlFor="acconto_dovuto" className="font-normal cursor-pointer">Importo Dovuto</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="acconto_comunicato"
-                          checked={formData.acconto_comunicato}
-                          onCheckedChange={(checked) => setFormData({ ...formData, acconto_comunicato: checked as boolean })}
-                        />
-                        <Label htmlFor="acconto_comunicato" className="font-normal cursor-pointer">Comunicato al cliente</Label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="acconto_data">Data Comunicazione</Label>
-                        <Input
-                          id="acconto_data"
-                          type="date"
-                          value={formData.acconto_data}
-                          onChange={(e) => setFormData({ ...formData, acconto_data: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Saldo IMU */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">Saldo IMU (Dicembre)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="saldo_imu"
-                          checked={formData.saldo_imu}
-                          onCheckedChange={(checked) => setFormData({ ...formData, saldo_imu: checked as boolean })}
-                        />
-                        <Label htmlFor="saldo_imu" className="font-normal cursor-pointer">Pratica Saldo</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="saldo_dovuto"
-                          checked={formData.saldo_dovuto}
-                          onCheckedChange={(checked) => setFormData({ ...formData, saldo_dovuto: checked as boolean })}
-                        />
-                        <Label htmlFor="saldo_dovuto" className="font-normal cursor-pointer">Importo Dovuto</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="saldo_comunicato"
-                          checked={formData.saldo_comunicato}
-                          onCheckedChange={(checked) => setFormData({ ...formData, saldo_comunicato: checked as boolean })}
-                        />
-                        <Label htmlFor="saldo_comunicato" className="font-normal cursor-pointer">Comunicato al cliente</Label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="saldo_data">Data Comunicazione</Label>
-                        <Input
-                          id="saldo_data"
-                          type="date"
-                          value={formData.saldo_data}
-                          onChange={(e) => setFormData({ ...formData, saldo_data: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Dichiarazione IMU */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">Dichiarazione IMU</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="dichiarazione_imu"
-                          checked={formData.dichiarazione_imu}
-                          onCheckedChange={(checked) => setFormData({ ...formData, dichiarazione_imu: checked as boolean })}
-                        />
-                        <Label htmlFor="dichiarazione_imu" className="font-normal cursor-pointer">Da Presentare</Label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="dichiarazione_scadenza">Data Scadenza</Label>
-                        <Input
-                          id="dichiarazione_scadenza"
-                          type="date"
-                          value={formData.dichiarazione_scadenza}
-                          onChange={(e) => setFormData({ ...formData, dichiarazione_scadenza: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="flex items-center space-x-2 h-10">
-                        <Checkbox
-                          id="dichiarazione_presentazione"
-                          checked={formData.dichiarazione_presentazione}
-                          onCheckedChange={(checked) => setFormData({ ...formData, dichiarazione_presentazione: checked as boolean })}
-                        />
-                        <Label htmlFor="dichiarazione_presentazione" className="font-normal cursor-pointer">Presentata</Label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="dichiarazione_data_presentazione">Data Presentazione</Label>
-                        <Input
-                          id="dichiarazione_data_presentazione"
-                          type="date"
-                          value={formData.dichiarazione_data_pres}
-                          onChange={(e) => setFormData({ ...formData, dichiarazione_data_pres: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-end space-x-2 pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Annulla
-                  </Button>
-                  <Button type="submit">
-                    {editingScadenza ? "Salva Modifiche" : "Crea Scadenza"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca per nominativo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="flex">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-full mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
+              <p className="text-gray-500 mt-1">Gestione acconto, saldo e dichiarazione IMU</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Caricamento...</div>
-            ) : filteredScadenze.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nessuna scadenza IMU trovata. Crea la prima!
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nominativo</TableHead>
-                      <TableHead>Professionista</TableHead>
-                      <TableHead>Operatore</TableHead>
-                      <TableHead className="text-center">Acconto</TableHead>
-                      <TableHead className="text-center">Saldo</TableHead>
-                      <TableHead className="text-center">Dichiarazione</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredScadenze.map((scadenza) => (
-                      <TableRow key={scadenza.id}>
-                        <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                        <TableCell>
-                          {scadenza.professionista 
-                            ? `${scadenza.professionista.nome} ${scadenza.professionista.cognome}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {scadenza.operatore
-                            ? `${scadenza.operatore.nome} ${scadenza.operatore.cognome}`
-                            : "-"}
-                        </TableCell>
+
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-gray-600">Totale Clienti</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-green-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-green-600">Confermate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-orange-600">Non Confermate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Filtri e Ricerca</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Cerca Nominativo</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Cerca..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Utente Operatore</Label>
+                    <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tutti" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Tutti</SelectItem>
+                        {utenti.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Utente Professionista</Label>
+                    <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tutti" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Tutti</SelectItem>
+                        {utenti.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Stato Conferma</Label>
+                    <Select value={filterConferma} onValueChange={setFilterConferma}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tutti" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Tutti</SelectItem>
+                        <SelectItem value="true">Solo Confermate</SelectItem>
+                        <SelectItem value="false">Solo Non Confermate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                        <TableHead className="min-w-[150px]">Professionista</TableHead>
+                        <TableHead className="min-w-[150px]">Operatore</TableHead>
                         
-                        {/* Status Acconto */}
-                        <TableCell className="text-center">
-                          {scadenza.acconto_imu ? (
-                            scadenza.acconto_comunicato ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Comunicato</Badge>
-                            ) : (
-                              scadenza.acconto_dovuto ? (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Da Comunicare</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-gray-500">In Corso</Badge>
-                              )
-                            )
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </TableCell>
-
-                        {/* Status Saldo */}
-                        <TableCell className="text-center">
-                          {scadenza.saldo_imu ? (
-                            scadenza.saldo_comunicato ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Comunicato</Badge>
-                            ) : (
-                              scadenza.saldo_dovuto ? (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Da Comunicare</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-gray-500">In Corso</Badge>
-                              )
-                            )
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </TableCell>
-
-                        {/* Status Dichiarazione */}
-                        <TableCell className="text-center">
-                          {scadenza.dichiarazione_imu ? (
-                            scadenza.dichiarazione_presentazione ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Presentata</Badge>
-                            ) : (
-                              <div className="flex flex-col items-center">
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Da Fare</Badge>
-                                {scadenza.dichiarazione_scadenza && (
-                                  <span className="text-xs text-muted-foreground mt-1">
-                                    Scad: {new Date(scadenza.dichiarazione_scadenza).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            )
-                          ) : (
-                            <span className="text-gray-300">-</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>{getStatoBadge(scadenza)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(scadenza)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(scadenza.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {/* Acconto IMU */}
+                        <TableHead className="text-center min-w-[120px]">Acconto IMU</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Acconto Dovuto</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Acconto Comunicato</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Data Com. Acconto</TableHead>
+                        
+                        {/* Saldo IMU */}
+                        <TableHead className="text-center min-w-[120px]">Saldo IMU</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Saldo Dovuto</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Saldo Comunicato</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Data Com. Saldo</TableHead>
+                        
+                        {/* Dichiarazione IMU */}
+                        <TableHead className="text-center min-w-[140px]">Dichiarazione IMU</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Data Scad. Dich.</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Dich. Presentata</TableHead>
+                        <TableHead className="text-center min-w-[140px]">Data Presentazione</TableHead>
+                        
+                        <TableHead className="min-w-[200px]">Note</TableHead>
+                        <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
+                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredScadenze.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={18} className="text-center py-8 text-gray-500">
+                            Nessuna scadenza trovata
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredScadenze.map((scadenza) => {
+                          const isConfermata = scadenza.conferma_riga || false;
+                          
+                          return (
+                            <TableRow 
+                              key={scadenza.id}
+                              className={isConfermata ? "bg-green-50" : "bg-white hover:bg-gray-50"}
+                            >
+                              <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                                {scadenza.nominativo}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {getUtenteNome(scadenza.utente_professionista_id)}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {getUtenteNome(scadenza.utente_operatore_id)}
+                              </TableCell>
+                              
+                              {/* Acconto IMU */}
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.acconto_imu || false}
+                                  onChange={() => handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.acconto_dovuto || false}
+                                  onChange={() => handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.acconto_comunicato || false}
+                                  onChange={() => handleToggleField(scadenza.id, "acconto_comunicato", scadenza.acconto_comunicato)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="date"
+                                  value={scadenza.acconto_data || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "acconto_data", e.target.value)}
+                                  className="w-36 text-xs"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              
+                              {/* Saldo IMU */}
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.saldo_imu || false}
+                                  onChange={() => handleToggleField(scadenza.id, "saldo_imu", scadenza.saldo_imu)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.saldo_dovuto || false}
+                                  onChange={() => handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.saldo_comunicato || false}
+                                  onChange={() => handleToggleField(scadenza.id, "saldo_comunicato", scadenza.saldo_comunicato)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="date"
+                                  value={scadenza.saldo_data || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "saldo_data", e.target.value)}
+                                  className="w-36 text-xs"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              
+                              {/* Dichiarazione IMU */}
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.dichiarazione_imu || false}
+                                  onChange={() => handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="date"
+                                  value={scadenza.dichiarazione_scadenza || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "dichiarazione_scadenza", e.target.value)}
+                                  className="w-36 text-xs"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={scadenza.dichiarazione_presentazione || false}
+                                  onChange={() => handleToggleField(scadenza.id, "dichiarazione_presentazione", scadenza.dichiarazione_presentazione)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="date"
+                                  value={scadenza.dichiarazione_data_pres || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "dichiarazione_data_pres", e.target.value)}
+                                  className="w-36 text-xs"
+                                  disabled={isConfermata}
+                                />
+                              </TableCell>
+                              
+                              <TableCell>
+                                <Textarea
+                                  value={scadenza.note || ""}
+                                  onChange={(e) => handleUpdateField(scadenza.id, "note", e.target.value)}
+                                  className="min-h-[60px] text-xs"
+                                  disabled={isConfermata}
+                                  placeholder="Note..."
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  variant={isConfermata ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                                  className="w-full"
+                                >
+                                  {isConfermata ? "✓ Chiusa" : "○ Aperta"}
+                                </Button>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(scadenza.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
-    </>
+    </div>
   );
 }
