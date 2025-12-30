@@ -119,14 +119,14 @@ export function Sidebar() {
         { label: "IVA", href: "/scadenze/iva", icon: null },
         { label: "CCGG", href: "/scadenze/ccgg", icon: null },
         { label: "CU", href: "/scadenze/cu", icon: null },
+        { label: "IMU", href: "/scadenze/imu", icon: null },
         { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
         { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
         { label: "770", href: "/scadenze/770", icon: null },
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
-        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null },
-        { label: "IMU", href: "/scadenze/imu", icon: null }
+        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null }
       ]
     },
     {

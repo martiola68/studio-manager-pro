@@ -70,15 +70,14 @@ export default function ScadenzeIMU() {
       return;
     }
 
-    // Recupera studio_id dell'utente corrente
-    const { data: utente } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("email", session.user.email)
+    // Recupera studio_id (assumiamo single tenant o primo studio disponibile)
+    const { data: studio } = await supabase
+      .from("tbstudio")
+      .select("id")
       .single();
     
-    if (utente) {
-      setCurrentUserStudioId(utente.studio_id);
+    if (studio) {
+      setCurrentUserStudioId(studio.id);
     }
   };
 
