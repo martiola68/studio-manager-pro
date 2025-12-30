@@ -1365,13 +1365,16 @@ export type Database = {
           acconto_data: string | null
           acconto_dovuto: boolean | null
           acconto_imu: boolean | null
+          conferma_riga: boolean | null
+          confermariga: boolean | null
           created_at: string | null
           dichiarazione_data_pres: string | null
-          dichiarazione_imu: boolean | null
+          dichiarazione_imu: string | null
           dichiarazione_presentazione: boolean | null
           dichiarazione_scadenza: string | null
           id: string
           nominativo: string
+          note: string | null
           saldo_comunicato: boolean | null
           saldo_data: string | null
           saldo_dovuto: boolean | null
@@ -1386,13 +1389,16 @@ export type Database = {
           acconto_data?: string | null
           acconto_dovuto?: boolean | null
           acconto_imu?: boolean | null
+          conferma_riga?: boolean | null
+          confermariga?: boolean | null
           created_at?: string | null
           dichiarazione_data_pres?: string | null
-          dichiarazione_imu?: boolean | null
+          dichiarazione_imu?: string | null
           dichiarazione_presentazione?: boolean | null
           dichiarazione_scadenza?: string | null
           id?: string
           nominativo: string
+          note?: string | null
           saldo_comunicato?: boolean | null
           saldo_data?: string | null
           saldo_dovuto?: boolean | null
@@ -1407,13 +1413,16 @@ export type Database = {
           acconto_data?: string | null
           acconto_dovuto?: boolean | null
           acconto_imu?: boolean | null
+          conferma_riga?: boolean | null
+          confermariga?: boolean | null
           created_at?: string | null
           dichiarazione_data_pres?: string | null
-          dichiarazione_imu?: boolean | null
+          dichiarazione_imu?: string | null
           dichiarazione_presentazione?: boolean | null
           dichiarazione_scadenza?: string | null
           id?: string
           nominativo?: string
+          note?: string | null
           saldo_comunicato?: boolean | null
           saldo_data?: string | null
           saldo_dovuto?: boolean | null

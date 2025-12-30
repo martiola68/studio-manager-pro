@@ -453,13 +453,19 @@ export default function ScadenzeImuPage() {
                               
                               {/* Dichiarazione IMU */}
                               <TableCell className="text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={scadenza.dichiarazione_imu || false}
-                                  onChange={() => handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)}
-                                  className="rounded w-4 h-4 cursor-pointer"
+                                <Select
+                                  value={scadenza.dichiarazione_imu ? "SI" : "NO"}
+                                  onValueChange={(value) => handleToggleField(scadenza.id, "dichiarazione_imu", value === "SI")}
                                   disabled={isConfermata}
-                                />
+                                >
+                                  <SelectTrigger className="w-24 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="SI">SI</SelectItem>
+                                    <SelectItem value="NO">NO</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               <TableCell className="text-center">
                                 <Input
