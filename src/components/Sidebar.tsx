@@ -125,7 +125,8 @@ export function Sidebar() {
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
-        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null }
+        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null },
+        { label: "IMU", href: "/scadenze/imu", icon: null }
       ]
     },
     {

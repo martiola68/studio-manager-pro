@@ -17,8 +17,15 @@ import { utenteService } from "@/services/utenteService";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type ScadenzaIMU = Database["public"]["Tables"]["tbscadimu"]["Row"];
+// Tipo base dal DB
+type ScadenzaIMUBase = Database["public"]["Tables"]["tbscadimu"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+// Tipo esteso con le relazioni
+interface ScadenzaIMU extends ScadenzaIMUBase {
+  professionista?: { nome: string; cognome: string } | null;
+  operatore?: { nome: string; cognome: string } | null;
+}
 
 export default function ScadenzeIMU() {
   const router = useRouter();
@@ -30,6 +37,7 @@ export default function ScadenzeIMU() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingScadenza, setEditingScadenza] = useState<ScadenzaIMU | null>(null);
+  const [currentUserStudioId, setCurrentUserStudioId] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -47,7 +55,7 @@ export default function ScadenzeIMU() {
     dichiarazione_imu: false,
     dichiarazione_scadenza: "",
     dichiarazione_presentazione: false,
-    dichiarazione_data_presentazione: "",
+    dichiarazione_data_pres: "",
   });
 
   useEffect(() => {
@@ -59,6 +67,18 @@ export default function ScadenzeIMU() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push("/login");
+      return;
+    }
+
+    // Recupera studio_id dell'utente corrente
+    const { data: utente } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("email", session.user.email)
+      .single();
+    
+    if (utente) {
+      setCurrentUserStudioId(utente.studio_id);
     }
   };
 
@@ -67,9 +87,10 @@ export default function ScadenzeIMU() {
       setLoading(true);
       const [scadenzeData, utentiData] = await Promise.all([
         imuService.fetchAll(),
-        utenteService.fetchAll()
+        utenteService.getUtenti()
       ]);
-      setScadenze(scadenzeData);
+      // Casting necessario perché il service ritorna i dati con le relazioni ma il tipo base non le ha
+      setScadenze(scadenzeData as unknown as ScadenzaIMU[]);
       setUtenti(utentiData);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -86,15 +107,35 @@ export default function ScadenzeIMU() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!currentUserStudioId) {
+      toast({
+        title: "Errore",
+        description: "Impossibile identificare lo studio dell'utente",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Prepara i dati per il salvataggio
+      const dataToSave = {
+        ...formData,
+        studio_id: currentUserStudioId, // Aggiunge lo studio_id
+        // Gestione date vuote: se stringa vuota manda null (o undefined per il DB)
+        acconto_data: formData.acconto_data || null,
+        saldo_data: formData.saldo_data || null,
+        dichiarazione_scadenza: formData.dichiarazione_scadenza || null,
+        dichiarazione_data_pres: formData.dichiarazione_data_pres || null,
+      };
+
       if (editingScadenza) {
-        await imuService.update(editingScadenza.id, formData);
+        await imuService.update(editingScadenza.id, dataToSave);
         toast({
           title: "Successo",
           description: "Scadenza IMU aggiornata con successo",
         });
       } else {
-        await imuService.create(formData);
+        await imuService.create(dataToSave);
         toast({
           title: "Successo",
           description: "Scadenza IMU creata con successo",
@@ -131,7 +172,7 @@ export default function ScadenzeIMU() {
       dichiarazione_imu: scadenza.dichiarazione_imu || false,
       dichiarazione_scadenza: scadenza.dichiarazione_scadenza || "",
       dichiarazione_presentazione: scadenza.dichiarazione_presentazione || false,
-      dichiarazione_data_presentazione: scadenza.dichiarazione_data_presentazione || "",
+      dichiarazione_data_pres: scadenza.dichiarazione_data_pres || "",
     });
     setIsDialogOpen(true);
   };
@@ -173,7 +214,7 @@ export default function ScadenzeIMU() {
       dichiarazione_imu: false,
       dichiarazione_scadenza: "",
       dichiarazione_presentazione: false,
-      dichiarazione_data_presentazione: "",
+      dichiarazione_data_pres: "",
     });
   };
 
@@ -182,17 +223,18 @@ export default function ScadenzeIMU() {
   );
 
   const getStatoBadge = (scadenza: ScadenzaIMU) => {
-    const accontoCompletato = scadenza.acconto_imu && scadenza.acconto_comunicato;
-    const saldoCompletato = scadenza.saldo_imu && scadenza.saldo_comunicato;
-    const dichiarazioneCompletata = scadenza.dichiarazione_imu && scadenza.dichiarazione_presentazione;
-
-    if (accontoCompletato && saldoCompletato && dichiarazioneCompletata) {
+    // Logica semplificata per lo stato
+    if (scadenza.dichiarazione_presentazione) {
       return <Badge className="bg-green-500">Completato</Badge>;
-    } else if (!scadenza.acconto_imu && !scadenza.saldo_imu && !scadenza.dichiarazione_imu) {
-      return <Badge variant="secondary">Da Iniziare</Badge>;
-    } else {
-      return <Badge className="bg-yellow-500">In Corso</Badge>;
     }
+    
+    // Se c'è un acconto o saldo dovuto non ancora comunicato
+    if ((scadenza.acconto_dovuto && !scadenza.acconto_comunicato) || 
+        (scadenza.saldo_dovuto && !scadenza.saldo_comunicato)) {
+      return <Badge variant="destructive">Da Comunicare</Badge>;
+    }
+
+    return <Badge className="bg-yellow-500">In Corso</Badge>;
   };
 
   return (
@@ -215,7 +257,7 @@ export default function ScadenzeIMU() {
                 Nuova Scadenza IMU
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingScadenza ? "Modifica Scadenza IMU" : "Nuova Scadenza IMU"}
@@ -225,21 +267,22 @@ export default function ScadenzeIMU() {
                 </DialogDescription>
               </DialogHeader>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 mt-4">
                 {/* Dati Generali */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Dati Generali</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium">Anagrafica e Assegnazione</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="nominativo">Nominativo *</Label>
+                        <Label htmlFor="nominativo">Nominativo Cliente *</Label>
                         <Input
                           id="nominativo"
                           value={formData.nominativo}
                           onChange={(e) => setFormData({ ...formData, nominativo: e.target.value })}
                           required
+                          placeholder="Es. Mario Rossi"
                         />
                       </div>
 
@@ -250,7 +293,7 @@ export default function ScadenzeIMU() {
                           onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleziona professionista" />
+                            <SelectValue placeholder="Seleziona..." />
                           </SelectTrigger>
                           <SelectContent>
                             {utenti.map((utente) => (
@@ -269,7 +312,7 @@ export default function ScadenzeIMU() {
                           onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleziona operatore" />
+                            <SelectValue placeholder="Seleziona..." />
                           </SelectTrigger>
                           <SelectContent>
                             {utenti.map((utente) => (
@@ -286,40 +329,40 @@ export default function ScadenzeIMU() {
 
                 {/* Acconto IMU */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Acconto IMU</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium">Acconto IMU (Giugno)</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-2">
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="acconto_imu"
                           checked={formData.acconto_imu}
                           onCheckedChange={(checked) => setFormData({ ...formData, acconto_imu: checked as boolean })}
                         />
-                        <Label htmlFor="acconto_imu" className="cursor-pointer">Acconto IMU</Label>
+                        <Label htmlFor="acconto_imu" className="font-normal cursor-pointer">Pratica Acconto</Label>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="acconto_dovuto"
                           checked={formData.acconto_dovuto}
                           onCheckedChange={(checked) => setFormData({ ...formData, acconto_dovuto: checked as boolean })}
                         />
-                        <Label htmlFor="acconto_dovuto" className="cursor-pointer">Dovuto</Label>
+                        <Label htmlFor="acconto_dovuto" className="font-normal cursor-pointer">Importo Dovuto</Label>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="acconto_comunicato"
                           checked={formData.acconto_comunicato}
                           onCheckedChange={(checked) => setFormData({ ...formData, acconto_comunicato: checked as boolean })}
                         />
-                        <Label htmlFor="acconto_comunicato" className="cursor-pointer">Comunicato</Label>
+                        <Label htmlFor="acconto_comunicato" className="font-normal cursor-pointer">Comunicato al cliente</Label>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="acconto_data">Data</Label>
+                        <Label htmlFor="acconto_data">Data Comunicazione</Label>
                         <Input
                           id="acconto_data"
                           type="date"
@@ -333,40 +376,40 @@ export default function ScadenzeIMU() {
 
                 {/* Saldo IMU */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Saldo IMU</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium">Saldo IMU (Dicembre)</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-2">
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="saldo_imu"
                           checked={formData.saldo_imu}
                           onCheckedChange={(checked) => setFormData({ ...formData, saldo_imu: checked as boolean })}
                         />
-                        <Label htmlFor="saldo_imu" className="cursor-pointer">Saldo IMU</Label>
+                        <Label htmlFor="saldo_imu" className="font-normal cursor-pointer">Pratica Saldo</Label>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="saldo_dovuto"
                           checked={formData.saldo_dovuto}
                           onCheckedChange={(checked) => setFormData({ ...formData, saldo_dovuto: checked as boolean })}
                         />
-                        <Label htmlFor="saldo_dovuto" className="cursor-pointer">Dovuto</Label>
+                        <Label htmlFor="saldo_dovuto" className="font-normal cursor-pointer">Importo Dovuto</Label>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="saldo_comunicato"
                           checked={formData.saldo_comunicato}
                           onCheckedChange={(checked) => setFormData({ ...formData, saldo_comunicato: checked as boolean })}
                         />
-                        <Label htmlFor="saldo_comunicato" className="cursor-pointer">Comunicato</Label>
+                        <Label htmlFor="saldo_comunicato" className="font-normal cursor-pointer">Comunicato al cliente</Label>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="saldo_data">Data</Label>
+                        <Label htmlFor="saldo_data">Data Comunicazione</Label>
                         <Input
                           id="saldo_data"
                           type="date"
@@ -380,22 +423,22 @@ export default function ScadenzeIMU() {
 
                 {/* Dichiarazione IMU */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Dichiarazione IMU</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium">Dichiarazione IMU</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-2">
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="dichiarazione_imu"
                           checked={formData.dichiarazione_imu}
                           onCheckedChange={(checked) => setFormData({ ...formData, dichiarazione_imu: checked as boolean })}
                         />
-                        <Label htmlFor="dichiarazione_imu" className="cursor-pointer">Dichiarazione IMU</Label>
+                        <Label htmlFor="dichiarazione_imu" className="font-normal cursor-pointer">Da Presentare</Label>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dichiarazione_scadenza">Scadenza</Label>
+                        <Label htmlFor="dichiarazione_scadenza">Data Scadenza</Label>
                         <Input
                           id="dichiarazione_scadenza"
                           type="date"
@@ -404,34 +447,34 @@ export default function ScadenzeIMU() {
                         />
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 h-10">
                         <Checkbox
                           id="dichiarazione_presentazione"
                           checked={formData.dichiarazione_presentazione}
                           onCheckedChange={(checked) => setFormData({ ...formData, dichiarazione_presentazione: checked as boolean })}
                         />
-                        <Label htmlFor="dichiarazione_presentazione" className="cursor-pointer">Presentazione</Label>
+                        <Label htmlFor="dichiarazione_presentazione" className="font-normal cursor-pointer">Presentata</Label>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="dichiarazione_data_presentazione">Data Pres.</Label>
+                        <Label htmlFor="dichiarazione_data_presentazione">Data Presentazione</Label>
                         <Input
                           id="dichiarazione_data_presentazione"
                           type="date"
-                          value={formData.dichiarazione_data_presentazione}
-                          onChange={(e) => setFormData({ ...formData, dichiarazione_data_presentazione: e.target.value })}
+                          value={formData.dichiarazione_data_pres}
+                          onChange={(e) => setFormData({ ...formData, dichiarazione_data_pres: e.target.value })}
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <div className="flex justify-end space-x-2">
+                <div className="flex justify-end space-x-2 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Annulla
                   </Button>
                   <Button type="submit">
-                    {editingScadenza ? "Aggiorna" : "Crea"}
+                    {editingScadenza ? "Salva Modifiche" : "Crea Scadenza"}
                   </Button>
                 </div>
               </form>
@@ -456,80 +499,116 @@ export default function ScadenzeIMU() {
               <div className="text-center py-8">Caricamento...</div>
             ) : filteredScadenze.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nessuna scadenza IMU trovata
+                Nessuna scadenza IMU trovata. Crea la prima!
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nominativo</TableHead>
-                    <TableHead>Professionista</TableHead>
-                    <TableHead>Operatore</TableHead>
-                    <TableHead>Acconto</TableHead>
-                    <TableHead>Saldo</TableHead>
-                    <TableHead>Dichiarazione</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredScadenze.map((scadenza) => (
-                    <TableRow key={scadenza.id}>
-                      <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                      <TableCell>
-                        {scadenza.professionista 
-                          ? `${scadenza.professionista.nome} ${scadenza.professionista.cognome}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.operatore
-                          ? `${scadenza.operatore.nome} ${scadenza.operatore.cognome}`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.acconto_imu ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-gray-300" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.saldo_imu ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-gray-300" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.dichiarazione_imu ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-gray-300" />
-                        )}
-                      </TableCell>
-                      <TableCell>{getStatoBadge(scadenza)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(scadenza)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(scadenza.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nominativo</TableHead>
+                      <TableHead>Professionista</TableHead>
+                      <TableHead>Operatore</TableHead>
+                      <TableHead className="text-center">Acconto</TableHead>
+                      <TableHead className="text-center">Saldo</TableHead>
+                      <TableHead className="text-center">Dichiarazione</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredScadenze.map((scadenza) => (
+                      <TableRow key={scadenza.id}>
+                        <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
+                        <TableCell>
+                          {scadenza.professionista 
+                            ? `${scadenza.professionista.nome} ${scadenza.professionista.cognome}`
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {scadenza.operatore
+                            ? `${scadenza.operatore.nome} ${scadenza.operatore.cognome}`
+                            : "-"}
+                        </TableCell>
+                        
+                        {/* Status Acconto */}
+                        <TableCell className="text-center">
+                          {scadenza.acconto_imu ? (
+                            scadenza.acconto_comunicato ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Comunicato</Badge>
+                            ) : (
+                              scadenza.acconto_dovuto ? (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Da Comunicare</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-gray-500">In Corso</Badge>
+                              )
+                            )
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </TableCell>
+
+                        {/* Status Saldo */}
+                        <TableCell className="text-center">
+                          {scadenza.saldo_imu ? (
+                            scadenza.saldo_comunicato ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Comunicato</Badge>
+                            ) : (
+                              scadenza.saldo_dovuto ? (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Da Comunicare</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-gray-500">In Corso</Badge>
+                              )
+                            )
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </TableCell>
+
+                        {/* Status Dichiarazione */}
+                        <TableCell className="text-center">
+                          {scadenza.dichiarazione_imu ? (
+                            scadenza.dichiarazione_presentazione ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Presentata</Badge>
+                            ) : (
+                              <div className="flex flex-col items-center">
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Da Fare</Badge>
+                                {scadenza.dichiarazione_scadenza && (
+                                  <span className="text-xs text-muted-foreground mt-1">
+                                    Scad: {new Date(scadenza.dichiarazione_scadenza).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
+                        </TableCell>
+
+                        <TableCell>{getStatoBadge(scadenza)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(scadenza)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(scadenza.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
