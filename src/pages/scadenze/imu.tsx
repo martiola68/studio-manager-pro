@@ -454,11 +454,11 @@ export default function ScadenzeImuPage() {
                               {/* Dichiarazione IMU */}
                               <TableCell className="text-center">
                                 <Select
-                                  value={scadenza.dichiarazione_imu ? "SI" : "NO"}
-                                  onValueChange={(value) => handleToggleField(scadenza.id, "dichiarazione_imu", value === "SI")}
+                                  value={scadenza.dichiarazione_imu || "NO"}
+                                  onValueChange={(value) => handleUpdateField(scadenza.id, "dichiarazione_imu", value)}
                                   disabled={isConfermata}
                                 >
-                                  <SelectTrigger className="w-24 text-xs">
+                                  <SelectTrigger className="w-20 text-xs mx-auto">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -473,7 +473,7 @@ export default function ScadenzeImuPage() {
                                   value={scadenza.dichiarazione_scadenza || ""}
                                   onChange={(e) => handleUpdateField(scadenza.id, "dichiarazione_scadenza", e.target.value)}
                                   className="w-36 text-xs"
-                                  disabled={isConfermata}
+                                  disabled={isConfermata || scadenza.dichiarazione_imu === "NO"}
                                 />
                               </TableCell>
                               <TableCell className="text-center">
@@ -482,7 +482,7 @@ export default function ScadenzeImuPage() {
                                   checked={scadenza.dichiarazione_presentazione || false}
                                   onChange={() => handleToggleField(scadenza.id, "dichiarazione_presentazione", scadenza.dichiarazione_presentazione)}
                                   className="rounded w-4 h-4 cursor-pointer"
-                                  disabled={isConfermata}
+                                  disabled={isConfermata || scadenza.dichiarazione_imu === "NO"}
                                 />
                               </TableCell>
                               <TableCell className="text-center">
@@ -491,7 +491,7 @@ export default function ScadenzeImuPage() {
                                   value={scadenza.dichiarazione_data_pres || ""}
                                   onChange={(e) => handleUpdateField(scadenza.id, "dichiarazione_data_pres", e.target.value)}
                                   className="w-36 text-xs"
-                                  disabled={isConfermata}
+                                  disabled={isConfermata || scadenza.dichiarazione_imu === "NO"}
                                 />
                               </TableCell>
                               

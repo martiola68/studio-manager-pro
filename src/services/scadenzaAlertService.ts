@@ -52,6 +52,7 @@ export const scadenzaAlertService = {
       this.fetchScadenzeFromTable("tbscadlipe", "LIPE", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchScadenzeFromTable("tbscadestero", "Esterometro", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchScadenzeFromTable("tbscadproforma", "Proforma", userId, isPartner, studioId, oggiStr, tra30giorniStr),
+      this.fetchImuScadenze(userId, isPartner, studioId, oggiStr, tra30giorniStr),
     ];
 
     const results = await Promise.all(scadenzePromises);
@@ -129,6 +130,96 @@ export const scadenzaAlertService = {
       }));
     } catch (error) {
       console.error(`Exception fetching ${tipo} scadenze:`, error);
+      return [];
+    }
+  },
+
+  async fetchImuScadenze(
+    userId: string,
+    isPartner: boolean,
+    studioId: string,
+    dataInizio: string,
+    dataFine: string
+  ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
+    try {
+      // 1. Cerca se ci sono scadenze IMU nel periodo in tbtipi_scadenze
+      // Cerchiamo per nome che contiene "IMU" o tipo_scadenza = 'imu'
+      const { data: tipiScadenze, error: tipiError } = await supabase
+        .from("tbtipi_scadenze")
+        .select("*")
+        .eq("tipo_scadenza", "imu")
+        .gte("data_scadenza", dataInizio)
+        .lte("data_scadenza", dataFine);
+
+      if (tipiError || !tipiScadenze || tipiScadenze.length === 0) {
+        return [];
+      }
+
+      const alerts: Omit<ScadenzaAlert, "urgenza">[] = [];
+
+      // 2. Per ogni scadenza IMU trovata, cerca i clienti che devono ancora completarla
+      for (const tipoScadenza of tipiScadenze) {
+        let query = supabase
+          .from("tbscadimu")
+          .select(`
+            id, 
+            nominativo, 
+            utente_operatore_id,
+            tbutenti:utente_operatore_id(nome, cognome),
+            acconto_imu, acconto_dovuto, acconto_comunicato,
+            saldo_imu, saldo_dovuto, saldo_comunicato,
+            dichiarazione_imu, dichiarazione_presentazione
+          `);
+
+        // Filtro operatore se non partner
+        if (!isPartner) {
+          query = query.eq("utente_operatore_id", userId);
+        }
+
+        // Logica specifica per tipo di scadenza IMU
+        const nomeScadenza = tipoScadenza.nome.toLowerCase();
+        
+        if (nomeScadenza.includes("acconto")) {
+          // Alert per Acconto: Mostra se Acconto è attivo, dovuto E non comunicato
+          query = query
+            .eq("acconto_imu", true)
+            .eq("acconto_dovuto", true)
+            .eq("acconto_comunicato", false);
+        } else if (nomeScadenza.includes("saldo")) {
+          // Alert per Saldo: Mostra se Saldo è attivo, dovuto E non comunicato
+          query = query
+            .eq("saldo_imu", true)
+            .eq("saldo_dovuto", true)
+            .eq("saldo_comunicato", false);
+        } else if (nomeScadenza.includes("dichiarazione")) {
+          // Alert per Dichiarazione: Mostra se Dichiarazione è SI E non presentata
+          query = query
+            .eq("dichiarazione_imu", "SI")
+            .eq("dichiarazione_presentazione", false);
+        } else {
+          continue; // Tipo IMU non riconosciuto, salta
+        }
+
+        const { data: clienti, error } = await query;
+        
+        if (!error && clienti) {
+          clienti.forEach((cliente: any) => {
+            alerts.push({
+              id: `${cliente.id}_${tipoScadenza.id}`, // ID univoco combinato
+              tipo: "IMU",
+              descrizione: tipoScadenza.nome,
+              data_scadenza: tipoScadenza.data_scadenza,
+              cliente_nome: cliente.nominativo,
+              utente_assegnato: cliente.tbutenti ? `${cliente.tbutenti.nome} ${cliente.tbutenti.cognome}` : undefined,
+              tabella_origine: "tbscadimu"
+            });
+          });
+        }
+      }
+
+      return alerts;
+    } catch (error) {
+      console.error("Errore fetch IMU scadenze:", error);
       return [];
     }
   },

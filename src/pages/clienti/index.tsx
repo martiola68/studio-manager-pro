@@ -575,7 +575,7 @@ export default function ClientiPage() {
               saldo_imu: false,
               saldo_dovuto: false,
               saldo_comunicato: false,
-              dichiarazione_imu: false,
+              dichiarazione_imu: "NO",
               dichiarazione_presentazione: false
             })
           );
