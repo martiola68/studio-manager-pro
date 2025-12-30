@@ -28,6 +28,7 @@ export const scadenzaAlertService = {
     const tra7giorniStr = tra7giorni.toISOString().split("T")[0];
     const tra30giorniStr = tra30giorni.toISOString().split("T")[0];
 
+    // Strategia: Query sui tipi di scadenza in arrivo, poi verifichiamo le tabelle associate
     const scadenzePromises = [
       this.fetchScadenzeFromTable("tbscadiva", "IVA", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchScadenzeFromTable("tbscadccgg", "CCGG", userId, isPartner, studioId, oggiStr, tra30giorniStr),
@@ -62,43 +63,52 @@ export const scadenzaAlertService = {
     dataInizio: string,
     dataFine: string
   ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
-    // Cast tabella a any per evitare errori di tipo con Supabase su nomi tabella dinamici
-    let query = supabase
-      .from(tabella as any)
-      .select(`
-        id,
-        data_scadenza,
-        note,
-        cliente_id,
-        utente_assegnato_id,
-        tbclienti!inner(ragione_sociale),
-        tbutenti!utente_assegnato_id(nome, cognome)
-      `)
-      .gte("data_scadenza", dataInizio)
-      .lte("data_scadenza", dataFine)
-      .eq("completata", false);
+    try {
+      // Cast tabella a any per evitare errori di tipo con Supabase su nomi tabella dinamici
+      let query = supabase
+        .from(tabella as any)
+        .select(`
+          id,
+          nominativo,
+          utente_operatore_id,
+          mod_inviato,
+          tipo_scadenza_id,
+          tbtipi_scadenze!inner(
+            nome,
+            data_scadenza,
+            tipo_scadenza
+          ),
+          tbutenti:utente_operatore_id(nome, cognome)
+        `)
+        .gte("tbtipi_scadenze.data_scadenza", dataInizio)
+        .lte("tbtipi_scadenze.data_scadenza", dataFine)
+        .or("mod_inviato.is.null,mod_inviato.eq.false");
 
-    // Se NON è Partner, filtra per utente assegnato
-    if (!isPartner) {
-      query = query.eq("utente_assegnato_id", userId);
-    }
+      // Se NON è Partner, filtra per utente operatore
+      if (!isPartner) {
+        query = query.eq("utente_operatore_id", userId);
+      }
 
-    const { data, error } = await query;
+      const { data, error } = await query;
 
-    if (error) {
-      console.error(`Error fetching ${tipo} scadenze:`, error);
+      if (error) {
+        console.error(`Error fetching ${tipo} scadenze:`, error);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        tipo,
+        descrizione: item.tbtipi_scadenze?.nome || `Scadenza ${tipo}`,
+        data_scadenza: item.tbtipi_scadenze?.data_scadenza || "",
+        cliente_nome: item.nominativo || "Cliente sconosciuto",
+        utente_assegnato: item.tbutenti ? `${item.tbutenti.nome} ${item.tbutenti.cognome}` : undefined,
+        tabella_origine: tabella
+      }));
+    } catch (error) {
+      console.error(`Exception fetching ${tipo} scadenze:`, error);
       return [];
     }
-
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      tipo,
-      descrizione: item.note || `Scadenza ${tipo}`,
-      data_scadenza: item.data_scadenza,
-      cliente_nome: item.tbclienti?.ragione_sociale || "Cliente sconosciuto",
-      utente_assegnato: item.tbutenti ? `${item.tbutenti.nome} ${item.tbutenti.cognome}` : undefined,
-      tabella_origine: tabella
-    }));
   },
 
   calcolaUrgenza(dataScadenza: string, oggi: string, tra7giorni: string): "critica" | "urgente" | "prossima" {
