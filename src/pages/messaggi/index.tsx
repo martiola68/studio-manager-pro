@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
 import { AlertScadenze } from "@/components/AlertScadenze";
@@ -337,7 +335,6 @@ export default function MessaggiPage() {
   };
 
   const handleViewScadenzaDetails = (scadenzaId: string, tipo: string) => {
-    // Mappa tipo scadenza a URL corretto
     const tipoUrlMap: Record<string, string> = {
       "IVA": "/scadenze/iva",
       "CCGG": "/scadenze/ccgg",
@@ -348,6 +345,7 @@ export default function MessaggiPage() {
       "LIPE": "/scadenze/lipe",
       "Esterometro": "/scadenze/esterometro",
       "Proforma": "/scadenze/proforma",
+      "IMU": "/scadenze/imu",
     };
 
     const url = tipoUrlMap[tipo] || "/scadenze/iva";
@@ -376,73 +374,66 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
-        <Sidebar />
-        
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          
-          <div className="flex-1 flex overflow-hidden relative">
-            {/* Chat Sidebar - Full width on mobile when no conversation selected */}
-            <div className={cn(
-              "w-full md:w-80 border-r bg-background flex-shrink-0 absolute md:relative inset-0 z-10 md:z-0",
-              selectedConvId ? "hidden md:flex" : "flex"
-            )}>
-              <ChatSidebar
-                conversazioni={conversazioni}
-                selectedId={selectedConvId}
-                onSelect={setSelectedConvId}
-                currentUserEmail={user?.email}
-                onNewChat={() => setIsNewChatOpen(true)}
-              />
-            </div>
+      {/* Container per Chat che occupa tutta l'altezza disponibile nel main */}
+      <div className="flex h-full overflow-hidden relative">
+        {/* Chat Sidebar */}
+        <div className={cn(
+          "w-full md:w-80 border-r bg-background flex-shrink-0 absolute md:relative inset-0 z-10 md:z-0",
+          selectedConvId ? "hidden md:flex" : "flex"
+        )}>
+          <ChatSidebar
+            conversazioni={conversazioni}
+            selectedId={selectedConvId}
+            onSelect={setSelectedConvId}
+            currentUserEmail={user?.email}
+            onNewChat={() => setIsNewChatOpen(true)}
+          />
+        </div>
 
-            {/* Chat Area - Full width on mobile when conversation selected */}
-            <div className={cn(
-              "flex-1 bg-muted/10 absolute md:relative inset-0 z-20 md:z-0",
-              selectedConvId ? "flex" : "hidden md:flex"
-            )}>
-              {selectedConvId ? (
-                <ChatArea
-                  conversazioneId={selectedConvId}
-                  messaggi={messaggi}
-                  currentUserId={authUserId}
-                  partnerName={getPartnerName()}
-                  onSendMessage={handleSendMessage}
-                  onBack={() => setSelectedConvId(null)}
-                />
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4">
-                  <div className="p-4 bg-muted rounded-full">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="48"
-                      height="48"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-center px-4">Seleziona una conversazione per iniziare</p>
-                </div>
-              )}
+        {/* Chat Area */}
+        <div className={cn(
+          "flex-1 bg-muted/10 absolute md:relative inset-0 z-20 md:z-0 flex flex-col",
+          selectedConvId ? "flex" : "hidden md:flex"
+        )}>
+          {selectedConvId ? (
+            <ChatArea
+              conversazioneId={selectedConvId}
+              messaggi={messaggi}
+              currentUserId={authUserId}
+              partnerName={getPartnerName()}
+              onSendMessage={handleSendMessage}
+              onBack={() => setSelectedConvId(null)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4">
+              <div className="p-4 bg-muted rounded-full">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <p className="text-center px-4">Seleziona una conversazione per iniziare</p>
             </div>
+          )}
+        </div>
 
-            {/* Alert Scadenze Sidebar - Hidden on mobile */}
-            <div className="hidden xl:block w-80 border-l bg-background p-4 overflow-y-auto">
-              <AlertScadenze
-                scadenze={scadenzeAlert}
-                isPartner={isPartner}
-                onDismiss={handleDismissAlert}
-                onViewDetails={handleViewScadenzaDetails}
-              />
-            </div>
-          </div>
+        {/* Alert Scadenze Sidebar - Hidden on mobile */}
+        <div className="hidden xl:block w-80 border-l bg-background p-4 overflow-y-auto">
+          <AlertScadenze
+            scadenze={scadenzeAlert}
+            isPartner={isPartner}
+            onDismiss={handleDismissAlert}
+            onViewDetails={handleViewScadenzaDetails}
+          />
         </div>
       </div>
 
