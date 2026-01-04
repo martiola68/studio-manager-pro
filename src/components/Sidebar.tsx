@@ -210,6 +210,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <Link
         key={item.label}
         href={item.href || "#"}
+        onClick={onClose}
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative",
           depth > 0 && "pl-12 text-sm",

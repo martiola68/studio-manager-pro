@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -722,949 +720,941 @@ export default function ClientiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Gestione Clienti</h1>
-                <p className="text-gray-500 mt-1">Anagrafica completa e gestione scadenzari</p>
-              </div>
-              <div className="flex gap-3">
-                {/* CSV Import Dialog */}
-                <Dialog open={importDialogOpen} onOpenChange={(open) => {
-                  setImportDialogOpen(open);
-                  if (!open) resetImport();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Importa CSV
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Importazione Massiva Clienti da CSV</DialogTitle>
-                      <DialogDescription>
-                        Carica un file CSV per importare più clienti contemporaneamente
-                      </DialogDescription>
-                    </DialogHeader>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestione Clienti</h1>
+          <p className="text-gray-500 mt-1">Anagrafica completa e gestione scadenzari</p>
+        </div>
+        <div className="flex gap-3">
+          {/* CSV Import Dialog */}
+          <Dialog open={importDialogOpen} onOpenChange={(open) => {
+            setImportDialogOpen(open);
+            if (!open) resetImport();
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+                <Upload className="h-4 w-4 mr-2" />
+                Importa CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Importazione Massiva Clienti da CSV</DialogTitle>
+                <DialogDescription>
+                  Carica un file CSV per importare più clienti contemporaneamente
+                </DialogDescription>
+              </DialogHeader>
 
-                    {!importResult ? (
-                      <div className="space-y-6">
-                        {/* Download Template */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <FileSpreadsheet className="h-5 w-5 text-blue-600 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="font-semibold text-blue-900 mb-1">
-                                Scarica il template CSV
-                              </p>
-                              <p className="text-sm text-blue-800 mb-3">
-                                Usa il nostro modello per compilare i dati dei clienti con tutti i campi richiesti
-                              </p>
-                              <Button 
-                                onClick={downloadTemplate}
-                                size="sm"
-                                variant="outline"
-                                className="border-blue-600 text-blue-600 hover:bg-blue-100"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Scarica Template
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Upload Area */}
-                        <div
-                          onDrop={handleDrop}
-                          onDragOver={(e) => e.preventDefault()}
-                          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <input
-                            type="file"
-                            accept=".csv"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            id="csv-upload"
-                          />
-                          <label htmlFor="csv-upload" className="cursor-pointer">
-                            <Upload className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                            <p className="text-lg font-medium text-gray-900 mb-1">
-                              Trascina qui il file CSV
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              oppure clicca per selezionarlo
-                            </p>
-                          </label>
-                        </div>
-
-                        {/* Preview */}
-                        {csvData.length > 0 && (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-semibold text-gray-900">
-                                Anteprima: {csvData.length} clienti
-                              </h3>
-                              <Button
-                                onClick={resetImport}
-                                variant="outline"
-                                size="sm"
-                              >
-                                Carica altro file
-                              </Button>
-                            </div>
-
-                            <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Ragione Sociale</TableHead>
-                                    <TableHead>P.IVA</TableHead>
-                                    <TableHead>CF</TableHead>
-                                    <TableHead>Città</TableHead>
-                                    <TableHead>Email</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {csvData.slice(0, 10).map((row, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell className="font-medium">{row.ragione_sociale}</TableCell>
-                                      <TableCell className="font-mono text-sm">{row.partita_iva}</TableCell>
-                                      <TableCell className="font-mono text-sm">{row.codice_fiscale}</TableCell>
-                                      <TableCell>{row.citta}</TableCell>
-                                      <TableCell className="text-sm">{row.email}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                  {csvData.length > 10 && (
-                                    <TableRow>
-                                      <TableCell colSpan={5} className="text-center text-gray-500">
-                                        ... e altri {csvData.length - 10} clienti
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
-                            </div>
-
-                            {/* Import Progress */}
-                            {importing && (
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                  <span>Importazione in corso...</span>
-                                  <span className="font-semibold">{importProgress}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ width: `${importProgress}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Import Button */}
-                            <div className="flex justify-end gap-3 pt-4">
-                              <Button
-                                onClick={() => setImportDialogOpen(false)}
-                                variant="outline"
-                                disabled={importing}
-                              >
-                                Annulla
-                              </Button>
-                              <Button
-                                onClick={handleImportCSV}
-                                disabled={importing || csvData.length === 0}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                {importing ? (
-                                  <>Importazione in corso...</>
-                                ) : (
-                                  <>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Importa {csvData.length} Clienti
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      /* Import Result */
-                      <div className="space-y-6">
-                        <div className="text-center py-6">
-                          <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                            Importazione Completata
-                          </h3>
-                        </div>
-
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-3 gap-4">
-                          <Card className="border-l-4 border-l-green-600">
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <p className="text-3xl font-bold text-green-600">
-                                  {importResult.success}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-1">Clienti Importati</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="border-l-4 border-l-orange-600">
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <p className="text-3xl font-bold text-orange-600">
-                                  {importResult.duplicates}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-1">Duplicati Saltati</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="border-l-4 border-l-red-600">
-                            <CardContent className="pt-6">
-                              <div className="text-center">
-                                <p className="text-3xl font-bold text-red-600">
-                                  {importResult.errors}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-1">Errori</p>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {/* Duplicates Details */}
-                        {importResult.duplicateDetails.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                              <AlertCircle className="h-4 w-4 text-orange-600" />
-                              Clienti Duplicati (già esistenti)
-                            </h4>
-                            <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Ragione Sociale</TableHead>
-                                    <TableHead>P.IVA</TableHead>
-                                    <TableHead>CF</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {importResult.duplicateDetails.map((dup, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell>{dup.ragione_sociale}</TableCell>
-                                      <TableCell className="font-mono text-sm">{dup.partita_iva}</TableCell>
-                                      <TableCell className="font-mono text-sm">{dup.codice_fiscale}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Error Details */}
-                        {importResult.errorDetails.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                              <AlertCircle className="h-4 w-4 text-red-600" />
-                              Errori di Importazione
-                            </h4>
-                            <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Riga</TableHead>
-                                    <TableHead>Ragione Sociale</TableHead>
-                                    <TableHead>Errore</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {importResult.errorDetails.map((err, idx) => (
-                                    <TableRow key={idx}>
-                                      <TableCell>{err.row}</TableCell>
-                                      <TableCell>{err.ragione_sociale}</TableCell>
-                                      <TableCell className="text-sm text-red-600">{err.error}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex justify-end">
-                          <Button onClick={() => setImportDialogOpen(false)}>
-                            Chiudi
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
-
-                {/* New Client Dialog */}
-                <Dialog open={dialogOpen} onOpenChange={(open) => {
-                  setDialogOpen(open);
-                  if (!open) resetForm();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuovo Cliente
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Inserisci i dati completi del cliente
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit}>
-                      <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="grid w-full grid-cols-4">
-                          <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
-                          <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
-                          <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-                          <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="anagrafica" className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
-                            <Input
-                              id="ragione_sociale"
-                              value={formData.ragione_sociale}
-                              onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
-                              required
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="partita_iva">Partita IVA *</Label>
-                              <Input
-                                id="partita_iva"
-                                value={formData.partita_iva}
-                                onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                              <Input
-                                id="codice_fiscale"
-                                value={formData.codice_fiscale}
-                                onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="indirizzo">Indirizzo *</Label>
-                            <Input
-                              id="indirizzo"
-                              value={formData.indirizzo}
-                              onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
-                              required
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="cap">CAP *</Label>
-                              <Input
-                                id="cap"
-                                value={formData.cap}
-                                onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="citta">Città *</Label>
-                              <Input
-                                id="citta"
-                                value={formData.citta}
-                                onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="provincia">Provincia *</Label>
-                              <Input
-                                id="provincia"
-                                value={formData.provincia}
-                                onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
-                                maxLength={2}
-                                required
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email *</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                              required
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
-                              <Select
-                                value={formData.tipo_cliente}
-                                onValueChange={(value) => setFormData({ ...formData, tipo_cliente: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Interno">Interno</SelectItem>
-                                  <SelectItem value="Esterno">Esterno</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex items-center space-x-2 pt-8">
-                              <input
-                                type="checkbox"
-                                id="attivo"
-                                checked={formData.attivo}
-                                onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
-                                className="rounded"
-                              />
-                              <Label htmlFor="attivo" className="cursor-pointer">Cliente Attivo</Label>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="note">Note</Label>
-                            <Textarea
-                              id="note"
-                              value={formData.note}
-                              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                              rows={3}
-                            />
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="riferimenti" className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
-                              <Select
-                                value={formData.utente_operatore_id || "__none__"}
-                                onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value === "__none__" ? "" : value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleziona utente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nessuno</SelectItem>
-                                  {utenti.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>
-                                      {u.nome} {u.cognome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
-                              <Select
-                                value={formData.utente_professionista_id || "__none__"}
-                                onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value === "__none__" ? "" : value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleziona utente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nessuno</SelectItem>
-                                  {utenti.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>
-                                      {u.nome} {u.cognome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="contatto1_id">Contatto 1</Label>
-                              <Select
-                                value={formData.contatto1_id || "__none__"}
-                                onValueChange={(value) => setFormData({ ...formData, contatto1_id: value === "__none__" ? "" : value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleziona contatto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nessuno</SelectItem>
-                                  {contatti.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                      {c.nome} {c.cognome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="contatto2_id">Contatto 2</Label>
-                              <Select
-                                value={formData.contatto2_id || "__none__"}
-                                onValueChange={(value) => setFormData({ ...formData, contatto2_id: value === "__none__" ? "" : value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleziona contatto" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nessuno</SelectItem>
-                                  {contatti.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                      {c.nome} {c.cognome}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
-                            <Select
-                              value={formData.tipo_prestazione_id || "__none__"}
-                              onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value === "__none__" ? "" : value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleziona prestazione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nessuna</SelectItem>
-                                {prestazioni.map((p) => (
-                                  <SelectItem key={p.id} value={p.id}>
-                                    {p.descrizione}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
-                            <Select
-                              value={formData.tipo_redditi || "__none__"}
-                              onValueChange={(value) => setFormData({ ...formData, tipo_redditi: value === "__none__" ? "" : value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleziona tipo redditi" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nessuno</SelectItem>
-                                {TIPO_REDDITI_OPTIONS.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>
-                                    {opt}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="border-t pt-4 mt-4">
-                            <h3 className="font-semibold mb-4 text-lg">Adeguata Verifica Clientela (Antiriciclaggio)</h3>
-                            
-                            {/* Sezione A */}
-                            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                              <h4 className="font-semibold mb-3 text-blue-900">📋 Verifica A (Principale)</h4>
-                              
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="tipo_prestazione_a">Tipo Prestazione A</Label>
-                                  <Select
-                                    value={formData.tipo_prestazione_a || "__none__"}
-                                    onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_a: value === "__none__" ? "" : value })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleziona tipo prestazione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__none__">Nessuna</SelectItem>
-                                      <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
-                                        Assistenza e consulenza societaria continuativa e generica
-                                      </SelectItem>
-                                      <SelectItem value="Consulenza del Lavoro">
-                                        Consulenza del Lavoro
-                                      </SelectItem>
-                                      <SelectItem value="Altre attività">
-                                        Altre attività
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica A</Label>
-                                    <Input
-                                      id="data_ultima_verifica_antiric"
-                                      type="date"
-                                      value={formData.data_ultima_verifica_antiric}
-                                      onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio A</Label>
-                                    <Input
-                                      id="scadenza_antiric"
-                                      type="date"
-                                      value={formData.scadenza_antiric}
-                                      onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Sezione B */}
-                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                              <h4 className="font-semibold mb-3 text-green-900">📋 Verifica B (Secondaria)</h4>
-                              
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="tipo_prestazione_b">Tipo Prestazione B</Label>
-                                  <Select
-                                    value={formData.tipo_prestazione_b || "__none__"}
-                                    onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_b: value === "__none__" ? "" : value })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Seleziona tipo prestazione" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="__none__">Nessuna</SelectItem>
-                                      <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
-                                        Assistenza e consulenza societaria continuativa e generica
-                                      </SelectItem>
-                                      <SelectItem value="Consulenza del Lavoro">
-                                        Consulenza del Lavoro
-                                      </SelectItem>
-                                      <SelectItem value="Altre attività">
-                                        Altre attività
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-2">
-                                    <Label htmlFor="data_ultima_verifica_b">Data Ultima Verifica B</Label>
-                                    <Input
-                                      id="data_ultima_verifica_b"
-                                      type="date"
-                                      value={formData.data_ultima_verifica_b}
-                                      onChange={(e) => setFormData({ ...formData, data_ultima_verifica_b: e.target.value })}
-                                    />
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label htmlFor="scadenza_antiric_b">Scadenza Antiriciclaggio B</Label>
-                                    <Input
-                                      id="scadenza_antiric_b"
-                                      type="date"
-                                      value={formData.scadenza_antiric_b}
-                                      onChange={(e) => setFormData({ ...formData, scadenza_antiric_b: e.target.value })}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="scadenzari" className="space-y-4">
-                          <div className="space-y-3">
-                            <p className="text-sm text-gray-600 mb-4">
-                              Seleziona gli scadenzari attivi per questo cliente
-                            </p>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_iva"
-                                  checked={formData.flag_iva}
-                                  onChange={(e) => setFormData({ ...formData, flag_iva: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_iva" className="cursor-pointer">IVA</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_ccgg"
-                                  checked={formData.flag_ccgg}
-                                  onChange={(e) => setFormData({ ...formData, flag_ccgg: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_ccgg" className="cursor-pointer">CCGG</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_cu"
-                                  checked={formData.flag_cu}
-                                  onChange={(e) => setFormData({ ...formData, flag_cu: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_cu" className="cursor-pointer">CU</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_fiscali"
-                                  checked={formData.flag_fiscali}
-                                  onChange={(e) => setFormData({ ...formData, flag_fiscali: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_fiscali" className="cursor-pointer">Fiscali</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_bilancio"
-                                  checked={formData.flag_bilancio}
-                                  onChange={(e) => setFormData({ ...formData, flag_bilancio: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_bilancio" className="cursor-pointer">Bilanci</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_770"
-                                  checked={formData.flag_770}
-                                  onChange={(e) => setFormData({ ...formData, flag_770: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_770" className="cursor-pointer">770</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_lipe"
-                                  checked={formData.flag_lipe}
-                                  onChange={(e) => setFormData({ ...formData, flag_lipe: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_lipe" className="cursor-pointer">Lipe</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_esterometro"
-                                  checked={formData.flag_esterometro}
-                                  onChange={(e) => setFormData({ ...formData, flag_esterometro: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_esterometro" className="cursor-pointer">Esterometro</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_proforma"
-                                  checked={formData.flag_proforma}
-                                  onChange={(e) => setFormData({ ...formData, flag_proforma: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_proforma" className="cursor-pointer">Proforma</Label>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="flag_imu"
-                                  checked={formData.flag_imu}
-                                  onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
-                                  className="rounded"
-                                />
-                                <Label htmlFor="flag_imu" className="cursor-pointer">IMU</Label>
-                              </div>
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="comunicazioni" className="space-y-4">
-                          <p className="text-sm text-gray-600 mb-4">
-                            Gestisci le preferenze di comunicazione del cliente
-                          </p>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="flag_mail_attivo"
-                                checked={formData.flag_mail_attivo}
-                                onChange={(e) => setFormData({ ...formData, flag_mail_attivo: e.target.checked })}
-                                className="rounded"
-                              />
-                              <Label htmlFor="flag_mail_attivo" className="cursor-pointer">
-                                Email Attiva
-                              </Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="flag_mail_scadenze"
-                                checked={formData.flag_mail_scadenze}
-                                onChange={(e) => setFormData({ ...formData, flag_mail_scadenze: e.target.checked })}
-                                className="rounded"
-                              />
-                              <Label htmlFor="flag_mail_scadenze" className="cursor-pointer">
-                                Ricevi Mailing Scadenze
-                              </Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="flag_mail_newsletter"
-                                checked={formData.flag_mail_newsletter}
-                                onChange={(e) => setFormData({ ...formData, flag_mail_newsletter: e.target.checked })}
-                                className="rounded"
-                              />
-                              <Label htmlFor="flag_mail_newsletter" className="cursor-pointer">
-                                Ricevi Newsletter
-                              </Label>
-                            </div>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-
-                      <div className="flex gap-3 pt-6 mt-6 border-t">
-                        <Button type="submit" className="flex-1">
-                          {editingCliente ? "Aggiorna" : "Crea"} Cliente
-                        </Button>
+              {!importResult ? (
+                <div className="space-y-6">
+                  {/* Download Template */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-blue-900 mb-1">
+                          Scarica il template CSV
+                        </p>
+                        <p className="text-sm text-blue-800 mb-3">
+                          Usa il nostro modello per compilare i dati dei clienti con tutti i campi richiesti
+                        </p>
                         <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setDialogOpen(false)}
+                          onClick={downloadTemplate}
+                          size="sm"
+                          variant="outline"
+                          className="border-blue-600 text-blue-600 hover:bg-blue-100"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Scarica Template
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upload Area */}
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
+                  >
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="csv-upload"
+                    />
+                    <label htmlFor="csv-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <p className="text-lg font-medium text-gray-900 mb-1">
+                        Trascina qui il file CSV
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        oppure clicca per selezionarlo
+                      </p>
+                    </label>
+                  </div>
+
+                  {/* Preview */}
+                  {csvData.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-900">
+                          Anteprima: {csvData.length} clienti
+                        </h3>
+                        <Button
+                          onClick={resetImport}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Carica altro file
+                        </Button>
+                      </div>
+
+                      <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Ragione Sociale</TableHead>
+                              <TableHead>P.IVA</TableHead>
+                              <TableHead>CF</TableHead>
+                              <TableHead>Città</TableHead>
+                              <TableHead>Email</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {csvData.slice(0, 10).map((row, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{row.ragione_sociale}</TableCell>
+                                <TableCell className="font-mono text-sm">{row.partita_iva}</TableCell>
+                                <TableCell className="font-mono text-sm">{row.codice_fiscale}</TableCell>
+                                <TableCell>{row.citta}</TableCell>
+                                <TableCell className="text-sm">{row.email}</TableCell>
+                              </TableRow>
+                            ))}
+                            {csvData.length > 10 && (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center text-gray-500">
+                                  ... e altri {csvData.length - 10} clienti
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Import Progress */}
+                      {importing && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Importazione in corso...</span>
+                            <span className="font-semibold">{importProgress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${importProgress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Import Button */}
+                      <div className="flex justify-end gap-3 pt-4">
+                        <Button
+                          onClick={() => setImportDialogOpen(false)}
+                          variant="outline"
+                          disabled={importing}
                         >
                           Annulla
                         </Button>
+                        <Button
+                          onClick={handleImportCSV}
+                          disabled={importing || csvData.length === 0}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {importing ? (
+                            <>Importazione in corso...</>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Importa {csvData.length} Clienti
+                            </>
+                          )}
+                        </Button>
                       </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Import Result */
+                <div className="space-y-6">
+                  <div className="text-center py-6">
+                    <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      Importazione Completata
+                    </h3>
+                  </div>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Cerca per ragione sociale, P.IVA o CF..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card className="border-l-4 border-l-green-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-green-600">
+                            {importResult.success}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">Clienti Importati</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-orange-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-orange-600">
+                            {importResult.duplicates}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">Duplicati Saltati</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-red-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-red-600">
+                            {importResult.errors}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">Errori</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Duplicates Details */}
+                  {importResult.duplicateDetails.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                        Clienti Duplicati (già esistenti)
+                      </h4>
+                      <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Ragione Sociale</TableHead>
+                              <TableHead>P.IVA</TableHead>
+                              <TableHead>CF</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {importResult.duplicateDetails.map((dup, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{dup.ragione_sociale}</TableCell>
+                                <TableCell className="font-mono text-sm">{dup.partita_iva}</TableCell>
+                                <TableCell className="font-mono text-sm">{dup.codice_fiscale}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error Details */}
+                  {importResult.errorDetails.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        Errori di Importazione
+                      </h4>
+                      <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Riga</TableHead>
+                              <TableHead>Ragione Sociale</TableHead>
+                              <TableHead>Errore</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {importResult.errorDetails.map((err, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>{err.row}</TableCell>
+                                <TableCell>{err.ragione_sociale}</TableCell>
+                                <TableCell className="text-sm text-red-600">{err.error}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <Button onClick={() => setImportDialogOpen(false)}>
+                      Chiudi
+                    </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cod. Cliente</TableHead>
-                      <TableHead>Ragione Sociale</TableHead>
-                      <TableHead>P.IVA</TableHead>
-                      <TableHead>Città</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClienti.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nessun cliente trovato
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredClienti.map((cliente) => (
-                        <TableRow key={cliente.id}>
-                          <TableCell className="font-mono text-xs">{cliente.cod_cliente}</TableCell>
-                          <TableCell className="font-medium">{cliente.ragione_sociale}</TableCell>
-                          <TableCell className="font-mono text-sm">{cliente.partita_iva}</TableCell>
-                          <TableCell>{cliente.citta}</TableCell>
-                          <TableCell className="text-sm">{cliente.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={cliente.attivo ? "default" : "secondary"}>
-                              {cliente.attivo ? "Attivo" : "Non attivo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleAggiungiAScadenzari(cliente.id)}
-                                title="Aggiungi agli scadenzari"
-                              >
-                                <Calendar className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(cliente)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(cliente.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* New Client Dialog */}
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuovo Cliente
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
+                </DialogTitle>
+                <DialogDescription>
+                  Inserisci i dati completi del cliente
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+                    <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+                    <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+                    <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="anagrafica" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
+                      <Input
+                        id="ragione_sociale"
+                        value={formData.ragione_sociale}
+                        onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="partita_iva">Partita IVA *</Label>
+                        <Input
+                          id="partita_iva"
+                          value={formData.partita_iva}
+                          onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                        <Input
+                          id="codice_fiscale"
+                          value={formData.codice_fiscale}
+                          onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="indirizzo">Indirizzo *</Label>
+                      <Input
+                        id="indirizzo"
+                        value={formData.indirizzo}
+                        onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cap">CAP *</Label>
+                        <Input
+                          id="cap"
+                          value={formData.cap}
+                          onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="citta">Città *</Label>
+                        <Input
+                          id="citta"
+                          value={formData.citta}
+                          onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="provincia">Provincia *</Label>
+                        <Input
+                          id="provincia"
+                          value={formData.provincia}
+                          onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
+                          maxLength={2}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+                        <Select
+                          value={formData.tipo_cliente}
+                          onValueChange={(value) => setFormData({ ...formData, tipo_cliente: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Interno">Interno</SelectItem>
+                            <SelectItem value="Esterno">Esterno</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-8">
+                        <input
+                          type="checkbox"
+                          id="attivo"
+                          checked={formData.attivo}
+                          onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="attivo" className="cursor-pointer">Cliente Attivo</Label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="note">Note</Label>
+                      <Textarea
+                        id="note"
+                        value={formData.note}
+                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="riferimenti" className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
+                        <Select
+                          value={formData.utente_operatore_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value === "__none__" ? "" : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona utente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
+                            {utenti.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.nome} {u.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
+                        <Select
+                          value={formData.utente_professionista_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value === "__none__" ? "" : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona utente" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
+                            {utenti.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.nome} {u.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="contatto1_id">Contatto 1</Label>
+                        <Select
+                          value={formData.contatto1_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, contatto1_id: value === "__none__" ? "" : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona contatto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
+                            {contatti.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.nome} {c.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contatto2_id">Contatto 2</Label>
+                        <Select
+                          value={formData.contatto2_id || "__none__"}
+                          onValueChange={(value) => setFormData({ ...formData, contatto2_id: value === "__none__" ? "" : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona contatto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Nessuno</SelectItem>
+                            {contatti.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.nome} {c.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+                      <Select
+                        value={formData.tipo_prestazione_id || "__none__"}
+                        onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value === "__none__" ? "" : value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona prestazione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nessuna</SelectItem>
+                          {prestazioni.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.descrizione}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+                      <Select
+                        value={formData.tipo_redditi || "__none__"}
+                        onValueChange={(value) => setFormData({ ...formData, tipo_redditi: value === "__none__" ? "" : value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona tipo redditi" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nessuno</SelectItem>
+                          {TIPO_REDDITI_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="border-t pt-4 mt-4">
+                      <h3 className="font-semibold mb-4 text-lg">Adeguata Verifica Clientela (Antiriciclaggio)</h3>
+                      
+                      {/* Sezione A */}
+                      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-semibold mb-3 text-blue-900">📋 Verifica A (Principale)</h4>
+                        
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="tipo_prestazione_a">Tipo Prestazione A</Label>
+                            <Select
+                              value={formData.tipo_prestazione_a || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_a: value === "__none__" ? "" : value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleziona tipo prestazione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Nessuna</SelectItem>
+                                <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
+                                  Assistenza e consulenza societaria continuativa e generica
+                                </SelectItem>
+                                <SelectItem value="Consulenza del Lavoro">
+                                  Consulenza del Lavoro
+                                </SelectItem>
+                                <SelectItem value="Altre attività">
+                                  Altre attività
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica A</Label>
+                              <Input
+                                id="data_ultima_verifica_antiric"
+                                type="date"
+                                value={formData.data_ultima_verifica_antiric}
+                                onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
+                              />
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio A</Label>
+                              <Input
+                                id="scadenza_antiric"
+                                type="date"
+                                value={formData.scadenza_antiric}
+                                onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sezione B */}
+                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <h4 className="font-semibold mb-3 text-green-900">📋 Verifica B (Secondaria)</h4>
+                        
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="tipo_prestazione_b">Tipo Prestazione B</Label>
+                            <Select
+                              value={formData.tipo_prestazione_b || "__none__"}
+                              onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_b: value === "__none__" ? "" : value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleziona tipo prestazione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Nessuna</SelectItem>
+                                <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
+                                  Assistenza e consulenza societaria continuativa e generica
+                                </SelectItem>
+                                <SelectItem value="Consulenza del Lavoro">
+                                  Consulenza del Lavoro
+                                </SelectItem>
+                                <SelectItem value="Altre attività">
+                                  Altre attività
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="data_ultima_verifica_b">Data Ultima Verifica B</Label>
+                              <Input
+                                id="data_ultima_verifica_b"
+                                type="date"
+                                value={formData.data_ultima_verifica_b}
+                                onChange={(e) => setFormData({ ...formData, data_ultima_verifica_b: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="scadenza_antiric_b">Scadenza Antiriciclaggio B</Label>
+                              <Input
+                                id="scadenza_antiric_b"
+                                type="date"
+                                value={formData.scadenza_antiric_b}
+                                onChange={(e) => setFormData({ ...formData, scadenza_antiric_b: e.target.value })}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="scadenzari" className="space-y-4">
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Seleziona gli scadenzari attivi per questo cliente
+                      </p>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_iva"
+                            checked={formData.flag_iva}
+                            onChange={(e) => setFormData({ ...formData, flag_iva: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_iva" className="cursor-pointer">IVA</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_ccgg"
+                            checked={formData.flag_ccgg}
+                            onChange={(e) => setFormData({ ...formData, flag_ccgg: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_ccgg" className="cursor-pointer">CCGG</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_cu"
+                            checked={formData.flag_cu}
+                            onChange={(e) => setFormData({ ...formData, flag_cu: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_cu" className="cursor-pointer">CU</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_fiscali"
+                            checked={formData.flag_fiscali}
+                            onChange={(e) => setFormData({ ...formData, flag_fiscali: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_fiscali" className="cursor-pointer">Fiscali</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_bilancio"
+                            checked={formData.flag_bilancio}
+                            onChange={(e) => setFormData({ ...formData, flag_bilancio: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_bilancio" className="cursor-pointer">Bilanci</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_770"
+                            checked={formData.flag_770}
+                            onChange={(e) => setFormData({ ...formData, flag_770: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_770" className="cursor-pointer">770</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_lipe"
+                            checked={formData.flag_lipe}
+                            onChange={(e) => setFormData({ ...formData, flag_lipe: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_lipe" className="cursor-pointer">Lipe</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_esterometro"
+                            checked={formData.flag_esterometro}
+                            onChange={(e) => setFormData({ ...formData, flag_esterometro: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_esterometro" className="cursor-pointer">Esterometro</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_proforma"
+                            checked={formData.flag_proforma}
+                            onChange={(e) => setFormData({ ...formData, flag_proforma: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_proforma" className="cursor-pointer">Proforma</Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="flag_imu"
+                            checked={formData.flag_imu}
+                            onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
+                            className="rounded"
+                          />
+                          <Label htmlFor="flag_imu" className="cursor-pointer">IMU</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="comunicazioni" className="space-y-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Gestisci le preferenze di comunicazione del cliente
+                    </p>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_mail_attivo"
+                          checked={formData.flag_mail_attivo}
+                          onChange={(e) => setFormData({ ...formData, flag_mail_attivo: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_mail_attivo" className="cursor-pointer">
+                          Email Attiva
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_mail_scadenze"
+                          checked={formData.flag_mail_scadenze}
+                          onChange={(e) => setFormData({ ...formData, flag_mail_scadenze: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_mail_scadenze" className="cursor-pointer">
+                          Ricevi Mailing Scadenze
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_mail_newsletter"
+                          checked={formData.flag_mail_newsletter}
+                          onChange={(e) => setFormData({ ...formData, flag_mail_newsletter: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_mail_newsletter" className="cursor-pointer">
+                          Ricevi Newsletter
+                        </Label>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex gap-3 pt-6 mt-6 border-t">
+                  <Button type="submit" className="flex-1">
+                    {editingCliente ? "Aggiorna" : "Crea"} Cliente
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca per ragione sociale, P.IVA o CF..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cod. Cliente</TableHead>
+                  <TableHead>Ragione Sociale</TableHead>
+                  <TableHead>P.IVA</TableHead>
+                  <TableHead>Città</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClienti.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      Nessun cliente trovato
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredClienti.map((cliente) => (
+                    <TableRow key={cliente.id}>
+                      <TableCell className="font-mono text-xs">{cliente.cod_cliente}</TableCell>
+                      <TableCell className="font-medium">{cliente.ragione_sociale}</TableCell>
+                      <TableCell className="font-mono text-sm">{cliente.partita_iva}</TableCell>
+                      <TableCell>{cliente.citta}</TableCell>
+                      <TableCell className="text-sm">{cliente.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={cliente.attivo ? "default" : "secondary"}>
+                          {cliente.attivo ? "Attivo" : "Non attivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleAggiungiAScadenzari(cliente.id)}
+                            title="Aggiungi agli scadenzari"
+                          >
+                            <Calendar className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(cliente)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(cliente.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
