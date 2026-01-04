@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Users } from "lucide-react";
-import cn from "classnames";
+import { cn } from "@/lib/utils";
 
 export default function MessaggiPage() {
   const router = useRouter();
