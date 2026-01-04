@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { studioService } from "@/services/studioService";
 import { utenteService } from "@/services/utenteService";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
@@ -10,7 +10,11 @@ import type { Database } from "@/integrations/supabase/types";
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-export default function Header() {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+}
+
+export default function Header({ onMenuToggle }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
   const router = useRouter();
@@ -72,6 +76,16 @@ export default function Header() {
     <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={onMenuToggle}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+
           {studio?.logo_url ? (
             <img 
               src={studio.logo_url} 

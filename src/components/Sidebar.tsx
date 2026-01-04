@@ -31,13 +31,17 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -237,21 +241,11 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Hamburger Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden bg-white shadow-md"
-        onClick={() => setMobileOpen(true)}
-      >
-        <Menu className="h-6 w-6" />
-      </Button>
-
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
+          onClick={onClose}
         />
       )}
 
@@ -266,7 +260,7 @@ export function Sidebar() {
           variant="ghost"
           size="icon"
           className="absolute top-4 right-4 lg:hidden"
-          onClick={() => setMobileOpen(false)}
+          onClick={onClose}
         >
           <X className="h-6 w-6" />
         </Button>
