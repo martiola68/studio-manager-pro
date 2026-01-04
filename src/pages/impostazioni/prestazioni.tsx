@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Briefcase, Edit, Trash2, Search } from "lucide-react";
+import { Settings, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -181,127 +180,119 @@ export default function PrestazioniPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Tipi Prestazione</h1>
-                <p className="text-gray-500 mt-1">Gestisci i servizi professionali offerti dallo studio</p>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestione Prestazioni</h1>
+          <p className="text-gray-500 mt-1">Configurazione tipologie di prestazioni</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuova Prestazione
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingPrestazione ? "Modifica Prestazione" : "Nuova Prestazione"}
+              </DialogTitle>
+              <DialogDescription>
+                Inserisci la descrizione del tipo di prestazione
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="descrizione">Descrizione *</Label>
+                <Input
+                  id="descrizione"
+                  placeholder="es. Assistenza totale, Consulenza fiscale..."
+                  value={formData.descrizione}
+                  onChange={(e) => setFormData({ descrizione: e.target.value })}
+                  required
+                />
               </div>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Nuova Prestazione
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingPrestazione ? "Modifica Prestazione" : "Nuova Prestazione"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Inserisci la descrizione del tipo di prestazione
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="descrizione">Descrizione *</Label>
-                      <Input
-                        id="descrizione"
-                        placeholder="es. Assistenza totale, Consulenza fiscale..."
-                        value={formData.descrizione}
-                        onChange={(e) => setFormData({ descrizione: e.target.value })}
-                        required
-                      />
-                    </div>
 
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1">
-                        {editingPrestazione ? "Aggiorna" : "Crea"} Prestazione
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setDialogOpen(false)}
-                      >
-                        Annulla
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Cerca prestazione..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Descrizione</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPrestazioni.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center py-8 text-gray-500">
-                          Nessuna prestazione trovata
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredPrestazioni.map((prestazione) => (
-                        <TableRow key={prestazione.id}>
-                          <TableCell className="font-medium">{prestazione.descrizione}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(prestazione)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(prestazione.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1">
+                  {editingPrestazione ? "Aggiorna" : "Crea"} Prestazione
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                >
+                  Annulla
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Cerca prestazione..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Descrizione</TableHead>
+                <TableHead className="text-right">Azioni</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPrestazioni.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center py-8 text-gray-500">
+                    Nessuna prestazione trovata
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPrestazioni.map((prestazione) => (
+                  <TableRow key={prestazione.id}>
+                    <TableCell className="font-medium">{prestazione.descrizione}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(prestazione)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(prestazione.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

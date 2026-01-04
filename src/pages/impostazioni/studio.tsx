@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { studioService } from "@/services/studioService";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,243 +224,235 @@ export default function DatiStudioPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Dati Studio</h1>
-              <p className="text-gray-500 mt-1">Gestisci anagrafica e logo dello studio</p>
-            </div>
+    <div className="max-w-4xl mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dati Studio</h1>
+        <p className="text-gray-500 mt-1">Gestisci anagrafica e logo dello studio</p>
+      </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Upload className="h-5 w-5" />
-                      Logo Studio
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-6">
-                      {logoPreview ? (
-                        <img
-                          src={logoPreview}
-                          alt="Logo Studio"
-                          className="w-32 h-32 object-contain border-2 border-gray-200 rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <Building2 className="h-12 w-12 text-gray-400" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <Label htmlFor="logo" className="cursor-pointer">
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
-                            <div className="text-center">
-                              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                              <p className="text-sm text-gray-600">
-                                Clicca per caricare il logo
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                PNG, JPG fino a 2MB
-                              </p>
-                            </div>
-                          </div>
-                        </Label>
-                        <Input
-                          id="logo"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          className="hidden"
-                        />
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Logo Studio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo Studio"
+                    className="w-32 h-32 object-contain border-2 border-gray-200 rounded-lg"
+                  />
+                ) : (
+                  <div className="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Building2 className="h-12 w-12 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Label htmlFor="logo" className="cursor-pointer">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors">
+                      <div className="text-center">
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-gray-600">
+                          Clicca per caricare il logo
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          PNG, JPG fino a 2MB
+                        </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Dati Anagrafici</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
-                        <Input
-                          id="ragione_sociale"
-                          value={formData.ragione_sociale}
-                          onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="denominazione_breve">Denominazione Breve *</Label>
-                        <Input
-                          id="denominazione_breve"
-                          value={formData.denominazione_breve}
-                          onChange={(e) => setFormData({ ...formData, denominazione_breve: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="partita_iva">Partita IVA *</Label>
-                        <Input
-                          id="partita_iva"
-                          value={formData.partita_iva}
-                          onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                        <Input
-                          id="codice_fiscale"
-                          value={formData.codice_fiscale}
-                          onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="indirizzo">Indirizzo *</Label>
-                      <Input
-                        id="indirizzo"
-                        value={formData.indirizzo}
-                        onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cap">CAP *</Label>
-                        <Input
-                          id="cap"
-                          value={formData.cap}
-                          onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="citta">Città *</Label>
-                        <Input
-                          id="citta"
-                          value={formData.citta}
-                          onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="provincia">Provincia *</Label>
-                        <Input
-                          id="provincia"
-                          value={formData.provincia}
-                          onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
-                          maxLength={2}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contatti</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="telefono">Telefono *</Label>
-                        <Input
-                          id="telefono"
-                          type="tel"
-                          value={formData.telefono}
-                          onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="pec">PEC *</Label>
-                        <Input
-                          id="pec"
-                          type="email"
-                          value={formData.pec}
-                          onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="sito_web">Sito Web</Label>
-                        <Input
-                          id="sito_web"
-                          type="url"
-                          value={formData.sito_web}
-                          onChange={(e) => setFormData({ ...formData, sito_web: e.target.value })}
-                          placeholder="https://..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="note">Note</Label>
-                      <Textarea
-                        id="note"
-                        value={formData.note}
-                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                        rows={4}
-                        placeholder="Note aggiuntive..."
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {saving ? (
-                      <>
-                        <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Salvataggio...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Salva Modifiche
-                      </>
-                    )}
-                  </Button>
+                  </Label>
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
                 </div>
               </div>
-            </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Dati Anagrafici</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
+                  <Input
+                    id="ragione_sociale"
+                    value={formData.ragione_sociale}
+                    onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="denominazione_breve">Denominazione Breve *</Label>
+                  <Input
+                    id="denominazione_breve"
+                    value={formData.denominazione_breve}
+                    onChange={(e) => setFormData({ ...formData, denominazione_breve: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="partita_iva">Partita IVA *</Label>
+                  <Input
+                    id="partita_iva"
+                    value={formData.partita_iva}
+                    onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                  <Input
+                    id="codice_fiscale"
+                    value={formData.codice_fiscale}
+                    onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="indirizzo">Indirizzo *</Label>
+                <Input
+                  id="indirizzo"
+                  value={formData.indirizzo}
+                  onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cap">CAP *</Label>
+                  <Input
+                    id="cap"
+                    value={formData.cap}
+                    onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="citta">Città *</Label>
+                  <Input
+                    id="citta"
+                    value={formData.citta}
+                    onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="provincia">Provincia *</Label>
+                  <Input
+                    id="provincia"
+                    value={formData.provincia}
+                    onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
+                    maxLength={2}
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Contatti</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="telefono">Telefono *</Label>
+                  <Input
+                    id="telefono"
+                    type="tel"
+                    value={formData.telefono}
+                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pec">PEC *</Label>
+                  <Input
+                    id="pec"
+                    type="email"
+                    value={formData.pec}
+                    onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sito_web">Sito Web</Label>
+                  <Input
+                    id="sito_web"
+                    type="url"
+                    value={formData.sito_web}
+                    onChange={(e) => setFormData({ ...formData, sito_web: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="note">Note</Label>
+                <Textarea
+                  id="note"
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  rows={4}
+                  placeholder="Note aggiuntive..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {saving ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Salvataggio...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salva Modifiche
+                </>
+              )}
+            </Button>
           </div>
-        </main>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

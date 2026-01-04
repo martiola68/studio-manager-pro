@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import { utenteService } from "@/services/utenteService";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Edit, UserX, Search, Copy, Check, RotateCcw, Loader2, UserCheck, Filter, Key, Eye, EyeOff, Trash2 } from "lucide-react";
+import { UserPlus, Edit, UserX, Search, RotateCcw, Loader2, UserCheck, Filter, Key, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];
 
-// Funzione per generare password sicura
 const generateSecurePassword = (): string => {
   const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   const lowercase = "abcdefghijkmnopqrstuvwxyz";
@@ -148,7 +145,6 @@ export default function GestioneUtentiPage() {
       setCreating(true);
 
       if (editingUtente) {
-        // Modifica utente esistente
         await utenteService.updateUtente(editingUtente.id, {
           nome: formData.nome,
           cognome: formData.cognome,
@@ -167,7 +163,6 @@ export default function GestioneUtentiPage() {
         resetForm();
         await loadData();
       } else {
-        // Nuovo utente
         const utentiEsistenti = await utenteService.getUtenti();
         const utenteEsistente = utentiEsistenti.find(u => u.email.toLowerCase() === formData.email.toLowerCase());
 
@@ -180,7 +175,6 @@ export default function GestioneUtentiPage() {
           return;
         }
 
-        // Determina password da usare
         const passwordToUse = useAutoPassword ? "" : formData.password;
 
         if (!useAutoPassword && (!passwordToUse || passwordToUse.length < 8)) {
@@ -192,8 +186,6 @@ export default function GestioneUtentiPage() {
           return;
         }
 
-        // Chiama API per creare utente in Auth
-        // Il trigger on_auth_user_created creerà automaticamente il record in tbutenti!
         const response = await fetch("/api/auth/create-user", {
           method: "POST",
           headers: {
@@ -217,9 +209,6 @@ export default function GestioneUtentiPage() {
           throw new Error(result.details || result.error || "Errore creazione utente");
         }
 
-        // ✅ NON serve più inserire in tbutenti - il trigger lo fa automaticamente!
-        // Ma dobbiamo aggiornare i campi extra (tipo_utente, ruolo_operatore_id)
-        // che il trigger non può sapere
         await supabase
           .from("tbutenti")
           .update({
@@ -229,14 +218,12 @@ export default function GestioneUtentiPage() {
           })
           .eq("id", result.userId);
         
-        // Mostra la password usata
         const message = useAutoPassword 
           ? `Password generata: ${result.password}\n\nComunica questa password all'utente.`
           : `Utente creato con la password fornita.`;
         
         alert(`✅ UTENTE CREATO!\n\nEmail: ${formData.email}\n${message}`);
         
-        // Copia password negli appunti se auto-generata
         if (useAutoPassword) {
           try {
             await navigator.clipboard.writeText(result.password);
@@ -283,7 +270,6 @@ export default function GestioneUtentiPage() {
     try {
       setResettingPassword(utente.id);
 
-      // Chiama API per reset password
       const response = await fetch("/api/admin/reset-password", {
         method: "POST",
         headers: {
@@ -348,7 +334,6 @@ export default function GestioneUtentiPage() {
     try {
       setLoading(true);
 
-      // Chiama API per eliminare da Auth
       const response = await fetch("/api/admin/delete-user", {
         method: "POST",
         headers: {
@@ -363,7 +348,6 @@ export default function GestioneUtentiPage() {
         console.error("Errore eliminazione Auth");
       }
 
-      // Elimina dal DB
       await utenteService.deleteUtente(utente.id);
 
       toast({
@@ -471,390 +455,382 @@ export default function GestioneUtentiPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
-                <p className="text-gray-500 mt-1">Crea e gestisci gli utenti del sistema</p>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
+          <p className="text-gray-500 mt-1">Crea e gestisci gli utenti del sistema</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nuovo Utente
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingUtente 
+                  ? "Modifica i dati dell'utente" 
+                  : "Compila i campi per creare un nuovo utente"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome *</Label>
+                  <Input
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cognome">Cognome *</Label>
+                  <Input
+                    id="cognome"
+                    value={formData.cognome}
+                    onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Nuovo Utente
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {editingUtente 
-                        ? "Modifica i dati dell'utente" 
-                        : "Compila i campi per creare un nuovo utente"}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nome">Nome *</Label>
-                        <Input
-                          id="nome"
-                          value={formData.nome}
-                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cognome">Cognome *</Label>
-                        <Input
-                          id="cognome"
-                          value={formData.cognome}
-                          onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                        disabled={!!editingUtente}
-                      />
-                      {editingUtente && (
-                        <p className="text-xs text-gray-500">L'email non può essere modificata</p>
-                      )}
-                    </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  disabled={!!editingUtente}
+                />
+                {editingUtente && (
+                  <p className="text-xs text-gray-500">L'email non può essere modificata</p>
+                )}
+              </div>
 
-                    {!editingUtente && (
-                      <div className="space-y-3 border-t pt-4">
-                        <div className="flex items-center justify-between">
-                          <Label>Password *</Label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id="useAutoPassword"
-                              checked={useAutoPassword}
-                              onChange={(e) => {
-                                setUseAutoPassword(e.target.checked);
-                                if (e.target.checked) {
-                                  setFormData({ ...formData, password: "" });
-                                }
-                              }}
-                              className="rounded"
-                            />
-                            <Label htmlFor="useAutoPassword" className="cursor-pointer text-sm">
-                              Genera automaticamente
-                            </Label>
-                          </div>
-                        </div>
-
-                        {!useAutoPassword && (
-                          <div className="space-y-2">
-                            <div className="relative">
-                              <Input
-                                type={showPassword ? "text" : "password"}
-                                placeholder="Inserisci password (min 8 caratteri)"
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                required={!useAutoPassword}
-                                minLength={8}
-                                className="pr-20"
-                              />
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className="h-8 w-8"
-                                >
-                                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={handleGeneratePassword}
-                                  className="h-8 w-8"
-                                  title="Genera password"
-                                >
-                                  <Key className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-500">
-                              Min 8 caratteri. Click sull'icona 🔑 per generare una password sicura.
-                            </p>
-                          </div>
-                        )}
-
-                        {useAutoPassword && (
-                          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
-                            ℹ️ Una password sicura verrà generata automaticamente e mostrata dopo la creazione
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tipo_utente">Tipo Utente *</Label>
-                        <Select
-                          value={formData.tipo_utente}
-                          onValueChange={(value: "Admin" | "User") => 
-                            setFormData({ ...formData, tipo_utente: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Admin">Amministratore</SelectItem>
-                            <SelectItem value="User">Utente</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="ruolo_operatore_id">Ruolo Operatore</Label>
-                        <Select
-                          value={formData.ruolo_operatore_id || "__none__"}
-                          onValueChange={(value) => 
-                            setFormData({ ...formData, ruolo_operatore_id: value === "__none__" ? "" : value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona ruolo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuno</SelectItem>
-                            {ruoli.map((ruolo) => (
-                              <SelectItem key={ruolo.id} value={ruolo.id}>
-                                {ruolo.ruolo}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
+              {!editingUtente && (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Password *</Label>
+                    <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        id="attivo"
-                        checked={formData.attivo}
-                        onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
+                        id="useAutoPassword"
+                        checked={useAutoPassword}
+                        onChange={(e) => {
+                          setUseAutoPassword(e.target.checked);
+                          if (e.target.checked) {
+                            setFormData({ ...formData, password: "" });
+                          }
+                        }}
                         className="rounded"
                       />
-                      <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1" disabled={creating}>
-                        {creating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {editingUtente ? "Aggiornamento..." : "Creazione..."}
-                          </>
-                        ) : (
-                          <>
-                            {editingUtente ? "Aggiorna Utente" : "Crea Utente"}
-                          </>
-                        )}
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setDialogOpen(false)}
-                        disabled={creating}
-                      >
-                        Annulla
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Filtri e Ricerca</CardTitle>
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold">{activeCount} Attivi</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <UserX className="h-4 w-4 text-gray-400" />
-                      <span className="font-semibold">{inactiveCount} Disattivati</span>
+                      <Label htmlFor="useAutoPassword" className="cursor-pointer text-sm">
+                        Genera automaticamente
+                      </Label>
                     </div>
                   </div>
+
+                  {!useAutoPassword && (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Inserisci password (min 8 caratteri)"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          required={!useAutoPassword}
+                          minLength={8}
+                          className="pr-20"
+                        />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="h-8 w-8"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleGeneratePassword}
+                            className="h-8 w-8"
+                            title="Genera password"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Min 8 caratteri. Click sull'icona 🔑 per generare una password sicura.
+                      </p>
+                    </div>
+                  )}
+
+                  {useAutoPassword && (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                      ℹ️ Una password sicura verrà generata automaticamente e mostrata dopo la creazione
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Cerca per nome, cognome o email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-gray-500" />
-                    <Select value={filterStatus} onValueChange={(value: "all" | "active" | "inactive") => setFilterStatus(value)}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tutti gli utenti</SelectItem>
-                        <SelectItem value="active">Solo attivi</SelectItem>
-                        <SelectItem value="inactive">Solo disattivati</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              )}
 
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Cognome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Ruolo</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUtenti.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nessun utente trovato
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredUtenti.map((utente) => {
-                        const ruolo = ruoli.find(r => r.id === utente.ruolo_operatore_id);
-                        const isActive = utente.attivo ?? true;
-                        
-                        return (
-                          <TableRow key={utente.id} className={!isActive ? "opacity-60 bg-gray-50" : ""}>
-                            <TableCell className="font-medium">{utente.nome}</TableCell>
-                            <TableCell>{utente.cognome}</TableCell>
-                            <TableCell>{utente.email}</TableCell>
-                            <TableCell>
-                              <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
-                                {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {ruolo ? ruolo.ruolo : "-"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={isActive ? "default" : "secondary"}>
-                                {isActive ? "✓ Attivo" : "○ Disattivato"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(utente)}
-                                  title="Modifica utente"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleResetPassword(utente)}
-                                  title="Reset password"
-                                  disabled={resettingPassword === utente.id}
-                                >
-                                  {resettingPassword === utente.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RotateCcw className="h-4 w-4 text-orange-600" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleToggleStatus(utente)}
-                                  title={isActive ? "Disattiva utente" : "Riattiva utente"}
-                                  className={isActive ? "text-gray-600 hover:text-gray-700" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
-                                >
-                                  {isActive ? (
-                                    <UserX className="h-4 w-4" />
-                                  ) : (
-                                    <UserCheck className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                {utente.tipo_utente !== "Admin" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDeleteUser(utente)}
-                                    title="Elimina utente"
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card className="mt-6">
-              <CardContent className="py-4">
-                <div className="flex items-start gap-3 text-sm">
-                  <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-2">🔑 Gestione Password:</p>
-                    <ul className="space-y-1 text-gray-700">
-                      <li><strong>✏️ Creazione</strong> - Puoi inserire manualmente una password o generarla automaticamente</li>
-                      <li><strong>🔄 Reset</strong> - Ti verrà chiesto di inserire la nuova password (o lascia vuoto per generarla)</li>
-                      <li><strong>🗑️ Elimina</strong> - Rimuove completamente l'utente dal sistema (solo utenti non-admin)</li>
-                    </ul>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tipo_utente">Tipo Utente *</Label>
+                  <Select
+                    value={formData.tipo_utente}
+                    onValueChange={(value: "Admin" | "User") => 
+                      setFormData({ ...formData, tipo_utente: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Admin">Amministratore</SelectItem>
+                      <SelectItem value="User">Utente</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ruolo_operatore_id">Ruolo Operatore</Label>
+                  <Select
+                    value={formData.ruolo_operatore_id || "__none__"}
+                    onValueChange={(value) => 
+                      setFormData({ ...formData, ruolo_operatore_id: value === "__none__" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona ruolo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nessuno</SelectItem>
+                      {ruoli.map((ruolo) => (
+                        <SelectItem key={ruolo.id} value={ruolo.id}>
+                          {ruolo.ruolo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="attivo"
+                  checked={formData.attivo}
+                  onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
+                  className="rounded"
+                />
+                <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1" disabled={creating}>
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {editingUtente ? "Aggiornamento..." : "Creazione..."}
+                    </>
+                  ) : (
+                    <>
+                      {editingUtente ? "Aggiorna Utente" : "Crea Utente"}
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  disabled={creating}
+                >
+                  Annulla
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Filtri e Ricerca</CardTitle>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-green-600" />
+                <span className="font-semibold">{activeCount} Attivi</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <UserX className="h-4 w-4 text-gray-400" />
+                <span className="font-semibold">{inactiveCount} Disattivati</span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Cerca per nome, cognome o email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={filterStatus} onValueChange={(value: "all" | "active" | "inactive") => setFilterStatus(value)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti gli utenti</SelectItem>
+                  <SelectItem value="active">Solo attivi</SelectItem>
+                  <SelectItem value="inactive">Solo disattivati</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Cognome</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Ruolo</TableHead>
+                <TableHead>Stato</TableHead>
+                <TableHead className="text-right">Azioni</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUtenti.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    Nessun utente trovato
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUtenti.map((utente) => {
+                  const ruolo = ruoli.find(r => r.id === utente.ruolo_operatore_id);
+                  const isActive = utente.attivo ?? true;
+                  
+                  return (
+                    <TableRow key={utente.id} className={!isActive ? "opacity-60 bg-gray-50" : ""}>
+                      <TableCell className="font-medium">{utente.nome}</TableCell>
+                      <TableCell>{utente.cognome}</TableCell>
+                      <TableCell>{utente.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
+                          {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {ruolo ? ruolo.ruolo : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isActive ? "default" : "secondary"}>
+                          {isActive ? "✓ Attivo" : "○ Disattivato"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(utente)}
+                            title="Modifica utente"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleResetPassword(utente)}
+                            title="Reset password"
+                            disabled={resettingPassword === utente.id}
+                          >
+                            {resettingPassword === utente.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4 text-orange-600" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleStatus(utente)}
+                            title={isActive ? "Disattiva utente" : "Riattiva utente"}
+                            className={isActive ? "text-gray-600 hover:text-gray-700" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+                          >
+                            {isActive ? (
+                              <UserX className="h-4 w-4" />
+                            ) : (
+                              <UserCheck className="h-4 w-4" />
+                            )}
+                          </Button>
+                          {utente.tipo_utente !== "Admin" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteUser(utente)}
+                              title="Elimina utente"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardContent className="py-4">
+          <div className="flex items-start gap-3 text-sm">
+            <Key className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-gray-900 mb-2">🔑 Gestione Password:</p>
+              <ul className="space-y-1 text-gray-700">
+                <li><strong>✏️ Creazione</strong> - Puoi inserire manualmente una password o generarla automaticamente</li>
+                <li><strong>🔄 Reset</strong> - Ti verrà chiesto di inserire la nuova password (o lascia vuoto per generarla)</li>
+                <li><strong>🗑️ Elimina</strong> - Rimuove completamente l'utente dal sistema (solo utenti non-admin)</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

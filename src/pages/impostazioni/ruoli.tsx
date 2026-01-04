@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,17 +11,16 @@ import { Shield, Edit, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];
-type RuoloOperatoreInsert = Database["public"]["Tables"]["tbroperatore"]["Insert"];
+type Ruolo = Database["public"]["Tables"]["tbroperatore"]["Row"];
 
 export default function RuoliPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [ruoli, setRuoli] = useState<RuoloOperatore[]>([]);
+  const [ruoli, setRuoli] = useState<Ruolo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRuolo, setEditingRuolo] = useState<RuoloOperatore | null>(null);
+  const [editingRuolo, setEditingRuolo] = useState<Ruolo | null>(null);
   const [formData, setFormData] = useState({ ruolo: "" });
 
   useEffect(() => {
@@ -129,7 +126,7 @@ export default function RuoliPage() {
     }
   };
 
-  const handleEdit = (ruolo: RuoloOperatore) => {
+  const handleEdit = (ruolo: Ruolo) => {
     setEditingRuolo(ruolo);
     setFormData({ ruolo: ruolo.ruolo });
     setDialogOpen(true);
@@ -182,127 +179,119 @@ export default function RuoliPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Ruoli Operatori</h1>
-                <p className="text-gray-500 mt-1">Gestisci i ruoli per la classificazione degli utenti</p>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestione Ruoli</h1>
+          <p className="text-gray-500 mt-1">Configurazione ruoli e permessi</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button className="bg-purple-600 hover:bg-purple-700">
+              <Shield className="h-4 w-4 mr-2" />
+              Nuovo Ruolo
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingRuolo ? "Modifica Ruolo" : "Nuovo Ruolo"}
+              </DialogTitle>
+              <DialogDescription>
+                Inserisci la descrizione del ruolo operatore
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="ruolo">Ruolo *</Label>
+                <Input
+                  id="ruolo"
+                  placeholder="es. Commercialista, Consulente del Lavoro, Segreteria..."
+                  value={formData.ruolo}
+                  onChange={(e) => setFormData({ ruolo: e.target.value })}
+                  required
+                />
               </div>
-              <Dialog open={dialogOpen} onOpenChange={(open) => {
-                setDialogOpen(open);
-                if (!open) resetForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-purple-600 hover:bg-purple-700">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Nuovo Ruolo
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingRuolo ? "Modifica Ruolo" : "Nuovo Ruolo"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Inserisci la descrizione del ruolo operatore
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="ruolo">Ruolo *</Label>
-                      <Input
-                        id="ruolo"
-                        placeholder="es. Commercialista, Consulente del Lavoro, Segreteria..."
-                        value={formData.ruolo}
-                        onChange={(e) => setFormData({ ruolo: e.target.value })}
-                        required
-                      />
-                    </div>
 
-                    <div className="flex gap-3 pt-4">
-                      <Button type="submit" className="flex-1">
-                        {editingRuolo ? "Aggiorna" : "Crea"} Ruolo
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setDialogOpen(false)}
-                      >
-                        Annulla
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Cerca ruolo..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ruolo</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRuoli.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center py-8 text-gray-500">
-                          Nessun ruolo trovato
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredRuoli.map((ruolo) => (
-                        <TableRow key={ruolo.id}>
-                          <TableCell className="font-medium">{ruolo.ruolo}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(ruolo)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(ruolo.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="flex-1">
+                  {editingRuolo ? "Aggiorna" : "Crea"} Ruolo
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                >
+                  Annulla
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Cerca ruolo..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ruolo</TableHead>
+                <TableHead className="text-right">Azioni</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRuoli.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={2} className="text-center py-8 text-gray-500">
+                    Nessun ruolo trovato
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRuoli.map((ruolo) => (
+                  <TableRow key={ruolo.id}>
+                    <TableCell className="font-medium">{ruolo.ruolo}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(ruolo)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(ruolo.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

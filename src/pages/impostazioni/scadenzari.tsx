@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -368,143 +366,135 @@ export default function GenerazioneScadenzariPage() {
   const anni = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Generazione Scadenzari</h1>
-              <p className="text-gray-500 mt-1">Archivia scadenze precedenti e genera nuovi scadenzari</p>
+    <div className="max-w-4xl mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Generazione Scadenzari</h1>
+        <p className="text-gray-500 mt-1">Archivia scadenze precedenti e genera nuovi scadenzari</p>
+      </div>
+
+      <div className="space-y-6">
+        <Card className="border-l-4 border-l-red-600">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <Archive className="h-5 w-5" />
+              Archivia Scadenze
+            </CardTitle>
+            <CardDescription>
+              Archivia tutte le scadenze di un anno precedente
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-red-800">
+                  <p className="font-semibold mb-1">ATTENZIONE!</p>
+                  <p>L'archiviazione sposterà tutte le scadenze dell'anno selezionato in tabelle archivio separate. Questa operazione NON può essere annullata.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <Card className="border-l-4 border-l-red-600">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-700">
-                    <Archive className="h-5 w-5" />
-                    Archivia Scadenze
-                  </CardTitle>
-                  <CardDescription>
-                    Archivia tutte le scadenze di un anno precedente
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex gap-3">
-                      <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-red-800">
-                        <p className="font-semibold mb-1">ATTENZIONE!</p>
-                        <p>L'archiviazione sposterà tutte le scadenze dell'anno selezionato in tabelle archivio separate. Questa operazione NON può essere annullata.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="anno_archiviazione">Anno da Archiviare</Label>
-                    <Select
-                      value={annoArchiviazione.toString()}
-                      onValueChange={(value) => setAnnoArchiviazione(parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {anni.map((anno) => (
-                          <SelectItem key={anno} value={anno.toString()}>
-                            {anno}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button
-                    onClick={handleArchivia}
-                    disabled={processing}
-                    variant="destructive"
-                    className="w-full"
-                  >
-                    {processing ? (
-                      <>
-                        <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Archiviazione in corso...
-                      </>
-                    ) : (
-                      <>
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archivia Scadenze {annoArchiviazione}
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-green-600">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-700">
-                    <CalendarCog className="h-5 w-5" />
-                    Genera Nuovi Scadenzari
-                  </CardTitle>
-                  <CardDescription>
-                    Genera automaticamente gli scadenzari per l'anno selezionato
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="text-sm text-blue-800">
-                      <p className="font-semibold mb-1">Come funziona:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>Vengono generati scadenzari solo per i clienti ATTIVI</li>
-                        <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
-                        <li>Se uno scadenzario esiste già, NON viene duplicato</li>
-                        <li>I nominativi vengono inseriti automaticamente in base ai flag attivi</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="anno_generazione">Anno da Generare</Label>
-                    <Select
-                      value={annoGenerazione.toString()}
-                      onValueChange={(value) => setAnnoGenerazione(parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {anni.map((anno) => (
-                          <SelectItem key={anno} value={anno.toString()}>
-                            {anno}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button
-                    onClick={handleGenera}
-                    disabled={processing}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {processing ? (
-                      <>
-                        <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        Generazione in corso...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Genera Scadenzari {annoGenerazione}
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+            <div className="space-y-2">
+              <Label htmlFor="anno_archiviazione">Anno da Archiviare</Label>
+              <Select
+                value={annoArchiviazione.toString()}
+                onValueChange={(value) => setAnnoArchiviazione(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {anni.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </main>
+
+            <Button
+              onClick={handleArchivia}
+              disabled={processing}
+              variant="destructive"
+              className="w-full"
+            >
+              {processing ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Archiviazione in corso...
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archivia Scadenze {annoArchiviazione}
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-600">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700">
+              <CalendarCog className="h-5 w-5" />
+              Genera Nuovi Scadenzari
+            </CardTitle>
+            <CardDescription>
+              Genera automaticamente gli scadenzari per l'anno selezionato
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-sm text-blue-800">
+                <p className="font-semibold mb-1">Come funziona:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Vengono generati scadenzari solo per i clienti ATTIVI</li>
+                  <li>Vengono creati solo gli scadenzari relativi ai flag attivi del cliente</li>
+                  <li>Se uno scadenzario esiste già, NON viene duplicato</li>
+                  <li>I nominativi vengono inseriti automaticamente in base ai flag attivi</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="anno_generazione">Anno da Generare</Label>
+              <Select
+                value={annoGenerazione.toString()}
+                onValueChange={(value) => setAnnoGenerazione(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {anni.map((anno) => (
+                    <SelectItem key={anno} value={anno.toString()}>
+                      {anno}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={handleGenera}
+              disabled={processing}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              {processing ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Generazione in corso...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Genera Scadenzari {annoGenerazione}
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

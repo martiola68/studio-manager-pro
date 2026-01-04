@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -281,140 +279,130 @@ export default function TipiScadenzePage() {
         <title>Gestione Tipi Scadenze - Studio Manager Pro</title>
       </Head>
 
-      <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-        <Sidebar />
-        
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    Gestione Tipi Scadenze
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Configura le scadenze ricorrenti per tutti i tuoi clienti
-                  </p>
-                </div>
-                <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuovo Tipo Scadenza
-                </Button>
-              </div>
+      <div className="max-w-7xl mx-auto p-4 md:p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Gestione Tipi Scadenze
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Configura le scadenze ricorrenti per tutti i tuoi clienti
+            </p>
+          </div>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nuovo Tipo Scadenza
+          </Button>
+        </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Nome Scadenza
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Tipo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Data Scadenza
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Preavvisi
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Ricorrente
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Stato
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Azioni
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {tipiScadenze.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                            <p>Nessun tipo di scadenza configurato</p>
-                            <p className="text-sm mt-2">Clicca su &quot;Nuovo Tipo Scadenza&quot; per iniziare</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        tipiScadenze.map((tipo) => (
-                          <tr key={tipo.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-6 py-4">
-                              <div>
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                  {tipo.nome}
-                                </div>
-                                {tipo.descrizione && (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                                    {tipo.descrizione}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <Badge variant="outline">
-                                {getTipoLabel(tipo.tipo_scadenza)}
-                              </Badge>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div>
-                                <div className="text-gray-900 dark:text-white">
-                                  {new Date(tipo.data_scadenza).toLocaleDateString("it-IT")}
-                                </div>
-                                <Badge variant={getUrgencyColor(tipo.data_scadenza)} className="mt-1">
-                                  {getUrgencyText(tipo.data_scadenza)}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                              {tipo.giorni_preavviso_1} e {tipo.giorni_preavviso_2} giorni
-                            </td>
-                            <td className="px-6 py-4">
-                              <Badge variant={tipo.ricorrente ? "default" : "secondary"}>
-                                {tipo.ricorrente ? "Sì" : "No"}
-                              </Badge>
-                            </td>
-                            <td className="px-6 py-4">
-                              <Switch
-                                checked={tipo.attivo ?? true}
-                                onCheckedChange={(checked) =>
-                                  handleToggleAttivo(tipo.id, checked)
-                                }
-                              />
-                            </td>
-                            <td className="px-6 py-4 text-right space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenDialog(tipo)}
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setDeletingId(tipo.id);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </main>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Nome Scadenza
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Data Scadenza
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Preavvisi
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Ricorrente
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Stato
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {tipiScadenze.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Nessun tipo di scadenza configurato</p>
+                      <p className="text-sm mt-2">Clicca su &quot;Nuovo Tipo Scadenza&quot; per iniziare</p>
+                    </td>
+                  </tr>
+                ) : (
+                  tipiScadenze.map((tipo) => (
+                    <tr key={tipo.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {tipo.nome}
+                          </div>
+                          {tipo.descrizione && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {tipo.descrizione}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline">
+                          {getTipoLabel(tipo.tipo_scadenza)}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="text-gray-900 dark:text-white">
+                            {new Date(tipo.data_scadenza).toLocaleDateString("it-IT")}
+                          </div>
+                          <Badge variant={getUrgencyColor(tipo.data_scadenza)} className="mt-1">
+                            {getUrgencyText(tipo.data_scadenza)}
+                          </Badge>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {tipo.giorni_preavviso_1} e {tipo.giorni_preavviso_2} giorni
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={tipo.ricorrente ? "default" : "secondary"}>
+                          {tipo.ricorrente ? "Sì" : "No"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Switch
+                          checked={tipo.attivo ?? true}
+                          onCheckedChange={(checked) =>
+                            handleToggleAttivo(tipo.id, checked)
+                          }
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenDialog(tipo)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeletingId(tipo.id);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
