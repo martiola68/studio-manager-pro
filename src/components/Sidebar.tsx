@@ -14,9 +14,12 @@ import {
   ChevronDown,
   ChevronRight,
   Building2,
-  MessageSquare
+  MessageSquare,
+  X,
+  Menu
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -34,6 +37,7 @@ export function Sidebar() {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -232,10 +236,45 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
-      <nav className="space-y-2">
-        {menuItems.map(item => renderMenuItem(item))}
-      </nav>
-    </aside>
+    <>
+      {/* Mobile Hamburger Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50 lg:hidden bg-white shadow-md"
+        onClick={() => setMobileOpen(true)}
+      >
+        <Menu className="h-6 w-6" />
+      </Button>
+
+      {/* Mobile Overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={cn(
+        "w-64 bg-white border-r border-gray-200 min-h-screen p-4 transition-transform duration-300 lg:relative lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-40",
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {/* Mobile Close Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 right-4 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          <X className="h-6 w-6" />
+        </Button>
+
+        <nav className="space-y-2 mt-12 lg:mt-0">
+          {menuItems.map(item => renderMenuItem(item))}
+        </nav>
+      </aside>
+    </>
   );
 }

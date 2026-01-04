@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Users } from "lucide-react";
+import cn from "classnames";
 
 export default function MessaggiPage() {
   const router = useRouter();
@@ -375,18 +376,18 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
         <Sidebar />
         
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
           
-          <div className="flex-1 flex overflow-hidden">
-            {/* Chat Sidebar */}
-            <div className={`
-              w-full md:w-80 border-r bg-background flex-shrink-0
-              ${selectedConvId ? "hidden md:flex" : "flex"}
-            `}>
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Chat Sidebar - Full width on mobile when no conversation selected */}
+            <div className={cn(
+              "w-full md:w-80 border-r bg-background flex-shrink-0 absolute md:relative inset-0 z-10 md:z-0",
+              selectedConvId ? "hidden md:flex" : "flex"
+            )}>
               <ChatSidebar
                 conversazioni={conversazioni}
                 selectedId={selectedConvId}
@@ -396,11 +397,11 @@ export default function MessaggiPage() {
               />
             </div>
 
-            {/* Chat Area */}
-            <div className={`
-              flex-1 bg-muted/10
-              ${selectedConvId ? "flex" : "hidden md:flex"}
-            `}>
+            {/* Chat Area - Full width on mobile when conversation selected */}
+            <div className={cn(
+              "flex-1 bg-muted/10 absolute md:relative inset-0 z-20 md:z-0",
+              selectedConvId ? "flex" : "hidden md:flex"
+            )}>
               {selectedConvId ? (
                 <ChatArea
                   conversazioneId={selectedConvId}
@@ -427,13 +428,13 @@ export default function MessaggiPage() {
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                   </div>
-                  <p>Seleziona una conversazione per iniziare</p>
+                  <p className="text-center px-4">Seleziona una conversazione per iniziare</p>
                 </div>
               )}
             </div>
 
-            {/* Alert Scadenze Sidebar */}
-            <div className="hidden lg:block w-80 border-l bg-background p-4 overflow-y-auto">
+            {/* Alert Scadenze Sidebar - Hidden on mobile */}
+            <div className="hidden xl:block w-80 border-l bg-background p-4 overflow-y-auto">
               <AlertScadenze
                 scadenze={scadenzeAlert}
                 isPartner={isPartner}
@@ -447,7 +448,7 @@ export default function MessaggiPage() {
 
       {/* New Chat Dialog */}
       <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
             <DialogTitle>Nuova Conversazione</DialogTitle>
           </DialogHeader>

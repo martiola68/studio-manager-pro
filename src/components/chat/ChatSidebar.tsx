@@ -93,10 +93,10 @@ export function ChatSidebar({
 
   return (
     <div className={cn("flex flex-col h-full border-r bg-background", className)}>
-      <div className="p-4 border-b space-y-4">
+      <div className="p-3 md:p-4 border-b space-y-3 md:space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Messaggi</h2>
-          <Button size="icon" variant="ghost" onClick={onNewChat}>
+          <h2 className="text-lg md:text-xl font-bold">Messaggi</h2>
+          <Button size="icon" variant="ghost" onClick={onNewChat} className="shrink-0">
             <Plus className="h-5 w-5" />
           </Button>
         </div>
@@ -104,7 +104,7 @@ export function ChatSidebar({
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Cerca conversazione..."
-            className="pl-8"
+            className="pl-8 h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -126,11 +126,11 @@ export function ChatSidebar({
                   key={conv.id}
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg text-left transition-colors hover:bg-accent",
+                    "flex items-start gap-3 p-3 rounded-lg text-left transition-colors hover:bg-accent active:bg-accent/80 touch-manipulation",
                     selectedId === conv.id && "bg-accent"
                   )}
                 >
-                  <Avatar>
+                  <Avatar className="shrink-0">
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {displayInfo.isGroup ? (
                         <Users className="h-4 w-4" />
@@ -140,18 +140,18 @@ export function ChatSidebar({
                     </AvatarFallback>
                   </Avatar>
                   
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold truncate text-sm flex items-center gap-1">
-                        {displayInfo.nome}
+                  <div className="flex-1 overflow-hidden min-w-0">
+                    <div className="flex items-center justify-between mb-1 gap-2">
+                      <span className="font-semibold truncate text-sm flex items-center gap-1 flex-1 min-w-0">
+                        <span className="truncate">{displayInfo.nome}</span>
                         {displayInfo.isGroup && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground shrink-0">
                             ({conv.partecipanti?.length || 0})
                           </span>
                         )}
                       </span>
                       {conv.ultimo_messaggio && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                           {formatDistanceToNow(new Date(conv.ultimo_messaggio.created_at!), {
                             addSuffix: false,
                             locale: it,
@@ -160,9 +160,9 @@ export function ChatSidebar({
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <p className={cn(
-                        "text-xs truncate max-w-[180px]",
+                        "text-xs truncate flex-1 min-w-0",
                         (conv.non_letti || 0) > 0 ? "font-bold text-foreground" : "text-muted-foreground"
                       )}>
                         {conv.ultimo_messaggio?.testo || "Nessun messaggio"}
