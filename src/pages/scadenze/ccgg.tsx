@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -187,194 +186,188 @@ export default function ScadenzeCCGGPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-full mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Scadenzario CCGG</h1>
-              <p className="text-gray-500 mt-1">Gestione contributi previdenziali</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Organi Sociali</h1>
+          <p className="text-gray-500 mt-1">Gestione scadenze Cariche Sociali (CCGG)</p>
+        </div>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Cerca Nominativo</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Filtri e Ricerca</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Cerca Nominativo</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Cerca..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
+            <div className="space-y-2">
+              <Label>Utente Operatore</Label>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                  <div className="space-y-2">
-                    <Label>Utente Operatore</Label>
-                    <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tutti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Tutti</SelectItem>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Utente Professionista</Label>
-                    <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tutti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Tutti</SelectItem>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
-                        <TableHead className="min-w-[150px]">Professionista</TableHead>
-                        <TableHead className="min-w-[150px]">Operatore</TableHead>
-                        <TableHead className="text-center min-w-[140px]">Importo Calcolato</TableHead>
-                        <TableHead className="text-center min-w-[120px]">F24 Generato</TableHead>
-                        <TableHead className="text-center min-w-[140px]">F24 Comunicato</TableHead>
-                        <TableHead className="text-center min-w-[140px]">Data Comunicato</TableHead>
-                        <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
-                        <TableHead className="min-w-[200px]">Note</TableHead>
-                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredScadenze.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                            Nessuna scadenza trovata
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredScadenze.map((scadenza) => {
-                          const isConfermata = scadenza.conferma_riga || false;
-                          const isF24Comunicato = scadenza.f24_comunicato || false;
-                          
-                          return (
-                            <TableRow 
-                              key={scadenza.id}
-                              className={isConfermata ? "bg-green-50" : "bg-white hover:bg-gray-50"}
-                            >
-                              <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
-                                {scadenza.nominativo}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {getUtenteNome(scadenza.utente_professionista_id)}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {getUtenteNome(scadenza.utente_operatore_id)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={scadenza.importo_calcolato || false}
-                                  onChange={() => handleToggleField(scadenza.id, "importo_calcolato", scadenza.importo_calcolato)}
-                                  className="rounded w-4 h-4 cursor-pointer"
-                                  disabled={isConfermata}
-                                />
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={scadenza.f24_generato || false}
-                                  onChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
-                                  className="rounded w-4 h-4 cursor-pointer"
-                                  disabled={isConfermata}
-                                />
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={isF24Comunicato}
-                                  onChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
-                                  className="rounded w-4 h-4 cursor-pointer"
-                                  disabled={isConfermata}
-                                />
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Input
-                                  type="date"
-                                  value={scadenza.data_comunicato || ""}
-                                  onChange={(e) => handleUpdateField(scadenza.id, "data_comunicato", e.target.value)}
-                                  className="w-36 text-xs"
-                                  disabled={!isF24Comunicato || isConfermata}
-                                />
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Button
-                                  variant={isConfermata ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                                  className="w-full"
-                                >
-                                  {isConfermata ? "✓ Chiusa" : "○ Aperta"}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <Textarea
-                                  value={scadenza.note || ""}
-                                  onChange={(e) => handleUpdateField(scadenza.id, "note", e.target.value)}
-                                  className="min-h-[60px] text-xs"
-                                  disabled={isConfermata}
-                                  placeholder="Note..."
-                                />
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDelete(scadenza.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-2">
+              <Label>Utente Professionista</Label>
+              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </main>
-      </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                <TableRow>
+                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                  <TableHead className="min-w-[150px]">Professionista</TableHead>
+                  <TableHead className="min-w-[150px]">Operatore</TableHead>
+                  <TableHead className="text-center min-w-[140px]">Importo Calcolato</TableHead>
+                  <TableHead className="text-center min-w-[120px]">F24 Generato</TableHead>
+                  <TableHead className="text-center min-w-[140px]">F24 Comunicato</TableHead>
+                  <TableHead className="text-center min-w-[140px]">Data Comunicato</TableHead>
+                  <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
+                  <TableHead className="min-w-[200px]">Note</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredScadenze.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                      Nessuna scadenza trovata
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredScadenze.map((scadenza) => {
+                    const isConfermata = scadenza.conferma_riga || false;
+                    const isF24Comunicato = scadenza.f24_comunicato || false;
+                    
+                    return (
+                      <TableRow 
+                        key={scadenza.id}
+                        className={isConfermata ? "bg-green-50" : "bg-white hover:bg-gray-50"}
+                      >
+                        <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                          {scadenza.nominativo}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {getUtenteNome(scadenza.utente_professionista_id)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {getUtenteNome(scadenza.utente_operatore_id)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.importo_calcolato || false}
+                            onChange={() => handleToggleField(scadenza.id, "importo_calcolato", scadenza.importo_calcolato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.f24_generato || false}
+                            onChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={isF24Comunicato}
+                            onChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Input
+                            type="date"
+                            value={scadenza.data_comunicato || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "data_comunicato", e.target.value)}
+                            className="w-36 text-xs"
+                            disabled={!isF24Comunicato || isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant={isConfermata ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                            className="w-full"
+                          >
+                            {isConfermata ? "✓ Chiusa" : "○ Aperta"}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Textarea
+                            value={scadenza.note || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "note", e.target.value)}
+                            className="min-h-[60px] text-xs"
+                            disabled={isConfermata}
+                            placeholder="Note..."
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(scadenza.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

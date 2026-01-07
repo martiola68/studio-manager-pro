@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText } from "lucide-react";
+import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
@@ -47,6 +45,7 @@ export default function CalendarioScadenzePage() {
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaConUrgenza[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("tutti");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -220,191 +219,177 @@ export default function CalendarioScadenzePage() {
         <title>Calendario Scadenze - Studio Manager Pro</title>
       </Head>
 
-      <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-        <Sidebar />
-        
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto">
-              {/* Header */}
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  Calendario Scadenze
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Vista cronologica di tutte le scadenze configurate
-                </p>
-              </div>
-
-              {/* Statistiche */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Totale Scadenze
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{scadenzeFiltrate.length}</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-red-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-red-600 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      Scadute
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {scadenzeScadute.length}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-orange-600 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      Prossimi 7 giorni
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-orange-600">
-                      {scadenze7Giorni.length}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-yellow-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-yellow-600 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Prossimi 30 giorni
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600">
-                      {scadenze30Giorni.length}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Filtro Tipo */}
-              <div className="mb-6">
-                <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Filtra per tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIPI_SCADENZA_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Lista Scadenze */}
-              {scadenzeFiltrate.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Nessuna scadenza trovata
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {filtroTipo === "tutti"
-                      ? "Vai in Impostazioni > Tipi Scadenze per configurare le prime scadenze"
-                      : "Nessuna scadenza configurata per questo tipo"}
-                  </p>
-                  {filtroTipo === "tutti" && (
-                    <Button
-                      className="mt-4"
-                      onClick={() => router.push("/impostazioni/tipi-scadenze")}
-                    >
-                      Configura Scadenze
-                    </Button>
-                  )}
-                </Card>
-              ) : (
-                <div className="space-y-8">
-                  {/* Scadute */}
-                  {scadenzeScadute.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                        <h2 className="text-xl font-bold text-red-600">
-                          Scadute ({scadenzeScadute.length})
-                        </h2>
-                      </div>
-                      <div className="space-y-3">
-                        {scadenzeScadute.map((scadenza) => (
-                          <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Prossimi 7 giorni */}
-                  {scadenze7Giorni.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <Clock className="w-5 h-5 text-orange-600" />
-                        <h2 className="text-xl font-bold text-orange-600">
-                          Prossimi 7 giorni ({scadenze7Giorni.length})
-                        </h2>
-                      </div>
-                      <div className="space-y-3">
-                        {scadenze7Giorni.map((scadenza) => (
-                          <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Prossimi 30 giorni */}
-                  {scadenze30Giorni.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <CheckCircle2 className="w-5 h-5 text-yellow-600" />
-                        <h2 className="text-xl font-bold text-yellow-600">
-                          Prossimi 30 giorni ({scadenze30Giorni.length})
-                        </h2>
-                      </div>
-                      <div className="space-y-3">
-                        {scadenze30Giorni.map((scadenza) => (
-                          <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Oltre 30 giorni */}
-                  {scadenzeOltre30.length > 0 && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-4">
-                        <Calendar className="w-5 h-5 text-green-600" />
-                        <h2 className="text-xl font-bold text-green-600">
-                          Oltre 30 giorni ({scadenzeOltre30.length})
-                        </h2>
-                      </div>
-                      <div className="space-y-3">
-                        {scadenzeOltre30.map((scadenza) => (
-                          <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </main>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Calendario Scadenze</h1>
+            <p className="text-gray-500 mt-1">Gestione scadenze personalizzate e varie</p>
+          </div>
+          <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuova Scadenza
+          </Button>
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Totale Scadenze
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{scadenzeFiltrate.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-600 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Scadute
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {scadenzeScadute.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-600 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Prossimi 7 giorni
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {scadenze7Giorni.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-yellow-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-600 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Prossimi 30 giorni
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">
+              {scadenze30Giorni.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mb-6">
+          <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="Filtra per tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {TIPI_SCADENZA_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {scadenzeFiltrate.length === 0 ? (
+          <Card className="p-12 text-center">
+            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Nessuna scadenza trovata
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {filtroTipo === "tutti"
+                ? "Vai in Impostazioni > Tipi Scadenze per configurare le prime scadenze"
+                : "Nessuna scadenza configurata per questo tipo"}
+            </p>
+            {filtroTipo === "tutti" && (
+              <Button
+                className="mt-4"
+                onClick={() => router.push("/impostazioni/tipi-scadenze")}
+              >
+                Configura Scadenze
+              </Button>
+            )}
+          </Card>
+        ) : (
+          <div className="space-y-8">
+            {/* Scadute */}
+            {scadenzeScadute.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  <h2 className="text-xl font-bold text-red-600">
+                    Scadute ({scadenzeScadute.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {scadenzeScadute.map((scadenza) => (
+                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prossimi 7 giorni */}
+            {scadenze7Giorni.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="w-5 h-5 text-orange-600" />
+                  <h2 className="text-xl font-bold text-orange-600">
+                    Prossimi 7 giorni ({scadenze7Giorni.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {scadenze7Giorni.map((scadenza) => (
+                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Prossimi 30 giorni */}
+            {scadenze30Giorni.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle2 className="w-5 h-5 text-yellow-600" />
+                  <h2 className="text-xl font-bold text-yellow-600">
+                    Prossimi 30 giorni ({scadenze30Giorni.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {scadenze30Giorni.map((scadenza) => (
+                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Oltre 30 giorni */}
+            {scadenzeOltre30.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Calendar className="w-5 h-5 text-green-600" />
+                  <h2 className="text-xl font-bold text-green-600">
+                    Oltre 30 giorni ({scadenzeOltre30.length})
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {scadenzeOltre30.map((scadenza) => (
+                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

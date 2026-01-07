@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -178,179 +177,173 @@ export default function ScadenzeProformaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-full mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Scadenzario Proforma</h1>
-              <p className="text-gray-500 mt-1">Gestione invii mensili Proforma</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Proforma</h1>
+          <p className="text-gray-500 mt-1">Gestione avvisi di parcella e fatturazione</p>
+        </div>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Cerca Nominativo</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Filtri e Ricerca</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Cerca Nominativo</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Cerca..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
+            <div className="space-y-2">
+              <Label>Utente Operatore</Label>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                  <div className="space-y-2">
-                    <Label>Utente Operatore</Label>
-                    <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tutti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Tutti</SelectItem>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Utente Professionista</Label>
-                    <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tutti" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Tutti</SelectItem>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
-                        <TableHead className="min-w-[150px]">Professionista</TableHead>
-                        <TableHead className="min-w-[150px]">Operatore</TableHead>
-                        {MESI.map((mese) => (
-                          <TableHead key={mese.field} className="text-center min-w-[80px]">
-                            {mese.nome}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredScadenze.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={16} className="text-center py-8 text-gray-500">
-                            Nessuna scadenza trovata
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredScadenze.map((scadenza) => (
-                          <TableRow key={scadenza.id}>
-                            <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
-                              {scadenza.nominativo}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {getUtenteNome(scadenza.utente_professionista_id)}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {getUtenteNome(scadenza.utente_operatore_id)}
-                            </TableCell>
-                            
-                            {MESI.map((mese) => {
-                              const meseValue = scadenza[mese.field as keyof ScadenzaProforma] as boolean | null;
-                              
-                              return (
-                                <TableCell 
-                                  key={mese.field} 
-                                  className={`text-center ${meseValue ? 'bg-green-50' : ''}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={meseValue || false}
-                                    onChange={() => handleToggleMese(scadenza.id, mese.field, meseValue)}
-                                    className="rounded w-4 h-4 cursor-pointer"
-                                    title={`Invio ${mese.nome}`}
-                                  />
-                                </TableCell>
-                              );
-                            })}
-                            
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(scadenza.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Legenda */}
-            <Card className="mt-4">
-              <CardContent className="py-4">
-                <div className="space-y-3">
-                  <div className="font-semibold text-gray-900 mb-2">📋 Legenda Scadenzario Proforma:</div>
-                  
-                  <div className="text-sm text-gray-700">
-                    <p className="mb-2">Struttura semplificata: <strong>solo flag di invio per ogni mese</strong></p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Checkbox = Invio effettuato per quel mese</li>
-                      <li>Sfondo verde = Mesi con invio completato</li>
-                      <li>Sfondo bianco = Mesi senza invio</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 text-sm pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-green-50 border border-green-200 rounded"></div>
-                      <span>Invio Effettuato (verde chiaro)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
-                      <span>Nessun Invio (bianco)</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-2">
+              <Label>Utente Professionista</Label>
+              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </main>
-      </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                <TableRow>
+                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                  <TableHead className="min-w-[150px]">Professionista</TableHead>
+                  <TableHead className="min-w-[150px]">Operatore</TableHead>
+                  {MESI.map((mese) => (
+                    <TableHead key={mese.field} className="text-center min-w-[80px]">
+                      {mese.nome}
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredScadenze.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={16} className="text-center py-8 text-gray-500">
+                      Nessuna scadenza trovata
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredScadenze.map((scadenza) => (
+                    <TableRow key={scadenza.id}>
+                      <TableCell className="font-medium sticky left-0 bg-white z-10 border-r">
+                        {scadenza.nominativo}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {getUtenteNome(scadenza.utente_professionista_id)}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {getUtenteNome(scadenza.utente_operatore_id)}
+                      </TableCell>
+                      
+                      {MESI.map((mese) => {
+                        const meseValue = scadenza[mese.field as keyof ScadenzaProforma] as boolean | null;
+                        
+                        return (
+                          <TableCell 
+                            key={mese.field} 
+                            className={`text-center ${meseValue ? 'bg-green-50' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={meseValue || false}
+                              onChange={() => handleToggleMese(scadenza.id, mese.field, meseValue)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                              title={`Invio ${mese.nome}`}
+                            />
+                          </TableCell>
+                        );
+                      })}
+                      
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(scadenza.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Legenda */}
+      <Card className="mt-4">
+        <CardContent className="py-4">
+          <div className="space-y-3">
+            <div className="font-semibold text-gray-900 mb-2">📋 Legenda Scadenzario Proforma:</div>
+            
+            <div className="text-sm text-gray-700">
+              <p className="mb-2">Struttura semplificata: <strong>solo flag di invio per ogni mese</strong></p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Checkbox = Invio effettuato per quel mese</li>
+                <li>Sfondo verde = Mesi con invio completato</li>
+                <li>Sfondo bianco = Mesi senza invio</li>
+              </ul>
+            </div>
+            
+            <div className="flex items-center gap-6 text-sm pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-50 border border-green-200 rounded"></div>
+                <span>Invio Effettuato (verde chiaro)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-white border border-gray-200 rounded"></div>
+                <span>Nessun Invio (bianco)</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
