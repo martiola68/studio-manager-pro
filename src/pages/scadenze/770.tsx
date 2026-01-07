@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
+// Force rebuild - Fix Vercel deployment issue
+
 type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
