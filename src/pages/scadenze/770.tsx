@@ -53,11 +53,17 @@ export default function Scadenze770Page() {
   const [filtroStato, setFiltroStato] = useState<string>("tutti");
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    cliente_id: string;
+    anno: number;
+    data_scadenza: string;
+    stato: "da_fare" | "in_lavorazione" | "completato";
+    note: string;
+  }>({
     cliente_id: "",
     anno: annoCorrente,
     data_scadenza: "",
-    stato: "da_fare" as const,
+    stato: "da_fare",
     note: "",
   });
 
