@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-// Force rebuild - Fix Vercel deployment issue
+// Force rebuild - Fix TypeScript error on Vercel
+// This file does NOT use <Sidebar /> component - it's handled by _app.tsx layout
 
 type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
