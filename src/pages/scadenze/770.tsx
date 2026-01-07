@@ -15,6 +15,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 // Force rebuild - Fix TypeScript error on Vercel
 // This file does NOT use <Sidebar /> component - it's handled by _app.tsx layout
+// Updated: 2026-01-07 - Force Sync
 
 type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
