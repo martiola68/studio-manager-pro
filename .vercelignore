@@ -1,0 +1,2 @@
+# Force Vercel to rebuild completely and ignore cache
+# This file helps resolve phantom TypeScript errors
