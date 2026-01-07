@@ -1,2 +1,18 @@
-# Force Vercel to rebuild completely and ignore cache
-# This file helps resolve phantom TypeScript errors
+# Ignore Supabase Edge Functions (Deno runtime, not Next.js)
+supabase/
+
+# Ignore build artifacts
+.next/
+node_modules/
+.vercel/
+
+# Ignore uploads folder
+uploads/
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore environment files (handled by Vercel env vars)
+.env.local
+.env*.local
