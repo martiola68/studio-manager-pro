@@ -112,6 +112,47 @@ export type Database = {
         }
         Relationships: []
       }
+      scadenze_770: {
+        Row: {
+          anno: number
+          cliente_id: string
+          created_at: string | null
+          data_scadenza: string
+          id: string
+          note: string | null
+          stato: string
+          updated_at: string | null
+        }
+        Insert: {
+          anno: number
+          cliente_id: string
+          created_at?: string | null
+          data_scadenza: string
+          id?: string
+          note?: string | null
+          stato: string
+          updated_at?: string | null
+        }
+        Update: {
+          anno?: number
+          cliente_id?: string
+          created_at?: string | null
+          data_scadenza?: string
+          id?: string
+          note?: string | null
+          stato?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scadenze_770_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbagenda: {
         Row: {
           cliente_id: string | null

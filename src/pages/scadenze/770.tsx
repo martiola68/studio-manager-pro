@@ -73,11 +73,11 @@ export default function Scadenze770Page() {
         .from("scadenze_770")
         .select(`
           *,
-          clienti (
+          tbclienti!scadenze_770_cliente_id_fkey (
             id,
-            ragione_sociale,
-            codice_fiscale,
-            partita_iva
+            RagioneSociale,
+            CodiceFiscale,
+            PartitaIva
           )
         `)
         .eq("anno", filtroAnno)
@@ -91,12 +91,12 @@ export default function Scadenze770Page() {
 
       if (error) throw error;
 
-      const scadenzeConClienti = (data || []).map((s) => ({
+      const scadenzeConClienti = (data || []).map((s: any) => ({
         ...s,
-        cliente: Array.isArray(s.clienti) ? s.clienti[0] : s.clienti,
+        cliente: Array.isArray(s.tbclienti) ? s.tbclienti[0] : s.tbclienti,
       }));
 
-      setScadenze(scadenzeConClienti);
+      setScadenze(scadenzeConClienti as Scadenza770[]);
     } catch (error: any) {
       console.error("Errore nel caricamento delle scadenze 770:", error);
       toast({
@@ -205,7 +205,7 @@ export default function Scadenze770Page() {
       cliente_id: "",
       anno: annoCorrente,
       data_scadenza: "",
-      stato: "da_fare",
+      stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
       note: "",
     });
   };
@@ -437,7 +437,7 @@ export default function Scadenze770Page() {
                   scadenze.map((scadenza) => (
                     <TableRow key={scadenza.id}>
                       <TableCell className="font-medium">
-                        {scadenza.cliente?.ragione_sociale || "N/D"}
+                        {scadenza.cliente?.RagioneSociale || "N/D"}
                       </TableCell>
                       <TableCell>{scadenza.anno}</TableCell>
                       <TableCell>
