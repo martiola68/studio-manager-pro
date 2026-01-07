@@ -32,11 +32,14 @@ interface MenuItem {
 }
 
 interface SidebarProps {
-  mobileOpen: boolean;
-  onClose: () => void;
+  mobileOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
+export function Sidebar({ 
+  mobileOpen = false, 
+  onClose = () => {} 
+}: SidebarProps) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
