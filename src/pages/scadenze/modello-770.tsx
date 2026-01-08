@@ -27,9 +27,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Filter } from "lucide-react";
+import { Edit, Trash2, Filter, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
@@ -38,11 +37,6 @@ type Scadenza770 = Database["public"]["Tables"]["scadenze_770"]["Row"] & {
   tbclienti?: {
     ragione_sociale: string;
   };
-};
-
-type Cliente = {
-  id: string;
-  ragione_sociale: string;
 };
 
 export default function Scadenze770Page() {
@@ -63,6 +57,11 @@ export default function Scadenze770Page() {
     cliente_id: "",
     anno: new Date().getFullYear(),
     data_scadenza: "",
+    stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
+    note: "",
+  });
+
+  const [editFormData, setEditFormData] = useState({
     stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
     note: "",
   });
@@ -105,17 +104,8 @@ export default function Scadenze770Page() {
   const fetchData = async () => {
     if (!currentUser) return;
     setLoading(true);
-    await Promise.all([fetchScadenze(), fetchClienti()]);
+    await fetchScadenze();
     setLoading(false);
-  };
-
-  const fetchClienti = async () => {
-    const { data } = await supabase
-      .from("tbclienti")
-      .select("id, ragione_sociale")
-      .eq("flag_770", true)
-      .order("ragione_sociale");
-    setClienti(data || []);
   };
 
   const fetchScadenze = async () => {
@@ -156,48 +146,31 @@ export default function Scadenze770Page() {
     setFilteredScadenze(filtered);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentUser) {
-      toast({ title: "Errore", description: "Utente non autenticato", variant: "destructive" });
-      return;
-    }
+    if (!editingScadenza) return;
 
     try {
-      const scadenzaData = {
-        cliente_id: formData.cliente_id,
-        anno: formData.anno,
-        data_scadenza: formData.data_scadenza,
-        stato: formData.stato,
-        note: formData.note,
-      };
+      const { error } = await supabase
+        .from("scadenze_770")
+        .update({
+          stato: editFormData.stato,
+          note: editFormData.note,
+        })
+        .eq("id", editingScadenza.id);
 
-      if (editingScadenza) {
-        const { error } = await supabase
-          .from("scadenze_770")
-          .update(scadenzaData)
-          .eq("id", editingScadenza.id);
-
-        if (error) throw error;
-        toast({ title: "Successo", description: "Scadenza aggiornata" });
-      } else {
-        const { error } = await supabase
-          .from("scadenze_770")
-          .insert(scadenzaData);
-
-        if (error) throw error;
-        toast({ title: "Successo", description: "Scadenza creata" });
-      }
-
+      if (error) throw error;
+      
+      toast({ title: "Successo", description: "Scadenza aggiornata" });
       setShowDialog(false);
-      resetForm();
+      setEditingScadenza(null);
       fetchScadenze();
     } catch (error: any) {
-      console.error("Errore salvataggio:", error);
+      console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: error.message || "Errore nel salvataggio",
+        description: error.message || "Errore nell'aggiornamento",
         variant: "destructive",
       });
     }
@@ -293,99 +266,76 @@ export default function Scadenze770Page() {
               Gestione delle scadenze per il Modello 770
             </p>
           </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nuova Scadenza
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingScadenza ? "Modifica Scadenza 770" : "Nuova Scadenza 770"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="cliente">Cliente *</Label>
-                  <Select
-                    value={formData.cliente_id}
-                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona un cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clienti.map((cliente) => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.ragione_sociale}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="anno">Anno *</Label>
-                  <Input
-                    id="anno"
-                    type="number"
-                    value={formData.anno}
-                    onChange={(e) => setFormData({ ...formData, anno: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="data_scadenza">Data Scadenza *</Label>
-                  <Input
-                    id="data_scadenza"
-                    type="date"
-                    value={formData.data_scadenza}
-                    onChange={(e) => setFormData({ ...formData, data_scadenza: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stato">Stato *</Label>
-                  <Select
-                    value={formData.stato}
-                    onValueChange={(value: "da_fare" | "in_lavorazione" | "completato") =>
-                      setFormData({ ...formData, stato: value })
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="da_fare">Da Fare</SelectItem>
-                      <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
-                      <SelectItem value="completato">Completato</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="note">Note</Label>
-                  <Input
-                    id="note"
-                    value={formData.note}
-                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                    placeholder="Note aggiuntive"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                    Annulla
-                  </Button>
-                  <Button type="submit">
-                    {editingScadenza ? "Aggiorna" : "Crea"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Modifica Scadenza 770</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <Label>Cliente</Label>
+                <Input
+                  value={editingScadenza?.tbclienti?.ragione_sociale || "N/D"}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label>Anno</Label>
+                <Input
+                  value={editingScadenza?.anno || ""}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label>Data Scadenza</Label>
+                <Input
+                  value={editingScadenza?.data_scadenza || ""}
+                  disabled
+                  className="bg-gray-50"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_stato">Stato *</Label>
+                <Select
+                  value={editFormData.stato}
+                  onValueChange={(value: "da_fare" | "in_lavorazione" | "completato") =>
+                    setEditFormData({ ...editFormData, stato: value })
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="da_fare">Da Fare</SelectItem>
+                    <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
+                    <SelectItem value="completato">Completato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit_note">Note</Label>
+                <Input
+                  id="edit_note"
+                  value={editFormData.note}
+                  onChange={(e) => setEditFormData({ ...editFormData, note: e.target.value })}
+                  placeholder="Note aggiuntive"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                  Annulla
+                </Button>
+                <Button type="submit">Aggiorna</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Card className="mb-6">
           <CardHeader>
