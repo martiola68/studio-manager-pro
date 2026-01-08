@@ -284,7 +284,9 @@ export default function MessaggiPage() {
   };
 
   const createGroupChat = async () => {
-    if (!authUserId || !studioId || !groupTitle.trim() || selectedMembers.length < 2) {
+    const trimmedTitle = groupTitle?.trim() || "";
+    
+    if (!authUserId || !studioId || !trimmedTitle || selectedMembers.length < 2) {
       toast({
         variant: "destructive",
         title: "Errore",
@@ -299,7 +301,7 @@ export default function MessaggiPage() {
         : [authUserId, ...selectedMembers];
 
       const conv = await messaggioService.creaConversazioneGruppo(
-        groupTitle.trim(),
+        trimmedTitle,
         authUserId,
         studioId,
         allMembers
@@ -314,7 +316,7 @@ export default function MessaggiPage() {
         
         toast({
           title: "Gruppo creato",
-          description: `Il gruppo "${groupTitle}" è stato creato con successo.`,
+          description: `Il gruppo "${trimmedTitle}" è stato creato con successo.`,
         });
       }
     } catch (error) {

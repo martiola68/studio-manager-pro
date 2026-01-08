@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
+import { authService } from "@/services/authService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ export default function PrestazioniPage() {
   const checkAuthAndLoad = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!session || !session.user.email) {
         router.push("/login");
         return;
       }
