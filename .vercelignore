@@ -1,18 +1,11 @@
-# Ignore Supabase Edge Functions (Deno runtime, not Next.js)
+# Ignore Supabase Edge Functions during Vercel build
 supabase/
+supabase/**/*
 
-# Ignore build artifacts
-.next/
+# Ignore other development files
 node_modules/
-.vercel/
-
-# Ignore uploads folder
-uploads/
-
-# Ignore logs
-logs/
+.next/
+.git/
 *.log
-
-# Ignore environment files (handled by Vercel env vars)
-.env.local
 .env*.local
+.DS_Store
