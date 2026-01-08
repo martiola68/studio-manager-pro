@@ -198,7 +198,9 @@ export default function MessaggiPage() {
               await messaggioService.segnaComeLetto(convId, currentUserId);
             }
           }
-          loadConversazioni(currentUserId);
+          if (currentUserId) {
+            loadConversazioni(currentUserId);
+          }
         }
       )
       .subscribe();
