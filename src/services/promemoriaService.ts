@@ -14,13 +14,13 @@ export const promemoriaService = {
       .from("tbpromemoria")
       .select(`
         *,
-        tbtipopromemoria!tbpromemoria_tipologia_id_fkey (
+        tbtipopromemoria (
           id,
           nome,
           descrizione,
           colore
         ),
-        tbutenti!tbpromemoria_operatore_id_fkey (
+        tbutenti (
           id,
           nome,
           cognome,
@@ -51,7 +51,7 @@ export const promemoriaService = {
       .from("tbpromemoria")
       .select(`
         *,
-        tbtipopromemoria!tbpromemoria_tipologia_id_fkey (
+        tbtipopromemoria (
           id,
           nome,
           descrizione,
@@ -59,7 +59,7 @@ export const promemoriaService = {
         )
       `)
       .eq("operatore_id", utenteId)
-      .eq("working_progress", "in_lavorazione")
+      .eq("working_progress", "In lavorazione")
       .gte("data_scadenza", oggi)
       .lte("data_scadenza", traSetteGiorni)
       .order("data_scadenza", { ascending: true });
@@ -162,7 +162,7 @@ export const promemoriaService = {
     const promemoria = data || [];
     return {
       totali: promemoria.length,
-      inLavorazione: promemoria.filter((p) => p.working_progress === "in_lavorazione")
+      inLavorazione: promemoria.filter((p) => p.working_progress === "In lavorazione")
         .length,
       conclusi: promemoria.filter((p) => p.working_progress === "Concluso").length,
       daFatturare: promemoria.filter(
