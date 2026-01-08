@@ -198,8 +198,9 @@ export default function MessaggiPage() {
               await messaggioService.segnaComeLetto(convId, currentUserId);
             }
           }
+          // Use conditional call to avoid null issues
           if (currentUserId) {
-            loadConversazioni(currentUserId);
+            loadConversazioni(currentUserId as string);
           }
         }
       )
