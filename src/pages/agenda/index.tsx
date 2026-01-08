@@ -20,10 +20,10 @@ type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const SALE_CONFIG: Record<string, { nome: string; bordoColore: string | null }> = {
-  "A": { nome: "Sala Riunioni Grande", bordoColore: "#000000" },
-  "B": { nome: "Sala Briefing", bordoColore: "#EF4444" },
-  "C": { nome: "In Stanza", bordoColore: null }
+const SALE_CONFIG: Record<string, { nome: string; colore: string }> = {
+  "A": { nome: "Sala Riunioni Grande", colore: "#3B82F6" },
+  "B": { nome: "Sala Briefing", colore: "#10B981" },
+  "C": { nome: "In Stanza", colore: "#F59E0B" }
 };
 
 export default function AgendaPage() {
@@ -104,9 +104,13 @@ export default function AgendaPage() {
     }
   };
 
-  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean): string => {
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null): string => {
     if (eventoGenerico) {
       return "#3B82F6";
+    }
+    
+    if (inSede && sala && SALE_CONFIG[sala]) {
+      return SALE_CONFIG[sala].colore;
     }
     return inSede ? "#10B981" : "#EF4444";
   };
@@ -170,7 +174,7 @@ export default function AgendaPage() {
     }
 
     try {
-      const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
+      const colore = getColoreEvento(formData.evento_generico, formData.in_sede, formData.sala);
 
       const partecipantiFinal = formData.invia_a_tutti 
         ? utenti.map(u => u.id)
@@ -1104,7 +1108,6 @@ export default function AgendaPage() {
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
                         const salaBadge = evento.in_sede && evento.sala ? `[${evento.sala}] ` : "";
-                        const bordoColore = evento.in_sede && evento.sala ? getBordoStanza(evento.sala) : null;
                         
                         return (
                           <div
@@ -1113,8 +1116,7 @@ export default function AgendaPage() {
                             className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
                             style={{ 
                               backgroundColor: evento.colore || "#3B82F6",
-                              color: "white",
-                              border: bordoColore ? `2px solid ${bordoColore}` : "none"
+                              color: "white"
                             }}
                             title={`${responsabile} - ${evento.titolo}`}
                           >
@@ -1205,9 +1207,7 @@ export default function AgendaPage() {
                                 className="w-1 h-full rounded-full flex-shrink-0"
                                 style={{ 
                                   backgroundColor: evento.colore || "#3B82F6", 
-                                  minHeight: "60px",
-                                  border: bordoColore ? `3px solid ${bordoColore}` : "none",
-                                  boxSizing: "border-box"
+                                  minHeight: "60px"
                                 }}
                               ></div>
 
