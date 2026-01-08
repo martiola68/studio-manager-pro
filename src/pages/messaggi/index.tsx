@@ -299,7 +299,7 @@ export default function MessaggiPage() {
         : [authUserId, ...selectedMembers];
 
       const conv = await messaggioService.creaConversazioneGruppo(
-        groupTitle,
+        groupTitle.trim(),
         authUserId,
         studioId,
         allMembers

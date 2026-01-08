@@ -17,18 +17,18 @@ export default function ImpostazioniPage() {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      const authUser = await authService.getCurrentUser();
+      if (!authUser || !authUser.id) {
         router.push("/login");
         return;
       }
 
+      const profile = await authService.getUserProfile(authUser.id);
       // Verifica se è Admin
       const { data: utente } = await supabase
         .from("tbutenti")
         .select("tipo_utente")
-        .eq("email", session.user.email)
+        .eq("email", authUser.email)
         .single();
 
       if (utente?.tipo_utente !== "Admin") {
