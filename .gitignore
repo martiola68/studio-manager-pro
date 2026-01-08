@@ -35,9 +35,19 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Supabase Edge Functions - DO NOT COMMIT
-supabase/
-supabase/**
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/config.toml
 supabase/functions/
-supabase/functions/**/*
-**/supabase/functions/
+
+# Logs
+logs
+*.log
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
