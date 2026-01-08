@@ -166,8 +166,8 @@ export default function MessaggiPage() {
   const subscribeToChat = (convId: string) => {
     if (!authUserId) return;
     
-    // Capture user ID in a local const for the closure
-    const currentUserId = authUserId;
+    // Capture user ID in a local const for the closure and FORCE CAST it
+    const currentUserId = authUserId as string;
     
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
