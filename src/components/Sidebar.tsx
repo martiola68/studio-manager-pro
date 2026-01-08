@@ -133,7 +133,7 @@ export function Sidebar({
         { label: "IMU", href: "/scadenze/imu", icon: null },
         { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
         { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
-        { label: "770", href: "/scadenze/770", icon: null },
+        { label: "770", href: "/scadenze/modello-770", icon: null },
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
