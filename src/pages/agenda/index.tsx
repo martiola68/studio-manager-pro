@@ -100,11 +100,20 @@ export default function AgendaPage() {
     }
   };
 
-  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean): string => {
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null): string => {
     if (eventoGenerico) {
       return "#3B82F6";
     }
+    if (inSede && sala && SALE_CONFIG[sala as keyof typeof SALE_CONFIG]) {
+      return SALE_CONFIG[sala as keyof typeof SALE_CONFIG].colore;
+    }
     return inSede ? "#10B981" : "#EF4444";
+  };
+
+  const getSalaLabel = (sala: string | null): string => {
+    if (!sala) return "";
+    const config = SALE_CONFIG[sala as keyof typeof SALE_CONFIG];
+    return config ? `${sala} - ${config.nome}` : sala;
   };
 
   const generaFileICS = (evento: any): string => {
@@ -152,7 +161,6 @@ export default function AgendaPage() {
 
       const icsFile = generaFileICS(eventoData);
 
-      // Formatta date in italiano
       const dataInizioFormatted = new Date(eventoData.data_inizio).toLocaleString("it-IT", {
         weekday: "long",
         day: "numeric",
@@ -171,7 +179,6 @@ export default function AgendaPage() {
         minute: "2-digit"
       });
 
-      // Determina tipo evento
       let tipoEventoLabel = "";
       let tipoEventoIcon = "";
       if (!eventoData.cliente_id) {
@@ -185,7 +192,6 @@ export default function AgendaPage() {
         tipoEventoIcon = "🚗";
       }
 
-      // Costruisci corpo HTML professionale
       const corpoHTML = `
         <!DOCTYPE html>
         <html>
@@ -280,7 +286,7 @@ export default function AgendaPage() {
               <div class="info-section">
                 <div class="info-row">
                   <span class="info-label">🏢 Luogo:</span>
-                  <span class="info-value"><strong>In Sede - ${eventoData.sala}</strong></span>
+                  <span class="info-value"><strong>In Sede - ${getSalaLabel(eventoData.sala)}</strong></span>
                 </div>
               </div>
               ` : ""}
@@ -388,7 +394,7 @@ export default function AgendaPage() {
     }
 
     try {
-      const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
+      const colore = getColoreEvento(formData.evento_generico, formData.in_sede, formData.sala);
 
       const partecipantiFinal = formData.invia_a_tutti 
         ? utenti.map(u => u.id)
@@ -430,7 +436,6 @@ export default function AgendaPage() {
         });
       }
 
-      // Invia notifiche email
       if (!editingEvento && (partecipantiFinal.length > 0 || formData.utente_id || formData.cliente_id)) {
         try {
           console.log("🔍 DEBUG - Inizio invio notifiche email");
@@ -452,7 +457,7 @@ export default function AgendaPage() {
             eventoData: dataInizio.toISOString(),
             eventoOraInizio: dataInizio.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
             eventoOraFine: dataFine.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
-            eventoLuogo: formData.luogo || (formData.in_sede && formData.sala ? `Sede - ${formData.sala}` : undefined),
+            eventoLuogo: formData.luogo || (formData.in_sede && formData.sala ? `Sede - ${getSalaLabel(formData.sala)}` : undefined),
             eventoDescrizione: formData.descrizione || undefined,
             responsabileEmail: responsabile?.email || "",
             responsabileNome: responsabile ? `${responsabile.nome} ${responsabile.cognome}` : "Studio",
@@ -902,8 +907,16 @@ export default function AgendaPage() {
                         <span>Blu → Evento generico</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
+                        <span>Blu → Sala A (Riunioni Grande)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
-                        <span>Verde → In sede</span>
+                        <span>Verde → Sala B (Briefing)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#F59E0B" }}></div>
+                        <span>Arancione → Sala C (In Stanza)</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
@@ -1137,11 +1150,15 @@ export default function AgendaPage() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="hidden sm:inline">Generico</span>
+                <span className="hidden sm:inline">Generico/A</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="hidden sm:inline">In Sede</span>
+                <span className="hidden sm:inline">Sala B</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span className="hidden sm:inline">Sala C</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -1388,6 +1405,7 @@ export default function AgendaPage() {
                       const partecipanti = getPartecipantiEvento(evento);
                       const dataInizio = new Date(evento.data_inizio);
                       const dataFine = new Date(evento.data_fine);
+                      const salaLabel = getSalaLabel(evento.sala);
 
                       return (
                         <Card 
