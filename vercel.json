@@ -1,18 +1,23 @@
 {
-  "buildCommand": "npx next build",
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
   "installCommand": "npm install",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./supabase/",
-  "headers": [
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "builds": [
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
+      "src": "package.json",
+      "use": "@vercel/next"
     }
   ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  "env": {
+    "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+  },
+  "build": {
+    "env": {
+      "VERCEL_FORCE_NO_BUILD_CACHE": "1"
+    }
+  }
 }
