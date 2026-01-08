@@ -1,4 +1,3 @@
-Cache bust timestamp: 2026-01-08T08:07:24Z
-Force Vercel to rebuild without supabase/ directory
-Previous deployments had cached supabase/functions/ folder
-This file forces a clean rebuild
+Cache bust marker - Updated: 2026-01-08T09:20:04Z
+This file forces Vercel to invalidate build cache.
+Increment this number on each rebuild: 3

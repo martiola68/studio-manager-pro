@@ -1,11 +1,11 @@
-# Ignore Supabase Edge Functions during Vercel build
+# Ignore Supabase Edge Functions
 supabase/
 supabase/**/*
 
-# Ignore other development files
-node_modules/
-.next/
-.git/
-*.log
+# Ignore local development files
 .env*.local
-.DS_Store
+*.log
+logs/
+
+# Ignore uploads directory (user content)
+uploads/
