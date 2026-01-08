@@ -114,6 +114,11 @@ export default function AgendaPage() {
     return inSede ? "#10B981" : "#EF4444";
   };
 
+  const getBordoStanza = (sala: string | null): string | null => {
+    if (!sala || !SALE_CONFIG[sala]) return null;
+    return SALE_CONFIG[sala].bordoColore;
+  };
+
   const getSalaLabel = (sala: string | null): string => {
     if (!sala) return "";
     const config = SALE_CONFIG[sala];
@@ -674,27 +679,36 @@ export default function AgendaPage() {
                   </div>
 
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                    <p className="font-semibold mb-2">ℹ️ Colori automatici:</p>
+                    <p className="font-semibold mb-2">ℹ️ Sistema Colori:</p>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
-                        <span>Blu → Evento generico</span>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#3B82F6" }}></div>
+                        <span>🔵 Blu → Evento generico</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#3B82F6" }}></div>
-                        <span>Blu → Sala A (Riunioni Grande)</span>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#10B981" }}></div>
+                        <span>🟢 Verde → In sede</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#10B981" }}></div>
-                        <span>Verde → Sala B (Briefing)</span>
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#EF4444" }}></div>
+                        <span>🔴 Rosso → Fuori sede</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#F59E0B" }}></div>
-                        <span>Arancione → Sala C (In Stanza)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: "#EF4444" }}></div>
-                        <span>Rosso → Fuori sede</span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-blue-300">
+                      <p className="font-semibold mb-1">🏢 Stanze (bordi solo per verde/in sede):</p>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ border: "2px solid #000" }}></div>
+                          <span>Bordo nero → A - Sala Riunioni Grande</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ border: "2px solid #EF4444" }}></div>
+                          <span>Bordo rosso → B - Sala Briefing</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                          <span>Nessun bordo → C - In Stanza</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1096,6 +1110,7 @@ export default function AgendaPage() {
                     <div className="space-y-1">
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
+                        const salaBadge = evento.in_sede && evento.sala ? `[${evento.sala}] ` : "";
                         
                         return (
                           <div
@@ -1116,7 +1131,7 @@ export default function AgendaPage() {
                                 })}
                               </span>
                             )}
-                            {responsabile}
+                            {salaBadge}{responsabile}
                           </div>
                         );
                       })}
@@ -1180,6 +1195,7 @@ export default function AgendaPage() {
                       const dataInizio = new Date(evento.data_inizio);
                       const dataFine = new Date(evento.data_fine);
                       const salaLabel = getSalaLabel(evento.sala);
+                      const bordoColore = evento.in_sede && evento.sala ? getBordoStanza(evento.sala) : null;
 
                       return (
                         <Card 
@@ -1189,10 +1205,15 @@ export default function AgendaPage() {
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
-                              {/* Indicatore Colore */}
+                              {/* Indicatore Colore con Bordo */}
                               <div 
                                 className="w-1 h-full rounded-full flex-shrink-0"
-                                style={{ backgroundColor: evento.colore || "#3B82F6", minHeight: "60px" }}
+                                style={{ 
+                                  backgroundColor: evento.colore || "#3B82F6", 
+                                  minHeight: "60px",
+                                  border: bordoColore ? `3px solid ${bordoColore}` : "none",
+                                  boxSizing: "border-box"
+                                }}
                               ></div>
 
                               {/* Contenuto */}
