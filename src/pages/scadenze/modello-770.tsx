@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,9 +38,21 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
   tbtipi_scadenze?: Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
 };
 
+type Cliente = {
+  id: string;
+  ragione_sociale: string;
+};
+
+type TipoScadenza = {
+  id: string;
+  nome: string;
+};
+
 export default function Scadenze770Page() {
   const router = useRouter();
   const [scadenze, setScadenze] = useState<Scadenza770[]>([]);
+  const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [tipiScadenze, setTipiScadenze] = useState<TipoScadenza[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingScadenza, setEditingScadenza] = useState<Scadenza770 | null>(null);
@@ -41,7 +60,8 @@ export default function Scadenze770Page() {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    nominativo: "",
+    cliente_id: "",
+    nominativo: "", // Campo readonly popolato dalla scelta cliente
     tipo_scadenza_id: "",
     mod_inviato: false,
     note: "",
@@ -53,7 +73,7 @@ export default function Scadenze770Page() {
 
   useEffect(() => {
     if (currentUser) {
-      fetchScadenze();
+      fetchData();
     }
   }, [currentUser]);
 
@@ -78,12 +98,42 @@ export default function Scadenze770Page() {
     }
   };
 
-  const fetchScadenze = async () => {
+  const fetchData = async () => {
     if (!currentUser) return;
+    setLoading(true);
+    await Promise.all([fetchScadenze(), fetchClienti(), fetchTipiScadenze()]);
+    setLoading(false);
+  };
 
+  const fetchClienti = async () => {
+    const { data } = await supabase
+      .from("tbclienti")
+      .select("id, ragione_sociale")
+      .order("ragione_sociale");
+    setClienti(data || []);
+  };
+
+  const fetchTipiScadenze = async () => {
+    const { data } = await supabase
+      .from("tbtipi_scadenze")
+      .select("id, nome")
+      .eq("tipo_scadenza", "770") // Filtra solo tipi scadenza per 770
+      .order("nome");
+    
+    // Se non ci sono tipi specifici, prendi tutti o mostra avviso
+    if (!data || data.length === 0) {
+      const { data: allTypes } = await supabase
+        .from("tbtipi_scadenze")
+        .select("id, nome")
+        .order("nome");
+      setTipiScadenze(allTypes || []);
+    } else {
+      setTipiScadenze(data);
+    }
+  };
+
+  const fetchScadenze = async () => {
     try {
-      setLoading(true);
-
       const { data, error } = await supabase
         .from("tbscad770")
         .select(`
@@ -107,21 +157,29 @@ export default function Scadenze770Page() {
         description: "Impossibile caricare le scadenze 770",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleClienteChange = (clienteId: string) => {
+    const cliente = clienti.find(c => c.id === clienteId);
+    setFormData({
+      ...formData,
+      cliente_id: clienteId,
+      nominativo: cliente?.ragione_sociale || ""
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentUser) {
-      toast({
-        title: "Errore",
-        description: "Utente non autenticato",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: "Utente non autenticato", variant: "destructive" });
       return;
+    }
+
+    if (!formData.tipo_scadenza_id) {
+        toast({ title: "Attenzione", description: "Seleziona un tipo di scadenza", variant: "destructive" });
+        return;
     }
 
     try {
@@ -140,67 +198,51 @@ export default function Scadenze770Page() {
           .eq("id", editingScadenza.id);
 
         if (error) throw error;
-
-        toast({
-          title: "Successo",
-          description: "Scadenza 770 aggiornata con successo",
-        });
+        toast({ title: "Successo", description: "Scadenza aggiornata" });
       } else {
+        // PER NUOVE SCADENZE: Usiamo l'ID del cliente come ID della scadenza
+        // perché la tabella ha un vincolo FK id -> tbclienti.id
         const { error } = await supabase
           .from("tbscad770")
-          .insert(scadenzaData);
+          .insert({
+            ...scadenzaData,
+            id: formData.cliente_id // CRITICAL: ID deve coincidere con ID cliente
+          });
 
         if (error) throw error;
-
-        toast({
-          title: "Successo",
-          description: "Scadenza 770 creata con successo",
-        });
+        toast({ title: "Successo", description: "Scadenza creata" });
       }
 
       setShowDialog(false);
       resetForm();
       fetchScadenze();
     } catch (error: any) {
-      console.error("Errore salvataggio scadenza 770:", error);
+      console.error("Errore salvataggio:", error);
       toast({
         title: "Errore",
-        description: error.message || "Impossibile salvare la scadenza 770",
+        description: error.message || "Errore nel salvataggio. Assicurati che il cliente non abbia già una scadenza 770.",
         variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questa scadenza 770?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questa scadenza?")) return;
 
     try {
-      const { error } = await supabase
-        .from("tbscad770")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await supabase.from("tbscad770").delete().eq("id", id);
       if (error) throw error;
-
-      toast({
-        title: "Successo",
-        description: "Scadenza 770 eliminata con successo",
-      });
-
+      toast({ title: "Successo", description: "Scadenza eliminata" });
       fetchScadenze();
     } catch (error: any) {
-      console.error("Errore eliminazione scadenza 770:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare la scadenza 770",
-        variant: "destructive",
-      });
+      toast({ title: "Errore", description: "Impossibile eliminare", variant: "destructive" });
     }
   };
 
   const handleEdit = (scadenza: Scadenza770) => {
     setEditingScadenza(scadenza);
     setFormData({
+      cliente_id: scadenza.id, // ID scadenza = ID cliente
       nominativo: scadenza.nominativo || "",
       tipo_scadenza_id: scadenza.tipo_scadenza_id || "",
       mod_inviato: scadenza.mod_inviato || false,
@@ -212,6 +254,7 @@ export default function Scadenze770Page() {
   const resetForm = () => {
     setEditingScadenza(null);
     setFormData({
+      cliente_id: "",
       nominativo: "",
       tipo_scadenza_id: "",
       mod_inviato: false,
@@ -230,7 +273,7 @@ export default function Scadenze770Page() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Caricamento scadenze 770...</p>
+          <p className="mt-4 text-muted-foreground">Caricamento...</p>
         </div>
       </div>
     );
@@ -260,26 +303,53 @@ export default function Scadenze770Page() {
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                
+                {/* Selezione Cliente */}
                 <div>
-                  <Label htmlFor="nominativo">Nominativo Cliente *</Label>
-                  <Input
-                    id="nominativo"
-                    value={formData.nominativo}
-                    onChange={(e) => setFormData({ ...formData, nominativo: e.target.value })}
-                    placeholder="Nome/Ragione Sociale"
-                    required
-                  />
+                  <Label htmlFor="cliente">Cliente *</Label>
+                  {editingScadenza ? (
+                    <Input value={formData.nominativo} disabled />
+                  ) : (
+                    <Select 
+                      value={formData.cliente_id} 
+                      onValueChange={handleClienteChange}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona un cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clienti.map(cliente => (
+                          <SelectItem key={cliente.id} value={cliente.id}>
+                            {cliente.ragione_sociale}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
+
+                {/* Selezione Tipo Scadenza */}
                 <div>
-                  <Label htmlFor="tipo_scadenza_id">Tipo Scadenza *</Label>
-                  <Input
-                    id="tipo_scadenza_id"
-                    value={formData.tipo_scadenza_id}
-                    onChange={(e) => setFormData({ ...formData, tipo_scadenza_id: e.target.value })}
-                    placeholder="ID Tipo Scadenza"
+                  <Label htmlFor="tipo_scadenza">Tipo Scadenza *</Label>
+                  <Select 
+                    value={formData.tipo_scadenza_id} 
+                    onValueChange={(val) => setFormData({...formData, tipo_scadenza_id: val})}
                     required
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona scadenza" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tipiScadenze.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id}>
+                          {tipo.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
