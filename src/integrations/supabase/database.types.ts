@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -684,6 +684,66 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tbpromemoria: {
+        Row: {
+          created_at: string | null
+          da_fatturare: boolean
+          data_inserimento: string
+          data_scadenza: string
+          fatturato: boolean
+          giorni_scadenza: number
+          id: string
+          note: string | null
+          operatore_id: string
+          tipo_promemoria_id: string
+          updated_at: string | null
+          working_progress: string
+        }
+        Insert: {
+          created_at?: string | null
+          da_fatturare?: boolean
+          data_inserimento?: string
+          data_scadenza: string
+          fatturato?: boolean
+          giorni_scadenza?: number
+          id?: string
+          note?: string | null
+          operatore_id: string
+          tipo_promemoria_id: string
+          updated_at?: string | null
+          working_progress?: string
+        }
+        Update: {
+          created_at?: string | null
+          da_fatturare?: boolean
+          data_inserimento?: string
+          data_scadenza?: string
+          fatturato?: boolean
+          giorni_scadenza?: number
+          id?: string
+          note?: string | null
+          operatore_id?: string
+          tipo_promemoria_id?: string
+          updated_at?: string | null
+          working_progress?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbpromemoria_operatore_id_fkey"
+            columns: ["operatore_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbpromemoria_tipo_promemoria_id_fkey"
+            columns: ["tipo_promemoria_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipopromemoria"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbroperatore: {
         Row: {
@@ -1918,6 +1978,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tbtipopromemoria: {
+        Row: {
+          attivo: boolean | null
+          colore: string | null
+          created_at: string | null
+          descrizione: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          attivo?: boolean | null
+          colore?: string | null
+          created_at?: string | null
+          descrizione?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          attivo?: boolean | null
+          colore?: string | null
+          created_at?: string | null
+          descrizione?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tbutenti: {
         Row: {
