@@ -1106,6 +1106,7 @@ export default function AgendaPage() {
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
                         const salaBadge = evento.in_sede && evento.sala ? `[${evento.sala}] ` : "";
+                        const bordoColore = evento.in_sede && evento.sala ? getBordoStanza(evento.sala) : null;
                         
                         return (
                           <div
