@@ -403,7 +403,6 @@ export default function Scadenze770Page() {
                     <SelectValue placeholder="Tutti gli anni" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tutti</SelectItem>
                     {anni.map((anno) => (
                       <SelectItem key={anno} value={anno.toString()}>
                         {anno}
@@ -419,13 +418,23 @@ export default function Scadenze770Page() {
                     <SelectValue placeholder="Tutti gli stati" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tutti</SelectItem>
                     <SelectItem value="da_fare">Da Fare</SelectItem>
                     <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
                     <SelectItem value="completato">Completato</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilterAnno("");
+                  setFilterStato("");
+                }}
+              >
+                Cancella Filtri
+              </Button>
             </div>
           </CardContent>
         </Card>
