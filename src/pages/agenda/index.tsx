@@ -20,7 +20,11 @@ type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const SALE = ["Riunioni", "Briefing", "Stanza Personale"];
+const SALE_CONFIG: Record<string, { nome: string; colore: string }> = {
+  "A": { nome: "Sala Riunioni Grande", colore: "#3B82F6" },
+  "B": { nome: "Sala Briefing", colore: "#10B981" },
+  "C": { nome: "In Stanza", colore: "#F59E0B" }
+};
 
 export default function AgendaPage() {
   const router = useRouter();
@@ -104,15 +108,15 @@ export default function AgendaPage() {
     if (eventoGenerico) {
       return "#3B82F6";
     }
-    if (inSede && sala && SALE_CONFIG[sala as keyof typeof SALE_CONFIG]) {
-      return SALE_CONFIG[sala as keyof typeof SALE_CONFIG].colore;
+    if (inSede && sala && SALE_CONFIG[sala]) {
+      return SALE_CONFIG[sala].colore;
     }
     return inSede ? "#10B981" : "#EF4444";
   };
 
   const getSalaLabel = (sala: string | null): string => {
     if (!sala) return "";
-    const config = SALE_CONFIG[sala as keyof typeof SALE_CONFIG];
+    const config = SALE_CONFIG[sala];
     return config ? `${sala} - ${config.nome}` : sala;
   };
 
@@ -140,236 +144,6 @@ export default function AgendaPage() {
     ].filter(Boolean).join("\r\n");
 
     return icsContent;
-  };
-
-  const inviaEmailPartecipanti = async (partecipantiIds: string[], eventoData: any) => {
-    if (partecipantiIds.length === 0) return;
-
-    try {
-      const partecipantiCompleti = utenti.filter(u => partecipantiIds.includes(u.id));
-      const clienteData = eventoData.cliente_id 
-        ? clienti.find(c => c.id === eventoData.cliente_id)
-        : null;
-      
-      const responsabileData = eventoData.utente_id 
-        ? utenti.find(u => u.id === eventoData.utente_id)
-        : null;
-
-      const googleMapsLink = eventoData.luogo 
-        ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(eventoData.luogo)}`
-        : null;
-
-      const icsFile = generaFileICS(eventoData);
-
-      const dataInizioFormatted = new Date(eventoData.data_inizio).toLocaleString("it-IT", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-      
-      const dataFineFormatted = new Date(eventoData.data_fine).toLocaleString("it-IT", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-
-      let tipoEventoLabel = "";
-      let tipoEventoIcon = "";
-      if (!eventoData.cliente_id) {
-        tipoEventoLabel = "Evento Generico";
-        tipoEventoIcon = "📅";
-      } else if (eventoData.in_sede) {
-        tipoEventoLabel = "Appuntamento in Sede";
-        tipoEventoIcon = "🏢";
-      } else {
-        tipoEventoLabel = "Appuntamento Fuori Sede";
-        tipoEventoIcon = "🚗";
-      }
-
-      const corpoHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); color: white; padding: 30px 20px; border-radius: 10px 10px 0 0; text-align: center; }
-            .header h1 { margin: 0; font-size: 24px; }
-            .header p { margin: 10px 0 0 0; font-size: 14px; opacity: 0.9; }
-            .content { background: white; padding: 30px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 10px 10px; }
-            .info-section { margin: 25px 0; padding: 20px; background: #F9FAFB; border-left: 4px solid #2563EB; border-radius: 5px; }
-            .info-row { display: flex; margin: 12px 0; align-items: flex-start; }
-            .info-label { font-weight: bold; min-width: 140px; color: #6B7280; }
-            .info-value { color: #111827; flex: 1; }
-            .client-section { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .participants-list { background: #F3F4F6; padding: 15px; border-radius: 5px; margin: 15px 0; }
-            .participant-item { padding: 8px 0; border-bottom: 1px solid #E5E7EB; }
-            .participant-item:last-child { border-bottom: none; }
-            .location-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .button { display: inline-block; background: #2563EB; color: white !important; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
-            .button:hover { background: #1E40AF; }
-            .footer { text-align: center; padding: 20px; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; margin-top: 30px; }
-            .badge { display: inline-block; padding: 4px 12px; background: #DBEAFE; color: #1E40AF; border-radius: 12px; font-size: 13px; font-weight: 600; }
-            .icon { font-size: 20px; margin-right: 8px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>${tipoEventoIcon} ${eventoData.titolo}</h1>
-              <p><span class="badge">${tipoEventoLabel}</span></p>
-            </div>
-            
-            <div class="content">
-              <p style="font-size: 16px; margin-bottom: 20px;">
-                Gentile collega,<br><br>
-                con la presente ti confermiamo la convocazione al seguente evento:
-              </p>
-
-              <div class="info-section">
-                <h3 style="margin-top: 0; color: #1E40AF;">📋 Dettagli Evento</h3>
-                
-                <div class="info-row">
-                  <span class="info-label">🗓️ Data Inizio:</span>
-                  <span class="info-value">${dataInizioFormatted}</span>
-                </div>
-                
-                <div class="info-row">
-                  <span class="info-label">🕐 Data Fine:</span>
-                  <span class="info-value">${dataFineFormatted}</span>
-                </div>
-                
-                ${eventoData.tutto_giorno ? `
-                <div class="info-row">
-                  <span class="info-label">⏰ Durata:</span>
-                  <span class="info-value"><strong>Evento giornata intera</strong></span>
-                </div>
-                ` : ""}
-                
-                ${responsabileData ? `
-                <div class="info-row">
-                  <span class="info-label">👤 Responsabile:</span>
-                  <span class="info-value"><strong>${responsabileData.nome} ${responsabileData.cognome}</strong></span>
-                </div>
-                ` : ""}
-              </div>
-
-              ${clienteData ? `
-              <div class="client-section">
-                <h3 style="margin-top: 0; color: #1E40AF;">🏢 Informazioni Cliente</h3>
-                
-                <div class="info-row">
-                  <span class="info-label">Ragione Sociale:</span>
-                  <span class="info-value"><strong>${clienteData.ragione_sociale}</strong></span>
-                </div>
-                
-                <div class="info-row">
-                  <span class="info-label">Indirizzo:</span>
-                  <span class="info-value">${clienteData.indirizzo}, ${clienteData.cap} ${clienteData.citta} (${clienteData.provincia})</span>
-                </div>
-                
-                <div class="info-row">
-                  <span class="info-label">Email:</span>
-                  <span class="info-value"><a href="mailto:${clienteData.email}" style="color: #2563EB;">${clienteData.email}</a></span>
-                </div>
-              </div>
-              ` : ""}
-
-              ${eventoData.in_sede && eventoData.sala ? `
-              <div class="info-section">
-                <div class="info-row">
-                  <span class="info-label">🏢 Luogo:</span>
-                  <span class="info-value"><strong>In Sede - ${getSalaLabel(eventoData.sala)}</strong></span>
-                </div>
-              </div>
-              ` : ""}
-
-              ${eventoData.luogo && !eventoData.in_sede ? `
-              <div class="location-box">
-                <h3 style="margin-top: 0; color: #D97706;">📍 Luogo Incontro</h3>
-                <p style="margin: 10px 0; font-size: 15px;"><strong>${eventoData.luogo}</strong></p>
-                ${googleMapsLink ? `
-                <a href="${googleMapsLink}" class="button" style="display: inline-block; margin-top: 10px;">
-                  🗺️ Apri in Google Maps
-                </a>
-                ` : ""}
-              </div>
-              ` : ""}
-
-              ${eventoData.descrizione ? `
-              <div class="info-section">
-                <h3 style="margin-top: 0; color: #1E40AF;">📝 Descrizione</h3>
-                <p style="margin: 10px 0; line-height: 1.8;">${eventoData.descrizione.replace(/\n/g, "<br>")}</p>
-              </div>
-              ` : ""}
-
-              <div class="participants-list">
-                <h3 style="margin-top: 0; color: #6B7280;">👥 Partecipanti Convocati (${partecipantiCompleti.length})</h3>
-                ${partecipantiCompleti.map(p => `
-                  <div class="participant-item">
-                    <strong>${p.nome} ${p.cognome}</strong>
-                    ${p.email ? ` - <a href="mailto:${p.email}" style="color: #2563EB;">${p.email}</a>` : ""}
-                  </div>
-                `).join("")}
-              </div>
-
-              <div style="background: #FEF2F2; border-left: 4px solid #DC2626; padding: 15px; border-radius: 5px; margin: 25px 0;">
-                <p style="margin: 0; color: #991B1B;">
-                  <strong>⚠️ Importante:</strong> Si prega di confermare la propria presenza e di segnalare tempestivamente eventuali impedimenti.
-                </p>
-              </div>
-
-              <p style="margin-top: 30px;">
-                Cordiali saluti,<br>
-                <strong>Studio Manager Pro</strong><br>
-                <em>Sistema Gestionale Integrato</em>
-              </p>
-            </div>
-
-            <div class="footer">
-              <p>Questa è una comunicazione automatica generata da Studio Manager Pro.<br>
-              Per qualsiasi informazione o modifica, contattare il responsabile dell'evento.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      const emailData = {
-        destinatari: partecipantiCompleti.map(p => ({
-          email: p.email,
-          nome: `${p.nome} ${p.cognome}`
-        })),
-        oggetto: `📅 Convocazione: ${eventoData.titolo}`,
-        corpo: corpoHTML,
-        allegati: [
-          {
-            filename: `evento-${eventoData.titolo.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.ics`,
-            content: icsFile,
-            contentType: "text/calendar"
-          }
-        ]
-      };
-
-      console.log("📧 Email preparata per invio:", emailData);
-      
-      return {
-        success: true,
-        destinatari: partecipantiCompleti.length,
-        emailData
-      };
-
-    } catch (error) {
-      console.error("Errore preparazione email:", error);
-      throw error;
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -988,7 +762,7 @@ export default function AgendaPage() {
 
                   {formData.in_sede && !formData.evento_generico && (
                     <div className="space-y-2 mb-4">
-                      <Label htmlFor="sala">Sala</Label>
+                      <Label htmlFor="sala">Sala (Identificativo Stanza)</Label>
                       <Select
                         value={formData.sala || "__none__"}
                         onValueChange={(value) => setFormData({ ...formData, sala: value === "__none__" ? "" : value })}
@@ -998,9 +772,9 @@ export default function AgendaPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">Nessuna</SelectItem>
-                          {SALE.map((sala) => (
-                            <SelectItem key={sala} value={sala}>
-                              {sala}
+                          {Object.entries(SALE_CONFIG).map(([key, config]) => (
+                            <SelectItem key={key} value={key}>
+                              {key} - {config.nome}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1322,6 +1096,7 @@ export default function AgendaPage() {
                     <div className="space-y-1">
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
+                        const salaLabel = evento.sala || "";
                         
                         return (
                           <div
@@ -1332,7 +1107,7 @@ export default function AgendaPage() {
                               backgroundColor: evento.colore || "#3B82F6",
                               color: "white"
                             }}
-                            title={`${responsabile} - ${evento.titolo}`}
+                            title={`${salaLabel ? `[${salaLabel}] ` : ""}${responsabile} - ${evento.titolo}`}
                           >
                             {!evento.tutto_giorno && (
                               <span className="font-semibold mr-1">
@@ -1342,6 +1117,7 @@ export default function AgendaPage() {
                                 })}
                               </span>
                             )}
+                            {salaLabel && <span className="font-bold mr-1">[{salaLabel}]</span>}
                             {responsabile}
                           </div>
                         );
@@ -1477,7 +1253,7 @@ export default function AgendaPage() {
                                   {evento.in_sede && evento.sala && (
                                     <div className="flex items-center gap-2 text-gray-700">
                                       <Building2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                      <span>Sala: {evento.sala}</span>
+                                      <span className="font-semibold">{salaLabel}</span>
                                     </div>
                                   )}
 
