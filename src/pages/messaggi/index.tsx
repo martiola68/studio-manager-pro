@@ -350,7 +350,7 @@ export default function MessaggiPage() {
       "CU": "/scadenze/cu",
       "Fiscale": "/scadenze/fiscali",
       "Bilancio": "/scadenze/bilanci",
-      "770": "/scadenze/770",
+      "770": "/scadenze/modello-770",
       "LIPE": "/scadenze/lipe",
       "Esterometro": "/scadenze/esterometro",
       "Proforma": "/scadenze/proforma",
