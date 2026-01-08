@@ -164,9 +164,9 @@ export const promemoriaService = {
       totali: promemoria.length,
       inLavorazione: promemoria.filter((p) => p.working_progress === "in_lavorazione")
         .length,
-      conclusi: promemoria.filter((p) => p.working_progress === "concluso").length,
+      conclusi: promemoria.filter((p) => p.working_progress === "Concluso").length,
       daFatturare: promemoria.filter(
-        (p) => p.da_fatturare === "si" && !p.fatturato
+        (p) => p.da_fatturare && !p.fatturato
       ).length,
       fatturati: promemoria.filter((p) => p.fatturato).length,
     };

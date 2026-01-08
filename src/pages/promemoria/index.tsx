@@ -270,7 +270,7 @@ export default function PromemoriaPage() {
     totali: promemoria.length,
     inLavorazione: promemoria.filter((p) => p.working_progress === "In lavorazione").length,
     conclusi: promemoria.filter((p) => p.working_progress === "Concluso").length,
-    daFatturare: promemoria.filter((p) => p.da_fatturare === "si" && !p.fatturato).length,
+    daFatturare: promemoria.filter((p) => p.da_fatturare && !p.fatturato).length,
   };
 
   if (loading && !currentUser) {
@@ -598,16 +598,16 @@ export default function PromemoriaPage() {
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              p.da_fatturare === "si"
+                              p.da_fatturare
                                 ? "bg-orange-100 text-orange-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
-                            {p.da_fatturare === "si" ? "SI" : "NO"}
+                            {p.da_fatturare ? "SI" : "NO"}
                           </span>
                         </TableCell>
                         <TableCell>
-                          {p.da_fatturare === "si" ? (
+                          {p.da_fatturare ? (
                             p.fatturato ? (
                               <CheckCircle2 className="h-5 w-5 text-green-600" />
                             ) : (
