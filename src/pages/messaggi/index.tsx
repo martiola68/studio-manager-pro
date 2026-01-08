@@ -166,6 +166,9 @@ export default function MessaggiPage() {
   const subscribeToChat = (convId: string) => {
     if (!authUserId) return;
     
+    // Capture user ID in a local const for the closure
+    const currentUserId = authUserId;
+    
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
     }
@@ -181,7 +184,7 @@ export default function MessaggiPage() {
           filter: `conversazione_id=eq.${convId}`,
         },
         async (payload) => {
-          if (payload.new.mittente_id !== authUserId) {
+          if (payload.new.mittente_id !== currentUserId) {
             const { data: sender } = await supabase
               .from("tbutenti")
               .select("id, nome, cognome, email")
@@ -191,15 +194,13 @@ export default function MessaggiPage() {
             const newMessage = { ...payload.new, mittente: sender };
             setMessaggi((prev) => [...prev, newMessage]);
             
-            if (document.visibilityState === "visible" && authUserId) {
-              await messaggioService.segnaComeLetto(convId, authUserId);
+            if (document.visibilityState === "visible") {
+              await messaggioService.segnaComeLetto(convId, currentUserId);
             }
           }
           
-          // Reload conversations only if authUserId is available
-          if (authUserId) {
-            loadConversazioni(authUserId);
-          }
+          // Use the captured constant variable
+          loadConversazioni(currentUserId);
         }
       )
       .subscribe();
