@@ -1,0 +1,15 @@
+name: Force Vercel Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deployment
+        run: |
+          echo "Deployment triggered at $(date)"
+          echo "This workflow forces Vercel to recognize new commits"
