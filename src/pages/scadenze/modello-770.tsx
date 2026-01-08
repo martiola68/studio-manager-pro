@@ -29,13 +29,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Edit, Trash2, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
 
-type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
-  tbtipi_scadenze?: Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
+type Scadenza770 = Database["public"]["Tables"]["scadenze_770"]["Row"] & {
+  tbclienti?: {
+    ragione_sociale: string;
+  };
 };
 
 type Cliente = {
@@ -43,27 +45,25 @@ type Cliente = {
   ragione_sociale: string;
 };
 
-type TipoScadenza = {
-  id: string;
-  nome: string;
-};
-
 export default function Scadenze770Page() {
   const router = useRouter();
   const [scadenze, setScadenze] = useState<Scadenza770[]>([]);
+  const [filteredScadenze, setFilteredScadenze] = useState<Scadenza770[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
-  const [tipiScadenze, setTipiScadenze] = useState<TipoScadenza[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingScadenza, setEditingScadenza] = useState<Scadenza770 | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
+  const [filterAnno, setFilterAnno] = useState<string>("");
+  const [filterStato, setFilterStato] = useState<string>("");
+
   const [formData, setFormData] = useState({
     cliente_id: "",
-    nominativo: "", // Campo readonly popolato dalla scelta cliente
-    tipo_scadenza_id: "",
-    mod_inviato: false,
+    anno: new Date().getFullYear(),
+    data_scadenza: "",
+    stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
     note: "",
   });
 
@@ -76,6 +76,10 @@ export default function Scadenze770Page() {
       fetchData();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [scadenze, filterAnno, filterStato]);
 
   const checkAuthAndLoad = async () => {
     try {
@@ -101,7 +105,7 @@ export default function Scadenze770Page() {
   const fetchData = async () => {
     if (!currentUser) return;
     setLoading(true);
-    await Promise.all([fetchScadenze(), fetchClienti(), fetchTipiScadenze()]);
+    await Promise.all([fetchScadenze(), fetchClienti()]);
     setLoading(false);
   };
 
@@ -109,43 +113,21 @@ export default function Scadenze770Page() {
     const { data } = await supabase
       .from("tbclienti")
       .select("id, ragione_sociale")
+      .eq("flag_770", true)
       .order("ragione_sociale");
     setClienti(data || []);
-  };
-
-  const fetchTipiScadenze = async () => {
-    const { data } = await supabase
-      .from("tbtipi_scadenze")
-      .select("id, nome")
-      .eq("tipo_scadenza", "770") // Filtra solo tipi scadenza per 770
-      .order("nome");
-    
-    // Se non ci sono tipi specifici, prendi tutti o mostra avviso
-    if (!data || data.length === 0) {
-      const { data: allTypes } = await supabase
-        .from("tbtipi_scadenze")
-        .select("id, nome")
-        .order("nome");
-      setTipiScadenze(allTypes || []);
-    } else {
-      setTipiScadenze(data);
-    }
   };
 
   const fetchScadenze = async () => {
     try {
       const { data, error } = await supabase
-        .from("tbscad770")
+        .from("scadenze_770")
         .select(`
           *,
-          tbtipi_scadenze(
-            id,
-            nome,
-            data_scadenza
-          )
+          tbclienti(ragione_sociale)
         `)
-        .eq("utente_operatore_id", currentUser.id)
-        .order("created_at", { ascending: false });
+        .order("anno", { ascending: false })
+        .order("data_scadenza", { ascending: true });
 
       if (error) throw error;
 
@@ -160,13 +142,18 @@ export default function Scadenze770Page() {
     }
   };
 
-  const handleClienteChange = (clienteId: string) => {
-    const cliente = clienti.find(c => c.id === clienteId);
-    setFormData({
-      ...formData,
-      cliente_id: clienteId,
-      nominativo: cliente?.ragione_sociale || ""
-    });
+  const applyFilters = () => {
+    let filtered = [...scadenze];
+
+    if (filterAnno) {
+      filtered = filtered.filter((s) => s.anno.toString() === filterAnno);
+    }
+
+    if (filterStato) {
+      filtered = filtered.filter((s) => s.stato === filterStato);
+    }
+
+    setFilteredScadenze(filtered);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,37 +164,27 @@ export default function Scadenze770Page() {
       return;
     }
 
-    if (!formData.tipo_scadenza_id) {
-        toast({ title: "Attenzione", description: "Seleziona un tipo di scadenza", variant: "destructive" });
-        return;
-    }
-
     try {
       const scadenzaData = {
-        nominativo: formData.nominativo,
-        tipo_scadenza_id: formData.tipo_scadenza_id,
-        utente_operatore_id: currentUser.id,
-        mod_inviato: formData.mod_inviato,
+        cliente_id: formData.cliente_id,
+        anno: formData.anno,
+        data_scadenza: formData.data_scadenza,
+        stato: formData.stato,
         note: formData.note,
       };
 
       if (editingScadenza) {
         const { error } = await supabase
-          .from("tbscad770")
+          .from("scadenze_770")
           .update(scadenzaData)
           .eq("id", editingScadenza.id);
 
         if (error) throw error;
         toast({ title: "Successo", description: "Scadenza aggiornata" });
       } else {
-        // PER NUOVE SCADENZE: Usiamo l'ID del cliente come ID della scadenza
-        // perché la tabella ha un vincolo FK id -> tbclienti.id
         const { error } = await supabase
-          .from("tbscad770")
-          .insert({
-            ...scadenzaData,
-            id: formData.cliente_id // CRITICAL: ID deve coincidere con ID cliente
-          });
+          .from("scadenze_770")
+          .insert(scadenzaData);
 
         if (error) throw error;
         toast({ title: "Successo", description: "Scadenza creata" });
@@ -220,7 +197,7 @@ export default function Scadenze770Page() {
       console.error("Errore salvataggio:", error);
       toast({
         title: "Errore",
-        description: error.message || "Errore nel salvataggio. Assicurati che il cliente non abbia già una scadenza 770.",
+        description: error.message || "Errore nel salvataggio",
         variant: "destructive",
       });
     }
@@ -230,7 +207,7 @@ export default function Scadenze770Page() {
     if (!confirm("Sei sicuro di voler eliminare questa scadenza?")) return;
 
     try {
-      const { error } = await supabase.from("tbscad770").delete().eq("id", id);
+      const { error } = await supabase.from("scadenze_770").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Successo", description: "Scadenza eliminata" });
       fetchScadenze();
@@ -242,10 +219,10 @@ export default function Scadenze770Page() {
   const handleEdit = (scadenza: Scadenza770) => {
     setEditingScadenza(scadenza);
     setFormData({
-      cliente_id: scadenza.id, // ID scadenza = ID cliente
-      nominativo: scadenza.nominativo || "",
-      tipo_scadenza_id: scadenza.tipo_scadenza_id || "",
-      mod_inviato: scadenza.mod_inviato || false,
+      cliente_id: scadenza.cliente_id,
+      anno: scadenza.anno,
+      data_scadenza: scadenza.data_scadenza,
+      stato: scadenza.stato as "da_fare" | "in_lavorazione" | "completato",
       note: scadenza.note || "",
     });
     setShowDialog(true);
@@ -255,18 +232,45 @@ export default function Scadenze770Page() {
     setEditingScadenza(null);
     setFormData({
       cliente_id: "",
-      nominativo: "",
-      tipo_scadenza_id: "",
-      mod_inviato: false,
+      anno: new Date().getFullYear(),
+      data_scadenza: "",
+      stato: "da_fare",
       note: "",
     });
   };
 
-  const statistiche = {
-    totali: scadenze.length,
-    daInviare: scadenze.filter((s) => !s.mod_inviato).length,
-    inviati: scadenze.filter((s) => s.mod_inviato).length,
+  const getStatoColor = (stato: string) => {
+    switch (stato) {
+      case "completato":
+        return "text-green-600 bg-green-50";
+      case "in_lavorazione":
+        return "text-yellow-600 bg-yellow-50";
+      default:
+        return "text-gray-600 bg-gray-50";
+    }
   };
+
+  const getStatoLabel = (stato: string) => {
+    switch (stato) {
+      case "completato":
+        return "Completato";
+      case "in_lavorazione":
+        return "In Lavorazione";
+      default:
+        return "Da Fare";
+    }
+  };
+
+  const statistiche = {
+    totali: filteredScadenze.length,
+    daFare: filteredScadenze.filter((s) => s.stato === "da_fare").length,
+    inLavorazione: filteredScadenze.filter((s) => s.stato === "in_lavorazione").length,
+    completate: filteredScadenze.filter((s) => s.stato === "completato").length,
+  };
+
+  const anni = Array.from(
+    new Set(scadenze.map((s) => s.anno))
+  ).sort((a, b) => b - a);
 
   if (loading && !currentUser) {
     return (
@@ -303,64 +307,63 @@ export default function Scadenze770Page() {
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                
-                {/* Selezione Cliente */}
                 <div>
                   <Label htmlFor="cliente">Cliente *</Label>
-                  {editingScadenza ? (
-                    <Input value={formData.nominativo} disabled />
-                  ) : (
-                    <Select 
-                      value={formData.cliente_id} 
-                      onValueChange={handleClienteChange}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona un cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clienti.map(cliente => (
-                          <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.ragione_sociale}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                {/* Selezione Tipo Scadenza */}
-                <div>
-                  <Label htmlFor="tipo_scadenza">Tipo Scadenza *</Label>
-                  <Select 
-                    value={formData.tipo_scadenza_id} 
-                    onValueChange={(val) => setFormData({...formData, tipo_scadenza_id: val})}
+                  <Select
+                    value={formData.cliente_id}
+                    onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
                     required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona scadenza" />
+                      <SelectValue placeholder="Seleziona un cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {tipiScadenze.map(tipo => (
-                        <SelectItem key={tipo.id} value={tipo.id}>
-                          {tipo.nome}
+                      {clienti.map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id}>
+                          {cliente.ragione_sociale}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="mod_inviato"
-                    checked={formData.mod_inviato}
-                    onChange={(e) => setFormData({ ...formData, mod_inviato: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300"
+                <div>
+                  <Label htmlFor="anno">Anno *</Label>
+                  <Input
+                    id="anno"
+                    type="number"
+                    value={formData.anno}
+                    onChange={(e) => setFormData({ ...formData, anno: parseInt(e.target.value) })}
+                    required
                   />
-                  <Label htmlFor="mod_inviato" className="cursor-pointer">
-                    Modello Inviato
-                  </Label>
+                </div>
+                <div>
+                  <Label htmlFor="data_scadenza">Data Scadenza *</Label>
+                  <Input
+                    id="data_scadenza"
+                    type="date"
+                    value={formData.data_scadenza}
+                    onChange={(e) => setFormData({ ...formData, data_scadenza: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="stato">Stato *</Label>
+                  <Select
+                    value={formData.stato}
+                    onValueChange={(value: "da_fare" | "in_lavorazione" | "completato") =>
+                      setFormData({ ...formData, stato: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="da_fare">Da Fare</SelectItem>
+                      <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
+                      <SelectItem value="completato">Completato</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="note">Note</Label>
@@ -384,7 +387,50 @@ export default function Scadenze770Page() {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtri
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="filter_anno">Anno</Label>
+                <Select value={filterAnno} onValueChange={setFilterAnno}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tutti gli anni" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tutti</SelectItem>
+                    {anni.map((anno) => (
+                      <SelectItem key={anno} value={anno.toString()}>
+                        {anno}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="filter_stato">Stato</Label>
+                <Select value={filterStato} onValueChange={setFilterStato}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tutti gli stati" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tutti</SelectItem>
+                    <SelectItem value="da_fare">Da Fare</SelectItem>
+                    <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
+                    <SelectItem value="completato">Completato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -398,21 +444,33 @@ export default function Scadenze770Page() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Da Inviare
+                Da Fare
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{statistiche.daInviare}</div>
+              <div className="text-2xl font-bold text-gray-600">{statistiche.daFare}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Inviati
+                In Lavorazione
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{statistiche.inviati}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {statistiche.inLavorazione}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Completate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{statistiche.completate}</div>
             </CardContent>
           </Card>
         </div>
@@ -426,7 +484,7 @@ export default function Scadenze770Page() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Tipo Scadenza</TableHead>
+                  <TableHead>Anno</TableHead>
                   <TableHead>Data Scadenza</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead>Note</TableHead>
@@ -440,35 +498,30 @@ export default function Scadenze770Page() {
                       <div className="inline-block h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     </TableCell>
                   </TableRow>
-                ) : scadenze.length === 0 ? (
+                ) : filteredScadenze.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nessuna scadenza 770 trovata
                     </TableCell>
                   </TableRow>
                 ) : (
-                  scadenze.map((scadenza) => (
+                  filteredScadenze.map((scadenza) => (
                     <TableRow key={scadenza.id}>
                       <TableCell className="font-medium">
-                        {scadenza.nominativo || "N/D"}
+                        {scadenza.tbclienti?.ragione_sociale || "N/D"}
+                      </TableCell>
+                      <TableCell>{scadenza.anno}</TableCell>
+                      <TableCell>
+                        {format(parseISO(scadenza.data_scadenza), "dd/MM/yyyy", { locale: it })}
                       </TableCell>
                       <TableCell>
-                        {scadenza.tbtipi_scadenze?.nome || "N/D"}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.tbtipi_scadenze?.data_scadenza 
-                          ? format(parseISO(scadenza.tbtipi_scadenze.data_scadenza), "dd/MM/yyyy", { locale: it })
-                          : "N/D"}
-                      </TableCell>
-                      <TableCell>
-                        {scadenza.mod_inviato ? (
-                          <span className="flex items-center gap-1 text-green-600">
-                            <CheckCircle2 className="h-4 w-4" />
-                            Inviato
-                          </span>
-                        ) : (
-                          <span className="text-orange-600">Da Inviare</span>
-                        )}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatoColor(
+                            scadenza.stato
+                          )}`}
+                        >
+                          {getStatoLabel(scadenza.stato)}
+                        </span>
                       </TableCell>
                       <TableCell className="max-w-xs truncate">{scadenza.note || "-"}</TableCell>
                       <TableCell className="text-right">
