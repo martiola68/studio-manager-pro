@@ -1,0 +1,2 @@
+Force Vercel to rebuild - 2026-01-08T16:45:00Z
+This file forces Vercel to invalidate its build cache and rebuild from scratch.
