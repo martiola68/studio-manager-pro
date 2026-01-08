@@ -408,7 +408,7 @@ export default function MessaggiPage() {
             <ChatArea
               conversazioneId={selectedConvId}
               messaggi={messaggi}
-              currentUserId={authUserId}
+              currentUserId={authUserId!}
               partnerName={getPartnerName()}
               onSendMessage={handleSendMessage}
               onBack={() => setSelectedConvId(null)}
