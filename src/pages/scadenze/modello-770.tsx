@@ -22,20 +22,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
 import type { Database } from "@/integrations/supabase/types";
 
 type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
-  tbclienti?: Database["public"]["Tables"]["tbclienti"]["Row"];
   tbtipi_scadenze?: Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
 };
 
@@ -96,12 +88,6 @@ export default function Scadenze770Page() {
         .from("tbscad770")
         .select(`
           *,
-          tbclienti(
-            id,
-            ragione_sociale,
-            codice_fiscale,
-            partita_iva
-          ),
           tbtipi_scadenze(
             id,
             nome,
@@ -215,8 +201,8 @@ export default function Scadenze770Page() {
   const handleEdit = (scadenza: Scadenza770) => {
     setEditingScadenza(scadenza);
     setFormData({
-      nominativo: scadenza.nominativo,
-      tipo_scadenza_id: scadenza.tipo_scadenza_id,
+      nominativo: scadenza.nominativo || "",
+      tipo_scadenza_id: scadenza.tipo_scadenza_id || "",
       mod_inviato: scadenza.mod_inviato || false,
       note: scadenza.note || "",
     });
