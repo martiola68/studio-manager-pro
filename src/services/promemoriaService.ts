@@ -75,41 +75,47 @@ export const promemoriaService = {
   /**
    * Crea un nuovo promemoria
    */
-  async creaPromemoria(promemoria: PromemoriaInsert): Promise<Promemoria | null> {
-    const { data, error } = await supabase
-      .from("tbpromemoria")
-      .insert([promemoria])
-      .select()
-      .single();
+  async creaPromemoria(promemoria: Omit<Promemoria, "id" | "created_at" | "updated_at">) {
+    const { error } = await supabase.from("tbpromemoria").insert({
+      operatore_id: promemoria.operatore_id,
+      tipo_promemoria_id: promemoria.tipo_promemoria_id,
+      data_inserimento: promemoria.data_inserimento,
+      giorni_scadenza: promemoria.giorni_scadenza,
+      data_scadenza: promemoria.data_scadenza,
+      working_progress: promemoria.working_progress,
+      da_fatturare: promemoria.da_fatturare,
+      fatturato: promemoria.fatturato,
+      note: promemoria.note
+    });
 
     if (error) {
       console.error("Errore creazione promemoria:", error);
       throw error;
     }
-
-    return data;
   },
 
   /**
    * Aggiorna un promemoria esistente
    */
-  async aggiornaPromemoria(
-    id: string,
-    updates: PromemoriaUpdate
-  ): Promise<Promemoria | null> {
-    const { data, error } = await supabase
+  async aggiornaPromemoria(id: string, promemoria: Partial<Promemoria>) {
+    const { error } = await supabase
       .from("tbpromemoria")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
+      .update({
+        tipo_promemoria_id: promemoria.tipo_promemoria_id,
+        data_inserimento: promemoria.data_inserimento,
+        giorni_scadenza: promemoria.giorni_scadenza,
+        data_scadenza: promemoria.data_scadenza,
+        working_progress: promemoria.working_progress,
+        da_fatturare: promemoria.da_fatturare,
+        fatturato: promemoria.fatturato,
+        note: promemoria.note
+      })
+      .eq("id", id);
 
     if (error) {
       console.error("Errore aggiornamento promemoria:", error);
       throw error;
     }
-
-    return data;
   },
 
   /**

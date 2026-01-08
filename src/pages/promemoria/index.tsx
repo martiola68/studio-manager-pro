@@ -57,12 +57,12 @@ export default function PromemoriaPage() {
   const [filtroStato, setFiltroStato] = useState<string>("tutti");
 
   const [formData, setFormData] = useState({
-    tipologia_id: "",
-    descrizione: "",
-    data: format(new Date(), "yyyy-MM-dd"),
+    tipo_promemoria_id: "",
+    note: "",
+    data_inserimento: format(new Date(), "yyyy-MM-dd"),
     giorni_scadenza: 7,
-    working_progress: "in_lavorazione" as "in_lavorazione" | "concluso",
-    da_fatturare: "no" as "si" | "no",
+    working_progress: "In lavorazione",
+    da_fatturare: "no",
     fatturato: false,
   });
 
@@ -150,19 +150,19 @@ export default function PromemoriaPage() {
 
     try {
       const dataScadenza = promemoriaService.calcolaDataScadenza(
-        formData.data,
+        formData.data_inserimento,
         formData.giorni_scadenza
       );
 
       const promemoriaData = {
         operatore_id: currentUser.id,
-        tipologia_id: formData.tipologia_id,
-        descrizione: formData.descrizione,
-        data: formData.data,
+        tipo_promemoria_id: formData.tipo_promemoria_id,
+        note: formData.note,
+        data_inserimento: formData.data_inserimento,
         giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: dataScadenza,
         working_progress: formData.working_progress,
-        da_fatturare: formData.da_fatturare,
+        da_fatturare: formData.da_fatturare === "si",
         fatturato: formData.da_fatturare === "si" ? formData.fatturato : false,
       };
 
@@ -216,13 +216,13 @@ export default function PromemoriaPage() {
   const handleEdit = (promemoria: Promemoria) => {
     setEditingPromemoria(promemoria);
     setFormData({
-      tipologia_id: promemoria.tipologia_id,
-      descrizione: promemoria.descrizione || "",
-      data: promemoria.data,
+      tipo_promemoria_id: promemoria.tipo_promemoria_id,
+      note: promemoria.note || "",
+      data_inserimento: promemoria.data_inserimento,
       giorni_scadenza: promemoria.giorni_scadenza,
       working_progress: promemoria.working_progress,
-      da_fatturare: promemoria.da_fatturare,
-      fatturato: promemoria.fatturato || false,
+      da_fatturare: promemoria.da_fatturare ? "si" : "no",
+      fatturato: promemoria.fatturato,
     });
     setShowDialog(true);
   };
@@ -230,18 +230,18 @@ export default function PromemoriaPage() {
   const resetForm = () => {
     setEditingPromemoria(null);
     setFormData({
-      tipologia_id: "",
-      descrizione: "",
-      data: format(new Date(), "yyyy-MM-dd"),
+      tipo_promemoria_id: "",
+      note: "",
+      data_inserimento: format(new Date(), "yyyy-MM-dd"),
       giorni_scadenza: 7,
-      working_progress: "in_lavorazione",
+      working_progress: "In lavorazione",
       da_fatturare: "no",
       fatturato: false,
     });
   };
 
   const getStatoBadge = (stato: string) => {
-    if (stato === "in_lavorazione") {
+    if (stato === "In lavorazione") {
       return (
         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex items-center gap-1 w-fit">
           <Clock className="h-3 w-3" />
@@ -258,9 +258,9 @@ export default function PromemoriaPage() {
   };
 
   const calcolaDataScadenzaPreview = () => {
-    if (!formData.data || !formData.giorni_scadenza) return "-";
+    if (!formData.data_inserimento || !formData.giorni_scadenza) return "-";
     const dataScadenza = promemoriaService.calcolaDataScadenza(
-      formData.data,
+      formData.data_inserimento,
       formData.giorni_scadenza
     );
     return format(parseISO(dataScadenza), "dd/MM/yyyy", { locale: it });
@@ -268,8 +268,8 @@ export default function PromemoriaPage() {
 
   const statistiche = {
     totali: promemoria.length,
-    inLavorazione: promemoria.filter((p) => p.working_progress === "in_lavorazione").length,
-    conclusi: promemoria.filter((p) => p.working_progress === "concluso").length,
+    inLavorazione: promemoria.filter((p) => p.working_progress === "In lavorazione").length,
+    conclusi: promemoria.filter((p) => p.working_progress === "Concluso").length,
     daFatturare: promemoria.filter((p) => p.da_fatturare === "si" && !p.fatturato).length,
   };
 
@@ -323,11 +323,11 @@ export default function PromemoriaPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="tipologia_id">Tipologia *</Label>
+                    <Label htmlFor="tipo_promemoria_id">Tipologia *</Label>
                     <Select
-                      value={formData.tipologia_id}
+                      value={formData.tipo_promemoria_id}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, tipologia_id: value })
+                        setFormData({ ...formData, tipo_promemoria_id: value })
                       }
                       required
                     >
@@ -351,12 +351,12 @@ export default function PromemoriaPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="descrizione">Descrizione</Label>
+                    <Label htmlFor="note">Descrizione</Label>
                     <Textarea
-                      id="descrizione"
-                      value={formData.descrizione}
+                      id="note"
+                      value={formData.note}
                       onChange={(e) =>
-                        setFormData({ ...formData, descrizione: e.target.value })
+                        setFormData({ ...formData, note: e.target.value })
                       }
                       placeholder="Descrizione del promemoria"
                       rows={3}
@@ -365,12 +365,12 @@ export default function PromemoriaPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="data">Data *</Label>
+                      <Label htmlFor="data_inserimento">Data *</Label>
                       <Input
-                        id="data"
+                        id="data_inserimento"
                         type="date"
-                        value={formData.data}
-                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                        value={formData.data_inserimento}
+                        onChange={(e) => setFormData({ ...formData, data_inserimento: e.target.value })}
                         required
                       />
                     </div>
@@ -413,8 +413,8 @@ export default function PromemoriaPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
-                        <SelectItem value="concluso">Concluso</SelectItem>
+                        <SelectItem value="In lavorazione">In Lavorazione</SelectItem>
+                        <SelectItem value="Concluso">Concluso</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -535,8 +535,8 @@ export default function PromemoriaPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tutti">Tutti gli stati</SelectItem>
-                    <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
-                    <SelectItem value="concluso">Concluso</SelectItem>
+                    <SelectItem value="In lavorazione">In Lavorazione</SelectItem>
+                    <SelectItem value="Concluso">Concluso</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -586,10 +586,10 @@ export default function PromemoriaPage() {
                           </div>
                         </TableCell>
                         <TableCell className="max-w-xs truncate">
-                          {p.descrizione || "-"}
+                          {p.note || "-"}
                         </TableCell>
                         <TableCell>
-                          {format(parseISO(p.data), "dd/MM/yyyy", { locale: it })}
+                          {format(parseISO(p.data_inserimento), "dd/MM/yyyy", { locale: it })}
                         </TableCell>
                         <TableCell>
                           {format(parseISO(p.data_scadenza), "dd/MM/yyyy", { locale: it })}

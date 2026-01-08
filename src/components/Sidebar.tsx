@@ -261,7 +261,7 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside className={cn(
-        "w-64 bg-white border-r border-gray-200 min-h-screen p-4 transition-transform duration-300 lg:relative lg:translate-x-0",
+        "w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col p-4 transition-transform duration-300 lg:relative lg:translate-x-0",
         "fixed inset-y-0 left-0 z-40",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>

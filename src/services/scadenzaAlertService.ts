@@ -53,6 +53,7 @@ export const scadenzaAlertService = {
       this.fetchScadenzeFromTable("tbscadestero", "Esterometro", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchScadenzeFromTable("tbscadproforma", "Proforma", userId, isPartner, studioId, oggiStr, tra30giorniStr),
       this.fetchImuScadenze(userId, isPartner, studioId, oggiStr, tra30giorniStr),
+      this.fetchPromemoriaScadenze(userId, isPartner, studioId, oggiStr, tra30giorniStr),
     ];
 
     const results = await Promise.all(scadenzePromises);
@@ -220,6 +221,54 @@ export const scadenzaAlertService = {
       return alerts;
     } catch (error) {
       console.error("Errore fetch IMU scadenze:", error);
+      return [];
+    }
+  },
+
+  async fetchPromemoriaScadenze(
+    userId: string,
+    isPartner: boolean,
+    studioId: string,
+    dataInizio: string,
+    dataFine: string
+  ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
+    try {
+      let query = supabase
+        .from("tbpromemoria")
+        .select(`
+          id,
+          note,
+          data_scadenza,
+          operatore_id,
+          tbtipopromemoria(nome),
+          tbutenti(nome, cognome)
+        `)
+        .eq("working_progress", "In lavorazione")
+        .gte("data_scadenza", dataInizio)
+        .lte("data_scadenza", dataFine);
+
+      if (!isPartner) {
+        query = query.eq("operatore_id", userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching promemoria scadenze:", error);
+        return [];
+      }
+
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        tipo: "Promemoria",
+        descrizione: item.note || item.tbtipopromemoria?.nome || "Promemoria senza descrizione",
+        data_scadenza: item.data_scadenza,
+        cliente_nome: "Interno",
+        utente_assegnato: item.tbutenti ? `${item.tbutenti.nome} ${item.tbutenti.cognome}` : undefined,
+        tabella_origine: "tbpromemoria"
+      }));
+    } catch (error) {
+      console.error("Exception fetching promemoria scadenze:", error);
       return [];
     }
   },
