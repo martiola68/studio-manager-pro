@@ -43,7 +43,6 @@ export default function Scadenze770Page() {
   const router = useRouter();
   const [scadenze, setScadenze] = useState<Scadenza770[]>([]);
   const [filteredScadenze, setFilteredScadenze] = useState<Scadenza770[]>([]);
-  const [clienti, setClienti] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [editingScadenza, setEditingScadenza] = useState<Scadenza770 | null>(null);
