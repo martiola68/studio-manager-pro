@@ -1096,7 +1096,6 @@ export default function AgendaPage() {
                     <div className="space-y-1">
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
-                        const salaLabel = evento.sala || "";
                         
                         return (
                           <div
@@ -1107,7 +1106,7 @@ export default function AgendaPage() {
                               backgroundColor: evento.colore || "#3B82F6",
                               color: "white"
                             }}
-                            title={`${salaLabel ? `[${salaLabel}] ` : ""}${responsabile} - ${evento.titolo}`}
+                            title={`${responsabile} - ${evento.titolo}`}
                           >
                             {!evento.tutto_giorno && (
                               <span className="font-semibold mr-1">
@@ -1117,7 +1116,6 @@ export default function AgendaPage() {
                                 })}
                               </span>
                             )}
-                            {salaLabel && <span className="font-bold mr-1">[{salaLabel}]</span>}
                             {responsabile}
                           </div>
                         );
@@ -1253,7 +1251,7 @@ export default function AgendaPage() {
                                   {evento.in_sede && evento.sala && (
                                     <div className="flex items-center gap-2 text-gray-700">
                                       <Building2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                      <span className="font-semibold">{salaLabel}</span>
+                                      <span className="font-semibold">{evento.sala}</span>
                                     </div>
                                   )}
 
