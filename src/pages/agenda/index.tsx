@@ -1115,6 +1115,7 @@ export default function AgendaPage() {
                             className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
                             style={{ 
                               backgroundColor: evento.colore || "#3B82F6",
+                              border: bordoColore ? `3px solid ${bordoColore}` : "none",
                               color: "white"
                             }}
                             title={`${responsabile} - ${evento.titolo}`}
@@ -1205,7 +1206,8 @@ export default function AgendaPage() {
                               <div 
                                 className="w-1 h-full rounded-full flex-shrink-0"
                                 style={{ 
-                                  backgroundColor: evento.colore || "#3B82F6", 
+                                  backgroundColor: evento.colore || "#3B82F6",
+                                  border: bordoColore ? `3px solid ${bordoColore}` : "none",
                                   minHeight: "60px"
                                 }}
                               ></div>
