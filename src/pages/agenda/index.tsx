@@ -20,10 +20,10 @@ type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const SALE_CONFIG: Record<string, { nome: string; colore: string }> = {
-  "A": { nome: "Sala Riunioni Grande", colore: "#3B82F6" },
-  "B": { nome: "Sala Briefing", colore: "#10B981" },
-  "C": { nome: "In Stanza", colore: "#F59E0B" }
+const SALE_CONFIG: Record<string, { nome: string; bordoColore: string | null }> = {
+  "A": { nome: "Sala Riunioni Grande", bordoColore: "#000000" },
+  "B": { nome: "Sala Briefing", bordoColore: "#EF4444" },
+  "C": { nome: "In Stanza", bordoColore: null }
 };
 
 export default function AgendaPage() {
@@ -104,12 +104,9 @@ export default function AgendaPage() {
     }
   };
 
-  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null): string => {
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean): string => {
     if (eventoGenerico) {
       return "#3B82F6";
-    }
-    if (inSede && sala && SALE_CONFIG[sala]) {
-      return SALE_CONFIG[sala].colore;
     }
     return inSede ? "#10B981" : "#EF4444";
   };
@@ -173,7 +170,7 @@ export default function AgendaPage() {
     }
 
     try {
-      const colore = getColoreEvento(formData.evento_generico, formData.in_sede, formData.sala);
+      const colore = getColoreEvento(formData.evento_generico, formData.in_sede);
 
       const partecipantiFinal = formData.invia_a_tutti 
         ? utenti.map(u => u.id)
@@ -935,21 +932,17 @@ export default function AgendaPage() {
                 <p className="text-2xl font-bold text-gray-900">{totalEventi}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="hidden sm:inline">Generico/A</span>
+                <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                <span className="hidden sm:inline">Generico</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="hidden sm:inline">Sala B</span>
+                <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                <span className="hidden sm:inline">In Sede</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                <span className="hidden sm:inline">Sala C</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-4 h-4 rounded-full bg-red-500"></div>
                 <span className="hidden sm:inline">Fuori Sede</span>
               </div>
             </div>
@@ -1111,6 +1104,7 @@ export default function AgendaPage() {
                       {eventiGiorno.slice(0, 3).map((evento) => {
                         const responsabile = getUtenteNome(evento.utente_id);
                         const salaBadge = evento.in_sede && evento.sala ? `[${evento.sala}] ` : "";
+                        const bordoColore = evento.in_sede && evento.sala ? getBordoStanza(evento.sala) : null;
                         
                         return (
                           <div
@@ -1119,7 +1113,8 @@ export default function AgendaPage() {
                             className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
                             style={{ 
                               backgroundColor: evento.colore || "#3B82F6",
-                              color: "white"
+                              color: "white",
+                              border: bordoColore ? `2px solid ${bordoColore}` : "none"
                             }}
                             title={`${responsabile} - ${evento.titolo}`}
                           >
@@ -1272,7 +1267,7 @@ export default function AgendaPage() {
                                   {evento.in_sede && evento.sala && (
                                     <div className="flex items-center gap-2 text-gray-700">
                                       <Building2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                      <span className="font-semibold">{evento.sala}</span>
+                                      <span className="font-semibold">{salaLabel}</span>
                                     </div>
                                   )}
 
