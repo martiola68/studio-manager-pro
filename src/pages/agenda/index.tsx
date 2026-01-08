@@ -109,7 +109,6 @@ export default function AgendaPage() {
       return "#3B82F6";
     }
     
-    // In sede è sempre verde, la stanza determina solo il bordo
     return inSede ? "#10B981" : "#EF4444";
   };
 
@@ -697,11 +696,11 @@ export default function AgendaPage() {
                       <p className="font-semibold mb-1">🏢 Stanze (bordi solo per verde/in sede):</p>
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ border: "2px solid #000" }}></div>
+                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ boxShadow: "inset 0 0 0 2px #000" }}></div>
                           <span>Bordo nero → A - Sala Riunioni Grande</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ border: "2px solid #EF4444" }}></div>
+                          <div className="w-4 h-4 rounded-full bg-green-500" style={{ boxShadow: "inset 0 0 0 2px #EF4444" }}></div>
                           <span>Bordo rosso → B - Sala Briefing</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1115,7 +1114,7 @@ export default function AgendaPage() {
                             className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
                             style={{ 
                               backgroundColor: evento.colore || "#3B82F6",
-                              border: bordoColore ? `3px solid ${bordoColore}` : "none",
+                              boxShadow: bordoColore ? `inset 0 0 0 3px ${bordoColore}` : "none",
                               color: "white"
                             }}
                             title={`${responsabile} - ${evento.titolo}`}
@@ -1207,7 +1206,7 @@ export default function AgendaPage() {
                                 className="w-1 h-full rounded-full flex-shrink-0"
                                 style={{ 
                                   backgroundColor: evento.colore || "#3B82F6",
-                                  border: bordoColore ? `3px solid ${bordoColore}` : "none",
+                                  boxShadow: bordoColore ? `inset 0 0 0 3px ${bordoColore}` : "none",
                                   minHeight: "60px"
                                 }}
                               ></div>
