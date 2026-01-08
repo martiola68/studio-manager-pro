@@ -20,10 +20,10 @@ type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const SALE_CONFIG: Record<string, { nome: string; colore: string }> = {
-  "A": { nome: "Sala Riunioni Grande", colore: "#3B82F6" },
-  "B": { nome: "Sala Briefing", colore: "#10B981" },
-  "C": { nome: "In Stanza", colore: "#F59E0B" }
+const SALE_CONFIG: Record<string, { nome: string; bordoColore: string | null }> = {
+  "A": { nome: "Sala Riunioni Grande", bordoColore: "#000000" },
+  "B": { nome: "Sala Briefing", bordoColore: "#EF4444" },
+  "C": { nome: "In Stanza", bordoColore: null }
 };
 
 export default function AgendaPage() {
