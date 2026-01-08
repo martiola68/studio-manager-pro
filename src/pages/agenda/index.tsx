@@ -109,9 +109,7 @@ export default function AgendaPage() {
       return "#3B82F6";
     }
     
-    if (inSede && sala && SALE_CONFIG[sala]) {
-      return SALE_CONFIG[sala].colore;
-    }
+    // In sede è sempre verde, la stanza determina solo il bordo
     return inSede ? "#10B981" : "#EF4444";
   };
 
