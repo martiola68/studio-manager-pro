@@ -269,7 +269,7 @@ export function Sidebar({
           <X className="h-6 w-6" />
         </Button>
 
-        <nav className="space-y-2 mt-12 lg:mt-0">
+        <nav className="space-y-2 mt-12 lg:mt-0 overflow-y-auto">
           {menuItems.map(item => renderMenuItem(item))}
         </nav>
       </aside>
