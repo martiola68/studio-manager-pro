@@ -420,6 +420,9 @@ export default function AgendaPage() {
         });
       } else {
         const nuovoEvento = await eventoService.createEvento(dataToSave);
+        if (!nuovoEvento) {
+          throw new Error("Errore durante la creazione dell'evento");
+        }
         savedEventoId = nuovoEvento.id;
         toast({
           title: "Successo",

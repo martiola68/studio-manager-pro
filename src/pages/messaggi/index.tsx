@@ -164,6 +164,8 @@ export default function MessaggiPage() {
   };
 
   const subscribeToChat = (convId: string) => {
+    if (!authUserId) return;
+    
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
     }
@@ -193,7 +195,9 @@ export default function MessaggiPage() {
               await messaggioService.segnaComeLetto(convId, authUserId);
             }
           }
-          loadConversazioni(authUserId);
+          if (authUserId) {
+            loadConversazioni(authUserId);
+          }
         }
       )
       .subscribe();
@@ -211,7 +215,7 @@ export default function MessaggiPage() {
         );
       }
 
-      if (sentMsg) {
+      if (sentMsg && user) {
         const optimisticMsg = {
           ...sentMsg,
           mittente: {

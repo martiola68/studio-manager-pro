@@ -106,6 +106,11 @@ export const eventoService = {
       console.log("📧 Preparing to send event notification for:", evento.id);
 
       // Recupera i dati del responsabile
+      if (!evento.utente_id) {
+        console.error("❌ No utente_id found for evento");
+        return;
+      }
+
       const { data: responsabile } = await supabase
         .from("tbutenti")
         .select("nome, cognome, email")
