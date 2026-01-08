@@ -148,7 +148,7 @@ export default function Scadenze770Page() {
       } else {
         const { error } = await supabase
           .from("tbscad770")
-          .insert([scadenzaData]);
+          .insert(scadenzaData);
 
         if (error) throw error;
 
