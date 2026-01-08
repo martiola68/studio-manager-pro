@@ -35,6 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# firebase
-firebase-service-account.json
+# Supabase Edge Functions - DO NOT COMMIT
 supabase/
+supabase/**
+supabase/functions/
+supabase/functions/**/*
+**/supabase/functions/
