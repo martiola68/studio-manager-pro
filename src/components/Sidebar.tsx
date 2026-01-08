@@ -123,6 +123,11 @@ export function Sidebar({
       href: "/contatti"
     },
     {
+      label: "Promemoria",
+      icon: <FileText className="h-5 w-5" />,
+      href: "/promemoria"
+    },
+    {
       label: "Scadenzario",
       icon: <FileText className="h-5 w-5" />,
       children: [
@@ -161,7 +166,8 @@ export function Sidebar({
         { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
         { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
         { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> }
+        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> }
       ]
     }
   ];
