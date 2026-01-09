@@ -1,3 +1,3 @@
-Cache invalidation marker
-Timestamp: 2026-01-09T10:13:00Z
-Build ID: force-rebuild-no-cache-v2.4.5
+Force Vercel cache bust and complete rebuild
+Timestamp: 2026-01-09T12:55:00Z
+This file forces Vercel to ignore all caches and rebuild from scratch

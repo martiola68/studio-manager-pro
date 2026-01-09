@@ -1,1 +1,3 @@
 FORCE_REBUILD=true
+TIMESTAMP=2026-01-09T12:55:00Z
+REASON=Cannot find Supabase integration files during build
