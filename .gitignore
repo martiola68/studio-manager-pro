@@ -35,13 +35,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Supabase
+# Supabase - Escludi solo i file nella cartella root supabase/, NON quelli in src/integrations/supabase/
 supabase/.branches
 supabase/.temp
 supabase/config.toml
 supabase/functions/
-supabase/*.ts
-supabase/*.js
+# Escludi solo file TS/JS nella cartella supabase/ root (non in src/integrations/)
+/supabase/*.ts
+/supabase/*.js
 
 # Logs
 logs
