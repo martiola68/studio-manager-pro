@@ -1,6 +1,4 @@
-Force complete rebuild without any cache
-Timestamp: 2026-01-09T10:45:00Z
-Build must start from scratch - no cached dependencies
-ESLint cache must be cleared
-TypeScript cache must be cleared
-Next.js build cache must be cleared
+# Force Vercel to rebuild from scratch
+# This file triggers a fresh build, bypassing all caches
+# Timestamp: 2026-01-09T12:40:00Z
+# Reason: Missing Supabase integration files in previous builds
