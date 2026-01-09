@@ -1,11 +1,9 @@
-# Ignore Supabase Edge Functions
-supabase/
-supabase/**/*
-
-# Ignore local development files
-.env*.local
+# Force Vercel to ignore cached builds
+.next
+node_modules
+.vercel
 *.log
-logs/
-
-# Ignore uploads directory (user content)
-uploads/
+.env*.local
+tsconfig.tsbuildinfo
+.vercel-force-rebuild
+VERCEL_CACHE_BUST.txt

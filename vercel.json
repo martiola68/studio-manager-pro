@@ -1,4 +1,6 @@
 {
+  "buildCommand": "next build",
+  "framework": "nextjs",
   "headers": [
     {
       "source": "/(.*)",

@@ -1,3 +1,3 @@
-Cache bust marker - Updated: 2026-01-08T09:24:31Z
-This file forces Vercel to invalidate build cache.
-Increment this number on each rebuild: 4
+Cache invalidation marker
+Timestamp: 2026-01-09T10:13:00Z
+Build ID: force-rebuild-no-cache-v2.4.5
