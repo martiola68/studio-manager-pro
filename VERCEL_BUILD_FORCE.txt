@@ -1,3 +1,2 @@
-Force Vercel to rebuild completely
-Timestamp: 2026-01-09T10:45:00Z
-No cache allowed - full clean build required
+Force Vercel to rebuild with latest code
+Timestamp: 2026-01-12T16:19:00Z
