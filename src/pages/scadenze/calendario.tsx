@@ -15,7 +15,7 @@ import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus } from "lu
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
 type TipoScadenza = Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];

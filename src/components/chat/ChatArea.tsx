@@ -7,7 +7,7 @@ import { Send, ArrowLeft, MoreVertical, Paperclip, File, Download, X, Trash2 } f
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 import {
   LayoutDashboard,
   Users,

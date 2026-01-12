@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { utenteService } from "@/services/utenteService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];

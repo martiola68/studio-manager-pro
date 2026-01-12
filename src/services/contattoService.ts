@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import { Database } from "@/lib/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"];

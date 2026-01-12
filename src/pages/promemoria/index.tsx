@@ -36,7 +36,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Edit, Trash2, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"] & {
   tbtipopromemoria?: Database["public"]["Tables"]["tbtipopromemoria"]["Row"];

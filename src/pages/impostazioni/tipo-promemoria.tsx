@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type TipoPromemoria = Database["public"]["Tables"]["tbtipopromemoria"]["Row"];
 

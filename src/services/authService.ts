@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
 export interface AuthUser {

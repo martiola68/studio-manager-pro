@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
 import { utenteService } from "@/services/utenteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Edit, UserX, Search, RotateCcw, Loader2, UserCheck, Filter, Key, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type RuoloOperatore = Database["public"]["Tables"]["tbroperatore"]["Row"];

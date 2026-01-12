@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { comunicazioneService } from "@/services/comunicazioneService";
 import { clienteService } from "@/services/clienteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Mail, Send, Plus, Paperclip, Search, Trash2, Eye, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];

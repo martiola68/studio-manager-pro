@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import { Database } from "@/lib/supabase/types";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];

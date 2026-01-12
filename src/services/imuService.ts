@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 
 type ScadenzaIMU = Database["public"]["Tables"]["tbscadimu"]["Row"];
 type ScadenzaIMUInsert = Database["public"]["Tables"]["tbscadimu"]["Insert"];

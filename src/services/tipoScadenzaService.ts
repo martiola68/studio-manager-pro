@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 
 type TipoScadenza = Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
 type TipoScadenzaInsert = Database["public"]["Tables"]["tbtipi_scadenze"]["Insert"];

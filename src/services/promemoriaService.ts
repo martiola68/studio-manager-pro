@@ -1,5 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 
 type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 type PromemoriaInsert = Database["public"]["Tables"]["tbpromemoria"]["Insert"];

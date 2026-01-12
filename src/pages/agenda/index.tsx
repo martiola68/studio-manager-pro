@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { eventoService } from "@/services/eventoService";
 import { clienteService } from "@/services/clienteService";
 import { utenteService } from "@/services/utenteService";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight, Search, User, List, Grid3x3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];

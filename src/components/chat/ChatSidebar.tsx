@@ -7,7 +7,7 @@ import { Search, Plus, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 // Definiamo i tipi manualmente basandoci su quelli del DB per gestire le relazioni
 type Conversazione = Database["public"]["Tables"]["tbconversazioni"]["Row"];

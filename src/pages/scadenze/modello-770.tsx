@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import {
 import { Edit, Trash2, Filter, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/router";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 type Scadenza770 = Database["public"]["Tables"]["scadenze_770"]["Row"] & {
   tbclienti?: {
