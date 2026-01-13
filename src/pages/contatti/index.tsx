@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/lib/supabase/types";
+// Importo i tipi dalla cartella integrations che è quella aggiornata
+import type { Database } from "@/integrations/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
@@ -131,9 +132,11 @@ export default function ContattiPage() {
         email: formData.email || null,
         cell: formData.cell || null,
         tel: formData.tel || null,
-        cliente_id: formData.cliente_id || null,
+        // Gestione corretta del cliente_id
+        cliente_id: formData.cliente_id && formData.cliente_id !== "nessuna" ? formData.cliente_id : null,
         note: formData.note || null,
         cassetto_fiscale: formData.cassetto_fiscale,
+        // Se non ha cassetto fiscale, resetta i campi a null
         utente: formData.cassetto_fiscale ? (formData.utente || null) : null,
         password: formData.cassetto_fiscale ? (formData.password || null) : null,
         pin: formData.cassetto_fiscale ? (formData.pin || null) : null,
@@ -658,16 +661,16 @@ export default function ContattiPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cliente_id">Società (opzionale)</Label>
+                    <Label htmlFor="cliente_id">Società (Opzionale)</Label>
                     <Select
-                      value={formData.cliente_id}
-                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                      value={formData.cliente_id || "nessuna"}
+                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value === "nessuna" ? "" : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona una società" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nessuna società</SelectItem>
+                        <SelectItem value="nessuna">Nessuna società</SelectItem>
                         {clienti.map((cliente) => (
                           <SelectItem key={cliente.id} value={cliente.id}>
                             {cliente.ragione_sociale}
@@ -695,51 +698,70 @@ export default function ContattiPage() {
                         type="checkbox"
                         id="cassetto_fiscale"
                         checked={formData.cassetto_fiscale}
-                        onChange={(e) => setFormData({ ...formData, cassetto_fiscale: e.target.checked })}
-                        className="rounded w-5 h-5"
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData({ 
+                            ...formData, 
+                            cassetto_fiscale: checked,
+                            // Se disabilito, pulisco i campi visualmente (opzionale, ma utile per UX)
+                            utente: checked ? formData.utente : "",
+                            password: checked ? formData.password : "",
+                            pin: checked ? formData.pin : "",
+                            password_iniziale: checked ? formData.password_iniziale : ""
+                          });
+                        }}
+                        className="rounded w-5 h-5 border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
-                      <Label htmlFor="cassetto_fiscale" className="cursor-pointer">Ha Cassetto Fiscale</Label>
+                      <Label htmlFor="cassetto_fiscale" className="cursor-pointer font-medium">Ha Cassetto Fiscale</Label>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="utente">Utente</Label>
+                        <Label htmlFor="utente" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Utente</Label>
                         <Input
                           id="utente"
                           value={formData.utente}
                           onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
                           disabled={!formData.cassetto_fiscale}
+                          autoComplete="new-password" // Trucco per evitare autofill
+                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="pin">PIN</Label>
+                        <Label htmlFor="pin" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>PIN</Label>
                         <Input
                           id="pin"
                           value={formData.pin}
                           onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
                           disabled={!formData.cassetto_fiscale}
+                          autoComplete="off"
+                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Password</Label>
                         <Input
                           id="password"
-                          type="password"
+                          type="text" // Cambiato a text per evitare che il browser provi a salvare/suggerire password
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                           disabled={!formData.cassetto_fiscale}
+                          autoComplete="new-password"
+                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="password_iniziale">Password Iniziale</Label>
+                        <Label htmlFor="password_iniziale" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Password Iniziale</Label>
                         <Input
                           id="password_iniziale"
                           value={formData.password_iniziale}
                           onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
                           disabled={!formData.cassetto_fiscale}
+                          autoComplete="off"
+                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
                         />
                       </div>
                     </div>
