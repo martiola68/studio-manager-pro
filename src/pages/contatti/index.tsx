@@ -449,7 +449,7 @@ export default function ContattiPage() {
   const getClienteNome = (clienteId: string | null): string => {
     if (!clienteId) return "";
     const cliente = clienti.find(c => c.id === clienteId);
-    return cliente ? cliente.denominazione : "";
+    return cliente ? cliente.ragione_sociale : "";
   };
 
   const contattiConCassetto = contatti.filter(c => c.cassetto_fiscale).length;
@@ -670,7 +670,7 @@ export default function ContattiPage() {
                         <SelectItem value="">Nessuna società</SelectItem>
                         {clienti.map((cliente) => (
                           <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.denominazione}
+                            {cliente.ragione_sociale}
                           </SelectItem>
                         ))}
                       </SelectContent>
