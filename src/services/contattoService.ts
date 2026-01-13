@@ -9,7 +9,22 @@ export const contattoService = {
   async getContatti(): Promise<Contatto[]> {
     const { data, error } = await supabase
       .from("tbcontatti")
-      .select("*")
+      .select(`
+        id,
+        nome,
+        cognome,
+        email,
+        cell,
+        tel,
+        cliente_id,
+        note,
+        cassetto_fiscale,
+        utente,
+        password,
+        pin,
+        password_iniziale,
+        created_at
+      `)
       .order("cognome", { ascending: true });
 
     if (error) {
@@ -22,7 +37,22 @@ export const contattoService = {
   async getContattoById(id: string): Promise<Contatto | null> {
     const { data, error } = await supabase
       .from("tbcontatti")
-      .select("*")
+      .select(`
+        id,
+        nome,
+        cognome,
+        email,
+        cell,
+        tel,
+        cliente_id,
+        note,
+        cassetto_fiscale,
+        utente,
+        password,
+        pin,
+        password_iniziale,
+        created_at
+      `)
       .eq("id", id)
       .single();
 
@@ -37,7 +67,22 @@ export const contattoService = {
     const { data, error } = await supabase
       .from("tbcontatti")
       .insert(contatto)
-      .select()
+      .select(`
+        id,
+        nome,
+        cognome,
+        email,
+        cell,
+        tel,
+        cliente_id,
+        note,
+        cassetto_fiscale,
+        utente,
+        password,
+        pin,
+        password_iniziale,
+        created_at
+      `)
       .single();
 
     if (error) {
@@ -52,7 +97,22 @@ export const contattoService = {
       .from("tbcontatti")
       .update(updates)
       .eq("id", id)
-      .select()
+      .select(`
+        id,
+        nome,
+        cognome,
+        email,
+        cell,
+        tel,
+        cliente_id,
+        note,
+        cassetto_fiscale,
+        utente,
+        password,
+        pin,
+        password_iniziale,
+        created_at
+      `)
       .single();
 
     if (error) {
