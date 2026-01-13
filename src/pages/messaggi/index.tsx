@@ -377,7 +377,7 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex flex-col md:flex-row h-[calc(100vh-72px)] mt-[72px]">
+      <div className="flex flex-col md:flex-row h-full">
         <div className={cn(
           "w-full md:w-80 border-r bg-background flex-shrink-0 overflow-y-auto",
           selectedConvId ? "hidden md:block" : "block"

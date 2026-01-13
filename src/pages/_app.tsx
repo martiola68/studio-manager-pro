@@ -24,7 +24,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <ThemeProvider>
-      <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-col h-screen">
         <Header onMenuToggle={() => setMobileOpen(!mobileOpen)} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
