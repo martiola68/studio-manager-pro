@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <!-- Background -->
+  <rect width="200" height="60" fill="#4F46E5" rx="8"/>
+  
+  <!-- El.Ma. Text -->
+  <text x="20" y="38" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white">
+    El.Ma.
+  </text>
+  
+  <!-- Software Text -->
+  <text x="20" y="52" font-family="Arial, sans-serif" font-size="12" font-weight="normal" fill="#10B981" letter-spacing="2">
+    SOFTWARE
+  </text>
+  
+  <!-- Decorative element -->
+  <circle cx="170" cy="30" r="15" fill="#10B981" opacity="0.2"/>
+  <circle cx="170" cy="30" r="10" fill="#10B981" opacity="0.4"/>
+  <circle cx="170" cy="30" r="5" fill="#10B981"/>
+</svg>
