@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { contattoService } from "@/services/contattoService";
+import { clienteService } from "@/services/clienteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Copy, ExternalLink, FolderKey, CheckCircle } from "lucide-react";
+import { Search, Copy, ExternalLink, FolderKey, CheckCircle, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 
 const CASSETTO_FISCALE_URL = "https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate";
 
@@ -20,6 +22,7 @@ export default function CassettiFiscaliPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
+  const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [letterFilter, setLetterFilter] = useState<string>("");
@@ -42,7 +45,7 @@ export default function CassettiFiscaliPage() {
         router.push("/login");
         return;
       }
-      await loadContatti();
+      await Promise.all([loadContatti(), loadClienti()]);
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -67,16 +70,35 @@ export default function CassettiFiscaliPage() {
     }
   };
 
+  const loadClienti = async () => {
+    try {
+      const data = await clienteService.getClienti();
+      setClienti(data);
+    } catch (error) {
+      console.error("Errore caricamento clienti:", error);
+    }
+  };
+
+  const getClienteNome = (clienteId: string | null): string => {
+    if (!clienteId) return "-";
+    const cliente = clienti.find(c => c.id === clienteId);
+    return cliente ? cliente.ragione_sociale : "-";
+  };
+
   const filterContatti = () => {
     let filtered = [...contatti];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.nome.toLowerCase().includes(query) ||
-        c.cognome.toLowerCase().includes(query) ||
-        (c.utente?.toLowerCase() || "").includes(query)
-      );
+      filtered = filtered.filter(c => {
+        const clienteNome = getClienteNome(c.cliente_id).toLowerCase();
+        return (
+          c.nome.toLowerCase().includes(query) ||
+          c.cognome.toLowerCase().includes(query) ||
+          (c.utente?.toLowerCase() || "").includes(query) ||
+          clienteNome.includes(query)
+        );
+      });
     }
 
     if (letterFilter) {
@@ -265,13 +287,14 @@ export default function CassettiFiscaliPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[180px]">Nome</TableHead>
-                  <TableHead className="w-[180px]">Cognome</TableHead>
-                  <TableHead className="w-[200px]">Utente</TableHead>
-                  <TableHead className="w-[120px]">PIN</TableHead>
-                  <TableHead className="w-[150px]">Password</TableHead>
+                  <TableHead className="w-[150px]">Nome</TableHead>
+                  <TableHead className="w-[150px]">Cognome</TableHead>
+                  <TableHead className="w-[200px]">Società</TableHead>
+                  <TableHead className="w-[150px]">Utente</TableHead>
+                  <TableHead className="w-[100px]">PIN</TableHead>
+                  <TableHead className="w-[120px]">Password</TableHead>
                   <TableHead className="w-[100px]">Stato</TableHead>
-                  <TableHead className="text-right w-[300px]">Azioni Rapide</TableHead>
+                  <TableHead className="text-right w-[200px]">Azioni Rapide</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -280,11 +303,22 @@ export default function CassettiFiscaliPage() {
                   const hasPin = !!contatto.pin;
                   const hasPassword = !!contatto.password;
                   const isComplete = hasUtente && hasPin && hasPassword;
+                  const clienteNome = getClienteNome(contatto.cliente_id);
                   
                   return (
                     <TableRow key={contatto.id}>
                       <TableCell className="font-medium">{contatto.nome}</TableCell>
                       <TableCell className="font-medium">{contatto.cognome}</TableCell>
+                      <TableCell>
+                        {contatto.cliente_id ? (
+                          <div className="flex items-center gap-1.5 text-blue-700 font-medium text-sm">
+                            <Building2 className="h-3 w-3" />
+                            {clienteNome}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <code className="text-xs bg-gray-100 px-2 py-1 rounded">
                           {contatto.utente || "-"}
