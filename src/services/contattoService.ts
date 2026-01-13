@@ -23,7 +23,8 @@ export const contattoService = {
         password,
         pin,
         password_iniziale,
-        created_at
+        created_at,
+        updated_at
       `)
       .order("cognome", { ascending: true });
 
@@ -51,7 +52,8 @@ export const contattoService = {
         password,
         pin,
         password_iniziale,
-        created_at
+        created_at,
+        updated_at
       `)
       .eq("id", id)
       .single();
@@ -81,7 +83,8 @@ export const contattoService = {
         password,
         pin,
         password_iniziale,
-        created_at
+        created_at,
+        updated_at
       `)
       .single();
 
@@ -111,7 +114,8 @@ export const contattoService = {
         password,
         pin,
         password_iniziale,
-        created_at
+        created_at,
+        updated_at
       `)
       .single();
 
