@@ -377,9 +377,9 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex flex-col md:flex-row min-h-screen pt-[72px]">
+      <div className="flex flex-col md:flex-row h-[calc(100vh-72px)] mt-[72px]">
         <div className={cn(
-          "w-full md:w-80 border-r bg-background flex-shrink-0",
+          "w-full md:w-80 border-r bg-background flex-shrink-0 overflow-y-auto",
           selectedConvId ? "hidden md:block" : "block"
         )}>
           <ChatSidebar
@@ -392,7 +392,7 @@ export default function MessaggiPage() {
         </div>
 
         <div className={cn(
-          "flex-1 bg-muted/10 flex flex-col min-w-0",
+          "flex-1 bg-muted/10 flex flex-col min-w-0 overflow-hidden",
           selectedConvId ? "block" : "hidden md:block"
         )}>
           {selectedConvId ? (
