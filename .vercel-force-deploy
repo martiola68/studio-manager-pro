@@ -1,3 +1,3 @@
-Force deploy trigger - 2026-01-08 15:45:00 UTC
-This file forces Vercel to recognize changes and deploy.
-Deployment must use latest commit with all fixes.
+# Force Vercel deployment
+# Last update: 2026-01-13 08:30:40 UTC
+# Trigger deployment to all configured domains
