@@ -62,7 +62,6 @@ export default function MessaggiPage() {
     if (authUserId && studioId) {
       loadScadenzeAlert();
       
-      // Refresh alert ogni 30 minuti
       alertIntervalRef.current = setInterval(() => {
         loadScadenzeAlert();
       }, 30 * 60 * 1000);
@@ -92,7 +91,6 @@ export default function MessaggiPage() {
       }
       setUser(profile);
       
-      // Verifica se l'utente è Partner
       const isPartnerUser = profile.tipo_utente?.toLowerCase() === "partner";
       setIsPartner(isPartnerUser);
       
@@ -142,14 +140,12 @@ export default function MessaggiPage() {
         studioId
       );
 
-      // Filtra scadenze già dismissate
       const scadenzeNonDismissate = scadenze.filter(
         s => !scadenzaAlertService.isDismissed(s.id)
       );
 
       setScadenzeAlert(scadenzeNonDismissate);
 
-      // Mostra toast per scadenze critiche (solo se ce ne sono di nuove)
       const critiche = scadenzeNonDismissate.filter(s => s.urgenza === "critica");
       if (critiche.length > 0) {
         toast({
@@ -166,7 +162,6 @@ export default function MessaggiPage() {
   const subscribeToChat = (convId: string) => {
     if (!authUserId) return;
     
-    // Capture user ID in a local const for the closure and FORCE non-null
     const currentUserId = authUserId!;
     
     if (subscriptionRef.current) {
@@ -199,7 +194,6 @@ export default function MessaggiPage() {
             }
           }
           
-          // Use the captured constant variable
           loadConversazioni(currentUserId);
         }
       )
@@ -383,12 +377,10 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      {/* Container per Chat che occupa tutta l'altezza disponibile nel main */}
-      <div className="flex h-full overflow-hidden relative">
-        {/* Chat Sidebar */}
+      <div className="flex flex-col md:flex-row h-[calc(100vh-88px)] overflow-hidden">
         <div className={cn(
-          "w-full md:w-80 border-r bg-background flex-shrink-0 absolute md:relative inset-0 z-10 md:z-0",
-          selectedConvId ? "hidden md:flex" : "flex"
+          "w-full md:w-80 border-r bg-background flex-shrink-0",
+          selectedConvId ? "hidden md:block" : "block"
         )}>
           <ChatSidebar
             conversazioni={conversazioni}
@@ -399,10 +391,9 @@ export default function MessaggiPage() {
           />
         </div>
 
-        {/* Chat Area */}
         <div className={cn(
-          "flex-1 bg-muted/10 absolute md:relative inset-0 z-20 md:z-0 flex flex-col",
-          selectedConvId ? "flex" : "hidden md:flex"
+          "flex-1 bg-muted/10 flex flex-col min-w-0",
+          selectedConvId ? "block" : "hidden md:block"
         )}>
           {selectedConvId ? (
             <ChatArea
@@ -435,18 +426,18 @@ export default function MessaggiPage() {
           )}
         </div>
 
-        {/* Alert Scadenze Sidebar - Hidden on mobile */}
-        <div className="hidden xl:block w-80 border-l bg-background p-4 overflow-y-auto">
-          <AlertScadenze
-            scadenze={scadenzeAlert}
-            isPartner={isPartner}
-            onDismiss={handleDismissAlert}
-            onViewDetails={handleViewScadenzaDetails}
-          />
+        <div className="hidden xl:block w-80 border-l bg-background overflow-y-auto flex-shrink-0">
+          <div className="p-4">
+            <AlertScadenze
+              scadenze={scadenzeAlert}
+              isPartner={isPartner}
+              onDismiss={handleDismissAlert}
+              onViewDetails={handleViewScadenzaDetails}
+            />
+          </div>
         </div>
       </div>
 
-      {/* New Chat Dialog */}
       <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
         <DialogContent className="max-w-md mx-4">
           <DialogHeader>

@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, ArrowLeft, MoreVertical, Paperclip, File, Download, X, Trash2 } from "lucide-react";
+import { Send, ArrowLeft, MoreVertical, Paperclip, File, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -53,10 +53,6 @@ export function ChatArea({
   onBack,
   className,
 }: ChatAreaProps) {
-  const [message, setMessage] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
@@ -66,6 +62,7 @@ export function ChatArea({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,7 +75,6 @@ export function ChatArea({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     
-    // Limite 5 file per messaggio
     if (selectedFiles.length + files.length > 5) {
       toast({
         variant: "destructive",
@@ -88,7 +84,6 @@ export function ChatArea({
       return;
     }
 
-    // Limite 10MB per file
     const oversizedFiles = files.filter((f) => f.size > 10 * 1024 * 1024);
     if (oversizedFiles.length > 0) {
       toast({
@@ -122,10 +117,6 @@ export function ChatArea({
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  };
-
-  const handleRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteMessage = async () => {
@@ -185,8 +176,7 @@ export function ChatArea({
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Header */}
-      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm z-10 bg-background flex-shrink-0">
+      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -210,7 +200,6 @@ export function ChatArea({
         </Button>
       </div>
 
-      {/* Messages */}
       <ScrollArea className="flex-1 p-3 md:p-4 bg-muted/20">
         <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto">
           {Object.entries(messageGroups).map(([dateStr, msgs]) => (
@@ -279,7 +268,6 @@ export function ChatArea({
                         {msg.created_at && format(new Date(msg.created_at), "HH:mm", { locale: it })}
                       </p>
 
-                      {/* Delete button - only for own messages */}
                       {isMe && hoveredMessageId === msg.id && (
                         <Button
                           variant="ghost"
@@ -300,7 +288,6 @@ export function ChatArea({
         </div>
       </ScrollArea>
 
-      {/* Selected Files Preview */}
       {selectedFiles.length > 0 && (
         <div className="px-3 md:px-4 py-2 border-t bg-muted/50 overflow-x-auto flex-shrink-0">
           <div className="flex gap-2 min-w-min">
@@ -329,7 +316,6 @@ export function ChatArea({
         </div>
       )}
 
-      {/* Input */}
       <div className="p-3 md:p-4 border-t bg-background flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2 max-w-3xl mx-auto">
           <input
@@ -372,7 +358,6 @@ export function ChatArea({
         </form>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
