@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guida Completa Installazione - Studio Manager Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #1F2937;
+            background: #fff;
+            padding: 40px 60px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        @media print {
+            body {
+                padding: 20px;
+            }
+            .no-print {
+                display: none;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #4F46E5;
+        }
+        
+        .logo {
+            width: 200px;
+            height: 60px;
+            margin: 0 auto 20px;
+            background: #4F46E5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        h1 {
+            color: #4F46E5;
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #6B7280;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        
+        .author {
+            color: #10B981;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        
+        h2 {
+            color: #4F46E5;
+            font-size: 28px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #E5E7EB;
+        }
+        
+        h3 {
+            color: #1F2937;
+            font-size: 22px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #374151;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            color: #4B5563;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            color: #4B5563;
+        }
+        
+        .highlight-box {
+            background: #EEF2FF;
+            border-left: 4px solid #4F46E5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .success-box {
+            background: #D1FAE5;
+            border-left: 4px solid #10B981;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .warning-box {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .code-block {
+            background: #1F2937;
+            color: #10B981;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .step {
+            background: #F9FAFB;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 3px solid #4F46E5;
+        }
+        
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .toc {
+            background: #F9FAFB;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+        }
+        
+        .toc a {
+            color: #4F46E5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #E5E7EB;
+            text-align: center;
+            color: #6B7280;
+        }
+        
+        .contact-box {
+            background: #4F46E5;
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+        
+        .contact-box h3 {
+            color: white;
+            margin-top: 0;
+        }
+        
+        .contact-box p {
+            color: #E0E7FF;
+        }
+        
+        .btn-print {
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        
+        .btn-print:hover {
+            background: #4338CA;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">El.Ma. SOFTWARE</div>
+        <h1>📱 GUIDA COMPLETA ALL'INSTALLAZIONE</h1>
+        <div class="subtitle">Studio Manager Pro - Gestionale Amministrativo Professionale</div>
+        <div class="author">Creato da: Mario Artiola - Fondatore e Lead Developer<br>
+        Brand: El.Ma. Software | Versione: 1.0 - Gennaio 2026</div>
+    </header>
+
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Stampa / Salva come PDF</button>
+    </div>
+
+    <div class="toc">
+        <h2>📋 INDICE</h2>
+        <ul>
+            <li><a href="#benvenuto">1. Benvenuto</a></li>
+            <li><a href="#iphone">2. Installazione iPhone/iPad</a></li>
+            <li><a href="#android">3. Installazione Android</a></li>
+            <li><a href="#windows">4. Installazione Windows</a></li>
+            <li><a href="#mac">5. Installazione Mac</a></li>
+            <li><a href="#primo-accesso">6. Primo Accesso</a></li>
+            <li><a href="#faq">7. Domande Frequenti</a></li>
+            <li><a href="#supporto">8. Supporto Tecnico</a></li>
+        </ul>
+    </div>
+
+    <section id="benvenuto">
+        <h2>👋 BENVENUTO</h2>
+        <p>Grazie per aver scelto <strong>Studio Manager Pro</strong>!</p>
+        <p>Questa guida ti accompagnerà passo dopo passo nell'installazione dell'applicazione su qualsiasi dispositivo. Studio Manager Pro è una <strong>Progressive Web App (PWA)</strong> che si comporta come un'app nativa, offrendoti la massima flessibilità e prestazioni.</p>
+        
+        <div class="highlight-box">
+            <h4>Vantaggi dell'installazione:</h4>
+            <ul>
+                <li>✅ Accesso rapido dalla home screen</li>
+                <li>✅ Esperienza full-screen (senza barra del browser)</li>
+                <li>✅ Notifiche push in tempo reale</li>
+                <li>✅ Funzionalità offline</li>
+                <li>✅ Prestazioni ottimizzate</li>
+            </ul>
+        </div>
+
+        <div class="code-block">
+            🔗 Link dell'applicazione:<br>
+            https://studiomanagerpro.vercel.app
+        </div>
+    </section>
+
+    <section id="iphone" class="page-break">
+        <h2>📱 INSTALLAZIONE SU IPHONE/IPAD</h2>
+        
+        <div class="warning-box">
+            <h4>Requisiti:</h4>
+            <ul>
+                <li>iOS 11.3 o superiore</li>
+                <li>Browser Safari (obbligatorio)</li>
+            </ul>
+        </div>
+
+        <h3>Procedura passo-passo:</h3>
+
+        <div class="step">
+            <strong>PASSO 1:</strong> Apri Safari sul tuo iPhone/iPad
+        </div>
+
+        <div class="step">
+            <strong>PASSO 2:</strong> Vai all'indirizzo:
+            <div class="code-block">https://studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 3:</strong> Effettua il login con le tue credenziali
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Tocca il pulsante <strong>"Condividi"</strong> 📤
+            <ul>
+                <li>Si trova nella barra in basso (iPhone) o in alto (iPad)</li>
+                <li>Icona: quadrato con freccia verso l'alto</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 5:</strong> Scorri il menu e tocca <strong>"Aggiungi a Home"</strong> ➕
+        </div>
+
+        <div class="step">
+            <strong>PASSO 6:</strong> Conferma il nome dell'app
+            <ul>
+                <li>Nome predefinito: "Studio Manager Pro"</li>
+                <li>Puoi modificarlo se desideri</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 7:</strong> Tocca <strong>"Aggiungi"</strong> in alto a destra
+        </div>
+
+        <div class="success-box">
+            <h4>✅ FATTO! L'icona dell'app apparirà nella tua Home screen!</h4>
+        </div>
+
+        <div class="highlight-box">
+            <h4>🎯 Dove trovare l'app:</h4>
+            <ul>
+                <li>Cerca l'icona nella Home screen</li>
+                <li>Puoi spostarla dove preferisci</li>
+                <li>Si apre a schermo intero, come un'app nativa</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="android" class="page-break">
+        <h2>🤖 INSTALLAZIONE SU ANDROID</h2>
+        
+        <div class="warning-box">
+            <h4>Requisiti:</h4>
+            <ul>
+                <li>Android 5.0 (Lollipop) o superiore</li>
+                <li>Chrome, Firefox, Samsung Internet o Edge</li>
+            </ul>
+        </div>
+
+        <h3>Procedura passo-passo:</h3>
+
+        <div class="step">
+            <strong>PASSO 1:</strong> Apri Chrome (consigliato) sul tuo dispositivo Android
+        </div>
+
+        <div class="step">
+            <strong>PASSO 2:</strong> Vai all'indirizzo:
+            <div class="code-block">https://studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 3:</strong> Effettua il login con le tue credenziali
+        </div>
+
+        <h4>METODO A (Banner automatico):</h4>
+        <div class="step">
+            <strong>PASSO 4:</strong>
+            <ul>
+                <li>Apparirà un banner in basso con scritto: "Installare Studio Manager Pro?"</li>
+                <li>Tocca <strong>"Installa"</strong></li>
+                <li>Attendi qualche secondo</li>
+                <li>✅ L'app è installata!</li>
+            </ul>
+        </div>
+
+        <h4>METODO B (Menu manuale):</h4>
+        <div class="step">
+            <strong>PASSO 4:</strong>
+            <ul>
+                <li>Tocca i <strong>3 puntini verticali</strong> ⋮ in alto a destra</li>
+                <li>Seleziona <strong>"Installa app"</strong> o <strong>"Aggiungi a Home"</strong></li>
+                <li>Tocca <strong>"Installa"</strong> nella finestra di conferma</li>
+                <li>✅ L'app è installata!</li>
+            </ul>
+        </div>
+
+        <div class="highlight-box">
+            <h4>🎯 Dove trovare l'app:</h4>
+            <ul>
+                <li>Nel drawer delle app (insieme alle altre app)</li>
+                <li>Puoi aggiungere un'icona alla Home screen</li>
+                <li>Cerca "Studio Manager Pro"</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="windows" class="page-break">
+        <h2>💻 INSTALLAZIONE SU WINDOWS</h2>
+        
+        <div class="warning-box">
+            <h4>Requisiti:</h4>
+            <ul>
+                <li>Windows 10 o superiore</li>
+                <li>Chrome o Microsoft Edge (consigliati)</li>
+            </ul>
+        </div>
+
+        <h3>Procedura con Chrome:</h3>
+
+        <div class="step">
+            <strong>PASSO 1:</strong> Apri Google Chrome sul tuo PC
+        </div>
+
+        <div class="step">
+            <strong>PASSO 2:</strong> Vai all'indirizzo:
+            <div class="code-block">https://studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 3:</strong> Effettua il login con le tue credenziali
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Guarda la <strong>barra degli indirizzi</strong> in alto
+            <ul>
+                <li>Vedrai un'icona <strong>⊕ Installa</strong> oppure <strong>🖥️</strong></li>
+                <li>L'icona appare a destra della barra</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 5:</strong> Clicca sull'icona <strong>"Installa"</strong>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 6:</strong> Apparirà una finestra di conferma
+            <ul>
+                <li>Titolo: "Installare Studio Manager Pro?"</li>
+                <li>Clicca <strong>"Installa"</strong></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 7:</strong> Attendi qualche secondo
+            <ul>
+                <li>L'app si aprirà automaticamente in una nuova finestra</li>
+                <li>✅ L'app è installata!</li>
+            </ul>
+        </div>
+
+        <h3>Procedura con Microsoft Edge:</h3>
+
+        <div class="step">
+            <strong>PASSO 1-3:</strong> Come sopra (apri Edge, vai al sito, login)
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Clicca sui <strong>3 puntini</strong> ⋯ in alto a destra
+        </div>
+
+        <div class="step">
+            <strong>PASSO 5:</strong> Seleziona <strong>"App"</strong> → <strong>"Installa questo sito come app"</strong>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 6:</strong> Conferma il nome e clicca <strong>"Installa"</strong>
+        </div>
+
+        <div class="highlight-box">
+            <h4>🎯 Dove trovare l'app:</h4>
+            <ul>
+                <li><strong>Menu Start:</strong> Cerca "Studio Manager Pro"</li>
+                <li><strong>Desktop:</strong> Puoi creare un collegamento</li>
+                <li><strong>Barra delle applicazioni:</strong> Puoi pinnare l'app</li>
+                <li>Si apre in una finestra dedicata (senza barra del browser)</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="mac" class="page-break">
+        <h2>🍎 INSTALLAZIONE SU MAC</h2>
+        
+        <div class="warning-box">
+            <h4>Requisiti:</h4>
+            <ul>
+                <li>macOS 10.13 (High Sierra) o superiore</li>
+                <li>Chrome, Safari o Edge</li>
+            </ul>
+        </div>
+
+        <h3>Procedura con Chrome:</h3>
+
+        <div class="step">
+            <strong>PASSO 1:</strong> Apri Google Chrome sul tuo Mac
+        </div>
+
+        <div class="step">
+            <strong>PASSO 2:</strong> Vai all'indirizzo:
+            <div class="code-block">https://studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 3:</strong> Effettua il login con le tue credenziali
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Guarda la <strong>barra degli indirizzi</strong> in alto
+            <ul>
+                <li>Vedrai un'icona <strong>⊕ Installa</strong> oppure <strong>🖥️</strong></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 5:</strong> Clicca sull'icona e poi <strong>"Installa"</strong>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 6:</strong> Conferma e attendi l'installazione
+        </div>
+
+        <h3>Procedura con Safari:</h3>
+
+        <div class="step">
+            <strong>PASSO 1-3:</strong> Come sopra (apri Safari, vai al sito, login)
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Nel menu in alto, clicca <strong>"File"</strong>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 5:</strong> Seleziona <strong>"Aggiungi al Dock"</strong>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 6:</strong> L'app apparirà nel Dock
+        </div>
+
+        <div class="highlight-box">
+            <h4>🎯 Dove trovare l'app:</h4>
+            <ul>
+                <li><strong>Dock:</strong> Icona dedicata</li>
+                <li><strong>Launchpad:</strong> Insieme alle altre app</li>
+                <li><strong>Spotlight:</strong> Cerca "Studio Manager Pro"</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="primo-accesso" class="page-break">
+        <h2>🔐 PRIMO ACCESSO</h2>
+
+        <h3>Credenziali di accesso:</h3>
+        <div class="highlight-box">
+            <p>Hai ricevuto via email:</p>
+            <ul>
+                <li><strong>Email:</strong> [la tua email]</li>
+                <li><strong>Password temporanea:</strong> [password iniziale]</li>
+            </ul>
+        </div>
+
+        <h3>Primo login:</h3>
+
+        <div class="step">
+            <strong>PASSO 1:</strong> Apri l'app installata
+        </div>
+
+        <div class="step">
+            <strong>PASSO 2:</strong> Inserisci email e password
+        </div>
+
+        <div class="step">
+            <strong>PASSO 3:</strong> Al primo accesso ti verrà chiesto di:
+            <ul>
+                <li>✅ Cambiare la password temporanea</li>
+                <li>✅ Scegliere una nuova password sicura:
+                    <ul>
+                        <li>Minimo 8 caratteri</li>
+                        <li>Almeno una lettera maiuscola</li>
+                        <li>Almeno un numero</li>
+                        <li>Almeno un carattere speciale</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>PASSO 4:</strong> Completa il profilo:
+            <ul>
+                <li>Nome e cognome</li>
+                <li>Ruolo/Mansione</li>
+                <li>Foto profilo (opzionale)</li>
+            </ul>
+        </div>
+
+        <div class="success-box">
+            <h4>✅ Sei pronto per usare Studio Manager Pro!</h4>
+        </div>
+    </section>
+
+    <section id="faq" class="page-break">
+        <h2>❓ DOMANDE FREQUENTI (FAQ)</h2>
+
+        <div class="highlight-box">
+            <h4>Q: L'app funziona offline?</h4>
+            <p><strong>A:</strong> Alcune funzionalità sono disponibili offline (consultazione dati già caricati). Per le operazioni che richiedono sincronizzazione con il database è necessaria la connessione internet.</p>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: Posso installare l'app su più dispositivi?</h4>
+            <p><strong>A:</strong> Sì! Puoi installare Studio Manager Pro su tutti i tuoi dispositivi (smartphone, tablet, PC). I dati sono sincronizzati in tempo reale.</p>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: Come aggiorno l'app?</h4>
+            <p><strong>A:</strong> Le PWA si aggiornano automaticamente. Quando apri l'app, viene scaricata l'ultima versione disponibile in background.</p>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: Posso disinstallare l'app?</h4>
+            <p><strong>A:</strong> Sì, come qualsiasi altra app:</p>
+            <ul>
+                <li><strong>iOS:</strong> Tieni premuto l'icona → "Rimuovi app"</li>
+                <li><strong>Android:</strong> Disinstalla dalle impostazioni del dispositivo</li>
+                <li><strong>Windows/Mac:</strong> Menu Start/Launchpad → Click destro → Disinstalla</li>
+            </ul>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: L'app occupa molto spazio?</h4>
+            <p><strong>A:</strong> No, le PWA sono leggere. Studio Manager Pro occupa circa 5-10 MB.</p>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: I miei dati sono al sicuro?</h4>
+            <p><strong>A:</strong> Sì! Tutti i dati sono:</p>
+            <ul>
+                <li>✅ Crittografati end-to-end</li>
+                <li>✅ Salvati su server sicuri (Supabase)</li>
+                <li>✅ Backup automatici giornalieri</li>
+                <li>✅ Conformi al GDPR</li>
+            </ul>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: Posso ricevere notifiche?</h4>
+            <p><strong>A:</strong> Sì! Al primo accesso ti verrà chiesto se desideri abilitare le notifiche push per:</p>
+            <ul>
+                <li>Scadenze imminenti</li>
+                <li>Nuovi messaggi</li>
+                <li>Promemoria eventi</li>
+            </ul>
+        </div>
+
+        <div class="highlight-box">
+            <h4>Q: Non trovo l'icona "Installa" sul browser</h4>
+            <p><strong>A:</strong> Assicurati di:</p>
+            <ul>
+                <li>Aver effettuato il login</li>
+                <li>Usare un browser supportato (Chrome, Edge, Safari)</li>
+                <li>Avere una connessione internet attiva</li>
+                <li>Se il problema persiste, contatta il supporto</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="supporto" class="page-break">
+        <div class="contact-box">
+            <h2>🆘 SUPPORTO TECNICO</h2>
+            
+            <h3>Hai bisogno di aiuto?</h3>
+            
+            <p><strong>Mario Artiola</strong> - Fondatore e Lead Developer<br>
+            <strong>El.Ma. Software</strong></p>
+            
+            <p>📧 <strong>Email:</strong> marioartiola@gmail.com<br>
+            📱 <strong>Telefono:</strong> +39 392 7963001</p>
+            
+            <p><strong>Orari di supporto:</strong><br>
+            Lunedì - Venerdì: 9:00 - 18:00<br>
+            Sabato: 9:00 - 13:00<br>
+            Domenica: Chiuso (emergenze via email)</p>
+        </div>
+
+        <div class="warning-box">
+            <h4>Cosa includere nella richiesta:</h4>
+            <p>Per un supporto più rapido, fornisci:</p>
+            <ul>
+                <li>📱 Tipo di dispositivo (es. iPhone 13, Samsung Galaxy S21)</li>
+                <li>💻 Sistema operativo (es. iOS 16, Android 13, Windows 11)</li>
+                <li>🌐 Browser utilizzato (es. Chrome, Safari)</li>
+                <li>📸 Screenshot dell'eventuale errore</li>
+                <li>📝 Descrizione dettagliata del problema</li>
+            </ul>
+        </div>
+
+        <div class="success-box">
+            <h4>Tempo di risposta:</h4>
+            <ul>
+                <li><strong>Email:</strong> Entro 24 ore lavorative</li>
+                <li><strong>Telefono:</strong> Immediato durante gli orari di apertura</li>
+                <li><strong>Emergenze:</strong> Entro 2 ore</li>
+            </ul>
+        </div>
+    </section>
+
+    <footer>
+        <h2>🎉 GRAZIE PER AVER SCELTO STUDIO MANAGER PRO!</h2>
+        <p><strong>El.Ma. Software</strong> - Soluzioni gestionali innovative</p>
+        <p>© 2026 El.Ma. Software - Tutti i diritti riservati</p>
+        <p style="margin-top: 20px;">
+            <strong>Versione documento:</strong> 1.0<br>
+            <strong>Ultimo aggiornamento:</strong> Gennaio 2026<br>
+            <strong>Codice documento:</strong> SMP-GUIDE-FULL-v1.0
+        </p>
+    </footer>
+
+    <div class="no-print" style="text-align: center; margin-top: 40px;">
+        <button class="btn-print" onclick="window.print()">🖨️ Stampa / Salva come PDF</button>
+    </div>
+</body>
+</html>

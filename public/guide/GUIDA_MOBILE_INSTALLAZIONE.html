@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guida Mobile - Studio Manager Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #1F2937;
+            background: #fff;
+            padding: 30px 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        @media print {
+            body {
+                padding: 15px;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #10B981;
+        }
+        
+        .logo {
+            width: 180px;
+            height: 50px;
+            margin: 0 auto 15px;
+            background: #10B981;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        h1 {
+            color: #10B981;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #6B7280;
+            font-size: 16px;
+        }
+        
+        h2 {
+            color: #10B981;
+            font-size: 24px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #D1FAE5;
+        }
+        
+        h3 {
+            color: #1F2937;
+            font-size: 20px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        h4 {
+            color: #374151;
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        
+        p {
+            margin-bottom: 12px;
+            color: #4B5563;
+        }
+        
+        ul, ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+            color: #4B5563;
+        }
+        
+        .highlight-box {
+            background: #D1FAE5;
+            border-left: 4px solid #10B981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        
+        .warning-box {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        
+        .code-block {
+            background: #1F2937;
+            color: #10B981;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+        
+        .step {
+            background: #F9FAFB;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 3px solid #10B981;
+        }
+        
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #E5E7EB;
+            text-align: center;
+            color: #6B7280;
+            font-size: 14px;
+        }
+        
+        .contact-box {
+            background: #10B981;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .contact-box h3 {
+            color: white;
+            margin-top: 0;
+        }
+        
+        .btn-print {
+            background: #10B981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 15px 0;
+        }
+        
+        .btn-print:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">El.Ma. SOFTWARE</div>
+        <h1>📱 GUIDA INSTALLAZIONE MOBILE</h1>
+        <div class="subtitle">Studio Manager Pro - iOS & Android</div>
+        <p style="margin-top: 10px; color: #10B981; font-weight: 600;">Mario Artiola - Fondatore e Lead Developer</p>
+    </header>
+
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Stampa / Salva come PDF</button>
+    </div>
+
+    <section>
+        <h2>🍎 INSTALLAZIONE SU IPHONE/IPAD</h2>
+        
+        <div class="warning-box">
+            <h4>✅ Requisiti:</h4>
+            <ul>
+                <li>iOS 11.3 o superiore</li>
+                <li>Browser Safari</li>
+            </ul>
+        </div>
+
+        <h3>📋 Procedura:</h3>
+
+        <div class="step">
+            <strong>1. Apri Safari</strong>
+        </div>
+
+        <div class="step">
+            <strong>2. Vai su:</strong>
+            <div class="code-block">studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>3. Fai login con le tue credenziali</strong>
+        </div>
+
+        <div class="step">
+            <strong>4. Tocca il pulsante "Condividi" 📤</strong>
+            <ul>
+                <li>In basso su iPhone</li>
+                <li>In alto su iPad</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <strong>5. Scorri e tocca "Aggiungi a Home" ➕</strong>
+        </div>
+
+        <div class="step">
+            <strong>6. Conferma il nome → Tocca "Aggiungi"</strong>
+        </div>
+
+        <div class="highlight-box">
+            <h4>✅ L'app è sulla tua Home!</h4>
+        </div>
+    </section>
+
+    <section>
+        <h2>🤖 INSTALLAZIONE SU ANDROID</h2>
+        
+        <div class="warning-box">
+            <h4>✅ Requisiti:</h4>
+            <ul>
+                <li>Android 5.0 o superiore</li>
+                <li>Chrome (consigliato)</li>
+            </ul>
+        </div>
+
+        <h3>📋 Procedura - Metodo A (Automatico):</h3>
+
+        <div class="step">
+            <strong>1. Apri Chrome</strong>
+        </div>
+
+        <div class="step">
+            <strong>2. Vai su:</strong>
+            <div class="code-block">studiomanagerpro.vercel.app</div>
+        </div>
+
+        <div class="step">
+            <strong>3. Fai login</strong>
+        </div>
+
+        <div class="step">
+            <strong>4. Apparirà un banner in basso:</strong><br>
+            "Installare Studio Manager Pro?"
+        </div>
+
+        <div class="step">
+            <strong>5. Tocca "Installa"</strong>
+        </div>
+
+        <div class="highlight-box">
+            <h4>✅ L'app è installata!</h4>
+        </div>
+
+        <h3>📋 Procedura - Metodo B (Manuale):</h3>
+
+        <div class="step">
+            <strong>1-3. Come sopra (Chrome, login)</strong>
+        </div>
+
+        <div class="step">
+            <strong>4. Tocca i 3 puntini ⋮ in alto</strong>
+        </div>
+
+        <div class="step">
+            <strong>5. Seleziona "Installa app"</strong>
+        </div>
+
+        <div class="step">
+            <strong>6. Tocca "Installa" nella conferma</strong>
+        </div>
+
+        <div class="highlight-box">
+            <h4>✅ L'app è installata!</h4>
+        </div>
+    </section>
+
+    <section>
+        <h2>🔐 PRIMO ACCESSO</h2>
+
+        <h3>Credenziali:</h3>
+        <ul>
+            <li><strong>Email:</strong> [ricevuta via email]</li>
+            <li><strong>Password:</strong> [temporanea, da cambiare]</li>
+        </ul>
+
+        <h3>Al primo login:</h3>
+        <ol>
+            <li>✅ Cambia password temporanea</li>
+            <li>✅ Completa il profilo</li>
+            <li>✅ Abilita notifiche (opzionale)</li>
+        </ol>
+
+        <div class="warning-box">
+            <h4>Requisiti nuova password:</h4>
+            <ul>
+                <li>Minimo 8 caratteri</li>
+                <li>1 maiuscola</li>
+                <li>1 numero</li>
+                <li>1 carattere speciale</li>
+            </ul>
+        </div>
+    </section>
+
+    <section>
+        <h2>❓ FAQ RAPIDE</h2>
+
+        <div class="highlight-box">
+            <p><strong>Q: Funziona offline?</strong><br>
+            A: Parzialmente. Consulta dati già caricati.</p>
+        </div>
+
+        <div class="highlight-box">
+            <p><strong>Q: Su più dispositivi?</strong><br>
+            A: Sì! I dati si sincronizzano.</p>
+        </div>
+
+        <div class="highlight-box">
+            <p><strong>Q: Come si aggiorna?</strong><br>
+            A: Automaticamente, in background.</p>
+        </div>
+
+        <div class="highlight-box">
+            <p><strong>Q: Occupa spazio?</strong><br>
+            A: Solo 5-10 MB.</p>
+        </div>
+
+        <div class="highlight-box">
+            <p><strong>Q: È sicura?</strong><br>
+            A: Sì! Crittografia + backup automatici.</p>
+        </div>
+    </section>
+
+    <section>
+        <div class="contact-box">
+            <h3>🆘 SUPPORTO</h3>
+            
+            <p><strong>Mario Artiola</strong><br>
+            El.Ma. Software</p>
+            
+            <p>📧 marioartiola@gmail.com<br>
+            📱 +39 392 7963001</p>
+            
+            <p><strong>Orari:</strong><br>
+            Lun-Ven: 9:00-18:00<br>
+            Sab: 9:00-13:00</p>
+        </div>
+    </section>
+
+    <footer>
+        <p><strong>Versione:</strong> 1.0 | <strong>Gennaio 2026</strong></p>
+        <p>© 2026 El.Ma. Software</p>
+    </footer>
+
+    <div class="no-print" style="text-align: center; margin-top: 30px;">
+        <button class="btn-print" onclick="window.print()">🖨️ Stampa / Salva come PDF</button>
+    </div>
+</body>
+</html>
