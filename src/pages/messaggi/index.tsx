@@ -377,7 +377,7 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex flex-col md:flex-row h-[calc(100vh-88px)] overflow-hidden">
+      <div className="flex flex-col md:flex-row min-h-screen">
         <div className={cn(
           "w-full md:w-80 border-r bg-background flex-shrink-0",
           selectedConvId ? "hidden md:block" : "block"
@@ -405,7 +405,7 @@ export default function MessaggiPage() {
               onBack={() => setSelectedConvId(null)}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4 py-12">
               <div className="p-4 bg-muted rounded-full">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

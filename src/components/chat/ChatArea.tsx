@@ -175,8 +175,8 @@ export function ChatArea({
   };
 
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
+    <div className={cn("flex flex-col bg-background", className)}>
+      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0 sticky top-0 z-10">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -201,7 +201,7 @@ export function ChatArea({
       </div>
 
       <ScrollArea className="flex-1 p-3 md:p-4 bg-muted/20">
-        <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto">
+        <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto pb-4">
           {Object.entries(messageGroups).map(([dateStr, msgs]) => (
             <div key={dateStr} className="space-y-3 md:space-y-4">
               <div className="flex justify-center sticky top-0 z-10">
@@ -316,7 +316,7 @@ export function ChatArea({
         </div>
       )}
 
-      <div className="p-3 md:p-4 border-t bg-background flex-shrink-0">
+      <div className="p-3 md:p-4 border-t bg-background flex-shrink-0 sticky bottom-0">
         <form onSubmit={handleSend} className="flex gap-2 max-w-3xl mx-auto">
           <input
             ref={fileInputRef}
