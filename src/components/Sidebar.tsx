@@ -261,7 +261,7 @@ export function Sidebar({
 
       {/* Sidebar */}
       <aside className={cn(
-        "w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col p-4 transition-transform duration-300 lg:relative lg:translate-x-0",
+        "w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col p-4 transition-transform duration-300 lg:relative lg:translate-x-0 overflow-hidden",
         "fixed inset-y-0 left-0 z-40",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
@@ -275,7 +275,7 @@ export function Sidebar({
           <X className="h-6 w-6" />
         </Button>
 
-        <nav className="space-y-2 mt-12 lg:mt-0 overflow-y-auto">
+        <nav className="space-y-2 mt-12 lg:mt-0 flex-1 overflow-y-auto">
           {menuItems.map(item => renderMenuItem(item))}
         </nav>
       </aside>
