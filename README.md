@@ -1,3 +1,3 @@
-# STUDIO MANAGER PRO
+# Studio Manager Pro
 
-<!-- Test workflow CI/CD - 2026-01-09 11:21 -->
+Test webhook - deployment automatico configurato ✅
