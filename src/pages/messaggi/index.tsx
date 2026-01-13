@@ -377,7 +377,7 @@ export default function MessaggiPage() {
         <title>Messaggi | Studio Manager</title>
       </Head>
       
-      <div className="flex flex-col md:flex-row min-h-screen">
+      <div className="flex flex-col md:flex-row min-h-screen pt-[72px]">
         <div className={cn(
           "w-full md:w-80 border-r bg-background flex-shrink-0",
           selectedConvId ? "hidden md:block" : "block"
