@@ -33,7 +33,7 @@ export const contattoService = {
     return data;
   },
 
-  async createContatto(contatto: ContattoInsert): Promise<Contatto | null> {
+  async createContatto(contatto: Partial<ContattoInsert>): Promise<Contatto | null> {
     const { data, error } = await supabase
       .from("tbcontatti")
       .insert(contatto)
@@ -47,7 +47,7 @@ export const contattoService = {
     return data;
   },
 
-  async updateContatto(id: string, updates: ContattoUpdate): Promise<Contatto | null> {
+  async updateContatto(id: string, updates: Partial<ContattoUpdate>): Promise<Contatto | null> {
     const { data, error } = await supabase
       .from("tbcontatti")
       .update(updates)

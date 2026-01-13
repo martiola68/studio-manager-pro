@@ -2,24 +2,28 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { contattoService } from "@/services/contattoService";
+import { clienteService } from "@/services/clienteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User } from "lucide-react";
+import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 
 export default function ContattiPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
+  const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [letterFilter, setLetterFilter] = useState<string>("");
@@ -36,6 +40,7 @@ export default function ContattiPage() {
     email: "",
     cell: "",
     tel: "",
+    cliente_id: "",
     note: "",
     cassetto_fiscale: false,
     utente: "",
@@ -61,7 +66,7 @@ export default function ContattiPage() {
         router.push("/login");
         return;
       }
-      await loadContatti();
+      await Promise.all([loadContatti(), loadClienti()]);
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -82,6 +87,15 @@ export default function ContattiPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadClienti = async () => {
+    try {
+      const data = await clienteService.getClienti();
+      setClienti(data);
+    } catch (error) {
+      console.error("Errore caricamento clienti:", error);
     }
   };
 
@@ -111,14 +125,29 @@ export default function ContattiPage() {
     e.preventDefault();
 
     try {
+      const dataToSave = {
+        nome: formData.nome,
+        cognome: formData.cognome,
+        email: formData.email || null,
+        cell: formData.cell || null,
+        tel: formData.tel || null,
+        cliente_id: formData.cliente_id || null,
+        note: formData.note || null,
+        cassetto_fiscale: formData.cassetto_fiscale,
+        utente: formData.cassetto_fiscale ? (formData.utente || null) : null,
+        password: formData.cassetto_fiscale ? (formData.password || null) : null,
+        pin: formData.cassetto_fiscale ? (formData.pin || null) : null,
+        password_iniziale: formData.cassetto_fiscale ? (formData.password_iniziale || null) : null
+      };
+
       if (editingContatto) {
-        await contattoService.updateContatto(editingContatto.id, formData);
+        await contattoService.updateContatto(editingContatto.id, dataToSave);
         toast({
           title: "Successo",
           description: "Contatto aggiornato con successo"
         });
       } else {
-        await contattoService.createContatto(formData);
+        await contattoService.createContatto(dataToSave);
         toast({
           title: "Successo",
           description: "Contatto creato con successo"
@@ -146,6 +175,7 @@ export default function ContattiPage() {
       email: contatto.email || "",
       cell: contatto.cell || "",
       tel: contatto.tel || "",
+      cliente_id: contatto.cliente_id || "",
       note: contatto.note || "",
       cassetto_fiscale: contatto.cassetto_fiscale || false,
       utente: contatto.utente || "",
@@ -183,6 +213,7 @@ export default function ContattiPage() {
       email: "",
       cell: "",
       tel: "",
+      cliente_id: "",
       note: "",
       cassetto_fiscale: false,
       utente: "",
@@ -200,6 +231,7 @@ export default function ContattiPage() {
       "email",
       "cell",
       "tel",
+      "cliente_id",
       "note",
       "cassetto_fiscale",
       "utente",
@@ -215,6 +247,7 @@ export default function ContattiPage() {
         "mario.rossi@email.it",
         "3331234567",
         "0612345678",
+        "",
         "Contatto principale",
         "true",
         "RSSMRA80A01H501Z",
@@ -227,6 +260,7 @@ export default function ContattiPage() {
         "Bianchi",
         "laura.bianchi@email.it",
         "3337654321",
+        "",
         "",
         "",
         "false",
@@ -363,6 +397,7 @@ export default function ContattiPage() {
             email: row.email?.trim() || null,
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
+            cliente_id: row.cliente_id?.trim() || null,
             note: row.note?.trim() || null,
             cassetto_fiscale: row.cassetto_fiscale?.toLowerCase() === "true" || false,
             utente: row.utente?.trim() || null,
@@ -409,6 +444,12 @@ export default function ContattiPage() {
 
   const getInitials = (nome: string, cognome: string): string => {
     return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
+  };
+
+  const getClienteNome = (clienteId: string | null): string => {
+    if (!clienteId) return "";
+    const cliente = clienti.find(c => c.id === clienteId);
+    return cliente ? cliente.denominazione : "";
   };
 
   const contattiConCassetto = contatti.filter(c => c.cassetto_fiscale).length;
@@ -617,6 +658,26 @@ export default function ContattiPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="cliente_id">Società (opzionale)</Label>
+                    <Select
+                      value={formData.cliente_id}
+                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona una società" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nessuna società</SelectItem>
+                        {clienti.map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id}>
+                            {cliente.denominazione}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="note">Note</Label>
                     <Textarea
                       id="note"
@@ -647,6 +708,7 @@ export default function ContattiPage() {
                           id="utente"
                           value={formData.utente}
                           onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
+                          disabled={!formData.cassetto_fiscale}
                         />
                       </div>
                       <div className="space-y-2">
@@ -655,6 +717,7 @@ export default function ContattiPage() {
                           id="pin"
                           value={formData.pin}
                           onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                          disabled={!formData.cassetto_fiscale}
                         />
                       </div>
                     </div>
@@ -667,6 +730,7 @@ export default function ContattiPage() {
                           type="password"
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          disabled={!formData.cassetto_fiscale}
                         />
                       </div>
                       <div className="space-y-2">
@@ -675,6 +739,7 @@ export default function ContattiPage() {
                           id="password_iniziale"
                           value={formData.password_iniziale}
                           onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
+                          disabled={!formData.cassetto_fiscale}
                         />
                       </div>
                     </div>
@@ -809,12 +874,20 @@ export default function ContattiPage() {
                         <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
                           {contatto.nome} {contatto.cognome}
                         </h3>
-                        {contatto.cassetto_fiscale && (
-                          <Badge variant="default" className="mt-1">
-                            <FileSpreadsheet className="h-3 w-3 mr-1" />
-                            Cassetto Fiscale
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {contatto.cassetto_fiscale && (
+                            <Badge variant="default">
+                              <FileSpreadsheet className="h-3 w-3 mr-1" />
+                              Cassetto Fiscale
+                            </Badge>
+                          )}
+                          {contatto.cliente_id && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              {getClienteNome(contatto.cliente_id)}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
                       {/* Action Buttons */}
