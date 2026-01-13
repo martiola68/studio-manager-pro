@@ -33,7 +33,7 @@ export const contattoService = {
     return data;
   },
 
-  async createContatto(contatto: Partial<ContattoInsert>): Promise<Contatto | null> {
+  async createContatto(contatto: ContattoInsert): Promise<Contatto | null> {
     const { data, error } = await supabase
       .from("tbcontatti")
       .insert(contatto)
