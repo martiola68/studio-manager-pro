@@ -200,7 +200,7 @@ export function ChatArea({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-3 md:p-4 bg-muted/20">
+      <div className="flex-1 p-3 md:p-4 bg-muted/20 overflow-y-auto">
         <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto pb-4">
           {Object.entries(messageGroups).map(([dateStr, msgs]) => (
             <div key={dateStr} className="space-y-3 md:space-y-4">
@@ -286,7 +286,7 @@ export function ChatArea({
           ))}
           <div ref={bottomRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {selectedFiles.length > 0 && (
         <div className="px-3 md:px-4 py-2 border-t bg-muted/50 overflow-x-auto flex-shrink-0">
