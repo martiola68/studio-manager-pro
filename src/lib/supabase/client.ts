@@ -2,7 +2,7 @@
 // Last updated: 2026-01-08T16:31:32Z
 // Force rebuild: 2026-01-09T10:00:00Z - Vercel cache bypass
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+import type { Database } from "@/integrations/supabase/types";
 
 const SUPABASE_URL = "https://ngeltlygytupgdjiagve.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZWx0bHlneXR1cGdkamlhZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5NzkyMjYsImV4cCI6MjA4MTU1NTIyNn0.NEWh7HshhOImDEqOqJnCF-ZJQwix2QcHyTL_a-2IE3M";
