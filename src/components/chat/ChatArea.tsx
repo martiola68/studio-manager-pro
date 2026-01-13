@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, ArrowLeft, MoreVertical, Paperclip, File, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -63,6 +62,7 @@ export function ChatArea({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -175,8 +175,9 @@ export function ChatArea({
   };
 
   return (
-    <div className={cn("flex flex-col bg-background", className)}>
-      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0 sticky top-0 z-10">
+    <div className={cn("flex flex-col h-full bg-background", className)}>
+      {/* Header - Fixed */}
+      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -200,8 +201,12 @@ export function ChatArea({
         </Button>
       </div>
 
-      <div className="flex-1 p-3 md:p-4 bg-muted/20 overflow-y-auto">
-        <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto pb-4">
+      {/* Messages Area - Scrollable */}
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto bg-muted/20 p-3 md:p-4"
+      >
+        <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto">
           {Object.entries(messageGroups).map(([dateStr, msgs]) => (
             <div key={dateStr} className="space-y-3 md:space-y-4">
               <div className="flex justify-center sticky top-0 z-10">
@@ -288,6 +293,7 @@ export function ChatArea({
         </div>
       </div>
 
+      {/* File Preview - Fixed */}
       {selectedFiles.length > 0 && (
         <div className="px-3 md:px-4 py-2 border-t bg-muted/50 overflow-x-auto flex-shrink-0">
           <div className="flex gap-2 min-w-min">
@@ -316,7 +322,8 @@ export function ChatArea({
         </div>
       )}
 
-      <div className="p-3 md:p-4 border-t bg-background flex-shrink-0 sticky bottom-0">
+      {/* Input Area - Fixed */}
+      <div className="p-3 md:p-4 border-t bg-background flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2 max-w-3xl mx-auto">
           <input
             ref={fileInputRef}
