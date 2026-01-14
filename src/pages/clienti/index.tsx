@@ -249,6 +249,11 @@ export default function ClientiPage() {
     }
   };
 
+  const handleAddNew = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
     setFormData({
@@ -431,20 +436,28 @@ export default function ClientiPage() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Rubrica Contatti</h1>
-          <p className="text-muted-foreground">Gestisci i contatti della rubrica</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            Importa CSV
-          </Button>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuovo Contatto
-          </Button>
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-3xl font-bold">Gestione Clienti</h1>
+            <p className="text-muted-foreground mt-1">
+              Anagrafica completa e gestione scadenzari
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById("csv-upload")?.click()}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Importa CSV
+            </Button>
+            <Button onClick={handleAddNew} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nuovo Cliente
+            </Button>
+          </div>
         </div>
       </div>
 
