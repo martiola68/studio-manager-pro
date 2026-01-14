@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];

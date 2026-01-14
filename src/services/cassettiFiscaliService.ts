@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import { Database } from "@/lib/supabase/database.types";
+import { Database } from "@/integrations/supabase/types";
 
 export type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 export type CassettoFiscaleInsert = Database["public"]["Tables"]["tbcassetti_fiscali"]["Insert"];

@@ -42,12 +42,7 @@ export default function ContattiPage() {
     cell: "",
     tel: "",
     cliente_id: "",
-    note: "",
-    cassetto_fiscale: false,
-    utente: "",
-    password: "",
-    pin: "",
-    password_iniziale: ""
+    note: ""
   });
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -132,15 +127,8 @@ export default function ContattiPage() {
         email: formData.email || null,
         cell: formData.cell || null,
         tel: formData.tel || null,
-        // Gestione corretta del cliente_id
         cliente_id: formData.cliente_id && formData.cliente_id !== "nessuna" ? formData.cliente_id : null,
-        note: formData.note || null,
-        cassetto_fiscale: formData.cassetto_fiscale,
-        // Se non ha cassetto fiscale, resetta i campi a null
-        utente: formData.cassetto_fiscale ? (formData.utente || null) : null,
-        password: formData.cassetto_fiscale ? (formData.password || null) : null,
-        pin: formData.cassetto_fiscale ? (formData.pin || null) : null,
-        password_iniziale: formData.cassetto_fiscale ? (formData.password_iniziale || null) : null
+        note: formData.note || null
       };
 
       if (editingContatto) {
@@ -179,12 +167,7 @@ export default function ContattiPage() {
       cell: contatto.cell || "",
       tel: contatto.tel || "",
       cliente_id: contatto.cliente_id || "",
-      note: contatto.note || "",
-      cassetto_fiscale: contatto.cassetto_fiscale || false,
-      utente: contatto.utente || "",
-      password: contatto.password || "",
-      pin: contatto.pin || "",
-      password_iniziale: contatto.password_iniziale || ""
+      note: contatto.note || ""
     });
     setDialogOpen(true);
   };
@@ -217,12 +200,7 @@ export default function ContattiPage() {
       cell: "",
       tel: "",
       cliente_id: "",
-      note: "",
-      cassetto_fiscale: false,
-      utente: "",
-      password: "",
-      pin: "",
-      password_iniziale: ""
+      note: ""
     });
     setEditingContatto(null);
   };
@@ -235,12 +213,7 @@ export default function ContattiPage() {
       "cell",
       "tel",
       "cliente_id",
-      "note",
-      "cassetto_fiscale",
-      "utente",
-      "password",
-      "pin",
-      "password_iniziale"
+      "note"
     ];
 
     const exampleRows = [
@@ -251,23 +224,13 @@ export default function ContattiPage() {
         "3331234567",
         "0612345678",
         "",
-        "Contatto principale",
-        "true",
-        "RSSMRA80A01H501Z",
-        "password123",
-        "12345",
-        "temp123"
+        "Contatto principale"
       ],
       [
         "Laura",
         "Bianchi",
         "laura.bianchi@email.it",
         "3337654321",
-        "",
-        "",
-        "",
-        "false",
-        "",
         "",
         "",
         ""
@@ -401,12 +364,7 @@ export default function ContattiPage() {
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
             cliente_id: row.cliente_id?.trim() || null,
-            note: row.note?.trim() || null,
-            cassetto_fiscale: row.cassetto_fiscale?.toLowerCase() === "true" || false,
-            utente: row.utente?.trim() || null,
-            password: row.password?.trim() || null,
-            pin: row.pin?.trim() || null,
-            password_iniziale: row.password_iniziale?.trim() || null
+            note: row.note?.trim() || null
           };
 
           await contattoService.createContatto(contattoData);
@@ -454,8 +412,6 @@ export default function ContattiPage() {
     const cliente = clienti.find(c => c.id === clienteId);
     return cliente ? cliente.ragione_sociale : "";
   };
-
-  const contattiConCassetto = contatti.filter(c => c.cassetto_fiscale).length;
 
   if (loading) {
     return (
@@ -690,83 +646,6 @@ export default function ContattiPage() {
                     />
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3">Credenziali Cassetto Fiscale</h3>
-                    
-                    <div className="flex items-center space-x-2 mb-4">
-                      <input
-                        type="checkbox"
-                        id="cassetto_fiscale"
-                        checked={formData.cassetto_fiscale}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setFormData({ 
-                            ...formData, 
-                            cassetto_fiscale: checked,
-                            // Se disabilito, pulisco i campi visualmente (opzionale, ma utile per UX)
-                            utente: checked ? formData.utente : "",
-                            password: checked ? formData.password : "",
-                            pin: checked ? formData.pin : "",
-                            password_iniziale: checked ? formData.password_iniziale : ""
-                          });
-                        }}
-                        className="rounded w-5 h-5 border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <Label htmlFor="cassetto_fiscale" className="cursor-pointer font-medium">Ha Cassetto Fiscale</Label>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="utente" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Utente</Label>
-                        <Input
-                          id="utente"
-                          value={formData.utente}
-                          onChange={(e) => setFormData({ ...formData, utente: e.target.value })}
-                          disabled={!formData.cassetto_fiscale}
-                          autoComplete="new-password" // Trucco per evitare autofill
-                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pin" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>PIN</Label>
-                        <Input
-                          id="pin"
-                          value={formData.pin}
-                          onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
-                          disabled={!formData.cassetto_fiscale}
-                          autoComplete="off"
-                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="password" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Password</Label>
-                        <Input
-                          id="password"
-                          type="text" // Cambiato a text per evitare che il browser provi a salvare/suggerire password
-                          value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          disabled={!formData.cassetto_fiscale}
-                          autoComplete="new-password"
-                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="password_iniziale" className={!formData.cassetto_fiscale ? "text-gray-400" : ""}>Password Iniziale</Label>
-                        <Input
-                          id="password_iniziale"
-                          value={formData.password_iniziale}
-                          onChange={(e) => setFormData({ ...formData, password_iniziale: e.target.value })}
-                          disabled={!formData.cassetto_fiscale}
-                          autoComplete="off"
-                          className={!formData.cassetto_fiscale ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row gap-3 pt-4">
                     <Button type="submit" className="flex-1">
                       {editingContatto ? "Aggiorna" : "Crea"} Contatto
@@ -785,44 +664,6 @@ export default function ContattiPage() {
             </Dialog>
           </div>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <UserCircle className="h-4 w-4" />
-              Totale Contatti
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{contatti.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Con Cassetto Fiscale
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{contattiConCassetto}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="sm:col-span-2 lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Percentuale</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {contatti.length > 0 ? Math.round((contattiConCassetto / contatti.length) * 100) : 0}%
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search and Filters */}
@@ -897,12 +738,6 @@ export default function ContattiPage() {
                           {contatto.nome} {contatto.cognome}
                         </h3>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {contatto.cassetto_fiscale && (
-                            <Badge variant="default">
-                              <FileSpreadsheet className="h-3 w-3 mr-1" />
-                              Cassetto Fiscale
-                            </Badge>
-                          )}
                           {contatto.cliente_id && (
                             <Badge variant="secondary" className="bg-purple-100 text-purple-800">
                               <Building2 className="h-3 w-3 mr-1" />

@@ -1,141 +1,78 @@
 import { supabase } from "@/lib/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
-type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"];
-type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"];
+export type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+export type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"];
+export type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"];
 
 export const contattoService = {
-  async getContatti(): Promise<Contatto[]> {
+  async getContatti() {
     const { data, error } = await supabase
       .from("tbcontatti")
-      .select(`
-        id,
-        nome,
-        cognome,
-        email,
-        cell,
-        tel,
-        cliente_id,
-        note,
-        cassetto_fiscale,
-        utente,
-        password,
-        pin,
-        password_iniziale,
-        created_at,
-        updated_at
-      `)
+      .select("*")
       .order("cognome", { ascending: true });
 
-    if (error) {
-      console.error("Error fetching contatti:", error);
-      return [];
-    }
-    return data || [];
+    if (error) throw error;
+    return data;
   },
 
-  async getContattoById(id: string): Promise<Contatto | null> {
+  async getContattoById(id: string) {
     const { data, error } = await supabase
       .from("tbcontatti")
-      .select(`
-        id,
-        nome,
-        cognome,
-        email,
-        cell,
-        tel,
-        cliente_id,
-        note,
-        cassetto_fiscale,
-        utente,
-        password,
-        pin,
-        password_iniziale,
-        created_at,
-        updated_at
-      `)
+      .select("*")
       .eq("id", id)
       .single();
 
-    if (error) {
-      console.error("Error fetching contatto:", error);
-      return null;
-    }
+    if (error) throw error;
     return data;
   },
 
-  async createContatto(contatto: ContattoInsert): Promise<Contatto | null> {
+  async getContattiByCliente(clienteId: string) {
     const { data, error } = await supabase
       .from("tbcontatti")
-      .insert(contatto)
-      .select(`
-        id,
-        nome,
-        cognome,
-        email,
-        cell,
-        tel,
-        cliente_id,
-        note,
-        cassetto_fiscale,
-        utente,
-        password,
-        pin,
-        password_iniziale,
-        created_at,
-        updated_at
-      `)
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("cognome", { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async createContatto(contatto: ContattoInsert) {
+    // Rimuovi campi non validi se presenti (pulizia difensiva)
+    const { ...validContatto } = contatto;
+    
+    const { data, error } = await supabase
+      .from("tbcontatti")
+      .insert(validContatto)
+      .select()
       .single();
 
-    if (error) {
-      console.error("Error creating contatto:", error);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   },
 
-  async updateContatto(id: string, updates: Partial<ContattoUpdate>): Promise<Contatto | null> {
+  async updateContatto(id: string, updates: ContattoUpdate) {
+    // Rimuovi campi non validi se presenti (pulizia difensiva)
+    const { ...validUpdates } = updates;
+
     const { data, error } = await supabase
       .from("tbcontatti")
-      .update(updates)
+      .update(validUpdates)
       .eq("id", id)
-      .select(`
-        id,
-        nome,
-        cognome,
-        email,
-        cell,
-        tel,
-        cliente_id,
-        note,
-        cassetto_fiscale,
-        utente,
-        password,
-        pin,
-        password_iniziale,
-        created_at,
-        updated_at
-      `)
+      .select("*") // Explicitly select all columns including updated_at
       .single();
 
-    if (error) {
-      console.error("Error updating contatto:", error);
-      throw error;
-    }
+    if (error) throw error;
     return data;
   },
 
-  async deleteContatto(id: string): Promise<boolean> {
+  async deleteContatto(id: string) {
     const { error } = await supabase
       .from("tbcontatti")
       .delete()
       .eq("id", id);
 
-    if (error) {
-      console.error("Error deleting contatto:", error);
-      return false;
-    }
-    return true;
+    if (error) throw error;
   }
 };
