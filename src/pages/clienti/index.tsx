@@ -193,7 +193,17 @@ export default function ClientiPage() {
 
       const dataToSave = {
         ...formData,
-        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`
+        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+        utente_operatore_id: formData.utente_operatore_id || null,
+        utente_professionista_id: formData.utente_professionista_id || null,
+        contatto1_id: formData.contatto1_id || null,
+        contatto2_id: formData.contatto2_id || null,
+        tipo_prestazione_id: formData.tipo_prestazione_id || null,
+        tipo_redditi: formData.tipo_redditi || null,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+        percorso_bilanci: formData.percorso_bilanci || null,
+        percorso_fiscali: formData.percorso_fiscali || null,
+        percorso_generale: formData.percorso_generale || null,
       };
 
       if (editingCliente) {
@@ -346,7 +356,6 @@ export default function ClientiPage() {
     try {
       const text = await file.text();
       const lines = text.split("\n");
-      const headers = lines[0].split(",");
 
       let successCount = 0;
       let errorCount = 0;
@@ -504,7 +513,7 @@ export default function ClientiPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
-              placeholder="Cerca per nome, cognome, email o telefono..."
+              placeholder="Cerca per ragione sociale, P.IVA o CF..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12 text-base"
@@ -793,16 +802,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
                   <Select
-                    value={formData.utente_operatore_id || "undefined"}
+                    value={formData.utente_operatore_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_operatore_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, utente_operatore_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -815,16 +823,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
                   <Select
-                    value={formData.utente_professionista_id || "undefined"}
+                    value={formData.utente_professionista_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_professionista_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, utente_professionista_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -837,16 +844,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto1_id">Contatto 1</Label>
                   <Select
-                    value={formData.contatto1_id || "undefined"}
+                    value={formData.contatto1_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, contatto1_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -859,16 +865,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto2_id">Contatto 2</Label>
                   <Select
-                    value={formData.contatto2_id || "undefined"}
+                    value={formData.contatto2_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto2_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, contatto2_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -881,16 +886,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
                   <Select
-                    value={formData.tipo_prestazione_id || "undefined"}
+                    value={formData.tipo_prestazione_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, tipo_prestazione_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona prestazione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuna</SelectItem>
                       {prestazioni.map((prestazione) => (
                         <SelectItem key={prestazione.id} value={prestazione.id}>
                           {prestazione.descrizione}
@@ -903,16 +907,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
                   <Select
-                    value={formData.tipo_redditi || "undefined"}
+                    value={formData.tipo_redditi || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value === "undefined" ? "" : value as "SC" | "SP" | "ENC" | "PF" | "730" })
+                      setFormData({ ...formData, tipo_redditi: value as "SC" | "SP" | "ENC" | "PF" | "730" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       <SelectItem value="SC">SC - Società di Capitali</SelectItem>
                       <SelectItem value="SP">SP - Società di Persone</SelectItem>
                       <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
@@ -925,16 +928,15 @@ export default function ClientiPage() {
                 <div className="md:col-span-2">
                   <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
                   <Select
-                    value={formData.cassetto_fiscale_id || "undefined"}
+                    value={formData.cassetto_fiscale_id || undefined}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value === "undefined" ? "" : value })
+                      setFormData({ ...formData, cassetto_fiscale_id: value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona cassetto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
                           {cassetto.nominativo}
@@ -1162,16 +1164,15 @@ export default function ClientiPage() {
                       <div>
                         <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
                         <Select
-                          value={verificaA.tipo_prestazione || "undefined"}
+                          value={verificaA.tipo_prestazione || undefined}
                           onValueChange={(value) =>
-                            setVerificaA({ ...verificaA, tipo_prestazione: value === "undefined" ? "" : value })
+                            setVerificaA({ ...verificaA, tipo_prestazione: value })
                           }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona prestazione" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="undefined">Nessuna</SelectItem>
                             {prestazioni.map((prestazione) => (
                               <SelectItem key={prestazione.id} value={prestazione.id}>
                                 {prestazione.descrizione}
@@ -1207,16 +1208,15 @@ export default function ClientiPage() {
                       <div>
                         <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
                         <Select
-                          value={verificaB.tipo_prestazione || "undefined"}
+                          value={verificaB.tipo_prestazione || undefined}
                           onValueChange={(value) =>
-                            setVerificaB({ ...verificaB, tipo_prestazione: value === "undefined" ? "" : value })
+                            setVerificaB({ ...verificaB, tipo_prestazione: value })
                           }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleziona prestazione" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="undefined">Nessuna</SelectItem>
                             {prestazioni.map((prestazione) => (
                               <SelectItem key={prestazione.id} value={prestazione.id}>
                                 {prestazione.descrizione}
