@@ -8,6 +8,19 @@ export type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
 export type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
 
 export const clienteService = {
+  async getAll(): Promise<Cliente[]> {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select(`
+        *,
+        tbcassetti_fiscali (*)
+      `)
+      .order("ragione_sociale");
+
+    if (error) throw error;
+    return data || [];
+  },
+
   async getClienti() {
     const { data, error } = await supabase
       .from("tbclienti")

@@ -16,7 +16,10 @@ import {
   Building2,
   MessageSquare,
   X,
-  Menu
+  Menu,
+  Key,
+  FolderOpen,
+  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -156,6 +159,11 @@ export function Sidebar({
       href: "/comunicazioni"
     },
     {
+      label: "Consultazioni",
+      icon: <FolderOpen className="h-5 w-5" />,
+      href: "/consultazioni"
+    },
+    {
       label: "Impostazioni",
       icon: <Settings className="h-5 w-5" />,
       adminOnly: true,
@@ -167,7 +175,8 @@ export function Sidebar({
         { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
         { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> }
+        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+        { label: "Cassetti Fiscali", href: "/impostazioni/cassetti-fiscali", icon: <Key className="h-4 w-4" /> }
       ]
     }
   ];

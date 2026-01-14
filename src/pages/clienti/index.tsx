@@ -23,6 +23,7 @@ type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
+type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 
 interface CSVRow {
   cod_cliente: string;
@@ -75,6 +76,7 @@ export default function ClientiPage() {
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
+  const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
@@ -112,6 +114,10 @@ export default function ClientiPage() {
     tipo_prestazione_b: "__none__",
     data_ultima_verifica_b: "",
     scadenza_antiric_b: "",
+    cassetto_fiscale_id: "__none__",
+    percorso_bilanci: "",
+    percorso_fiscali: "",
+    percorso_generale: "",
     flag_iva: true,
     flag_cu: true,
     flag_bilancio: true,
@@ -148,16 +154,18 @@ export default function ClientiPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [clientiData, contattiData, utentiData, prestazioniData] = await Promise.all([
+      const [clientiData, contattiData, utentiData, prestazioniData, cassettiData] = await Promise.all([
         clienteService.getClienti(),
         contattoService.getContatti(),
         utenteService.getUtenti(),
-        loadPrestazioni()
+        loadPrestazioni(),
+        loadCassettiFiscali()
       ]);
       setClienti(clientiData);
       setContatti(contattiData);
       setUtenti(utentiData);
       setPrestazioni(prestazioniData);
+      setCassettiFiscali(cassettiData);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
@@ -175,6 +183,15 @@ export default function ClientiPage() {
       .from("tbprestazioni")
       .select("*")
       .order("descrizione");
+    if (error) throw error;
+    return data || [];
+  };
+
+  const loadCassettiFiscali = async (): Promise<CassettoFiscale[]> => {
+    const { data, error } = await supabase
+      .from("tbcassetti_fiscali")
+      .select("*")
+      .order("nominativo");
     if (error) throw error;
     return data || [];
   };
@@ -436,7 +453,11 @@ export default function ClientiPage() {
         tipo_prestazione_a: formData.tipo_prestazione_a && formData.tipo_prestazione_a !== "__none__" ? formData.tipo_prestazione_a : null,
         tipo_prestazione_b: formData.tipo_prestazione_b && formData.tipo_prestazione_b !== "__none__" ? formData.tipo_prestazione_b : null,
         data_ultima_verifica_b: formData.data_ultima_verifica_b || null,
-        scadenza_antiric_b: formData.scadenza_antiric_b || null
+        scadenza_antiric_b: formData.scadenza_antiric_b || null,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id && formData.cassetto_fiscale_id !== "__none__" ? formData.cassetto_fiscale_id : null,
+        percorso_bilanci: formData.percorso_bilanci || null,
+        percorso_fiscali: formData.percorso_fiscali || null,
+        percorso_generale: formData.percorso_generale || null
       };
 
       if (editingCliente) {
@@ -622,6 +643,10 @@ export default function ClientiPage() {
       tipo_prestazione_b: cliente.tipo_prestazione_b || "__none__",
       data_ultima_verifica_b: cliente.data_ultima_verifica_b || "",
       scadenza_antiric_b: cliente.scadenza_antiric_b || "",
+      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "__none__",
+      percorso_bilanci: cliente.percorso_bilanci || "",
+      percorso_fiscali: cliente.percorso_fiscali || "",
+      percorso_generale: cliente.percorso_generale || "",
       flag_iva: cliente.flag_iva ?? true,
       flag_cu: cliente.flag_cu ?? true,
       flag_bilancio: cliente.flag_bilancio ?? true,
@@ -684,6 +709,10 @@ export default function ClientiPage() {
       tipo_prestazione_b: "__none__",
       data_ultima_verifica_b: "",
       scadenza_antiric_b: "",
+      cassetto_fiscale_id: "__none__",
+      percorso_bilanci: "",
+      percorso_fiscali: "",
+      percorso_generale: "",
       flag_iva: true,
       flag_cu: true,
       flag_bilancio: true,
@@ -804,7 +833,7 @@ export default function ClientiPage() {
                           Anteprima: {csvData.length} clienti
                         </h3>
                         <Button
-                          onClick={resetImport}
+                          onClick={() => setImportDialogOpen(false)}
                           variant="outline"
                           size="sm"
                         >
@@ -1025,10 +1054,11 @@ export default function ClientiPage() {
               </DialogHeader>
               <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-4">
+                  <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
                     <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
                     <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+                    <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
                     <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
                   </TabsList>
 
@@ -1278,6 +1308,26 @@ export default function ClientiPage() {
                       </Select>
                     </div>
 
+                    <div className="space-y-2">
+                      <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
+                      <Select
+                        value={formData.cassetto_fiscale_id || "__none__"}
+                        onValueChange={(value) => setFormData({ ...formData, cassetto_fiscale_id: value === "__none__" ? "" : value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona titolare" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nessuno</SelectItem>
+                          {cassettiFiscali.map((cf) => (
+                            <SelectItem key={cf.id} value={cf.id}>
+                              {cf.nominativo} - {cf.username}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="border-t pt-4 mt-4">
                       <h3 className="font-semibold mb-4 text-lg">Adeguata Verifica Clientela (Antiriciclaggio)</h3>
                       
@@ -1389,122 +1439,65 @@ export default function ClientiPage() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="scadenzari" className="space-y-4">
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600 mb-4">
-                        Seleziona gli scadenzari attivi per questo cliente
+                  <TabsContent value="percorsi" className="space-y-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                      Inserisci i percorsi delle cartelle documenti (locali o di rete)
+                    </p>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Come ottenere il percorso completo della cartella
+                      </h4>
+                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Apri <strong>Esplora Risorse</strong> e vai alla cartella desiderata</li>
+                        <li>Clicca sulla <strong>barra degli indirizzi</strong> in alto</li>
+                        <li>Il percorso completo verrà selezionato automaticamente</li>
+                        <li><strong>Copia</strong> (Ctrl+C) e <strong>Incolla</strong> (Ctrl+V) qui sotto</li>
+                      </ol>
+                      <p className="text-xs text-blue-700 mt-2">
+                        Esempio: <code className="bg-blue-100 px-1 py-0.5 rounded">W:\Revisioni\Documenti\HappySrl\Bilanci\</code>
                       </p>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_iva"
-                            checked={formData.flag_iva}
-                            onChange={(e) => setFormData({ ...formData, flag_iva: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_iva" className="cursor-pointer">IVA</Label>
-                        </div>
+                    </div>
 
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_ccgg"
-                            checked={formData.flag_ccgg}
-                            onChange={(e) => setFormData({ ...formData, flag_ccgg: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_ccgg" className="cursor-pointer">CCGG</Label>
-                        </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
+                        <Input
+                          id="percorso_bilanci"
+                          value={formData.percorso_bilanci}
+                          onChange={(e) => setFormData({ ...formData, percorso_bilanci: e.target.value })}
+                          placeholder="es: W:\Revisioni\Documenti\HappySrl\Bilanci\"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Percorso locale o di rete alla cartella bilanci
+                        </p>
+                      </div>
 
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_cu"
-                            checked={formData.flag_cu}
-                            onChange={(e) => setFormData({ ...formData, flag_cu: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_cu" className="cursor-pointer">CU</Label>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
+                        <Input
+                          id="percorso_fiscali"
+                          value={formData.percorso_fiscali}
+                          onChange={(e) => setFormData({ ...formData, percorso_fiscali: e.target.value })}
+                          placeholder="es: W:\Revisioni\Documenti\HappySrl\Fiscali\"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Percorso locale o di rete alla cartella fiscali
+                        </p>
+                      </div>
 
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_fiscali"
-                            checked={formData.flag_fiscali}
-                            onChange={(e) => setFormData({ ...formData, flag_fiscali: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_fiscali" className="cursor-pointer">Fiscali</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_bilancio"
-                            checked={formData.flag_bilancio}
-                            onChange={(e) => setFormData({ ...formData, flag_bilancio: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_bilancio" className="cursor-pointer">Bilanci</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_770"
-                            checked={formData.flag_770}
-                            onChange={(e) => setFormData({ ...formData, flag_770: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_770" className="cursor-pointer">770</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_lipe"
-                            checked={formData.flag_lipe}
-                            onChange={(e) => setFormData({ ...formData, flag_lipe: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_lipe" className="cursor-pointer">Lipe</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_esterometro"
-                            checked={formData.flag_esterometro}
-                            onChange={(e) => setFormData({ ...formData, flag_esterometro: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_esterometro" className="cursor-pointer">Esterometro</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_proforma"
-                            checked={formData.flag_proforma}
-                            onChange={(e) => setFormData({ ...formData, flag_proforma: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_proforma" className="cursor-pointer">Proforma</Label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="flag_imu"
-                            checked={formData.flag_imu}
-                            onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
-                            className="rounded"
-                          />
-                          <Label htmlFor="flag_imu" className="cursor-pointer">IMU</Label>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="percorso_generale">Percorso Generale</Label>
+                        <Input
+                          id="percorso_generale"
+                          value={formData.percorso_generale}
+                          onChange={(e) => setFormData({ ...formData, percorso_generale: e.target.value })}
+                          placeholder="es: W:\Revisioni\Documenti\HappySrl\"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Percorso locale o di rete alla cartella generale
+                        </p>
                       </div>
                     </div>
                   </TabsContent>
