@@ -31,12 +31,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, FolderOpen } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, FolderOpen, Calendar } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
 import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -55,6 +60,18 @@ type ScadenzariSelezionati = {
   ccgg: boolean;
   proforma: boolean;
   imu: boolean;
+};
+
+type ComunicazioniPreferenze = {
+  email_attiva: boolean;
+  ricevi_mailing_scadenze: boolean;
+  ricevi_newsletter: boolean;
+};
+
+type VerificaAntiriciclaggio = {
+  tipo_prestazione_id: string;
+  data_ultima_verifica: Date | undefined;
+  scadenza_antiriciclaggio: Date | undefined;
 };
 
 export default function ClientiPage() {
@@ -97,26 +114,34 @@ export default function ClientiPage() {
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
-    iva: false,
-    cu: false,
-    bilancio: false,
-    fiscali: false,
-    lipe: false,
-    modello_770: false,
-    esterometro: false,
-    ccgg: false,
-    proforma: false,
-    imu: false,
+    iva: true,
+    cu: true,
+    bilancio: true,
+    fiscali: true,
+    lipe: true,
+    modello_770: true,
+    esterometro: true,
+    ccgg: true,
+    proforma: true,
+    imu: true,
   });
 
-  const [verificaA, setVerificaA] = useState({
-    attiva: false,
-    tipo_prestazione: "",
+  const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
+    email_attiva: true,
+    ricevi_mailing_scadenze: true,
+    ricevi_newsletter: true,
   });
 
-  const [verificaB, setVerificaB] = useState({
-    attiva: false,
-    tipo_prestazione: "",
+  const [verificaA, setVerificaA] = useState<VerificaAntiriciclaggio>({
+    tipo_prestazione_id: "",
+    data_ultima_verifica: undefined,
+    scadenza_antiriciclaggio: undefined,
+  });
+
+  const [verificaB, setVerificaB] = useState<VerificaAntiriciclaggio>({
+    tipo_prestazione_id: "",
+    data_ultima_verifica: undefined,
+    scadenza_antiriciclaggio: undefined,
   });
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -314,19 +339,32 @@ export default function ClientiPage() {
       percorso_generale: "",
     });
     setScadenzari({
-      iva: false,
-      cu: false,
-      bilancio: false,
-      fiscali: false,
-      lipe: false,
-      modello_770: false,
-      esterometro: false,
-      ccgg: false,
-      proforma: false,
-      imu: false,
+      iva: true,
+      cu: true,
+      bilancio: true,
+      fiscali: true,
+      lipe: true,
+      modello_770: true,
+      esterometro: true,
+      ccgg: true,
+      proforma: true,
+      imu: true,
     });
-    setVerificaA({ attiva: false, tipo_prestazione: "" });
-    setVerificaB({ attiva: false, tipo_prestazione: "" });
+    setComunicazioni({
+      email_attiva: true,
+      ricevi_mailing_scadenze: true,
+      ricevi_newsletter: true,
+    });
+    setVerificaA({
+      tipo_prestazione_id: "",
+      data_ultima_verifica: undefined,
+      scadenza_antiriciclaggio: undefined,
+    });
+    setVerificaB({
+      tipo_prestazione_id: "",
+      data_ultima_verifica: undefined,
+      scadenza_antiriciclaggio: undefined,
+    });
   };
 
   const handleExportCSV = () => {
@@ -639,8 +677,8 @@ export default function ClientiPage() {
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
               <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
-              <TabsTrigger value="adeguata">Verifica AML</TabsTrigger>
             </TabsList>
 
             <TabsContent value="anagrafica" className="space-y-4">
@@ -797,7 +835,7 @@ export default function ClientiPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="riferimenti" className="space-y-4">
+            <TabsContent value="riferimenti" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
@@ -946,9 +984,213 @@ export default function ClientiPage() {
                   </Select>
                 </div>
               </div>
+
+              {/* Adeguata Verifica Clientela */}
+              <div className="space-y-6 pt-6 border-t">
+                <h3 className="font-semibold text-lg">
+                  Adeguata Verifica Clientela (Antiriciclaggio)
+                </h3>
+
+                <Card className="bg-blue-50 dark:bg-blue-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
+                      <Select
+                        value={verificaA.tipo_prestazione_id || undefined}
+                        onValueChange={(value) =>
+                          setVerificaA({ ...verificaA, tipo_prestazione_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleziona prestazione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {prestazioni.map((prestazione) => (
+                            <SelectItem key={prestazione.id} value={prestazione.id}>
+                              {prestazione.descrizione}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Data Ultima Verifica A</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !verificaA.data_ultima_verifica && "text-muted-foreground"
+                              )}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {verificaA.data_ultima_verifica ? (
+                                format(verificaA.data_ultima_verifica, "dd/MM/yyyy", { locale: it })
+                              ) : (
+                                <span>gg/mm/aaaa</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <CalendarComponent
+                              mode="single"
+                              selected={verificaA.data_ultima_verifica}
+                              onSelect={(date) =>
+                                setVerificaA({ ...verificaA, data_ultima_verifica: date })
+                              }
+                              locale={it}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div>
+                        <Label>Scadenza Antiriciclaggio A</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !verificaA.scadenza_antiriciclaggio && "text-muted-foreground"
+                              )}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {verificaA.scadenza_antiriciclaggio ? (
+                                format(verificaA.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                              ) : (
+                                <span>gg/mm/aaaa</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <CalendarComponent
+                              mode="single"
+                              selected={verificaA.scadenza_antiriciclaggio}
+                              onSelect={(date) =>
+                                setVerificaA({ ...verificaA, scadenza_antiriciclaggio: date })
+                              }
+                              locale={it}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 dark:bg-green-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
+                      <Select
+                        value={verificaB.tipo_prestazione_id || undefined}
+                        onValueChange={(value) =>
+                          setVerificaB({ ...verificaB, tipo_prestazione_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Nessuna" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {prestazioni.map((prestazione) => (
+                            <SelectItem key={prestazione.id} value={prestazione.id}>
+                              {prestazione.descrizione}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Data Ultima Verifica B</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !verificaB.data_ultima_verifica && "text-muted-foreground"
+                              )}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {verificaB.data_ultima_verifica ? (
+                                format(verificaB.data_ultima_verifica, "dd/MM/yyyy", { locale: it })
+                              ) : (
+                                <span>gg/mm/aaaa</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <CalendarComponent
+                              mode="single"
+                              selected={verificaB.data_ultima_verifica}
+                              onSelect={(date) =>
+                                setVerificaB({ ...verificaB, data_ultima_verifica: date })
+                              }
+                              locale={it}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div>
+                        <Label>Scadenza Antiriciclaggio B</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !verificaB.scadenza_antiriciclaggio && "text-muted-foreground"
+                              )}
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              {verificaB.scadenza_antiriciclaggio ? (
+                                format(verificaB.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                              ) : (
+                                <span>gg/mm/aaaa</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <CalendarComponent
+                              mode="single"
+                              selected={verificaB.scadenza_antiriciclaggio}
+                              onSelect={(date) =>
+                                setVerificaB({ ...verificaB, scadenza_antiriciclaggio: date })
+                              }
+                              locale={it}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="scadenzari" className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Seleziona gli scadenzari attivi per questo cliente
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -980,7 +1222,7 @@ export default function ClientiPage() {
                       setScadenzari({ ...scadenzari, bilancio: checked as boolean })
                     }
                   />
-                  <Label htmlFor="scad_bilancio">Bilancio</Label>
+                  <Label htmlFor="scad_bilancio">Bilanci</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1002,7 +1244,7 @@ export default function ClientiPage() {
                       setScadenzari({ ...scadenzari, lipe: checked as boolean })
                     }
                   />
-                  <Label htmlFor="scad_lipe">LIPE</Label>
+                  <Label htmlFor="scad_lipe">Lipe</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1013,7 +1255,7 @@ export default function ClientiPage() {
                       setScadenzari({ ...scadenzari, modello_770: checked as boolean })
                     }
                   />
-                  <Label htmlFor="scad_modello_770">Modello 770</Label>
+                  <Label htmlFor="scad_modello_770">770</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1058,6 +1300,46 @@ export default function ClientiPage() {
                     }
                   />
                   <Label htmlFor="scad_imu">IMU</Label>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="comunicazioni" className="space-y-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Gestisci le preferenze di comunicazione del cliente
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="email_attiva"
+                    checked={comunicazioni.email_attiva}
+                    onCheckedChange={(checked) =>
+                      setComunicazioni({ ...comunicazioni, email_attiva: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="email_attiva">Email Attiva</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="ricevi_mailing_scadenze"
+                    checked={comunicazioni.ricevi_mailing_scadenze}
+                    onCheckedChange={(checked) =>
+                      setComunicazioni({ ...comunicazioni, ricevi_mailing_scadenze: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="ricevi_mailing_scadenze">Ricevi Mailing Scadenze</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="ricevi_newsletter"
+                    checked={comunicazioni.ricevi_newsletter}
+                    onCheckedChange={(checked) =>
+                      setComunicazioni({ ...comunicazioni, ricevi_newsletter: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="ricevi_newsletter">Ricevi Newsletter</Label>
                 </div>
               </div>
             </TabsContent>
@@ -1132,102 +1414,6 @@ export default function ClientiPage() {
                     </Button>
                   </div>
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="adeguata" className="space-y-6">
-              <div className="space-y-6">
-                <h3 className="font-semibold text-lg">
-                  Adeguata Verifica Clientela (Antiriciclaggio)
-                </h3>
-
-                <Card className="bg-blue-50 dark:bg-blue-950/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="verifica_a_attiva"
-                        checked={verificaA.attiva}
-                        onCheckedChange={(checked) =>
-                          setVerificaA({ ...verificaA, attiva: checked as boolean })
-                        }
-                      />
-                      <Label htmlFor="verifica_a_attiva">Attiva Verifica A</Label>
-                    </div>
-
-                    {verificaA.attiva && (
-                      <div>
-                        <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
-                        <Select
-                          value={verificaA.tipo_prestazione || undefined}
-                          onValueChange={(value) =>
-                            setVerificaA({ ...verificaA, tipo_prestazione: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona prestazione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {prestazioni.map((prestazione) => (
-                              <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.descrizione}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-green-50 dark:bg-green-950/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="verifica_b_attiva"
-                        checked={verificaB.attiva}
-                        onCheckedChange={(checked) =>
-                          setVerificaB({ ...verificaB, attiva: checked as boolean })
-                        }
-                      />
-                      <Label htmlFor="verifica_b_attiva">Attiva Verifica B</Label>
-                    </div>
-
-                    {verificaB.attiva && (
-                      <div>
-                        <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
-                        <Select
-                          value={verificaB.tipo_prestazione || undefined}
-                          onValueChange={(value) =>
-                            setVerificaB({ ...verificaB, tipo_prestazione: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona prestazione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {prestazioni.map((prestazione) => (
-                              <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.descrizione}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
           </Tabs>
