@@ -48,17 +48,17 @@ export default function CassettiFiscaliImpostazioniPage() {
         router.push("/login");
         return;
       }
-      await loadData();
+      await loadCassetti();
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
     }
   };
 
-  const loadData = async () => {
+  const loadCassetti = async () => {
     try {
       setLoading(true);
-      const data = await cassettiFiscaliService.getAll();
+      const data = await cassettiFiscaliService.getCassettiFiscali();
       setCassetti(data);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
@@ -101,7 +101,7 @@ export default function CassettiFiscaliImpostazioniPage() {
 
       setDialogOpen(false);
       resetForm();
-      await loadData();
+      await loadCassetti();
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -137,7 +137,7 @@ export default function CassettiFiscaliImpostazioniPage() {
         title: "Successo",
         description: "Cassetto fiscale eliminato"
       });
-      await loadData();
+      await loadCassetti();
     } catch (error) {
       console.error("Errore eliminazione:", error);
       toast({

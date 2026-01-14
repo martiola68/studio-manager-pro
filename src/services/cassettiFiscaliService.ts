@@ -6,14 +6,14 @@ export type CassettoFiscaleInsert = Database["public"]["Tables"]["tbcassetti_fis
 export type CassettoFiscaleUpdate = Database["public"]["Tables"]["tbcassetti_fiscali"]["Update"];
 
 export const cassettiFiscaliService = {
-  async getAll() {
+  async getCassettiFiscali() {
     const { data, error } = await supabase
       .from("tbcassetti_fiscali")
       .select("*")
       .order("nominativo");
 
     if (error) throw error;
-    return data;
+    return data || [];
   },
 
   async getById(id: string) {

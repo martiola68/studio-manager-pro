@@ -127,8 +127,7 @@ export default function CassettiFiscaliPage() {
 
   const loadCassetti = async () => {
     try {
-      setLoading(true);
-      const data = await cassettiFiscaliService.getAll();
+      const data = await cassettiFiscaliService.getCassettiFiscali();
       setCassetti(data);
     } catch (error) {
       console.error("Errore caricamento cassetti:", error);

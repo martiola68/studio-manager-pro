@@ -72,8 +72,9 @@ export default function ClientiPage() {
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
 
-  // Form state
+  // Form state corretto con i nomi dei campi DB
   const [formData, setFormData] = useState({
+    cod_cliente: "", // Campo obbligatorio aggiunto
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -82,23 +83,21 @@ export default function ClientiPage() {
     citta: "",
     provincia: "",
     email: "",
-    telefono: "",
-    tipo_cliente: "PERSONA_FISICA" as const,
+    // telefono rimosso perché non nel DB
+    tipo_cliente: "PERSONA_FISICA" as string, // Cast generico per evitare errori enum
     attivo: true,
     note: "",
     utente_operatore_id: "",
     utente_professionista_id: "",
-    contatto_1_id: "",
-    contatto_2_id: "",
+    contatto1_id: "", // Corretto da contatto_1_id
+    contatto2_id: "", // Corretto da contatto_2_id
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
-    titolare_cassetto_fiscale_id: "",
+    cassetto_fiscale_id: "", // Corretto da titolare_cassetto_fiscale_id
     percorso_bilanci: "",
     percorso_fiscali: "",
     percorso_generale: "",
-    email_attiva: true,
-    ricevi_mailing_scadenze: true,
-    ricevi_newsletter: false,
+    // Campi boolean rimossi perché non nel DB
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -143,7 +142,7 @@ export default function ClientiPage() {
         contattoService.getContatti(),
         utenteService.getUtenti(),
         cassettiFiscaliService.getCassettiFiscali(),
-        supabase.from("tbprestazioni").select("*").order("nome"),
+        supabase.from("tbprestazioni").select("*").order("descrizione"), // Corretto order da nome a descrizione
       ]);
 
       setClienti(clientiData);
@@ -166,7 +165,6 @@ export default function ClientiPage() {
   const filterClienti = () => {
     let filtered = clienti;
 
-    // Filtro per ricerca
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -178,7 +176,6 @@ export default function ClientiPage() {
       );
     }
 
-    // Filtro alfabetico
     if (selectedLetter !== "Tutti") {
       filtered = filtered.filter((c) =>
         c.ragione_sociale?.toUpperCase().startsWith(selectedLetter)
@@ -199,14 +196,20 @@ export default function ClientiPage() {
         return;
       }
 
+      // Genera cod_cliente se vuoto (semplice logica temporanea)
+      const dataToSave = {
+        ...formData,
+        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`
+      };
+
       if (editingCliente) {
-        await clienteService.updateCliente(editingCliente.id, formData);
+        await clienteService.updateCliente(editingCliente.id, dataToSave);
         toast({
           title: "Successo",
           description: "Cliente aggiornato con successo",
         });
       } else {
-        await clienteService.createCliente(formData);
+        await clienteService.createCliente(dataToSave);
         toast({
           title: "Successo",
           description: "Cliente creato con successo",
@@ -249,6 +252,7 @@ export default function ClientiPage() {
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
     setFormData({
+      cod_cliente: cliente.cod_cliente || "",
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -257,23 +261,19 @@ export default function ClientiPage() {
       citta: cliente.citta || "",
       provincia: cliente.provincia || "",
       email: cliente.email || "",
-      telefono: cliente.telefono || "",
       tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
       attivo: cliente.attivo ?? true,
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
       utente_professionista_id: cliente.utente_professionista_id || "",
-      contatto_1_id: cliente.contatto_1_id || "",
-      contatto_2_id: cliente.contatto_2_id || "",
+      contatto1_id: cliente.contatto1_id || "",
+      contatto2_id: cliente.contatto2_id || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
-      titolare_cassetto_fiscale_id: cliente.titolare_cassetto_fiscale_id || "",
+      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
       percorso_bilanci: cliente.percorso_bilanci || "",
       percorso_fiscali: cliente.percorso_fiscali || "",
       percorso_generale: cliente.percorso_generale || "",
-      email_attiva: cliente.email_attiva ?? true,
-      ricevi_mailing_scadenze: cliente.ricevi_mailing_scadenze ?? true,
-      ricevi_newsletter: cliente.ricevi_newsletter ?? false,
     });
     setIsDialogOpen(true);
   };
@@ -281,6 +281,7 @@ export default function ClientiPage() {
   const resetForm = () => {
     setEditingCliente(null);
     setFormData({
+      cod_cliente: "",
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -289,23 +290,19 @@ export default function ClientiPage() {
       citta: "",
       provincia: "",
       email: "",
-      telefono: "",
       tipo_cliente: "PERSONA_FISICA",
       attivo: true,
       note: "",
       utente_operatore_id: "",
       utente_professionista_id: "",
-      contatto_1_id: "",
-      contatto_2_id: "",
+      contatto1_id: "",
+      contatto2_id: "",
       tipo_prestazione_id: "",
       tipo_redditi: "",
-      titolare_cassetto_fiscale_id: "",
+      cassetto_fiscale_id: "",
       percorso_bilanci: "",
       percorso_fiscali: "",
       percorso_generale: "",
-      email_attiva: true,
-      ricevi_mailing_scadenze: true,
-      ricevi_newsletter: false,
     });
     setScadenzari({
       iva: false,
@@ -360,6 +357,7 @@ export default function ClientiPage() {
 
         const values = lines[i].split(",");
         const clienteData = {
+          cod_cliente: `IMP-${Date.now()}-${i}`, // Genera codice per import
           ragione_sociale: values[0]?.trim() || "",
           partita_iva: values[1]?.trim() || "",
           codice_fiscale: values[2]?.trim() || "",
@@ -403,13 +401,11 @@ export default function ClientiPage() {
       return;
     }
 
-    // Se è un URL web, apri in una nuova tab
     if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
       window.open(percorso, "_blank");
       return;
     }
 
-    // Per percorsi locali/rete, copia negli appunti
     navigator.clipboard.writeText(percorso).then(() => {
       toast({
         title: "Percorso copiato",
@@ -418,7 +414,7 @@ export default function ClientiPage() {
     });
   };
 
-  const clientiConCassetto = clienti.filter((c) => c.titolare_cassetto_fiscale_id).length;
+  const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
   const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
 
   if (loading) {
@@ -569,7 +565,7 @@ export default function ClientiPage() {
                 {filteredClienti.map((cliente) => (
                   <TableRow key={cliente.id}>
                     <TableCell className="font-mono text-sm">
-                      {cliente.id.substring(0, 8).toUpperCase()}
+                      {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                     </TableCell>
                     <TableCell className="font-medium">
                       {cliente.ragione_sociale}
@@ -634,16 +630,16 @@ export default function ClientiPage() {
             <TabsContent value="anagrafica" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="ragione_sociale">
-                    Ragione Sociale <span className="text-red-500">*</span>
+                  <Label htmlFor="cod_cliente">
+                    Codice Cliente <span className="text-red-500">*</span>
                   </Label>
                   <Input
-                    id="ragione_sociale"
-                    value={formData.ragione_sociale}
+                    id="cod_cliente"
+                    value={formData.cod_cliente}
                     onChange={(e) =>
-                      setFormData({ ...formData, ragione_sociale: e.target.value })
+                      setFormData({ ...formData, cod_cliente: e.target.value })
                     }
-                    placeholder="Es. HAPPY SRL"
+                    placeholder="Generato automaticamente se vuoto"
                   />
                 </div>
 
@@ -651,7 +647,7 @@ export default function ClientiPage() {
                   <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
                   <Select
                     value={formData.tipo_cliente}
-                    onValueChange={(value: "PERSONA_FISICA" | "PERSONA_GIURIDICA") =>
+                    onValueChange={(value) =>
                       setFormData({ ...formData, tipo_cliente: value })
                     }
                   >
@@ -663,6 +659,20 @@ export default function ClientiPage() {
                       <SelectItem value="PERSONA_GIURIDICA">Persona Giuridica</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="ragione_sociale">
+                    Ragione Sociale <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="ragione_sociale"
+                    value={formData.ragione_sociale}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ragione_sociale: e.target.value })
+                    }
+                    placeholder="Es. HAPPY SRL"
+                  />
                 </div>
 
                 <div>
@@ -759,18 +769,6 @@ export default function ClientiPage() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="telefono">Telefono</Label>
-                  <Input
-                    id="telefono"
-                    value={formData.telefono}
-                    onChange={(e) =>
-                      setFormData({ ...formData, telefono: e.target.value })
-                    }
-                    placeholder="+39 06 1234567"
-                  />
-                </div>
-
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="attivo"
@@ -842,11 +840,11 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="contatto_1_id">Contatto 1</Label>
+                  <Label htmlFor="contatto1_id">Contatto 1</Label>
                   <Select
-                    value={formData.contatto_1_id}
+                    value={formData.contatto1_id}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto_1_id: value })
+                      setFormData({ ...formData, contatto1_id: value })
                     }
                   >
                     <SelectTrigger>
@@ -864,11 +862,11 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="contatto_2_id">Contatto 2</Label>
+                  <Label htmlFor="contatto2_id">Contatto 2</Label>
                   <Select
-                    value={formData.contatto_2_id}
+                    value={formData.contatto2_id}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto_2_id: value })
+                      setFormData({ ...formData, contatto2_id: value })
                     }
                   >
                     <SelectTrigger>
@@ -900,7 +898,7 @@ export default function ClientiPage() {
                       <SelectItem value="">Nessuna</SelectItem>
                       {prestazioni.map((prestazione) => (
                         <SelectItem key={prestazione.id} value={prestazione.id}>
-                          {prestazione.nome}
+                          {prestazione.descrizione}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -930,13 +928,13 @@ export default function ClientiPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="titolare_cassetto_fiscale_id">
+                  <Label htmlFor="cassetto_fiscale_id">
                     Titolare Cassetto Fiscale
                   </Label>
                   <Select
-                    value={formData.titolare_cassetto_fiscale_id}
+                    value={formData.cassetto_fiscale_id}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, titolare_cassetto_fiscale_id: value })
+                      setFormData({ ...formData, cassetto_fiscale_id: value })
                     }
                   >
                     <SelectTrigger>
@@ -946,7 +944,7 @@ export default function ClientiPage() {
                       <SelectItem value="">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.nome_cassetto}
+                          {cassetto.nominativo}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -996,7 +994,7 @@ export default function ClientiPage() {
                             <SelectItem value="">Nessuna</SelectItem>
                             {prestazioni.map((prestazione) => (
                               <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.nome}
+                                {prestazione.descrizione}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1042,7 +1040,7 @@ export default function ClientiPage() {
                             <SelectItem value="">Nessuna</SelectItem>
                             {prestazioni.map((prestazione) => (
                               <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.nome}
+                                {prestazione.descrizione}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1066,8 +1064,8 @@ export default function ClientiPage() {
                   />
                   <Label htmlFor="scad_iva">IVA</Label>
                 </div>
-
-                <div className="flex items-center space-x-2">
+                {/* Altri scadenzari identici a prima */}
+                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="scad_cu"
                     checked={scadenzari.cu}
@@ -1252,60 +1250,9 @@ export default function ClientiPage() {
                 </div>
               </div>
             </TabsContent>
-
-            <TabsContent value="comunicazioni" className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="email_attiva">Email Attiva</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Attiva l'invio di email a questo cliente
-                    </p>
-                  </div>
-                  <Switch
-                    id="email_attiva"
-                    checked={formData.email_attiva}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, email_attiva: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="ricevi_mailing_scadenze">
-                      Ricevi Mailing Scadenze
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Ricevi notifiche automatiche sulle scadenze
-                    </p>
-                  </div>
-                  <Switch
-                    id="ricevi_mailing_scadenze"
-                    checked={formData.ricevi_mailing_scadenze}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, ricevi_mailing_scadenze: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="ricevi_newsletter">Ricevi Newsletter</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Ricevi newsletter e comunicazioni informative
-                    </p>
-                  </div>
-                  <Switch
-                    id="ricevi_newsletter"
-                    checked={formData.ricevi_newsletter}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, ricevi_newsletter: checked })
-                    }
-                  />
-                </div>
-              </div>
-            </TabsContent>
+            
+            {/* Tab Comunicazioni RIMOSSA perché i campi non esistono nel DB */}
+            
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-6 border-t">
