@@ -441,7 +441,6 @@ export type Database = {
           nome: string
           note: string | null
           password: string | null
-          password_iniziale: string | null
           pin: string | null
           tel: string | null
           updated_at: string | null
@@ -458,7 +457,6 @@ export type Database = {
           nome: string
           note?: string | null
           password?: string | null
-          password_iniziale?: string | null
           pin?: string | null
           tel?: string | null
           updated_at?: string | null
@@ -475,7 +473,6 @@ export type Database = {
           nome?: string
           note?: string | null
           password?: string | null
-          password_iniziale?: string | null
           pin?: string | null
           tel?: string | null
           updated_at?: string | null

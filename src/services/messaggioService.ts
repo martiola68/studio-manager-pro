@@ -395,34 +395,55 @@ export const messaggioService = {
 
   async getMessaggiNonLettiCount(userId: string): Promise<number> {
     try {
+      // Verifica che l'utente sia autenticato
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn("⚠️ Utente non autenticato, skip conteggio messaggi non letti");
+        return 0;
+      }
+
       // Ottieni tutte le conversazioni dell'utente
       const { data: conversazioni, error: convError } = await supabase
         .from("tbconversazioni_utenti")
         .select("conversazione_id, ultimo_letto_at")
         .eq("utente_id", userId);
 
-      if (convError) throw convError;
-      if (!conversazioni || conversazioni.length === 0) return 0;
+      if (convError) {
+        console.error("Errore nel recupero delle conversazioni:", convError);
+        return 0;
+      }
+
+      if (!conversazioni || conversazioni.length === 0) {
+        return 0;
+      }
 
       // Per ogni conversazione, conta i messaggi non letti
       let totalNonLetti = 0;
 
       for (const conv of conversazioni) {
-        const ultimoLetto = conv.ultimo_letto_at || "1970-01-01";
-
-        const { count } = await supabase
+        const query = supabase
           .from("tbmessaggi")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .eq("conversazione_id", conv.conversazione_id)
-          .neq("mittente_id", userId)
-          .gt("created_at", ultimoLetto);
+          .neq("mittente_id", userId);
+
+        if (conv.ultimo_letto_at) {
+          query.gt("created_at", conv.ultimo_letto_at);
+        }
+
+        const { count, error: msgError } = await query;
+
+        if (msgError) {
+          console.error("Errore nel conteggio messaggi:", msgError);
+          continue;
+        }
 
         totalNonLetti += count || 0;
       }
 
       return totalNonLetti;
     } catch (error) {
-      console.error("Errore conteggio messaggi non letti:", error);
+      console.error("Errore nel conteggio messaggi non letti:", error);
       return 0;
     }
   },

@@ -76,14 +76,20 @@ export function TopNavBar() {
   };
 
   const loadMessaggiNonLetti = async () => {
-    if (!currentUser) return;
-    
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
+        setMessaggiNonLetti(0);
+        return;
+      }
+
       const { messaggioService } = await import("@/services/messaggioService");
-      const count = await messaggioService.getMessaggiNonLettiCount(currentUser.id);
+      const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
       setMessaggiNonLetti(count);
     } catch (error) {
-      console.error("Errore caricamento messaggi non letti:", error);
+      console.error("❌ Errore caricamento messaggi non letti:", error);
+      setMessaggiNonLetti(0);
     }
   };
 
