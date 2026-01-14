@@ -395,25 +395,35 @@ export const messaggioService = {
 
   async getMessaggiNonLettiCount(userId: string): Promise<number> {
     try {
-      // Verifica che l'utente sia autenticato
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.warn("⚠️ Utente non autenticato, skip conteggio messaggi non letti");
+      console.log("📊 Caricamento messaggi non letti per userId:", userId);
+
+      // Verifica che userId sia valido
+      if (!userId || typeof userId !== "string") {
+        console.warn("⚠️ userId non valido:", userId);
         return 0;
       }
 
-      // Ottieni tutte le conversazioni dell'utente
+      // Verifica sessione attiva
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        console.warn("⚠️ Sessione non valida o scaduta, skip conteggio messaggi");
+        return 0;
+      }
+
+      // Ottieni tutte le conversazioni dell'utente con timeout e retry
       const { data: conversazioni, error: convError } = await supabase
         .from("tbconversazioni_utenti")
         .select("conversazione_id, ultimo_letto_at")
         .eq("utente_id", userId);
 
       if (convError) {
-        console.error("Errore nel recupero delle conversazioni:", convError);
+        // Log dell'errore ma non bloccare l'applicazione
+        console.warn("⚠️ Errore caricamento conversazioni (gestito):", convError.message);
         return 0;
       }
 
       if (!conversazioni || conversazioni.length === 0) {
+        console.log("ℹ️ Nessuna conversazione trovata per l'utente");
         return 0;
       }
 

@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, FolderOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
 import type { Database } from "@/integrations/supabase/types";
@@ -1439,36 +1439,177 @@ export default function ClientiPage() {
                     </div>
                   </TabsContent>
 
+                  <TabsContent value="scadenzari" className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_iva"
+                          checked={formData.flag_iva}
+                          onChange={(e) => setFormData({ ...formData, flag_iva: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_iva" className="cursor-pointer">
+                          IVA
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_cu"
+                          checked={formData.flag_cu}
+                          onChange={(e) => setFormData({ ...formData, flag_cu: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_cu" className="cursor-pointer">
+                          CU
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_bilancio"
+                          checked={formData.flag_bilancio}
+                          onChange={(e) => setFormData({ ...formData, flag_bilancio: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_bilancio" className="cursor-pointer">
+                          Bilancio
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_fiscali"
+                          checked={formData.flag_fiscali}
+                          onChange={(e) => setFormData({ ...formData, flag_fiscali: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_fiscali" className="cursor-pointer">
+                          Fiscali
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_lipe"
+                          checked={formData.flag_lipe}
+                          onChange={(e) => setFormData({ ...formData, flag_lipe: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_lipe" className="cursor-pointer">
+                          LIPE
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_770"
+                          checked={formData.flag_770}
+                          onChange={(e) => setFormData({ ...formData, flag_770: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_770" className="cursor-pointer">
+                          Modello 770
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_esterometro"
+                          checked={formData.flag_esterometro}
+                          onChange={(e) => setFormData({ ...formData, flag_esterometro: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_esterometro" className="cursor-pointer">
+                          Esterometro
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_ccgg"
+                          checked={formData.flag_ccgg}
+                          onChange={(e) => setFormData({ ...formData, flag_ccgg: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_ccgg" className="cursor-pointer">
+                          CCGG
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_proforma"
+                          checked={formData.flag_proforma}
+                          onChange={(e) => setFormData({ ...formData, flag_proforma: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_proforma" className="cursor-pointer">
+                          Proforma
+                        </Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="flag_imu"
+                          checked={formData.flag_imu}
+                          onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
+                          className="rounded"
+                        />
+                        <Label htmlFor="flag_imu" className="cursor-pointer">
+                          IMU
+                        </Label>
+                      </div>
+                    </div>
+                  </TabsContent>
+
                   <TabsContent value="percorsi" className="space-y-4">
                     <p className="text-sm text-gray-600 mb-4">
-                      Inserisci i percorsi delle cartelle documenti (locali o di rete)
+                      Inserisci i percorsi delle cartelle documenti e aprili direttamente con un click
                     </p>
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                        <FileSpreadsheet className="h-4 w-4" />
-                        Come ottenere il percorso completo della cartella
-                      </h4>
-                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                        <li>Apri <strong>Esplora Risorse</strong> e vai alla cartella desiderata</li>
-                        <li>Clicca sulla <strong>barra degli indirizzi</strong> in alto</li>
-                        <li>Il percorso completo verrà selezionato automaticamente</li>
-                        <li><strong>Copia</strong> (Ctrl+C) e <strong>Incolla</strong> (Ctrl+V) qui sotto</li>
-                      </ol>
-                      <p className="text-xs text-blue-700 mt-2">
-                        Esempio: <code className="bg-blue-100 px-1 py-0.5 rounded">W:\Revisioni\Documenti\HappySrl\Bilanci\</code>
-                      </p>
-                    </div>
 
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
-                        <Input
-                          id="percorso_bilanci"
-                          value={formData.percorso_bilanci}
-                          onChange={(e) => setFormData({ ...formData, percorso_bilanci: e.target.value })}
-                          placeholder="es: W:\Revisioni\Documenti\HappySrl\Bilanci\"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="percorso_bilanci"
+                            value={formData.percorso_bilanci}
+                            onChange={(e) => setFormData({ ...formData, percorso_bilanci: e.target.value })}
+                            placeholder="es: W:\Revisioni\Documenti\HappySrl\Bilanci\"
+                            className="flex-1"
+                          />
+                          {formData.percorso_bilanci && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (formData.percorso_bilanci.startsWith('http')) {
+                                  window.open(formData.percorso_bilanci, '_blank');
+                                } else {
+                                  navigator.clipboard.writeText(formData.percorso_bilanci);
+                                  toast({
+                                    title: "Percorso copiato",
+                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
+                                  });
+                                }
+                              }}
+                            >
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              Apri
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
                           Percorso locale o di rete alla cartella bilanci
                         </p>
@@ -1476,12 +1617,35 @@ export default function ClientiPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
-                        <Input
-                          id="percorso_fiscali"
-                          value={formData.percorso_fiscali}
-                          onChange={(e) => setFormData({ ...formData, percorso_fiscali: e.target.value })}
-                          placeholder="es: W:\Revisioni\Documenti\HappySrl\Fiscali\"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="percorso_fiscali"
+                            value={formData.percorso_fiscali}
+                            onChange={(e) => setFormData({ ...formData, percorso_fiscali: e.target.value })}
+                            placeholder="es: W:\Revisioni\Documenti\HappySrl\Fiscali\"
+                            className="flex-1"
+                          />
+                          {formData.percorso_fiscali && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (formData.percorso_fiscali.startsWith('http')) {
+                                  window.open(formData.percorso_fiscali, '_blank');
+                                } else {
+                                  navigator.clipboard.writeText(formData.percorso_fiscali);
+                                  toast({
+                                    title: "Percorso copiato",
+                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
+                                  });
+                                }
+                              }}
+                            >
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              Apri
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
                           Percorso locale o di rete alla cartella fiscali
                         </p>
@@ -1489,12 +1653,35 @@ export default function ClientiPage() {
 
                       <div className="space-y-2">
                         <Label htmlFor="percorso_generale">Percorso Generale</Label>
-                        <Input
-                          id="percorso_generale"
-                          value={formData.percorso_generale}
-                          onChange={(e) => setFormData({ ...formData, percorso_generale: e.target.value })}
-                          placeholder="es: W:\Revisioni\Documenti\HappySrl\"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            id="percorso_generale"
+                            value={formData.percorso_generale}
+                            onChange={(e) => setFormData({ ...formData, percorso_generale: e.target.value })}
+                            placeholder="es: W:\Revisioni\Documenti\HappySrl\"
+                            className="flex-1"
+                          />
+                          {formData.percorso_generale && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (formData.percorso_generale.startsWith('http')) {
+                                  window.open(formData.percorso_generale, '_blank');
+                                } else {
+                                  navigator.clipboard.writeText(formData.percorso_generale);
+                                  toast({
+                                    title: "Percorso copiato",
+                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
+                                  });
+                                }
+                              }}
+                            >
+                              <FolderOpen className="h-4 w-4 mr-2" />
+                              Apri
+                            </Button>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
                           Percorso locale o di rete alla cartella generale
                         </p>

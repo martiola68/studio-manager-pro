@@ -14,6 +14,12 @@ import {
   ChevronDown,
   Building2,
   MessageSquare,
+  Bell,
+  Key,
+  FolderOpen,
+  LogOut,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -88,7 +94,8 @@ export function TopNavBar() {
       const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
       setMessaggiNonLetti(count);
     } catch (error) {
-      console.error("❌ Errore caricamento messaggi non letti:", error);
+      // Log dell'errore ma non bloccare l'UI
+      console.warn("⚠️ Errore caricamento messaggi non letti (gestito):", error);
       setMessaggiNonLetti(0);
     }
   };
@@ -146,6 +153,11 @@ export function TopNavBar() {
       label: "Comunicazioni",
       icon: <Mail className="h-4 w-4" />,
       href: "/comunicazioni"
+    },
+    {
+      label: "Consultazioni",
+      icon: <Mail className="h-4 w-4" />,
+      href: "/consultazioni"
     },
     {
       label: "Impostazioni",
