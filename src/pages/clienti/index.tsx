@@ -1,618 +1,247 @@
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, FolderOpen } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, FolderOpen } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import Papa from "papaparse";
-import type { Database } from "@/integrations/supabase/types";
+import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
+import { Switch } from "@/components/ui/switch";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
-type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
+type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 
-interface CSVRow {
-  cod_cliente: string;
-  ragione_sociale: string;
-  partita_iva: string;
-  codice_fiscale: string;
-  indirizzo: string;
-  cap: string;
-  citta: string;
-  provincia: string;
-  email: string;
-  note?: string;
-  attivo?: string;
-  tipo_cliente?: string;
-  flag_iva?: string;
-  flag_cu?: string;
-  flag_bilancio?: string;
-  flag_fiscali?: string;
-  flag_lipe?: string;
-  flag_770?: string;
-  flag_esterometro?: string;
-  flag_ccgg?: string;
-  flag_proforma?: string;
-  flag_mail_attivo?: string;
-  flag_mail_scadenze?: string;
-  flag_mail_newsletter?: string;
-  utente_operatore_id?: string;
-  utente_professionista_id?: string;
-  contatto1_id?: string;
-  contatto2_id?: string;
-  tipo_prestazione_id?: string;
-  scadenza_antiric?: string;
-}
-
-interface ImportResult {
-  success: number;
-  duplicates: number;
-  errors: number;
-  duplicateDetails: Array<{ ragione_sociale: string; partita_iva: string; codice_fiscale: string }>;
-  errorDetails: Array<{ row: number; ragione_sociale: string; error: string }>;
-}
-
-const TIPO_REDDITI_OPTIONS = ["SC", "SP", "ENC", "PF", "730"];
+// Tipo per gli scadenzari selezionati
+type ScadenzariSelezionati = {
+  iva: boolean;
+  cu: boolean;
+  bilancio: boolean;
+  fiscali: boolean;
+  lipe: boolean;
+  modello_770: boolean;
+  esterometro: boolean;
+  ccgg: boolean;
+  proforma: boolean;
+  imu: boolean;
+};
 
 export default function ClientiPage() {
-  const router = useRouter();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
-  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [activeTab, setActiveTab] = useState("anagrafica");
+  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
 
-  // CSV Import States
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvData, setCsvData] = useState<CSVRow[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-
+  // Form state
   const [formData, setFormData] = useState({
     ragione_sociale: "",
-    codice_fiscale: "",
     partita_iva: "",
+    codice_fiscale: "",
     indirizzo: "",
     cap: "",
     citta: "",
     provincia: "",
     email: "",
-    note: "",
+    telefono: "",
+    tipo_cliente: "PERSONA_FISICA" as const,
     attivo: true,
-    utente_operatore_id: "__none__",
-    utente_professionista_id: "__none__",
-    contatto1_id: "__none__",
-    contatto2_id: "__none__",
-    scadenza_antiric: "",
-    tipo_prestazione_id: "__none__",
-    tipo_cliente: "Esterno",
-    tipo_redditi: "__none__",
-    data_ultima_verifica_antiric: "",
-    tipo_prestazione_a: "__none__",
-    tipo_prestazione_b: "__none__",
-    data_ultima_verifica_b: "",
-    scadenza_antiric_b: "",
-    cassetto_fiscale_id: "__none__",
+    note: "",
+    utente_operatore_id: "",
+    utente_professionista_id: "",
+    contatto_1_id: "",
+    contatto_2_id: "",
+    tipo_prestazione_id: "",
+    tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
+    titolare_cassetto_fiscale_id: "",
     percorso_bilanci: "",
     percorso_fiscali: "",
     percorso_generale: "",
-    flag_iva: true,
-    flag_cu: true,
-    flag_bilancio: true,
-    flag_fiscali: true,
-    flag_lipe: true,
-    flag_770: true,
-    flag_esterometro: true,
-    flag_ccgg: true,
-    flag_proforma: true,
-    flag_imu: true,
-    flag_mail_attivo: true,
-    flag_mail_scadenze: true,
-    flag_mail_newsletter: true
+    email_attiva: true,
+    ricevi_mailing_scadenze: true,
+    ricevi_newsletter: false,
   });
 
+  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
+    iva: false,
+    cu: false,
+    bilancio: false,
+    fiscali: false,
+    lipe: false,
+    modello_770: false,
+    esterometro: false,
+    ccgg: false,
+    proforma: false,
+    imu: false,
+  });
+
+  // Adeguata Verifica Clientela
+  const [verificaA, setVerificaA] = useState({
+    attiva: false,
+    tipo_prestazione: "",
+  });
+
+  const [verificaB, setVerificaB] = useState({
+    attiva: false,
+    tipo_prestazione: "",
+  });
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
   useEffect(() => {
-    checkAuthAndLoad();
+    loadData();
   }, []);
 
-  const checkAuthAndLoad = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      await loadData();
-    } catch (error) {
-      console.error("Errore:", error);
-      router.push("/login");
-    }
-  };
+  useEffect(() => {
+    filterClienti();
+  }, [clienti, searchTerm, selectedLetter]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [clientiData, contattiData, utentiData, prestazioniData, cassettiData] = await Promise.all([
+      const [clientiData, contattiData, utentiData, cassettiData, prestazioniData] = await Promise.all([
         clienteService.getClienti(),
         contattoService.getContatti(),
         utenteService.getUtenti(),
-        loadPrestazioni(),
-        loadCassettiFiscali()
+        cassettiFiscaliService.getCassettiFiscali(),
+        supabase.from("tbprestazioni").select("*").order("nome"),
       ]);
+
       setClienti(clientiData);
       setContatti(contattiData);
       setUtenti(utentiData);
-      setPrestazioni(prestazioniData);
       setCassettiFiscali(cassettiData);
+      setPrestazioni(prestazioniData.data || []);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadPrestazioni = async (): Promise<Prestazione[]> => {
-    const { data, error } = await supabase
-      .from("tbprestazioni")
-      .select("*")
-      .order("descrizione");
-    if (error) throw error;
-    return data || [];
-  };
+  const filterClienti = () => {
+    let filtered = clienti;
 
-  const loadCassettiFiscali = async (): Promise<CassettoFiscale[]> => {
-    const { data, error } = await supabase
-      .from("tbcassetti_fiscali")
-      .select("*")
-      .order("nominativo");
-    if (error) throw error;
-    return data || [];
-  };
-
-  const checkDuplicates = async (partita_iva: string, codice_fiscale: string, excludeId?: string): Promise<boolean> => {
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("id, ragione_sociale, partita_iva, codice_fiscale")
-      .or(`partita_iva.eq.${partita_iva},codice_fiscale.eq.${codice_fiscale}`);
-
-    if (error) {
-      console.error("Errore controllo duplicati:", error);
-      return false;
+    // Filtro per ricerca
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.ragione_sociale?.toLowerCase().includes(search) ||
+          c.partita_iva?.toLowerCase().includes(search) ||
+          c.codice_fiscale?.toLowerCase().includes(search) ||
+          c.email?.toLowerCase().includes(search)
+      );
     }
 
-    const duplicates = data?.filter(c => excludeId ? c.id !== excludeId : true) || [];
-    
-    if (duplicates.length > 0) {
-      const dup = duplicates[0];
-      toast({
-        title: "Cliente già esistente",
-        description: `Trovato: ${dup.ragione_sociale} - P.IVA: ${dup.partita_iva || 'N/A'} - CF: ${dup.codice_fiscale}`,
-        variant: "destructive"
-      });
-      return true;
+    // Filtro alfabetico
+    if (selectedLetter !== "Tutti") {
+      filtered = filtered.filter((c) =>
+        c.ragione_sociale?.toUpperCase().startsWith(selectedLetter)
+      );
     }
 
-    return false;
+    setFilteredClienti(filtered);
   };
 
-  // CSV Import Functions
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.name.endsWith('.csv')) {
+  const handleSave = async () => {
+    try {
+      if (!formData.ragione_sociale || !formData.partita_iva || !formData.email) {
         toast({
-          title: "Formato non valido",
-          description: "Seleziona un file CSV",
-          variant: "destructive"
+          title: "Errore",
+          description: "Compila tutti i campi obbligatori",
+          variant: "destructive",
         });
         return;
       }
-      setCsvFile(file);
-      parseCSV(file);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.name.endsWith('.csv')) {
-      setCsvFile(file);
-      parseCSV(file);
-    } else {
-      toast({
-        title: "Formato non valido",
-        description: "Seleziona un file CSV",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const parseCSV = (file: File) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        const data = results.data as CSVRow[];
-        setCsvData(data);
-        toast({
-          title: "File caricato",
-          description: `${data.length} record pronti per l'importazione`
-        });
-      },
-      error: (error) => {
-        toast({
-          title: "Errore parsing CSV",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
-    });
-  };
-
-  const downloadTemplate = () => {
-    const link = document.createElement('a');
-    link.href = '/template_importazione_clienti.csv';
-    link.download = 'template_importazione_clienti.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const convertToBoolean = (value: string | undefined): boolean => {
-    if (!value) return false;
-    const lowerValue = value.toLowerCase().trim();
-    return lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes' || lowerValue === 'si';
-  };
-
-  const handleImportCSV = async () => {
-    if (csvData.length === 0) {
-      toast({
-        title: "Nessun dato",
-        description: "Carica un file CSV prima di importare",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setImporting(true);
-    setImportProgress(0);
-    
-    const result: ImportResult = {
-      success: 0,
-      duplicates: 0,
-      errors: 0,
-      duplicateDetails: [],
-      errorDetails: []
-    };
-
-    for (let i = 0; i < csvData.length; i++) {
-      const row = csvData[i];
-      
-      try {
-        // Validazione campi obbligatori
-        if (!row.ragione_sociale || !row.partita_iva || !row.codice_fiscale || 
-            !row.indirizzo || !row.cap || !row.citta || !row.provincia || !row.email) {
-          result.errors++;
-          result.errorDetails.push({
-            row: i + 2,
-            ragione_sociale: row.ragione_sociale || 'N/A',
-            error: 'Campi obbligatori mancanti'
-          });
-          continue;
-        }
-
-        // Controllo duplicati
-        const { data: existing } = await supabase
-          .from("tbclienti")
-          .select("id, ragione_sociale, partita_iva, codice_fiscale")
-          .or(`partita_iva.eq.${row.partita_iva},codice_fiscale.eq.${row.codice_fiscale}`);
-
-        if (existing && existing.length > 0) {
-          result.duplicates++;
-          result.duplicateDetails.push({
-            ragione_sociale: row.ragione_sociale,
-            partita_iva: row.partita_iva,
-            codice_fiscale: row.codice_fiscale
-          });
-          setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
-          continue;
-        }
-
-        // Genera cod_cliente se mancante
-        const codCliente = row.cod_cliente || `CL-${Date.now().toString().substr(-6)}-${i}`;
-
-        // Prepara dati per inserimento
-        const clienteData = {
-          cod_cliente: codCliente,
-          ragione_sociale: row.ragione_sociale,
-          partita_iva: row.partita_iva,
-          codice_fiscale: row.codice_fiscale,
-          indirizzo: row.indirizzo,
-          cap: row.cap,
-          citta: row.citta,
-          provincia: row.provincia,
-          email: row.email,
-          note: row.note || null,
-          attivo: row.attivo ? convertToBoolean(row.attivo) : true,
-          tipo_cliente: row.tipo_cliente || "Esterno",
-          flag_iva: row.flag_iva ? convertToBoolean(row.flag_iva) : true,
-          flag_cu: row.flag_cu ? convertToBoolean(row.flag_cu) : true,
-          flag_bilancio: row.flag_bilancio ? convertToBoolean(row.flag_bilancio) : true,
-          flag_fiscali: row.flag_fiscali ? convertToBoolean(row.flag_fiscali) : true,
-          flag_lipe: row.flag_lipe ? convertToBoolean(row.flag_lipe) : true,
-          flag_770: row.flag_770 ? convertToBoolean(row.flag_770) : true,
-          flag_esterometro: row.flag_esterometro ? convertToBoolean(row.flag_esterometro) : true,
-          flag_ccgg: row.flag_ccgg ? convertToBoolean(row.flag_ccgg) : true,
-          flag_proforma: row.flag_proforma ? convertToBoolean(row.flag_proforma) : true,
-          flag_mail_attivo: row.flag_mail_attivo ? convertToBoolean(row.flag_mail_attivo) : true,
-          flag_mail_scadenze: row.flag_mail_scadenze ? convertToBoolean(row.flag_mail_scadenze) : true,
-          flag_mail_newsletter: row.flag_mail_newsletter ? convertToBoolean(row.flag_mail_newsletter) : true,
-          utente_operatore_id: row.utente_operatore_id?.trim() || null,
-          utente_professionista_id: row.utente_professionista_id?.trim() || null,
-          contatto1_id: row.contatto1_id?.trim() || null,
-          contatto2_id: row.contatto2_id?.trim() || null,
-          tipo_prestazione_id: row.tipo_prestazione_id?.trim() || null,
-          scadenza_antiric: row.scadenza_antiric?.trim() || null
-        };
-
-        // Inserisci nel database
-        await clienteService.createCliente(clienteData);
-        result.success++;
-
-      } catch (error) {
-        console.error(`Errore riga ${i + 2}:`, error);
-        result.errors++;
-        result.errorDetails.push({
-          row: i + 2,
-          ragione_sociale: row.ragione_sociale || 'N/A',
-          error: error instanceof Error ? error.message : 'Errore sconosciuto'
-        });
-      }
-
-      setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
-    }
-
-    setImporting(false);
-    setImportResult(result);
-    
-    // Ricarica lista clienti
-    await loadData();
-
-    // Mostra riepilogo
-    toast({
-      title: "Importazione completata",
-      description: `✅ ${result.success} importati | ⚠️ ${result.duplicates} duplicati | ❌ ${result.errors} errori`,
-    });
-  };
-
-  const resetImport = () => {
-    setCsvFile(null);
-    setCsvData([]);
-    setImportProgress(0);
-    setImportResult(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.ragione_sociale || !formData.partita_iva || !formData.codice_fiscale) {
-      toast({
-        title: "Errore",
-        description: "Compila tutti i campi obbligatori",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const hasDuplicates = await checkDuplicates(
-      formData.partita_iva, 
-      formData.codice_fiscale,
-      editingCliente?.id
-    );
-
-    if (hasDuplicates) return;
-
-    try {
-      const dataToSave = {
-        ...formData,
-        utente_operatore_id: formData.utente_operatore_id && formData.utente_operatore_id !== "__none__" ? formData.utente_operatore_id : null,
-        utente_professionista_id: formData.utente_professionista_id && formData.utente_professionista_id !== "__none__" ? formData.utente_professionista_id : null,
-        contatto1_id: formData.contatto1_id && formData.contatto1_id !== "__none__" ? formData.contatto1_id : null,
-        contatto2_id: formData.contatto2_id && formData.contatto2_id !== "__none__" ? formData.contatto2_id : null,
-        tipo_prestazione_id: formData.tipo_prestazione_id && formData.tipo_prestazione_id !== "__none__" ? formData.tipo_prestazione_id : null,
-        scadenza_antiric: formData.scadenza_antiric || null,
-        tipo_redditi: formData.tipo_redditi && formData.tipo_redditi !== "__none__" ? formData.tipo_redditi : null,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric || null,
-        tipo_prestazione_a: formData.tipo_prestazione_a && formData.tipo_prestazione_a !== "__none__" ? formData.tipo_prestazione_a : null,
-        tipo_prestazione_b: formData.tipo_prestazione_b && formData.tipo_prestazione_b !== "__none__" ? formData.tipo_prestazione_b : null,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b || null,
-        scadenza_antiric_b: formData.scadenza_antiric_b || null,
-        cassetto_fiscale_id: formData.cassetto_fiscale_id && formData.cassetto_fiscale_id !== "__none__" ? formData.cassetto_fiscale_id : null,
-        percorso_bilanci: formData.percorso_bilanci || null,
-        percorso_fiscali: formData.percorso_fiscali || null,
-        percorso_generale: formData.percorso_generale || null
-      };
 
       if (editingCliente) {
-        await clienteService.updateCliente(editingCliente.id, dataToSave);
+        await clienteService.updateCliente(editingCliente.id, formData);
         toast({
           title: "Successo",
-          description: "Cliente aggiornato con successo"
+          description: "Cliente aggiornato con successo",
         });
       } else {
-        const codCliente = `CL-${Date.now().toString().substr(-6)}`;
-        
-        await clienteService.createCliente({
-          ...dataToSave,
-          cod_cliente: codCliente
-        });
+        await clienteService.createCliente(formData);
         toast({
           title: "Successo",
-          description: "Cliente creato con successo"
+          description: "Cliente creato con successo",
         });
       }
 
-      setDialogOpen(false);
+      setIsDialogOpen(false);
       resetForm();
-      await loadData();
+      loadData();
     } catch (error) {
-      console.error("Errore salvataggio:", error);
+      console.error("Errore salvataggio cliente:", error);
       toast({
         title: "Errore",
         description: "Impossibile salvare il cliente",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  const handleAggiungiAScadenzari = async (clienteId: string) => {
-    const cliente = clienti.find(c => c.id === clienteId);
-    if (!cliente) return;
-
-    const scadenzariSelezionati = [];
-    if (cliente.flag_iva) scadenzariSelezionati.push("IVA");
-    if (cliente.flag_770) scadenzariSelezionati.push("770");
-    if (cliente.flag_lipe) scadenzariSelezionati.push("Lipe");
-    if (cliente.flag_esterometro) scadenzariSelezionati.push("Esterometro");
-    if (cliente.flag_proforma) scadenzariSelezionati.push("Proforma");
-    if (cliente.flag_imu) scadenzariSelezionati.push("IMU");
-
-    if (scadenzariSelezionati.length === 0) {
-      toast({
-        title: "Nessuno scadenzario selezionato",
-        description: "Attiva almeno un flag per aggiungere il cliente agli scadenzari",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleDelete = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
 
     try {
-      const promises = [];
-
-      if (cliente.flag_iva) {
-        promises.push(
-          supabase.from("tbscadiva").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_770) {
-        promises.push(
-          supabase.from("tbscad770").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id,
-            conferma_riga: false
-          })
-        );
-      }
-
-      if (cliente.flag_lipe) {
-        promises.push(
-          supabase.from("tbscadlipe").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id
-          })
-        );
-      }
-
-      if (cliente.flag_esterometro) {
-        promises.push(
-          supabase.from("tbscadestero").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id
-          })
-        );
-      }
-
-      if (cliente.flag_proforma) {
-        promises.push(
-          supabase.from("tbscadproforma").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-            utente_professionista_id: cliente.utente_professionista_id
-          })
-        );
-      }
-
-      if (cliente.flag_imu) {
-        // Recupera studio_id
-        const { data: studio } = await supabase
-          .from("tbstudio")
-          .select("id")
-          .single();
-
-        if (studio) {
-          promises.push(
-            supabase.from("tbscadimu").upsert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_professionista_id: cliente.utente_professionista_id,
-              studio_id: studio.id,
-              acconto_imu: false,
-              acconto_dovuto: false,
-              acconto_comunicato: false,
-              saldo_imu: false,
-              saldo_dovuto: false,
-              saldo_comunicato: false,
-              dichiarazione_imu: "NO",
-              dichiarazione_presentazione: false
-            })
-          );
-        }
-      }
-
-      await Promise.all(promises);
-
+      await clienteService.deleteCliente(id);
       toast({
         title: "Successo",
-        description: `Cliente aggiunto a ${scadenzariSelezionati.length} scadenzari: ${scadenzariSelezionati.join(", ")}`
+        description: "Cliente eliminato con successo",
       });
+      loadData();
     } catch (error) {
-      console.error("Errore aggiunta scadenzari:", error);
+      console.error("Errore eliminazione cliente:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiungere agli scadenzari",
-        variant: "destructive"
+        description: "Impossibile eliminare il cliente",
+        variant: "destructive",
       });
     }
   };
@@ -620,1155 +249,310 @@ export default function ClientiPage() {
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
     setFormData({
-      ragione_sociale: cliente.ragione_sociale,
-      codice_fiscale: cliente.codice_fiscale,
-      partita_iva: cliente.partita_iva,
-      indirizzo: cliente.indirizzo,
-      cap: cliente.cap,
-      citta: cliente.citta,
-      provincia: cliente.provincia,
-      email: cliente.email,
-      note: cliente.note || "",
+      ragione_sociale: cliente.ragione_sociale || "",
+      partita_iva: cliente.partita_iva || "",
+      codice_fiscale: cliente.codice_fiscale || "",
+      indirizzo: cliente.indirizzo || "",
+      cap: cliente.cap || "",
+      citta: cliente.citta || "",
+      provincia: cliente.provincia || "",
+      email: cliente.email || "",
+      telefono: cliente.telefono || "",
+      tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
       attivo: cliente.attivo ?? true,
-      utente_operatore_id: cliente.utente_operatore_id || "__none__",
-      utente_professionista_id: cliente.utente_professionista_id || "__none__",
-      contatto1_id: cliente.contatto1_id || "__none__",
-      contatto2_id: cliente.contatto2_id || "__none__",
-      scadenza_antiric: cliente.scadenza_antiric || "",
-      tipo_prestazione_id: cliente.tipo_prestazione_id || "__none__",
-      tipo_cliente: cliente.tipo_cliente || "Esterno",
-      tipo_redditi: cliente.tipo_redditi || "__none__",
-      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric || "",
-      tipo_prestazione_a: cliente.tipo_prestazione_a || "__none__",
-      tipo_prestazione_b: cliente.tipo_prestazione_b || "__none__",
-      data_ultima_verifica_b: cliente.data_ultima_verifica_b || "",
-      scadenza_antiric_b: cliente.scadenza_antiric_b || "",
-      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "__none__",
+      note: cliente.note || "",
+      utente_operatore_id: cliente.utente_operatore_id || "",
+      utente_professionista_id: cliente.utente_professionista_id || "",
+      contatto_1_id: cliente.contatto_1_id || "",
+      contatto_2_id: cliente.contatto_2_id || "",
+      tipo_prestazione_id: cliente.tipo_prestazione_id || "",
+      tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
+      titolare_cassetto_fiscale_id: cliente.titolare_cassetto_fiscale_id || "",
       percorso_bilanci: cliente.percorso_bilanci || "",
       percorso_fiscali: cliente.percorso_fiscali || "",
       percorso_generale: cliente.percorso_generale || "",
-      flag_iva: cliente.flag_iva ?? true,
-      flag_cu: cliente.flag_cu ?? true,
-      flag_bilancio: cliente.flag_bilancio ?? true,
-      flag_fiscali: cliente.flag_fiscali ?? true,
-      flag_lipe: cliente.flag_lipe ?? true,
-      flag_770: cliente.flag_770 ?? true,
-      flag_esterometro: cliente.flag_esterometro ?? true,
-      flag_ccgg: cliente.flag_ccgg ?? true,
-      flag_proforma: cliente.flag_proforma ?? true,
-      flag_imu: cliente.flag_imu ?? true,
-      flag_mail_attivo: cliente.flag_mail_attivo ?? true,
-      flag_mail_scadenze: cliente.flag_mail_scadenze ?? true,
-      flag_mail_newsletter: cliente.flag_mail_newsletter ?? true
+      email_attiva: cliente.email_attiva ?? true,
+      ricevi_mailing_scadenze: cliente.ricevi_mailing_scadenze ?? true,
+      ricevi_newsletter: cliente.ricevi_newsletter ?? false,
     });
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo cliente? Verranno eliminate anche tutte le scadenze associate.")) return;
-
-    try {
-      await clienteService.deleteCliente(id);
-      toast({
-        title: "Successo",
-        description: "Cliente eliminato con successo"
-      });
-      await loadData();
-    } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il cliente",
-        variant: "destructive"
-      });
-    }
+    setIsDialogOpen(true);
   };
 
   const resetForm = () => {
+    setEditingCliente(null);
     setFormData({
       ragione_sociale: "",
-      codice_fiscale: "",
       partita_iva: "",
+      codice_fiscale: "",
       indirizzo: "",
       cap: "",
       citta: "",
       provincia: "",
       email: "",
-      note: "",
+      telefono: "",
+      tipo_cliente: "PERSONA_FISICA",
       attivo: true,
-      utente_operatore_id: "__none__",
-      utente_professionista_id: "__none__",
-      contatto1_id: "__none__",
-      contatto2_id: "__none__",
-      scadenza_antiric: "",
-      tipo_prestazione_id: "__none__",
-      tipo_cliente: "Esterno",
-      tipo_redditi: "__none__",
-      data_ultima_verifica_antiric: "",
-      tipo_prestazione_a: "__none__",
-      tipo_prestazione_b: "__none__",
-      data_ultima_verifica_b: "",
-      scadenza_antiric_b: "",
-      cassetto_fiscale_id: "__none__",
+      note: "",
+      utente_operatore_id: "",
+      utente_professionista_id: "",
+      contatto_1_id: "",
+      contatto_2_id: "",
+      tipo_prestazione_id: "",
+      tipo_redditi: "",
+      titolare_cassetto_fiscale_id: "",
       percorso_bilanci: "",
       percorso_fiscali: "",
       percorso_generale: "",
-      flag_iva: true,
-      flag_cu: true,
-      flag_bilancio: true,
-      flag_fiscali: true,
-      flag_lipe: true,
-      flag_770: true,
-      flag_esterometro: true,
-      flag_ccgg: true,
-      flag_proforma: true,
-      flag_imu: true,
-      flag_mail_attivo: true,
-      flag_mail_scadenze: true,
-      flag_mail_newsletter: true
+      email_attiva: true,
+      ricevi_mailing_scadenze: true,
+      ricevi_newsletter: false,
     });
-    setEditingCliente(null);
-    setActiveTab("anagrafica");
+    setScadenzari({
+      iva: false,
+      cu: false,
+      bilancio: false,
+      fiscali: false,
+      lipe: false,
+      modello_770: false,
+      esterometro: false,
+      ccgg: false,
+      proforma: false,
+      imu: false,
+    });
+    setVerificaA({ attiva: false, tipo_prestazione: "" });
+    setVerificaB({ attiva: false, tipo_prestazione: "" });
   };
 
-  const filteredClienti = clienti.filter(c =>
-    c.ragione_sociale.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.partita_iva.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.codice_fiscale.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleExportCSV = () => {
+    const headers = ["Ragione Sociale", "P.IVA", "Codice Fiscale", "Email", "Città", "Stato"];
+    const rows = filteredClienti.map((c) => [
+      c.ragione_sociale,
+      c.partita_iva,
+      c.codice_fiscale,
+      c.email,
+      c.citta,
+      c.attivo ? "Attivo" : "Inattivo",
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clienti.csv";
+    a.click();
+  };
+
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split("\n");
+      const headers = lines[0].split(",");
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        const values = lines[i].split(",");
+        const clienteData = {
+          ragione_sociale: values[0]?.trim() || "",
+          partita_iva: values[1]?.trim() || "",
+          codice_fiscale: values[2]?.trim() || "",
+          email: values[3]?.trim() || "",
+          citta: values[4]?.trim() || "",
+          attivo: values[5]?.trim().toLowerCase() === "attivo",
+        };
+
+        try {
+          await clienteService.createCliente(clienteData as any);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error(`Errore importazione riga ${i}:`, error);
+        }
+      }
+
+      toast({
+        title: "Importazione completata",
+        description: `${successCount} clienti importati, ${errorCount} errori`,
+      });
+
+      loadData();
+    } catch (error) {
+      console.error("Errore importazione CSV:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile importare il file CSV",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenFolder = (percorso: string) => {
+    if (!percorso) {
+      toast({
+        title: "Attenzione",
+        description: "Nessun percorso configurato",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Se è un URL web, apri in una nuova tab
+    if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
+      window.open(percorso, "_blank");
+      return;
+    }
+
+    // Per percorsi locali/rete, copia negli appunti
+    navigator.clipboard.writeText(percorso).then(() => {
+      toast({
+        title: "Percorso copiato",
+        description: "Il percorso è stato copiato negli appunti. Aprilo manualmente da Esplora File.",
+      });
+    });
+  };
+
+  const clientiConCassetto = clienti.filter((c) => c.titolare_cassetto_fiscale_id).length;
+  const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Caricamento...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Caricamento clienti...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestione Clienti</h1>
-          <p className="text-gray-500 mt-1">Anagrafica completa e gestione scadenzari</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">Rubrica Contatti</h1>
+          <p className="text-muted-foreground">Gestisci i contatti della rubrica</p>
         </div>
         <div className="flex gap-3">
-          {/* CSV Import Dialog */}
-          <Dialog open={importDialogOpen} onOpenChange={(open) => {
-            setImportDialogOpen(open);
-            if (!open) resetImport();
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-                <Upload className="h-4 w-4 mr-2" />
-                Importa CSV
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Importazione Massiva Clienti da CSV</DialogTitle>
-                <DialogDescription>
-                  Carica un file CSV per importare più clienti contemporaneamente
-                </DialogDescription>
-              </DialogHeader>
-
-              {!importResult ? (
-                <div className="space-y-6">
-                  {/* Download Template */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-semibold text-blue-900 mb-1">
-                          Scarica il template CSV
-                        </p>
-                        <p className="text-sm text-blue-800 mb-3">
-                          Usa il nostro modello per compilare i dati dei clienti con tutti i campi richiesti
-                        </p>
-                        <Button 
-                          onClick={downloadTemplate}
-                          size="sm"
-                          variant="outline"
-                          className="border-blue-600 text-blue-600 hover:bg-blue-100"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Scarica Template
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Upload Area */}
-                  <div
-                    onDrop={handleDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
-                  >
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="csv-upload"
-                    />
-                    <label htmlFor="csv-upload" className="cursor-pointer">
-                      <Upload className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                      <p className="text-lg font-medium text-gray-900 mb-1">
-                        Trascina qui il file CSV
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        oppure clicca per selezionarlo
-                      </p>
-                    </label>
-                  </div>
-
-                  {/* Preview */}
-                  {csvData.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">
-                          Anteprima: {csvData.length} clienti
-                        </h3>
-                        <Button
-                          onClick={() => setImportDialogOpen(false)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          Carica altro file
-                        </Button>
-                      </div>
-
-                      <div className="border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Ragione Sociale</TableHead>
-                              <TableHead>P.IVA</TableHead>
-                              <TableHead>CF</TableHead>
-                              <TableHead>Città</TableHead>
-                              <TableHead>Email</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {csvData.slice(0, 10).map((row, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell className="font-medium">{row.ragione_sociale}</TableCell>
-                                <TableCell className="font-mono text-sm">{row.partita_iva}</TableCell>
-                                <TableCell className="font-mono text-sm">{row.codice_fiscale}</TableCell>
-                                <TableCell>{row.citta}</TableCell>
-                                <TableCell className="text-sm">{row.email}</TableCell>
-                              </TableRow>
-                            ))}
-                            {csvData.length > 10 && (
-                              <TableRow>
-                                <TableCell colSpan={5} className="text-center text-gray-500">
-                                  ... e altri {csvData.length - 10} clienti
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-
-                      {/* Import Progress */}
-                      {importing && (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Importazione in corso...</span>
-                            <span className="font-semibold">{importProgress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${importProgress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Import Button */}
-                      <div className="flex justify-end gap-3 pt-4">
-                        <Button
-                          onClick={() => setImportDialogOpen(false)}
-                          variant="outline"
-                          disabled={importing}
-                        >
-                          Annulla
-                        </Button>
-                        <Button
-                          onClick={handleImportCSV}
-                          disabled={importing || csvData.length === 0}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          {importing ? (
-                            <>Importazione in corso...</>
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Importa {csvData.length} Clienti
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* Import Result */
-                <div className="space-y-6">
-                  <div className="text-center py-6">
-                    <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                      Importazione Completata
-                    </h3>
-                  </div>
-
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <Card className="border-l-4 border-l-green-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-green-600">
-                            {importResult.success}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">Clienti Importati</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-l-4 border-l-orange-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-orange-600">
-                            {importResult.duplicates}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">Duplicati Saltati</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-l-4 border-l-red-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <p className="text-3xl font-bold text-red-600">
-                            {importResult.errors}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">Errori</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Duplicates Details */}
-                  {importResult.duplicateDetails.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-orange-600" />
-                        Clienti Duplicati (già esistenti)
-                      </h4>
-                      <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Ragione Sociale</TableHead>
-                              <TableHead>P.IVA</TableHead>
-                              <TableHead>CF</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {importResult.duplicateDetails.map((dup, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{dup.ragione_sociale}</TableCell>
-                                <TableCell className="font-mono text-sm">{dup.partita_iva}</TableCell>
-                                <TableCell className="font-mono text-sm">{dup.codice_fiscale}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error Details */}
-                  {importResult.errorDetails.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                        Errori di Importazione
-                      </h4>
-                      <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Riga</TableHead>
-                              <TableHead>Ragione Sociale</TableHead>
-                              <TableHead>Errore</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {importResult.errorDetails.map((err, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>{err.row}</TableCell>
-                                <TableCell>{err.ragione_sociale}</TableCell>
-                                <TableCell className="text-sm text-red-600">{err.error}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <Button onClick={() => setImportDialogOpen(false)}>
-                      Chiudi
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* New Client Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuovo Cliente
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
-                </DialogTitle>
-                <DialogDescription>
-                  Inserisci i dati completi del cliente
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit}>
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
-                    <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
-                    <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-                    <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
-                    <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="anagrafica" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="ragione_sociale">Ragione Sociale *</Label>
-                      <Input
-                        id="ragione_sociale"
-                        value={formData.ragione_sociale}
-                        onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="partita_iva">Partita IVA *</Label>
-                        <Input
-                          id="partita_iva"
-                          value={formData.partita_iva}
-                          onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                        <Input
-                          id="codice_fiscale"
-                          value={formData.codice_fiscale}
-                          onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="indirizzo">Indirizzo *</Label>
-                      <Input
-                        id="indirizzo"
-                        value={formData.indirizzo}
-                        onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="cap">CAP *</Label>
-                        <Input
-                          id="cap"
-                          value={formData.cap}
-                          onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="citta">Città *</Label>
-                        <Input
-                          id="citta"
-                          value={formData.citta}
-                          onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="provincia">Provincia *</Label>
-                        <Input
-                          id="provincia"
-                          value={formData.provincia}
-                          onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
-                          maxLength={2}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
-                        <Select
-                          value={formData.tipo_cliente}
-                          onValueChange={(value) => setFormData({ ...formData, tipo_cliente: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Interno">Interno</SelectItem>
-                            <SelectItem value="Esterno">Esterno</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center space-x-2 pt-8">
-                        <input
-                          type="checkbox"
-                          id="attivo"
-                          checked={formData.attivo}
-                          onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="attivo" className="cursor-pointer">Cliente Attivo</Label>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="note">Note</Label>
-                      <Textarea
-                        id="note"
-                        value={formData.note}
-                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                        rows={3}
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="riferimenti" className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
-                        <Select
-                          value={formData.utente_operatore_id || "__none__"}
-                          onValueChange={(value) => setFormData({ ...formData, utente_operatore_id: value === "__none__" ? "" : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona utente" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuno</SelectItem>
-                            {utenti.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.nome} {u.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
-                        <Select
-                          value={formData.utente_professionista_id || "__none__"}
-                          onValueChange={(value) => setFormData({ ...formData, utente_professionista_id: value === "__none__" ? "" : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona utente" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuno</SelectItem>
-                            {utenti.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.nome} {u.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="contatto1_id">Contatto 1</Label>
-                        <Select
-                          value={formData.contatto1_id || "__none__"}
-                          onValueChange={(value) => setFormData({ ...formData, contatto1_id: value === "__none__" ? "" : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona contatto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuno</SelectItem>
-                            {contatti.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.nome} {c.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="contatto2_id">Contatto 2</Label>
-                        <Select
-                          value={formData.contatto2_id || "__none__"}
-                          onValueChange={(value) => setFormData({ ...formData, contatto2_id: value === "__none__" ? "" : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona contatto" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Nessuno</SelectItem>
-                            {contatti.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.nome} {c.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
-                      <Select
-                        value={formData.tipo_prestazione_id || "__none__"}
-                        onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value === "__none__" ? "" : value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona prestazione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Nessuna</SelectItem>
-                          {prestazioni.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.descrizione}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
-                      <Select
-                        value={formData.tipo_redditi || "__none__"}
-                        onValueChange={(value) => setFormData({ ...formData, tipo_redditi: value === "__none__" ? "" : value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona tipo redditi" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Nessuno</SelectItem>
-                          {TIPO_REDDITI_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>
-                              {opt}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
-                      <Select
-                        value={formData.cassetto_fiscale_id || "__none__"}
-                        onValueChange={(value) => setFormData({ ...formData, cassetto_fiscale_id: value === "__none__" ? "" : value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona titolare" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Nessuno</SelectItem>
-                          {cassettiFiscali.map((cf) => (
-                            <SelectItem key={cf.id} value={cf.id}>
-                              {cf.nominativo} - {cf.username}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="border-t pt-4 mt-4">
-                      <h3 className="font-semibold mb-4 text-lg">Adeguata Verifica Clientela (Antiriciclaggio)</h3>
-                      
-                      {/* Sezione A */}
-                      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h4 className="font-semibold mb-3 text-blue-900">📋 Verifica A (Principale)</h4>
-                        
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="tipo_prestazione_a">Tipo Prestazione A</Label>
-                            <Select
-                              value={formData.tipo_prestazione_a || "__none__"}
-                              onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_a: value === "__none__" ? "" : value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleziona tipo prestazione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nessuna</SelectItem>
-                                <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
-                                  Assistenza e consulenza societaria continuativa e generica
-                                </SelectItem>
-                                <SelectItem value="Consulenza del Lavoro">
-                                  Consulenza del Lavoro
-                                </SelectItem>
-                                <SelectItem value="Altre attività">
-                                  Altre attività
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="data_ultima_verifica_antiric">Data Ultima Verifica A</Label>
-                              <Input
-                                id="data_ultima_verifica_antiric"
-                                type="date"
-                                value={formData.data_ultima_verifica_antiric}
-                                onChange={(e) => setFormData({ ...formData, data_ultima_verifica_antiric: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="scadenza_antiric">Scadenza Antiriciclaggio A</Label>
-                              <Input
-                                id="scadenza_antiric"
-                                type="date"
-                                value={formData.scadenza_antiric}
-                                onChange={(e) => setFormData({ ...formData, scadenza_antiric: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Sezione B */}
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                        <h4 className="font-semibold mb-3 text-green-900">📋 Verifica B (Secondaria)</h4>
-                        
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="tipo_prestazione_b">Tipo Prestazione B</Label>
-                            <Select
-                              value={formData.tipo_prestazione_b || "__none__"}
-                              onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_b: value === "__none__" ? "" : value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Seleziona tipo prestazione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nessuna</SelectItem>
-                                <SelectItem value="Assistenza e consulenza societaria continuativa e generica">
-                                  Assistenza e consulenza societaria continuativa e generica
-                                </SelectItem>
-                                <SelectItem value="Consulenza del Lavoro">
-                                  Consulenza del Lavoro
-                                </SelectItem>
-                                <SelectItem value="Altre attività">
-                                  Altre attività
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="data_ultima_verifica_b">Data Ultima Verifica B</Label>
-                              <Input
-                                id="data_ultima_verifica_b"
-                                type="date"
-                                value={formData.data_ultima_verifica_b}
-                                onChange={(e) => setFormData({ ...formData, data_ultima_verifica_b: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="scadenza_antiric_b">Scadenza Antiriciclaggio B</Label>
-                              <Input
-                                id="scadenza_antiric_b"
-                                type="date"
-                                value={formData.scadenza_antiric_b}
-                                onChange={(e) => setFormData({ ...formData, scadenza_antiric_b: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="scadenzari" className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_iva"
-                          checked={formData.flag_iva}
-                          onChange={(e) => setFormData({ ...formData, flag_iva: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_iva" className="cursor-pointer">
-                          IVA
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_cu"
-                          checked={formData.flag_cu}
-                          onChange={(e) => setFormData({ ...formData, flag_cu: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_cu" className="cursor-pointer">
-                          CU
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_bilancio"
-                          checked={formData.flag_bilancio}
-                          onChange={(e) => setFormData({ ...formData, flag_bilancio: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_bilancio" className="cursor-pointer">
-                          Bilancio
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_fiscali"
-                          checked={formData.flag_fiscali}
-                          onChange={(e) => setFormData({ ...formData, flag_fiscali: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_fiscali" className="cursor-pointer">
-                          Fiscali
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_lipe"
-                          checked={formData.flag_lipe}
-                          onChange={(e) => setFormData({ ...formData, flag_lipe: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_lipe" className="cursor-pointer">
-                          LIPE
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_770"
-                          checked={formData.flag_770}
-                          onChange={(e) => setFormData({ ...formData, flag_770: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_770" className="cursor-pointer">
-                          Modello 770
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_esterometro"
-                          checked={formData.flag_esterometro}
-                          onChange={(e) => setFormData({ ...formData, flag_esterometro: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_esterometro" className="cursor-pointer">
-                          Esterometro
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_ccgg"
-                          checked={formData.flag_ccgg}
-                          onChange={(e) => setFormData({ ...formData, flag_ccgg: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_ccgg" className="cursor-pointer">
-                          CCGG
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_proforma"
-                          checked={formData.flag_proforma}
-                          onChange={(e) => setFormData({ ...formData, flag_proforma: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_proforma" className="cursor-pointer">
-                          Proforma
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_imu"
-                          checked={formData.flag_imu}
-                          onChange={(e) => setFormData({ ...formData, flag_imu: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_imu" className="cursor-pointer">
-                          IMU
-                        </Label>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="percorsi" className="space-y-4">
-                    <p className="text-sm text-gray-600 mb-4">
-                      Inserisci i percorsi delle cartelle documenti e aprili direttamente con un click
-                    </p>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="percorso_bilanci"
-                            value={formData.percorso_bilanci}
-                            onChange={(e) => setFormData({ ...formData, percorso_bilanci: e.target.value })}
-                            placeholder="es: W:\Revisioni\Documenti\HappySrl\Bilanci\"
-                            className="flex-1"
-                          />
-                          {formData.percorso_bilanci && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                if (formData.percorso_bilanci.startsWith('http')) {
-                                  window.open(formData.percorso_bilanci, '_blank');
-                                } else {
-                                  navigator.clipboard.writeText(formData.percorso_bilanci);
-                                  toast({
-                                    title: "Percorso copiato",
-                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
-                                  });
-                                }
-                              }}
-                            >
-                              <FolderOpen className="h-4 w-4 mr-2" />
-                              Apri
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Percorso locale o di rete alla cartella bilanci
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="percorso_fiscali"
-                            value={formData.percorso_fiscali}
-                            onChange={(e) => setFormData({ ...formData, percorso_fiscali: e.target.value })}
-                            placeholder="es: W:\Revisioni\Documenti\HappySrl\Fiscali\"
-                            className="flex-1"
-                          />
-                          {formData.percorso_fiscali && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                if (formData.percorso_fiscali.startsWith('http')) {
-                                  window.open(formData.percorso_fiscali, '_blank');
-                                } else {
-                                  navigator.clipboard.writeText(formData.percorso_fiscali);
-                                  toast({
-                                    title: "Percorso copiato",
-                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
-                                  });
-                                }
-                              }}
-                            >
-                              <FolderOpen className="h-4 w-4 mr-2" />
-                              Apri
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Percorso locale o di rete alla cartella fiscali
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="percorso_generale">Percorso Generale</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="percorso_generale"
-                            value={formData.percorso_generale}
-                            onChange={(e) => setFormData({ ...formData, percorso_generale: e.target.value })}
-                            placeholder="es: W:\Revisioni\Documenti\HappySrl\"
-                            className="flex-1"
-                          />
-                          {formData.percorso_generale && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                if (formData.percorso_generale.startsWith('http')) {
-                                  window.open(formData.percorso_generale, '_blank');
-                                } else {
-                                  navigator.clipboard.writeText(formData.percorso_generale);
-                                  toast({
-                                    title: "Percorso copiato",
-                                    description: "Incolla nella barra indirizzi di Esplora Risorse"
-                                  });
-                                }
-                              }}
-                            >
-                              <FolderOpen className="h-4 w-4 mr-2" />
-                              Apri
-                            </Button>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Percorso locale o di rete alla cartella generale
-                        </p>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="comunicazioni" className="space-y-4">
-                    <p className="text-sm text-gray-600 mb-4">
-                      Gestisci le preferenze di comunicazione del cliente
-                    </p>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_mail_attivo"
-                          checked={formData.flag_mail_attivo}
-                          onChange={(e) => setFormData({ ...formData, flag_mail_attivo: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_mail_attivo" className="cursor-pointer">
-                          Email Attiva
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_mail_scadenze"
-                          checked={formData.flag_mail_scadenze}
-                          onChange={(e) => setFormData({ ...formData, flag_mail_scadenze: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_mail_scadenze" className="cursor-pointer">
-                          Ricevi Mailing Scadenze
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="flag_mail_newsletter"
-                          checked={formData.flag_mail_newsletter}
-                          onChange={(e) => setFormData({ ...formData, flag_mail_newsletter: e.target.checked })}
-                          className="rounded"
-                        />
-                        <Label htmlFor="flag_mail_newsletter" className="cursor-pointer">
-                          Ricevi Newsletter
-                        </Label>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-
-                <div className="flex gap-3 pt-6 mt-6 border-t">
-                  <Button type="submit" className="flex-1">
-                    {editingCliente ? "Aggiorna" : "Crea"} Cliente
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setDialogOpen(false)}
-                  >
-                    Annulla
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Importa CSV
+          </Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuovo Contatto
+          </Button>
         </div>
+      </div>
 
+      {/* Statistiche */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Cerca per ragione sociale, P.IVA o CF..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Totale Contatti
+            </CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
+            <div className="text-4xl font-bold">{clienti.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Con Cassetto Fiscale
+            </CardTitle>
+            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-blue-600">{clientiConCassetto}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Percentuale
+            </CardTitle>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-green-600">{percentualeCassetto}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Ricerca e Filtri */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Barra di ricerca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <Input
+              placeholder="Cerca per nome, cognome, email o telefono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-12 text-base"
+            />
+          </div>
+
+          {/* Filtro alfabetico */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedLetter === "Tutti" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedLetter("Tutti")}
+                className="px-4"
+              >
+                Tutti
+              </Button>
+              {alphabet.map((letter) => (
+                <Button
+                  key={letter}
+                  variant={selectedLetter === letter ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedLetter(letter)}
+                  className="w-10 h-10 p-0"
+                >
+                  {letter}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabella Clienti */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredClienti.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+              <p className="text-muted-foreground mb-6">
+                {searchTerm || selectedLetter !== "Tutti"
+                  ? "Prova a modificare i filtri di ricerca"
+                  : "Inizia aggiungendo il tuo primo cliente"}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Aggiungi Cliente
+              </Button>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1782,60 +566,767 @@ export default function ClientiPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClienti.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      Nessun cliente trovato
+                {filteredClienti.map((cliente) => (
+                  <TableRow key={cliente.id}>
+                    <TableCell className="font-mono text-sm">
+                      {cliente.id.substring(0, 8).toUpperCase()}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {cliente.ragione_sociale}
+                    </TableCell>
+                    <TableCell>{cliente.partita_iva}</TableCell>
+                    <TableCell>{cliente.citta}</TableCell>
+                    <TableCell>{cliente.email}</TableCell>
+                    <TableCell>
+                      {cliente.attivo ? (
+                        <Badge variant="default" className="bg-green-600">
+                          Attivo
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Inattivo</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(cliente)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(cliente.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredClienti.map((cliente) => (
-                    <TableRow key={cliente.id}>
-                      <TableCell className="font-mono text-xs">{cliente.cod_cliente}</TableCell>
-                      <TableCell className="font-medium">{cliente.ragione_sociale}</TableCell>
-                      <TableCell className="font-mono text-sm">{cliente.partita_iva}</TableCell>
-                      <TableCell>{cliente.citta}</TableCell>
-                      <TableCell className="text-sm">{cliente.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.attivo ? "default" : "secondary"}>
-                          {cliente.attivo ? "Attivo" : "Non attivo"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleAggiungiAScadenzari(cliente.id)}
-                            title="Aggiungi agli scadenzari"
-                          >
-                            <Calendar className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(cliente)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(cliente.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialog Nuovo/Modifica Cliente */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="anagrafica" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+              <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+              <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+              <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
+              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="anagrafica" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ragione_sociale">
+                    Ragione Sociale <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="ragione_sociale"
+                    value={formData.ragione_sociale}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ragione_sociale: e.target.value })
+                    }
+                    placeholder="Es. HAPPY SRL"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+                  <Select
+                    value={formData.tipo_cliente}
+                    onValueChange={(value: "PERSONA_FISICA" | "PERSONA_GIURIDICA") =>
+                      setFormData({ ...formData, tipo_cliente: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PERSONA_FISICA">Persona Fisica</SelectItem>
+                      <SelectItem value="PERSONA_GIURIDICA">Persona Giuridica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="partita_iva">
+                    P.IVA <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="partita_iva"
+                    value={formData.partita_iva}
+                    onChange={(e) =>
+                      setFormData({ ...formData, partita_iva: e.target.value })
+                    }
+                    placeholder="01234567890"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="codice_fiscale">
+                    Codice Fiscale <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="codice_fiscale"
+                    value={formData.codice_fiscale}
+                    onChange={(e) =>
+                      setFormData({ ...formData, codice_fiscale: e.target.value })
+                    }
+                    placeholder="RSSMRA80A01H501U"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="indirizzo">
+                    Indirizzo <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="indirizzo"
+                    value={formData.indirizzo}
+                    onChange={(e) =>
+                      setFormData({ ...formData, indirizzo: e.target.value })
+                    }
+                    placeholder="Via Roma, 123"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="cap">
+                    CAP <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="cap"
+                    value={formData.cap}
+                    onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+                    placeholder="00100"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="citta">
+                    Città <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="citta"
+                    value={formData.citta}
+                    onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+                    placeholder="Roma"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="provincia">
+                    Provincia <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="provincia"
+                    value={formData.provincia}
+                    onChange={(e) =>
+                      setFormData({ ...formData, provincia: e.target.value })
+                    }
+                    placeholder="RM"
+                    maxLength={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="info@happy.it"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="telefono">Telefono</Label>
+                  <Input
+                    id="telefono"
+                    value={formData.telefono}
+                    onChange={(e) =>
+                      setFormData({ ...formData, telefono: e.target.value })
+                    }
+                    placeholder="+39 06 1234567"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="attivo"
+                    checked={formData.attivo}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, attivo: checked })
+                    }
+                  />
+                  <Label htmlFor="attivo">Cliente Attivo</Label>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="note">Note</Label>
+                  <Textarea
+                    id="note"
+                    value={formData.note}
+                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                    placeholder="Note aggiuntive..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="riferimenti" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
+                  <Select
+                    value={formData.utente_operatore_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_operatore_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona utente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
+                  <Select
+                    value={formData.utente_professionista_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_professionista_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona utente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="contatto_1_id">Contatto 1</Label>
+                  <Select
+                    value={formData.contatto_1_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, contatto_1_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona contatto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {contatti.map((contatto) => (
+                        <SelectItem key={contatto.id} value={contatto.id}>
+                          {contatto.nome} {contatto.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="contatto_2_id">Contatto 2</Label>
+                  <Select
+                    value={formData.contatto_2_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, contatto_2_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona contatto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {contatti.map((contatto) => (
+                        <SelectItem key={contatto.id} value={contatto.id}>
+                          {contatto.nome} {contatto.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+                  <Select
+                    value={formData.tipo_prestazione_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, tipo_prestazione_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona prestazione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuna</SelectItem>
+                      {prestazioni.map((prestazione) => (
+                        <SelectItem key={prestazione.id} value={prestazione.id}>
+                          {prestazione.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+                  <Select
+                    value={formData.tipo_redditi}
+                    onValueChange={(value: "SC" | "SP" | "ENC" | "PF" | "730") =>
+                      setFormData({ ...formData, tipo_redditi: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="SC">SC - Società di Capitali</SelectItem>
+                      <SelectItem value="SP">SP - Società di Persone</SelectItem>
+                      <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
+                      <SelectItem value="PF">PF - Persona Fisica</SelectItem>
+                      <SelectItem value="730">730 - Modello 730</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="titolare_cassetto_fiscale_id">
+                    Titolare Cassetto Fiscale
+                  </Label>
+                  <Select
+                    value={formData.titolare_cassetto_fiscale_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, titolare_cassetto_fiscale_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona cassetto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
+                      {cassettiFiscali.map((cassetto) => (
+                        <SelectItem key={cassetto.id} value={cassetto.id}>
+                          {cassetto.nome_cassetto}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Adeguata Verifica Clientela */}
+              <div className="space-y-6 pt-6 border-t">
+                <h3 className="font-semibold text-lg">
+                  Adeguata Verifica Clientela (Antiriciclaggio)
+                </h3>
+
+                {/* Verifica A */}
+                <Card className="bg-blue-50 dark:bg-blue-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="verifica_a_attiva"
+                        checked={verificaA.attiva}
+                        onCheckedChange={(checked) =>
+                          setVerificaA({ ...verificaA, attiva: checked as boolean })
+                        }
+                      />
+                      <Label htmlFor="verifica_a_attiva">Attiva Verifica A</Label>
+                    </div>
+
+                    {verificaA.attiva && (
+                      <div>
+                        <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
+                        <Select
+                          value={verificaA.tipo_prestazione}
+                          onValueChange={(value) =>
+                            setVerificaA({ ...verificaA, tipo_prestazione: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona prestazione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuna</SelectItem>
+                            {prestazioni.map((prestazione) => (
+                              <SelectItem key={prestazione.id} value={prestazione.id}>
+                                {prestazione.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Verifica B */}
+                <Card className="bg-green-50 dark:bg-green-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="verifica_b_attiva"
+                        checked={verificaB.attiva}
+                        onCheckedChange={(checked) =>
+                          setVerificaB({ ...verificaB, attiva: checked as boolean })
+                        }
+                      />
+                      <Label htmlFor="verifica_b_attiva">Attiva Verifica B</Label>
+                    </div>
+
+                    {verificaB.attiva && (
+                      <div>
+                        <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
+                        <Select
+                          value={verificaB.tipo_prestazione}
+                          onValueChange={(value) =>
+                            setVerificaB({ ...verificaB, tipo_prestazione: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona prestazione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Nessuna</SelectItem>
+                            {prestazioni.map((prestazione) => (
+                              <SelectItem key={prestazione.id} value={prestazione.id}>
+                                {prestazione.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="scadenzari" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_iva"
+                    checked={scadenzari.iva}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, iva: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_iva">IVA</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_cu"
+                    checked={scadenzari.cu}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, cu: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_cu">CU (Certificazione Unica)</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_bilancio"
+                    checked={scadenzari.bilancio}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, bilancio: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_bilancio">Bilancio</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_fiscali"
+                    checked={scadenzari.fiscali}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, fiscali: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_fiscali">Fiscali</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_lipe"
+                    checked={scadenzari.lipe}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, lipe: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_lipe">LIPE</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_modello_770"
+                    checked={scadenzari.modello_770}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, modello_770: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_modello_770">Modello 770</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_esterometro"
+                    checked={scadenzari.esterometro}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, esterometro: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_esterometro">Esterometro</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_ccgg"
+                    checked={scadenzari.ccgg}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, ccgg: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_ccgg">CCGG (Comunicazione Liquidazioni)</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_proforma"
+                    checked={scadenzari.proforma}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, proforma: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_proforma">Proforma</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_imu"
+                    checked={scadenzari.imu}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, imu: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_imu">IMU</Label>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="percorsi" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="percorso_bilanci"
+                      value={formData.percorso_bilanci}
+                      onChange={(e) =>
+                        setFormData({ ...formData, percorso_bilanci: e.target.value })
+                      }
+                      placeholder="W:\Revisioni\Documenti\Bilanci\"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleOpenFolder(formData.percorso_bilanci)}
+                      disabled={!formData.percorso_bilanci}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Esempio: W:\Revisioni\Documenti\Bilanci\ o
+                    https://drive.google.com/folder/...
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="percorso_fiscali"
+                      value={formData.percorso_fiscali}
+                      onChange={(e) =>
+                        setFormData({ ...formData, percorso_fiscali: e.target.value })
+                      }
+                      placeholder="W:\Revisioni\Documenti\Fiscali\"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleOpenFolder(formData.percorso_fiscali)}
+                      disabled={!formData.percorso_fiscali}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Esempio: W:\Revisioni\Documenti\Fiscali\ o
+                    https://drive.google.com/folder/...
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="percorso_generale">Percorso Generale</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="percorso_generale"
+                      value={formData.percorso_generale}
+                      onChange={(e) =>
+                        setFormData({ ...formData, percorso_generale: e.target.value })
+                      }
+                      placeholder="W:\Revisioni\Documenti\Generale\"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleOpenFolder(formData.percorso_generale)}
+                      disabled={!formData.percorso_generale}
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Esempio: W:\Revisioni\Documenti\Generale\ o
+                    https://drive.google.com/folder/...
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="comunicazioni" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="email_attiva">Email Attiva</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Attiva l'invio di email a questo cliente
+                    </p>
+                  </div>
+                  <Switch
+                    id="email_attiva"
+                    checked={formData.email_attiva}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, email_attiva: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="ricevi_mailing_scadenze">
+                      Ricevi Mailing Scadenze
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Ricevi notifiche automatiche sulle scadenze
+                    </p>
+                  </div>
+                  <Switch
+                    id="ricevi_mailing_scadenze"
+                    checked={formData.ricevi_mailing_scadenze}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ricevi_mailing_scadenze: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="ricevi_newsletter">Ricevi Newsletter</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Ricevi newsletter e comunicazioni informative
+                    </p>
+                  </div>
+                  <Switch
+                    id="ricevi_newsletter"
+                    checked={formData.ricevi_newsletter}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, ricevi_newsletter: checked })
+                    }
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleSave}>
+              {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden file input for CSV import */}
+      <input
+        type="file"
+        accept=".csv"
+        onChange={handleImportCSV}
+        className="hidden"
+        id="csv-upload"
+      />
     </div>
   );
 }
