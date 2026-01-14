@@ -460,6 +460,55 @@ export default function ClientiPage() {
     });
   };
 
+  const handleSelectFolder = (tipo: "bilanci" | "fiscali" | "generale") => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.webkitdirectory = true;
+    
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        const file = target.files[0];
+        const pathParts = file.webkitRelativePath.split("/");
+        const folderName = pathParts[0];
+        
+        // Prova a costruire un path completo
+        let fullPath = "";
+        
+        // Se il browser supporta FileSystemEntry, prova a ottenere il path completo
+        if ((file as any).path) {
+          fullPath = (file as any).path;
+          // Rimuovi il nome del file e tieni solo la cartella
+          fullPath = fullPath.substring(0, fullPath.lastIndexOf("\\"));
+        } else {
+          // Fallback: usa solo il nome della cartella
+          fullPath = folderName;
+          toast({
+            title: "Path parziale",
+            description: "Il browser ha fornito solo il nome della cartella. Completa manualmente il percorso (es. W:\\Revisioni\\Documenti\\).",
+            variant: "default",
+          });
+        }
+        
+        // Aggiorna il campo appropriato
+        if (tipo === "bilanci") {
+          setFormData({ ...formData, percorso_bilanci: fullPath });
+        } else if (tipo === "fiscali") {
+          setFormData({ ...formData, percorso_fiscali: fullPath });
+        } else {
+          setFormData({ ...formData, percorso_generale: fullPath });
+        }
+        
+        toast({
+          title: "Cartella selezionata",
+          description: `Percorso impostato: ${fullPath}`,
+        });
+      }
+    };
+    
+    input.click();
+  };
+
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
   const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
 
@@ -1361,8 +1410,8 @@ export default function ClientiPage() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => handleOpenFolder(formData.percorso_bilanci)}
-                      title={formData.percorso_bilanci ? "Copia percorso" : "Inserisci prima un percorso"}
+                      onClick={() => handleSelectFolder("bilanci")}
+                      title="Seleziona cartella Bilanci"
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
@@ -1384,8 +1433,8 @@ export default function ClientiPage() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => handleOpenFolder(formData.percorso_fiscali)}
-                      title={formData.percorso_fiscali ? "Copia percorso" : "Inserisci prima un percorso"}
+                      onClick={() => handleSelectFolder("fiscali")}
+                      title="Seleziona cartella Fiscali"
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
@@ -1407,8 +1456,8 @@ export default function ClientiPage() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => handleOpenFolder(formData.percorso_generale)}
-                      title={formData.percorso_generale ? "Copia percorso" : "Inserisci prima un percorso"}
+                      onClick={() => handleSelectFolder("generale")}
+                      title="Seleziona cartella Generale"
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
