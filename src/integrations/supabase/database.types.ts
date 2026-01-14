@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -506,7 +506,6 @@ export type Database = {
       }
       tbcontatti: {
         Row: {
-          cassetto_fiscale: boolean | null
           cell: string | null
           cliente_id: string | null
           cognome: string
@@ -522,7 +521,6 @@ export type Database = {
           utente: string | null
         }
         Insert: {
-          cassetto_fiscale?: boolean | null
           cell?: string | null
           cliente_id?: string | null
           cognome: string
@@ -538,7 +536,6 @@ export type Database = {
           utente?: string | null
         }
         Update: {
-          cassetto_fiscale?: boolean | null
           cell?: string | null
           cliente_id?: string | null
           cognome?: string

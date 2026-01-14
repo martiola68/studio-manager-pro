@@ -1,22 +1,38 @@
 import { supabase } from "@/lib/supabase/client";
-import { Database } from "@/lib/supabase/types";
+import { Database } from "@/integrations/supabase/types";
 
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
-type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
-type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
+export type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  tbcassetti_fiscali?: Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"] | null;
+};
+export type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
+export type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
 
 export const clienteService = {
-  async getClienti(): Promise<Cliente[]> {
+  async getClienti() {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select("*")
-      .order("ragione_sociale", { ascending: true });
+      .select(`
+        *,
+        tbcassetti_fiscali (*)
+      `)
+      .order("denominazione");
+      
+    if (error) throw error;
+    return data;
+  },
 
-    if (error) {
-      console.error("Error fetching clienti:", error);
-      return [];
-    }
-    return data || [];
+  async getClienteById(id: string) {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select(`
+        *,
+        tbcassetti_fiscali (*)
+      `)
+      .eq("id", id)
+      .single();
+      
+    if (error) throw error;
+    return data;
   },
 
   async getClientiAttivi(): Promise<Cliente[]> {
@@ -31,20 +47,6 @@ export const clienteService = {
       return [];
     }
     return data || [];
-  },
-
-  async getClienteById(id: string): Promise<Cliente | null> {
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.error("Error fetching cliente:", error);
-      return null;
-    }
-    return data;
   },
 
   async createCliente(cliente: ClienteInsert): Promise<Cliente | null> {
