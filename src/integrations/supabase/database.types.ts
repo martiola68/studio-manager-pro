@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -222,10 +222,67 @@ export type Database = {
           },
         ]
       }
+      tbcassetti_fiscali: {
+        Row: {
+          created_at: string | null
+          id: string
+          nominativo: string
+          note: string | null
+          password1: string | null
+          password2: string | null
+          pin: string | null
+          pw_attiva1: boolean | null
+          pw_attiva2: boolean | null
+          pw_iniziale: string | null
+          studio_id: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nominativo: string
+          note?: string | null
+          password1?: string | null
+          password2?: string | null
+          pin?: string | null
+          pw_attiva1?: boolean | null
+          pw_attiva2?: boolean | null
+          pw_iniziale?: string | null
+          studio_id?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nominativo?: string
+          note?: string | null
+          password1?: string | null
+          password2?: string | null
+          pin?: string | null
+          pw_attiva1?: boolean | null
+          pw_attiva2?: boolean | null
+          pw_iniziale?: string | null
+          studio_id?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbcassetti_fiscali_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbclienti: {
         Row: {
           attivo: boolean | null
           cap: string
+          cassetto_fiscale_id: string | null
           citta: string
           cod_cliente: string
           codice_fiscale: string
@@ -253,6 +310,9 @@ export type Database = {
           indirizzo: string
           note: string | null
           partita_iva: string
+          percorso_bilanci: string | null
+          percorso_fiscali: string | null
+          percorso_generale: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric: string | null
@@ -269,6 +329,7 @@ export type Database = {
         Insert: {
           attivo?: boolean | null
           cap: string
+          cassetto_fiscale_id?: string | null
           citta: string
           cod_cliente: string
           codice_fiscale: string
@@ -296,6 +357,9 @@ export type Database = {
           indirizzo: string
           note?: string | null
           partita_iva: string
+          percorso_bilanci?: string | null
+          percorso_fiscali?: string | null
+          percorso_generale?: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric?: string | null
@@ -312,6 +376,7 @@ export type Database = {
         Update: {
           attivo?: boolean | null
           cap?: string
+          cassetto_fiscale_id?: string | null
           citta?: string
           cod_cliente?: string
           codice_fiscale?: string
@@ -339,6 +404,9 @@ export type Database = {
           indirizzo?: string
           note?: string | null
           partita_iva?: string
+          percorso_bilanci?: string | null
+          percorso_fiscali?: string | null
+          percorso_generale?: string | null
           provincia?: string
           ragione_sociale?: string
           scadenza_antiric?: string | null
@@ -353,6 +421,13 @@ export type Database = {
           utente_professionista_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tbclienti_cassetto_fiscale_id_fkey"
+            columns: ["cassetto_fiscale_id"]
+            isOneToOne: false
+            referencedRelation: "tbcassetti_fiscali"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tbclienti_contatto1_id_fkey"
             columns: ["contatto1_id"]
