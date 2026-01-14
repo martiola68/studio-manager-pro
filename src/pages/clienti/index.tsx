@@ -1362,7 +1362,7 @@ export default function ClientiPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleOpenFolder(formData.percorso_bilanci)}
-                      disabled={!formData.percorso_bilanci}
+                      title={formData.percorso_bilanci ? "Copia percorso" : "Inserisci prima un percorso"}
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
@@ -1385,7 +1385,7 @@ export default function ClientiPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleOpenFolder(formData.percorso_fiscali)}
-                      disabled={!formData.percorso_fiscali}
+                      title={formData.percorso_fiscali ? "Copia percorso" : "Inserisci prima un percorso"}
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
@@ -1408,7 +1408,7 @@ export default function ClientiPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleOpenFolder(formData.percorso_generale)}
-                      disabled={!formData.percorso_generale}
+                      title={formData.percorso_generale ? "Copia percorso" : "Inserisci prima un percorso"}
                     >
                       <FolderOpen className="h-4 w-4" />
                     </Button>
