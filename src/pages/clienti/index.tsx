@@ -469,25 +469,30 @@ export default function ClientiPage() {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
         const file = target.files[0];
-        const pathParts = file.webkitRelativePath.split("/");
-        const folderName = pathParts[0];
-        
-        // Prova a costruire un path completo
         let fullPath = "";
         
-        // Se il browser supporta FileSystemEntry, prova a ottenere il path completo
+        // Prova a ottenere il path completo dal browser (funziona in alcuni browser desktop)
         if ((file as any).path) {
-          fullPath = (file as any).path;
-          // Rimuovi il nome del file e tieni solo la cartella
-          fullPath = fullPath.substring(0, fullPath.lastIndexOf("\\"));
-        } else {
-          // Fallback: usa solo il nome della cartella
-          fullPath = folderName;
+          const filePath = (file as any).path;
+          // Rimuovi il nome del file e tieni solo la directory
+          const lastSlashIndex = Math.max(filePath.lastIndexOf("\\"), filePath.lastIndexOf("/"));
+          fullPath = filePath.substring(0, lastSlashIndex + 1);
+        } else if (file.webkitRelativePath) {
+          // Fallback: usa webkitRelativePath e rimuovi il nome del file
+          const pathParts = file.webkitRelativePath.split("/");
+          // Prendi solo il nome della cartella principale (primo elemento)
+          fullPath = pathParts[0] + "\\";
+          
           toast({
             title: "Path parziale",
-            description: "Il browser ha fornito solo il nome della cartella. Completa manualmente il percorso (es. W:\\Revisioni\\Documenti\\).",
+            description: "Il browser ha fornito solo il nome della cartella. Completa manualmente il percorso completo (es. W:\\Revisioni\\Documenti\\).",
             variant: "default",
           });
+        }
+        
+        // Assicurati che il path termini con backslash
+        if (fullPath && !fullPath.endsWith("\\") && !fullPath.endsWith("/")) {
+          fullPath += "\\";
         }
         
         // Aggiorna il campo appropriato
