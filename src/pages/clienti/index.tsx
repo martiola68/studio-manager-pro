@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Calendar, Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle2, FolderOpen } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, FolderOpen } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
@@ -44,7 +44,6 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 
-// Tipo per gli scadenzari selezionati
 type ScadenzariSelezionati = {
   iva: boolean;
   cu: boolean;
@@ -72,9 +71,8 @@ export default function ClientiPage() {
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
 
-  // Form state corretto con i nomi dei campi DB
   const [formData, setFormData] = useState({
-    cod_cliente: "", // Campo obbligatorio aggiunto
+    cod_cliente: "",
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -83,21 +81,19 @@ export default function ClientiPage() {
     citta: "",
     provincia: "",
     email: "",
-    // telefono rimosso perché non nel DB
-    tipo_cliente: "PERSONA_FISICA" as string, // Cast generico per evitare errori enum
+    tipo_cliente: "PERSONA_FISICA" as string,
     attivo: true,
     note: "",
     utente_operatore_id: "",
     utente_professionista_id: "",
-    contatto1_id: "", // Corretto da contatto_1_id
-    contatto2_id: "", // Corretto da contatto_2_id
+    contatto1_id: "",
+    contatto2_id: "",
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
-    cassetto_fiscale_id: "", // Corretto da titolare_cassetto_fiscale_id
+    cassetto_fiscale_id: "",
     percorso_bilanci: "",
     percorso_fiscali: "",
     percorso_generale: "",
-    // Campi boolean rimossi perché non nel DB
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -113,7 +109,6 @@ export default function ClientiPage() {
     imu: false,
   });
 
-  // Adeguata Verifica Clientela
   const [verificaA, setVerificaA] = useState({
     attiva: false,
     tipo_prestazione: "",
@@ -142,7 +137,7 @@ export default function ClientiPage() {
         contattoService.getContatti(),
         utenteService.getUtenti(),
         cassettiFiscaliService.getCassettiFiscali(),
-        supabase.from("tbprestazioni").select("*").order("descrizione"), // Corretto order da nome a descrizione
+        supabase.from("tbprestazioni").select("*").order("descrizione"),
       ]);
 
       setClienti(clientiData);
@@ -196,7 +191,6 @@ export default function ClientiPage() {
         return;
       }
 
-      // Genera cod_cliente se vuoto (semplice logica temporanea)
       const dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`
@@ -362,7 +356,7 @@ export default function ClientiPage() {
 
         const values = lines[i].split(",");
         const clienteData = {
-          cod_cliente: `IMP-${Date.now()}-${i}`, // Genera codice per import
+          cod_cliente: `IMP-${Date.now()}-${i}`,
           ragione_sociale: values[0]?.trim() || "",
           partita_iva: values[1]?.trim() || "",
           codice_fiscale: values[2]?.trim() || "",
@@ -637,15 +631,13 @@ export default function ClientiPage() {
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
               <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
-              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+              <TabsTrigger value="adeguata">Verifica AML</TabsTrigger>
             </TabsList>
 
             <TabsContent value="anagrafica" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cod_cliente">
-                    Codice Cliente <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
                   <Input
                     id="cod_cliente"
                     value={formData.cod_cliente}
@@ -703,9 +695,7 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="codice_fiscale">
-                    Codice Fiscale <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
                   <Input
                     id="codice_fiscale"
                     value={formData.codice_fiscale}
@@ -717,9 +707,7 @@ export default function ClientiPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="indirizzo">
-                    Indirizzo <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="indirizzo">Indirizzo</Label>
                   <Input
                     id="indirizzo"
                     value={formData.indirizzo}
@@ -731,9 +719,7 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="cap">
-                    CAP <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="cap">CAP</Label>
                   <Input
                     id="cap"
                     value={formData.cap}
@@ -743,9 +729,7 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="citta">
-                    Città <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="citta">Città</Label>
                   <Input
                     id="citta"
                     value={formData.citta}
@@ -755,9 +739,7 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="provincia">
-                    Provincia <span className="text-red-500">*</span>
-                  </Label>
+                  <Label htmlFor="provincia">Provincia</Label>
                   <Input
                     id="provincia"
                     value={formData.provincia}
@@ -811,16 +793,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
                   <Select
-                    value={formData.utente_operatore_id}
+                    value={formData.utente_operatore_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_operatore_id: value })
+                      setFormData({ ...formData, utente_operatore_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -833,16 +815,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
                   <Select
-                    value={formData.utente_professionista_id}
+                    value={formData.utente_professionista_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_professionista_id: value })
+                      setFormData({ ...formData, utente_professionista_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -855,16 +837,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto1_id">Contatto 1</Label>
                   <Select
-                    value={formData.contatto1_id}
+                    value={formData.contatto1_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value })
+                      setFormData({ ...formData, contatto1_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -877,16 +859,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto2_id">Contatto 2</Label>
                   <Select
-                    value={formData.contatto2_id}
+                    value={formData.contatto2_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto2_id: value })
+                      setFormData({ ...formData, contatto2_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -899,16 +881,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
                   <Select
-                    value={formData.tipo_prestazione_id}
+                    value={formData.tipo_prestazione_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value })
+                      setFormData({ ...formData, tipo_prestazione_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona prestazione" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuna</SelectItem>
+                      <SelectItem value="undefined">Nessuna</SelectItem>
                       {prestazioni.map((prestazione) => (
                         <SelectItem key={prestazione.id} value={prestazione.id}>
                           {prestazione.descrizione}
@@ -921,16 +903,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
                   <Select
-                    value={formData.tipo_redditi}
-                    onValueChange={(value: "SC" | "SP" | "ENC" | "PF" | "730") =>
-                      setFormData({ ...formData, tipo_redditi: value })
+                    value={formData.tipo_redditi || "undefined"}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, tipo_redditi: value === "undefined" ? "" : value as "SC" | "SP" | "ENC" | "PF" | "730" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       <SelectItem value="SC">SC - Società di Capitali</SelectItem>
                       <SelectItem value="SP">SP - Società di Persone</SelectItem>
                       <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
@@ -941,20 +923,18 @@ export default function ClientiPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="cassetto_fiscale_id">
-                    Titolare Cassetto Fiscale
-                  </Label>
+                  <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
                   <Select
-                    value={formData.cassetto_fiscale_id}
+                    value={formData.cassetto_fiscale_id || "undefined"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value })
+                      setFormData({ ...formData, cassetto_fiscale_id: value === "undefined" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona cassetto" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nessuno</SelectItem>
+                      <SelectItem value="undefined">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
                           {cassetto.nominativo}
@@ -963,105 +943,6 @@ export default function ClientiPage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              {/* Adeguata Verifica Clientela */}
-              <div className="space-y-6 pt-6 border-t">
-                <h3 className="font-semibold text-lg">
-                  Adeguata Verifica Clientela (Antiriciclaggio)
-                </h3>
-
-                {/* Verifica A */}
-                <Card className="bg-blue-50 dark:bg-blue-950/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="verifica_a_attiva"
-                        checked={verificaA.attiva}
-                        onCheckedChange={(checked) =>
-                          setVerificaA({ ...verificaA, attiva: checked as boolean })
-                        }
-                      />
-                      <Label htmlFor="verifica_a_attiva">Attiva Verifica A</Label>
-                    </div>
-
-                    {verificaA.attiva && (
-                      <div>
-                        <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
-                        <Select
-                          value={verificaA.tipo_prestazione}
-                          onValueChange={(value) =>
-                            setVerificaA({ ...verificaA, tipo_prestazione: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona prestazione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Nessuna</SelectItem>
-                            {prestazioni.map((prestazione) => (
-                              <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.descrizione}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Verifica B */}
-                <Card className="bg-green-50 dark:bg-green-950/20">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="verifica_b_attiva"
-                        checked={verificaB.attiva}
-                        onCheckedChange={(checked) =>
-                          setVerificaB({ ...verificaB, attiva: checked as boolean })
-                        }
-                      />
-                      <Label htmlFor="verifica_b_attiva">Attiva Verifica B</Label>
-                    </div>
-
-                    {verificaB.attiva && (
-                      <div>
-                        <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
-                        <Select
-                          value={verificaB.tipo_prestazione}
-                          onValueChange={(value) =>
-                            setVerificaB({ ...verificaB, tipo_prestazione: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleziona prestazione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Nessuna</SelectItem>
-                            {prestazioni.map((prestazione) => (
-                              <SelectItem key={prestazione.id} value={prestazione.id}>
-                                {prestazione.descrizione}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
 
@@ -1077,8 +958,8 @@ export default function ClientiPage() {
                   />
                   <Label htmlFor="scad_iva">IVA</Label>
                 </div>
-                {/* Altri scadenzari identici a prima */}
-                 <div className="flex items-center space-x-2">
+
+                <div className="flex items-center space-x-2">
                   <Checkbox
                     id="scad_cu"
                     checked={scadenzari.cu}
@@ -1152,7 +1033,7 @@ export default function ClientiPage() {
                       setScadenzari({ ...scadenzari, ccgg: checked as boolean })
                     }
                   />
-                  <Label htmlFor="scad_ccgg">CCGG (Comunicazione Liquidazioni)</Label>
+                  <Label htmlFor="scad_ccgg">CCGG</Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1202,10 +1083,6 @@ export default function ClientiPage() {
                       <FolderOpen className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Esempio: W:\Revisioni\Documenti\Bilanci\ o
-                    https://drive.google.com/folder/...
-                  </p>
                 </div>
 
                 <div>
@@ -1229,10 +1106,6 @@ export default function ClientiPage() {
                       <FolderOpen className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Esempio: W:\Revisioni\Documenti\Fiscali\ o
-                    https://drive.google.com/folder/...
-                  </p>
                 </div>
 
                 <div>
@@ -1256,16 +1129,107 @@ export default function ClientiPage() {
                       <FolderOpen className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Esempio: W:\Revisioni\Documenti\Generale\ o
-                    https://drive.google.com/folder/...
-                  </p>
                 </div>
               </div>
             </TabsContent>
-            
-            {/* Tab Comunicazioni RIMOSSA perché i campi non esistono nel DB */}
-            
+
+            <TabsContent value="adeguata" className="space-y-6">
+              <div className="space-y-6">
+                <h3 className="font-semibold text-lg">
+                  Adeguata Verifica Clientela (Antiriciclaggio)
+                </h3>
+
+                <Card className="bg-blue-50 dark:bg-blue-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="verifica_a_attiva"
+                        checked={verificaA.attiva}
+                        onCheckedChange={(checked) =>
+                          setVerificaA({ ...verificaA, attiva: checked as boolean })
+                        }
+                      />
+                      <Label htmlFor="verifica_a_attiva">Attiva Verifica A</Label>
+                    </div>
+
+                    {verificaA.attiva && (
+                      <div>
+                        <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
+                        <Select
+                          value={verificaA.tipo_prestazione || "undefined"}
+                          onValueChange={(value) =>
+                            setVerificaA({ ...verificaA, tipo_prestazione: value === "undefined" ? "" : value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona prestazione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="undefined">Nessuna</SelectItem>
+                            {prestazioni.map((prestazione) => (
+                              <SelectItem key={prestazione.id} value={prestazione.id}>
+                                {prestazione.descrizione}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 dark:bg-green-950/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="verifica_b_attiva"
+                        checked={verificaB.attiva}
+                        onCheckedChange={(checked) =>
+                          setVerificaB({ ...verificaB, attiva: checked as boolean })
+                        }
+                      />
+                      <Label htmlFor="verifica_b_attiva">Attiva Verifica B</Label>
+                    </div>
+
+                    {verificaB.attiva && (
+                      <div>
+                        <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
+                        <Select
+                          value={verificaB.tipo_prestazione || "undefined"}
+                          onValueChange={(value) =>
+                            setVerificaB({ ...verificaB, tipo_prestazione: value === "undefined" ? "" : value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona prestazione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="undefined">Nessuna</SelectItem>
+                            {prestazioni.map((prestazione) => (
+                              <SelectItem key={prestazione.id} value={prestazione.id}>
+                                {prestazione.descrizione}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-6 border-t">
@@ -1279,7 +1243,6 @@ export default function ClientiPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden file input for CSV import */}
       <input
         type="file"
         accept=".csv"

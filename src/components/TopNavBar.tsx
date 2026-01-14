@@ -117,9 +117,9 @@ export function TopNavBar() {
       href: "/agenda"
     },
     {
-      label: "Contatti",
+      label: "Rubrica",
       icon: <UserCircle className="h-4 w-4" />,
-      href: "/contatti"
+      href: "/clienti"
     },
     {
       label: "Promemoria",
