@@ -108,9 +108,7 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
-    percorso_bilanci: "",
-    percorso_fiscali: "",
-    percorso_generale: "",
+    settore: "" as "Fiscale" | "Lavoro" | "",
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -226,9 +224,7 @@ export default function ClientiPage() {
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        percorso_bilanci: formData.percorso_bilanci || null,
-        percorso_fiscali: formData.percorso_fiscali || null,
-        percorso_generale: formData.percorso_generale || null,
+        settore: formData.settore || null,
       };
 
       if (editingCliente) {
@@ -305,9 +301,7 @@ export default function ClientiPage() {
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      percorso_bilanci: cliente.percorso_bilanci || "",
-      percorso_fiscali: cliente.percorso_fiscali || "",
-      percorso_generale: cliente.percorso_generale || "",
+      settore: (cliente.settore as "Fiscale" | "Lavoro") || "",
     });
     setIsDialogOpen(true);
   };
@@ -334,9 +328,7 @@ export default function ClientiPage() {
       tipo_prestazione_id: "",
       tipo_redditi: "",
       cassetto_fiscale_id: "",
-      percorso_bilanci: "",
-      percorso_fiscali: "",
-      percorso_generale: "",
+      settore: "",
     });
     setScadenzari({
       iva: true,
@@ -723,12 +715,11 @@ export default function ClientiPage() {
           </DialogHeader>
 
           <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
               <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-              <TabsTrigger value="percorsi">Percorsi</TabsTrigger>
             </TabsList>
 
             <TabsContent value="anagrafica" className="space-y-4">
@@ -801,6 +792,24 @@ export default function ClientiPage() {
                     }
                     placeholder="RSSMRA80A01H501U"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="settore">Settore</Label>
+                  <Select
+                    value={formData.settore || undefined}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona settore" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Fiscale">Fiscale</SelectItem>
+                      <SelectItem value="Lavoro">Lavoro</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="md:col-span-2">
@@ -1390,46 +1399,6 @@ export default function ClientiPage() {
                     }
                   />
                   <Label htmlFor="ricevi_newsletter">Ricevi Newsletter</Label>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="percorsi" className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
-                  <Input
-                    id="percorso_bilanci"
-                    value={formData.percorso_bilanci}
-                    onChange={(e) =>
-                      setFormData({ ...formData, percorso_bilanci: e.target.value })
-                    }
-                    placeholder="W:\Revisioni\Documenti\Bilanci\"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
-                  <Input
-                    id="percorso_fiscali"
-                    value={formData.percorso_fiscali}
-                    onChange={(e) =>
-                      setFormData({ ...formData, percorso_fiscali: e.target.value })
-                    }
-                    placeholder="W:\Revisioni\Documenti\Fiscali\"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="percorso_generale">Percorso Generale</Label>
-                  <Input
-                    id="percorso_generale"
-                    value={formData.percorso_generale}
-                    onChange={(e) =>
-                      setFormData({ ...formData, percorso_generale: e.target.value })
-                    }
-                    placeholder="W:\Revisioni\Documenti\Generale\"
-                  />
                 </div>
               </div>
             </TabsContent>
