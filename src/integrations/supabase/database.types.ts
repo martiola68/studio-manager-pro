@@ -310,13 +310,11 @@ export type Database = {
           indirizzo: string
           note: string | null
           partita_iva: string
-          percorso_bilanci: string | null
-          percorso_fiscali: string | null
-          percorso_generale: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric: string | null
           scadenza_antiric_b: string | null
+          settore: string | null
           tipo_cliente: string | null
           tipo_prestazione_a: string | null
           tipo_prestazione_b: string | null
@@ -357,13 +355,11 @@ export type Database = {
           indirizzo: string
           note?: string | null
           partita_iva: string
-          percorso_bilanci?: string | null
-          percorso_fiscali?: string | null
-          percorso_generale?: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
+          settore?: string | null
           tipo_cliente?: string | null
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
@@ -404,13 +400,11 @@ export type Database = {
           indirizzo?: string
           note?: string | null
           partita_iva?: string
-          percorso_bilanci?: string | null
-          percorso_fiscali?: string | null
-          percorso_generale?: string | null
           provincia?: string
           ragione_sociale?: string
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
+          settore?: string | null
           tipo_cliente?: string | null
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null

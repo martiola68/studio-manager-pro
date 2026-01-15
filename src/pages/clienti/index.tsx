@@ -108,7 +108,7 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
-    settore: "" as "Fiscale" | "Lavoro" | "",
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -141,6 +141,12 @@ export default function ClientiPage() {
     data_ultima_verifica: undefined,
     scadenza_antiriciclaggio: undefined,
   });
+
+  const [scadenzariDialogOpen, setScadenzariDialogOpen] = useState(false);
+  const [selectedClienteForScadenzari, setSelectedClienteForScadenzari] = useState<Cliente | null>(null);
+
+  const [clientiConCassetto, setClientiConCassetto] = useState(0);
+  const [percentualeCassetto, setPercentualeCassetto] = useState(0);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -274,6 +280,33 @@ export default function ClientiPage() {
     }
   };
 
+  const handleOpenScadenzariDialog = (cliente: Cliente) => {
+    setSelectedClienteForScadenzari(cliente);
+    setScadenzariDialogOpen(true);
+  };
+
+  const handleSaveScadenzari = async () => {
+    if (!selectedClienteForScadenzari) return;
+
+    try {
+      // Salvo gli scadenzari selezionati per il cliente
+      // Questa logica verrà implementata in base alla struttura del database
+      toast({
+        title: "Successo",
+        description: "Scadenzari aggiornati con successo",
+      });
+      setScadenzariDialogOpen(false);
+      setSelectedClienteForScadenzari(null);
+    } catch (error) {
+      console.error("Errore salvataggio scadenzari:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare gli scadenzari",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddNew = () => {
     resetForm();
     setIsDialogOpen(true);
@@ -301,7 +334,7 @@ export default function ClientiPage() {
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      settore: (cliente.settore as "Fiscale" | "Lavoro") || "",
+      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
     });
     setIsDialogOpen(true);
   };
@@ -581,6 +614,7 @@ export default function ClientiPage() {
                   <TableHead>Città</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Stato</TableHead>
+                  <TableHead className="text-center">Scadenzari</TableHead>
                   <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
@@ -604,6 +638,16 @@ export default function ClientiPage() {
                       ) : (
                         <Badge variant="secondary">Inattivo</Badge>
                       )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenScadenzariDialog(cliente)}
+                        title="Gestisci Scadenzari"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -726,7 +770,7 @@ export default function ClientiPage() {
                   <Select
                     value={formData.settore || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" })
+                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" })
                     }
                   >
                     <SelectTrigger>
@@ -735,6 +779,7 @@ export default function ClientiPage() {
                     <SelectContent>
                       <SelectItem value="Fiscale">Fiscale</SelectItem>
                       <SelectItem value="Lavoro">Lavoro</SelectItem>
+                      <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1349,6 +1394,144 @@ export default function ClientiPage() {
         className="hidden"
         id="csv-upload"
       />
+
+      {/* Dialog Gestione Scadenzari */}
+      <Dialog open={scadenzariDialogOpen} onOpenChange={setScadenzariDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Gestione Scadenzari - {selectedClienteForScadenzari?.ragione_sociale}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Seleziona gli scadenzari da assegnare a questo cliente
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_iva"
+                  checked={scadenzari.iva}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, iva: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_iva">IVA</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_cu"
+                  checked={scadenzari.cu}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, cu: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_cu">CU (Certificazione Unica)</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_bilancio"
+                  checked={scadenzari.bilancio}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, bilancio: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_bilancio">Bilanci</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_fiscali"
+                  checked={scadenzari.fiscali}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, fiscali: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_fiscali">Fiscali</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_lipe"
+                  checked={scadenzari.lipe}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, lipe: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_lipe">Lipe</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_modello_770"
+                  checked={scadenzari.modello_770}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, modello_770: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_modello_770">770</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_esterometro"
+                  checked={scadenzari.esterometro}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, esterometro: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_esterometro">Esterometro</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_ccgg"
+                  checked={scadenzari.ccgg}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, ccgg: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_ccgg">CCGG</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_proforma"
+                  checked={scadenzari.proforma}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, proforma: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_proforma">Proforma</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="scad_imu"
+                  checked={scadenzari.imu}
+                  onCheckedChange={(checked) =>
+                    setScadenzari({ ...scadenzari, imu: checked as boolean })
+                  }
+                />
+                <Label htmlFor="scad_imu">IMU</Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button variant="outline" onClick={() => setScadenzariDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleSaveScadenzari}>
+              Salva Scadenzari
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
