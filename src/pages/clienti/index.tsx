@@ -437,29 +437,6 @@ export default function ClientiPage() {
     }
   };
 
-  const handleOpenFolder = (percorso: string) => {
-    if (!percorso) {
-      toast({
-        title: "Attenzione",
-        description: "Nessun percorso configurato",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
-      window.open(percorso, "_blank");
-      return;
-    }
-
-    navigator.clipboard.writeText(percorso).then(() => {
-      toast({
-        title: "Percorso copiato",
-        description: "Il percorso è stato copiato negli appunti. Aprilo manualmente da Esplora File.",
-      });
-    });
-  };
-
   const handleSelectFolder = async (tipo: "bilanci" | "fiscali" | "generale") => {
     try {
       // Controlla se l'API è supportata
@@ -508,6 +485,29 @@ export default function ClientiPage() {
         variant: "default",
       });
     }
+  };
+
+  const handleOpenFolder = (percorso: string) => {
+    if (!percorso) {
+      toast({
+        title: "Attenzione",
+        description: "Nessun percorso configurato",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
+      window.open(percorso, "_blank");
+      return;
+    }
+
+    navigator.clipboard.writeText(percorso).then(() => {
+      toast({
+        title: "Percorso copiato",
+        description: "Il percorso è stato copiato negli appunti. Aprilo manualmente da Esplora File.",
+      });
+    });
   };
 
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
