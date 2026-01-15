@@ -145,9 +145,6 @@ export default function ClientiPage() {
   const [scadenzariDialogOpen, setScadenzariDialogOpen] = useState(false);
   const [selectedClienteForScadenzari, setSelectedClienteForScadenzari] = useState<Cliente | null>(null);
 
-  const [clientiConCassetto, setClientiConCassetto] = useState(0);
-  const [percentualeCassetto, setPercentualeCassetto] = useState(0);
-
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   useEffect(() => {
@@ -282,6 +279,18 @@ export default function ClientiPage() {
 
   const handleOpenScadenzariDialog = (cliente: Cliente) => {
     setSelectedClienteForScadenzari(cliente);
+    setScadenzari({
+      iva: cliente.flag_iva ?? false,
+      cu: cliente.flag_cu ?? false,
+      bilancio: cliente.flag_bilancio ?? false,
+      fiscali: cliente.flag_fiscali ?? false,
+      lipe: cliente.flag_lipe ?? false,
+      modello_770: cliente.flag_770 ?? false,
+      esterometro: cliente.flag_esterometro ?? false,
+      ccgg: cliente.flag_ccgg ?? false,
+      proforma: cliente.flag_proforma ?? false,
+      imu: cliente.flag_imu ?? false,
+    });
     setScadenzariDialogOpen(true);
   };
 
@@ -289,12 +298,33 @@ export default function ClientiPage() {
     if (!selectedClienteForScadenzari) return;
 
     try {
-      // Salvo gli scadenzari selezionati per il cliente
-      // Questa logica verrà implementata in base alla struttura del database
+      const updates = {
+        flag_iva: scadenzari.iva,
+        flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilancio,
+        flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
+        flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
+        flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
+        flag_imu: scadenzari.imu,
+      };
+
+      const { error } = await supabase
+        .from("tbclienti")
+        .update(updates)
+        .eq("id", selectedClienteForScadenzari.id);
+
+      if (error) throw error;
+
       toast({
         title: "Successo",
-        description: "Scadenzari aggiornati con successo",
+        description: "Scadenzari aggiornati con successo. Il nominativo è stato inserito/aggiornato negli scadenzari selezionati.",
       });
+      
+      // Ricarica i dati per aggiornare la lista
+      loadData();
       setScadenzariDialogOpen(false);
       setSelectedClienteForScadenzari(null);
     } catch (error) {
