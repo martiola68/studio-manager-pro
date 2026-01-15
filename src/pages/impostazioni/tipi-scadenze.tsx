@@ -53,6 +53,7 @@ const TIPI_SCADENZA_OPTIONS = [
   { value: "proforma", label: "Proforma" },
   { value: "antiriciclaggio", label: "Antiriciclaggio" },
   { value: "imu", label: "IMU" },
+  { value: "lavoro", label: "Lavoro" },
 ];
 
 export default function TipiScadenzePage() {

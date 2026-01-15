@@ -11,6 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
@@ -37,6 +49,7 @@ const TIPI_SCADENZA_OPTIONS = [
   { value: "cu", label: "CU" },
   { value: "proforma", label: "Proforma" },
   { value: "antiriciclaggio", label: "Antiriciclaggio" },
+  { value: "lavoro", label: "Lavoro" },
 ];
 
 export default function CalendarioScadenzePage() {
@@ -45,7 +58,7 @@ export default function CalendarioScadenzePage() {
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<ScadenzaConUrgenza[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("tutti");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [studioId, setStudioId] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -69,6 +82,7 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
+      setStudioId(studio.id);
       await loadScadenze(studio.id);
     } catch (error) {
       console.error("Errore autenticazione:", error);
@@ -225,9 +239,8 @@ export default function CalendarioScadenzePage() {
             <h1 className="text-3xl font-bold text-gray-900">Calendario Scadenze</h1>
             <p className="text-gray-500 mt-1">Gestione scadenze personalizzate e varie</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuova Scadenza
+          <Button onClick={() => router.push("/impostazioni/tipi-scadenze")} variant="outline">
+            Gestisci Tipi Scadenze
           </Button>
         </div>
 
