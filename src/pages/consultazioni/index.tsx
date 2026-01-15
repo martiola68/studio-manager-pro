@@ -142,12 +142,19 @@ export default function ConsultazioniPage() {
         description: "Percorso aperto in una nuova scheda"
       });
     } else {
-      // Per percorsi di rete locali, mostriamo il percorso copiabile
-      navigator.clipboard.writeText(percorso);
-      toast({
-        title: "Percorso copiato",
-        description: `${percorso}\n\nI percorsi di rete locali devono essere aperti manualmente da Esplora File.`,
-        duration: 5000
+      // Per percorsi di rete locali, copia negli appunti e mostra istruzioni
+      navigator.clipboard.writeText(percorso).then(() => {
+        toast({
+          title: "✅ Percorso copiato negli appunti!",
+          description: "Per aprire la cartella:\n\n1️⃣ Premi Win + E (Apri Esplora File)\n2️⃣ Clicca sulla barra degli indirizzi (o Ctrl + L)\n3️⃣ Incolla il percorso (Ctrl + V)\n4️⃣ Premi Invio\n\n✨ La cartella si aprirà automaticamente!",
+          duration: 10000
+        });
+      }).catch(() => {
+        toast({
+          title: "Percorso",
+          description: `${percorso}\n\nCopia questo percorso e incollalo nella barra degli indirizzi di Esplora File (Win + E).`,
+          duration: 10000
+        });
       });
     }
   };
@@ -271,6 +278,14 @@ export default function ConsultazioniPage() {
                   <p className="text-sm text-blue-700 mt-1">{selectedCliente.ragione_sociale}</p>
                 </div>
 
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <p className="text-xs font-medium text-amber-900 mb-1">💡 Come funziona:</p>
+                  <p className="text-xs text-amber-800">
+                    Il pulsante copia il percorso negli appunti. Poi apri Esplora File (Win+E), 
+                    incolla nella barra indirizzi (Ctrl+V) e premi Invio.
+                  </p>
+                </div>
+
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">Seleziona tipo di documento:</Label>
                   
@@ -324,7 +339,7 @@ export default function ConsultazioniPage() {
                   size="lg"
                 >
                   <FolderOpen className="h-5 w-5 mr-2" />
-                  Apri Percorso
+                  Copia e Apri Percorso
                 </Button>
 
                 {(checkboxes.bilanci || checkboxes.fiscali || checkboxes.generale) && (
