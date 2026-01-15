@@ -460,58 +460,54 @@ export default function ClientiPage() {
     });
   };
 
-  const handleSelectFolder = (tipo: "bilanci" | "fiscali" | "generale") => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.webkitdirectory = true;
-    
-    input.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const file = target.files[0];
-        let fullPath = "";
-        
-        // Prova a ottenere il path completo dal browser (funziona in alcuni browser desktop)
-        if ((file as any).path) {
-          const filePath = (file as any).path;
-          // Rimuovi il nome del file e tieni solo la directory
-          const lastSlashIndex = Math.max(filePath.lastIndexOf("\\"), filePath.lastIndexOf("/"));
-          fullPath = filePath.substring(0, lastSlashIndex + 1);
-        } else if (file.webkitRelativePath) {
-          // Fallback: usa webkitRelativePath e rimuovi il nome del file
-          const pathParts = file.webkitRelativePath.split("/");
-          // Prendi solo il nome della cartella principale (primo elemento)
-          fullPath = pathParts[0] + "\\";
-          
-          toast({
-            title: "Path parziale",
-            description: "Il browser ha fornito solo il nome della cartella. Completa manualmente il percorso completo (es. W:\\Revisioni\\Documenti\\).",
-            variant: "default",
-          });
-        }
-        
-        // Assicurati che il path termini con backslash
-        if (fullPath && !fullPath.endsWith("\\") && !fullPath.endsWith("/")) {
-          fullPath += "\\";
-        }
-        
-        // Aggiorna il campo appropriato
-        if (tipo === "bilanci") {
-          setFormData({ ...formData, percorso_bilanci: fullPath });
-        } else if (tipo === "fiscali") {
-          setFormData({ ...formData, percorso_fiscali: fullPath });
-        } else {
-          setFormData({ ...formData, percorso_generale: fullPath });
-        }
-        
+  const handleSelectFolder = async (tipo: "bilanci" | "fiscali" | "generale") => {
+    try {
+      // Controlla se l'API è supportata
+      if (!("showDirectoryPicker" in window)) {
         toast({
-          title: "Cartella selezionata",
-          description: `Percorso impostato: ${fullPath}`,
+          title: "Browser non supportato",
+          description: "Inserisci manualmente il percorso (es. W:\\Revisioni\\Documenti\\). Per copiare il percorso: apri la cartella in Esplora File e copia il percorso dalla barra degli indirizzi.",
+          variant: "default",
         });
+        return;
       }
-    };
-    
-    input.click();
+
+      // Apre dialog di selezione cartella (NON carica i file!)
+      const dirHandle = await (window as any).showDirectoryPicker({
+        mode: "read",
+      });
+
+      // Ottiene solo il nome della cartella
+      const folderName = dirHandle.name;
+      
+      toast({
+        title: "Cartella selezionata",
+        description: `Cartella: ${folderName}. Completa il percorso aggiungendo il prefisso (es. W:\\Revisioni\\Documenti\\).`,
+      });
+
+      // Inserisce il nome della cartella nel campo
+      const partialPath = `${folderName}\\`;
+      
+      if (tipo === "bilanci") {
+        setFormData({ ...formData, percorso_bilanci: partialPath });
+      } else if (tipo === "fiscali") {
+        setFormData({ ...formData, percorso_fiscali: partialPath });
+      } else {
+        setFormData({ ...formData, percorso_generale: partialPath });
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        // L'utente ha annullato la selezione
+        return;
+      }
+      
+      console.error("Errore selezione cartella:", error);
+      toast({
+        title: "Errore selezione cartella",
+        description: "Inserisci manualmente il percorso (es. W:\\Revisioni\\Documenti\\Bilanci\\). Per copiare: apri Esplora File, vai alla cartella e copia il percorso dalla barra degli indirizzi (Ctrl+L, Ctrl+C).",
+        variant: "default",
+      });
+    }
   };
 
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
@@ -1399,6 +1395,20 @@ export default function ClientiPage() {
             </TabsContent>
 
             <TabsContent value="percorsi" className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  💡 <strong>Come inserire il percorso:</strong>
+                </p>
+                <ol className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1 ml-4 list-decimal">
+                  <li>Clicca il pulsante 📁 e seleziona la cartella</li>
+                  <li>Oppure: Apri Esplora File (Win + E)</li>
+                  <li>Vai alla cartella desiderata</li>
+                  <li>Clicca sulla barra degli indirizzi (o premi Ctrl+L)</li>
+                  <li>Copia il percorso (Ctrl+C) e incollalo qui (Ctrl+V)</li>
+                  <li>Aggiungi \ alla fine se mancante</li>
+                </ol>
+              </div>
+
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
