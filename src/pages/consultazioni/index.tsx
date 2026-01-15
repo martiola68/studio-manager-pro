@@ -108,55 +108,54 @@ export default function ConsultazioniPage() {
     });
   };
 
-  const handleAprirPercorso = () => {
-    if (!selectedCliente) {
-      toast({
-        title: "Attenzione",
-        description: "Seleziona prima un cliente",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    let percorso = "";
-    if (checkboxes.bilanci) percorso = selectedCliente.percorso_bilanci || "";
-    if (checkboxes.fiscali) percorso = selectedCliente.percorso_fiscali || "";
-    if (checkboxes.generale) percorso = selectedCliente.percorso_generale || "";
-
+  const handleOpenPath = (percorso: string) => {
     if (!percorso) {
       toast({
         title: "Attenzione",
-        description: "Percorso non configurato per questo cliente",
+        description: "Nessun percorso configurato",
         variant: "destructive"
       });
       return;
     }
 
-    // Tenta di aprire il percorso
-    // In ambiente web, possiamo solo aprire URL HTTP/HTTPS
-    // I percorsi di rete locali (W:\...) funzionano solo in ambiente desktop
+    // Tenta di aprire con protocollo file://
+    const fileUrl = `file:///${percorso.replace(/\\/g, '/')}`;
+    
+    // Crea un link temporaneo e lo clicca
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.target = '_blank';
+    link.click();
+    
+    // Feedback all'utente
+    toast({
+      title: "Apertura percorso",
+      description: `Tentativo di aprire: ${percorso}`,
+      duration: 3000
+    });
+  };
+
+  const handleOpenFolder = (percorso: string) => {
+    if (!percorso) {
+      toast({
+        title: "Attenzione",
+        description: "Nessun percorso configurato",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
       window.open(percorso, "_blank");
-      toast({
-        title: "Successo",
-        description: "Percorso aperto in una nuova scheda"
-      });
-    } else {
-      // Per percorsi di rete locali, copia negli appunti e mostra istruzioni
-      navigator.clipboard.writeText(percorso).then(() => {
-        toast({
-          title: "✅ Percorso copiato negli appunti!",
-          description: "Per aprire la cartella:\n\n1️⃣ Premi Win + E (Apri Esplora File)\n2️⃣ Clicca sulla barra degli indirizzi (o Ctrl + L)\n3️⃣ Incolla il percorso (Ctrl + V)\n4️⃣ Premi Invio\n\n✨ La cartella si aprirà automaticamente!",
-          duration: 10000
-        });
-      }).catch(() => {
-        toast({
-          title: "Percorso",
-          description: `${percorso}\n\nCopia questo percorso e incollalo nella barra degli indirizzi di Esplora File (Win + E).`,
-          duration: 10000
-        });
-      });
+      return;
     }
+
+    navigator.clipboard.writeText(percorso).then(() => {
+      toast({
+        title: "Percorso copiato",
+        description: "Il percorso è stato copiato negli appunti. Aprilo manualmente da Esplora File.",
+      });
+    });
   };
 
   const handleClearSelection = () => {
@@ -278,14 +277,6 @@ export default function ConsultazioniPage() {
                   <p className="text-sm text-blue-700 mt-1">{selectedCliente.ragione_sociale}</p>
                 </div>
 
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-xs font-medium text-amber-900 mb-1">💡 Come funziona:</p>
-                  <p className="text-xs text-amber-800">
-                    Il pulsante copia il percorso negli appunti. Poi apri Esplora File (Win+E), 
-                    incolla nella barra indirizzi (Ctrl+V) e premi Invio.
-                  </p>
-                </div>
-
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">Seleziona tipo di documento:</Label>
                   
@@ -332,24 +323,24 @@ export default function ConsultazioniPage() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleAprirPercorso}
-                  disabled={!checkboxes.bilanci && !checkboxes.fiscali && !checkboxes.generale}
-                  className="w-full"
-                  size="lg"
-                >
-                  <FolderOpen className="h-5 w-5 mr-2" />
-                  Copia e Apri Percorso
-                </Button>
-
                 {(checkboxes.bilanci || checkboxes.fiscali || checkboxes.generale) && (
-                  <div className="p-3 bg-gray-50 rounded-lg border text-sm">
-                    <p className="font-medium mb-1">Percorso selezionato:</p>
-                    <p className="text-gray-600 font-mono text-xs break-all">
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    <p className="font-medium mb-2 text-sm">Percorso selezionato:</p>
+                    <button
+                      onClick={() => {
+                        const percorso = checkboxes.bilanci 
+                          ? selectedCliente.percorso_bilanci 
+                          : checkboxes.fiscali 
+                          ? selectedCliente.percorso_fiscali 
+                          : selectedCliente.percorso_generale;
+                        if (percorso) handleOpenPath(percorso);
+                      }}
+                      className="text-blue-600 hover:text-blue-800 hover:underline text-left font-mono text-xs break-all w-full"
+                    >
                       {checkboxes.bilanci && selectedCliente.percorso_bilanci}
                       {checkboxes.fiscali && selectedCliente.percorso_fiscali}
                       {checkboxes.generale && selectedCliente.percorso_generale}
-                    </p>
+                    </button>
                   </div>
                 )}
               </>

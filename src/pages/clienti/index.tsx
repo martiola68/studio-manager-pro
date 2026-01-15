@@ -1395,88 +1395,41 @@ export default function ClientiPage() {
             </TabsContent>
 
             <TabsContent value="percorsi" className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg mb-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  💡 <strong>Come inserire il percorso:</strong>
-                </p>
-                <ol className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1 ml-4 list-decimal">
-                  <li>Clicca il pulsante 📁 e seleziona la cartella</li>
-                  <li>Oppure: Apri Esplora File (Win + E)</li>
-                  <li>Vai alla cartella desiderata</li>
-                  <li>Clicca sulla barra degli indirizzi (o premi Ctrl+L)</li>
-                  <li>Copia il percorso (Ctrl+C) e incollalo qui (Ctrl+V)</li>
-                  <li>Aggiungi \ alla fine se mancante</li>
-                </ol>
-              </div>
-
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="percorso_bilanci">Percorso Bilanci</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="percorso_bilanci"
-                      value={formData.percorso_bilanci}
-                      onChange={(e) =>
-                        setFormData({ ...formData, percorso_bilanci: e.target.value })
-                      }
-                      placeholder="W:\Revisioni\Documenti\Bilanci\"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleSelectFolder("bilanci")}
-                      title="Seleziona cartella Bilanci"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Input
+                    id="percorso_bilanci"
+                    value={formData.percorso_bilanci}
+                    onChange={(e) =>
+                      setFormData({ ...formData, percorso_bilanci: e.target.value })
+                    }
+                    placeholder="W:\Revisioni\Documenti\Bilanci\"
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="percorso_fiscali">Percorso Fiscali</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="percorso_fiscali"
-                      value={formData.percorso_fiscali}
-                      onChange={(e) =>
-                        setFormData({ ...formData, percorso_fiscali: e.target.value })
-                      }
-                      placeholder="W:\Revisioni\Documenti\Fiscali\"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleSelectFolder("fiscali")}
-                      title="Seleziona cartella Fiscali"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Input
+                    id="percorso_fiscali"
+                    value={formData.percorso_fiscali}
+                    onChange={(e) =>
+                      setFormData({ ...formData, percorso_fiscali: e.target.value })
+                    }
+                    placeholder="W:\Revisioni\Documenti\Fiscali\"
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="percorso_generale">Percorso Generale</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="percorso_generale"
-                      value={formData.percorso_generale}
-                      onChange={(e) =>
-                        setFormData({ ...formData, percorso_generale: e.target.value })
-                      }
-                      placeholder="W:\Revisioni\Documenti\Generale\"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleSelectFolder("generale")}
-                      title="Seleziona cartella Generale"
-                    >
-                      <FolderOpen className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Input
+                    id="percorso_generale"
+                    value={formData.percorso_generale}
+                    onChange={(e) =>
+                      setFormData({ ...formData, percorso_generale: e.target.value })
+                    }
+                    placeholder="W:\Revisioni\Documenti\Generale\"
+                  />
                 </div>
               </div>
             </TabsContent>
