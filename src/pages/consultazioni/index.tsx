@@ -118,20 +118,37 @@ export default function ConsultazioniPage() {
       return;
     }
 
-    // Tenta di aprire con protocollo file://
-    const fileUrl = `file:///${percorso.replace(/\\/g, '/')}`;
-    
-    // Crea un link temporaneo e lo clicca
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.target = '_blank';
-    link.click();
-    
-    // Feedback all'utente
-    toast({
-      title: "Apertura percorso",
-      description: `Tentativo di aprire: ${percorso}`,
-      duration: 3000
+    // Per URL HTTP/HTTPS apri direttamente
+    if (percorso.startsWith("http://") || percorso.startsWith("https://")) {
+      window.open(percorso, "_blank");
+      return;
+    }
+
+    // Tentativo silenzioso di apertura con file:// protocol
+    try {
+      const fileUrl = `file:///${percorso.replace(/\\/g, '/')}`;
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.target = '_blank';
+      link.click();
+    } catch (error) {
+      // Ignora errori silenziosamente
+      console.log('Apertura diretta non supportata:', error);
+    }
+
+    // Copia sempre negli appunti come fallback affidabile
+    navigator.clipboard.writeText(percorso).then(() => {
+      toast({
+        title: "Percorso copiato",
+        description: "Apri Esplora File (Win+E), incolla (Ctrl+V) e premi Invio",
+        duration: 3000
+      });
+    }).catch(() => {
+      toast({
+        title: "Percorso",
+        description: percorso,
+        duration: 5000
+      });
     });
   };
 
