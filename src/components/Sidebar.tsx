@@ -159,11 +159,6 @@ export function Sidebar({
       href: "/comunicazioni"
     },
     {
-      label: "Consultazioni",
-      icon: <FolderOpen className="h-5 w-5" />,
-      href: "/consultazioni"
-    },
-    {
       label: "Impostazioni",
       icon: <Settings className="h-5 w-5" />,
       adminOnly: true,

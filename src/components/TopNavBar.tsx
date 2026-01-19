@@ -155,11 +155,6 @@ export function TopNavBar() {
       href: "/comunicazioni"
     },
     {
-      label: "Consultazioni",
-      icon: <Mail className="h-4 w-4" />,
-      href: "/consultazioni"
-    },
-    {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
       adminOnly: true,
