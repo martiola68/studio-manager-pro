@@ -14,10 +14,7 @@ export const promemoriaService = {
       .from("tbpromemoria")
       .select(`
         *,
-        cliente:cliente_id (
-          id,
-          ragione_sociale
-        ),
+        working_progress as stato,
         operatore:operatore_id (
           id,
           nome,
@@ -81,7 +78,6 @@ export const promemoriaService = {
     operatore_id: string;
     destinatario_id?: string | null;
     settore?: string;
-    cliente_id?: string | null;
   }) {
     const { data, error } = await supabase
       .from("tbpromemoria")
@@ -90,12 +86,11 @@ export const promemoriaService = {
         descrizione: promemoria.descrizione,
         data_scadenza: promemoria.data_scadenza,
         priorita: promemoria.priorita,
-        working_progress: promemoria.stato, // Mapping corretto
+        working_progress: promemoria.stato,
         operatore_id: promemoria.operatore_id,
         destinatario_id: promemoria.destinatario_id,
-        settore: promemoria.settore,
-        cliente_id: promemoria.cliente_id
-      } as any) // Force cast per evitare ritardi tipi
+        settore: promemoria.settore
+      } as any)
       .select()
       .single();
 

@@ -38,10 +38,9 @@ export default function PromemoriaPage() {
     descrizione: "",
     data_scadenza: undefined as Date | undefined,
     priorita: "Media",
-    working_progress: "Aperto", // Corretto: usare working_progress invece di stato
-    cliente_id: "",
+    working_progress: "Aperto",
     destinatario_id: "",
-    settore: "" // Auto-popolato
+    settore: ""
   });
 
   useEffect(() => {
@@ -128,18 +127,16 @@ export default function PromemoriaPage() {
         descrizione: formData.descrizione,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
-        stato: formData.working_progress, // Mapping: stato -> working_progress nel service
+        stato: formData.working_progress,
         operatore_id: currentUser?.id ?? "",
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || currentUser?.settore || "",
-        cliente_id: formData.cliente_id || null
+        settore: formData.settore || currentUser?.settore || ""
       });
 
       toast({ title: "Successo", description: "Promemoria creato" });
       setIsDialogOpen(false);
       checkUserAndLoad();
       
-      // Reset form completo
       setFormData({
         titolo: "",
         descrizione: "",
@@ -147,7 +144,6 @@ export default function PromemoriaPage() {
         priorita: "Media",
         working_progress: "Aperto",
         destinatario_id: "",
-        cliente_id: "",
         settore: currentUser?.settore || ""
       });
     } catch (error) {
