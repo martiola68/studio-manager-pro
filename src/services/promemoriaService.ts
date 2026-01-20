@@ -72,14 +72,37 @@ export const promemoriaService = {
   /**
    * Crea un nuovo promemoria
    */
-  async createPromemoria(promemoria: Database["public"]["Tables"]["tbpromemoria"]["Insert"]) {
+  async createPromemoria(promemoria: {
+    titolo: string;
+    descrizione?: string;
+    data_scadenza: string;
+    priorita: string;
+    stato: string;
+    operatore_id: string;
+    destinatario_id?: string | null;
+    settore?: string;
+    cliente_id?: string | null;
+  }) {
     const { data, error } = await supabase
       .from("tbpromemoria")
-      .insert(promemoria)
+      .insert({
+        titolo: promemoria.titolo,
+        descrizione: promemoria.descrizione,
+        data_scadenza: promemoria.data_scadenza,
+        priorita: promemoria.priorita,
+        working_progress: promemoria.stato, // Mapping corretto
+        operatore_id: promemoria.operatore_id,
+        destinatario_id: promemoria.destinatario_id,
+        settore: promemoria.settore,
+        cliente_id: promemoria.cliente_id
+      } as any) // Force cast per evitare ritardi tipi
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     return data;
   },
 

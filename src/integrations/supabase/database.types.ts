@@ -161,6 +161,7 @@ export type Database = {
           data_fine: string
           data_inizio: string
           descrizione: string | null
+          evento_generico: boolean | null
           id: string
           in_sede: boolean | null
           link_teams: string | null
@@ -168,6 +169,7 @@ export type Database = {
           partecipanti: Json | null
           riunione_teams: boolean | null
           sala: string | null
+          studio_id: string | null
           titolo: string
           tutto_giorno: boolean | null
           updated_at: string | null
@@ -180,6 +182,7 @@ export type Database = {
           data_fine: string
           data_inizio: string
           descrizione?: string | null
+          evento_generico?: boolean | null
           id?: string
           in_sede?: boolean | null
           link_teams?: string | null
@@ -187,6 +190,7 @@ export type Database = {
           partecipanti?: Json | null
           riunione_teams?: boolean | null
           sala?: string | null
+          studio_id?: string | null
           titolo: string
           tutto_giorno?: boolean | null
           updated_at?: string | null
@@ -199,6 +203,7 @@ export type Database = {
           data_fine?: string
           data_inizio?: string
           descrizione?: string | null
+          evento_generico?: boolean | null
           id?: string
           in_sede?: boolean | null
           link_teams?: string | null
@@ -206,6 +211,7 @@ export type Database = {
           partecipanti?: Json | null
           riunione_teams?: boolean | null
           sala?: string | null
+          studio_id?: string | null
           titolo?: string
           tutto_giorno?: boolean | null
           updated_at?: string | null
@@ -217,6 +223,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbagenda_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -860,14 +873,17 @@ export type Database = {
           da_fatturare: boolean
           data_inserimento: string
           data_scadenza: string
+          descrizione: string | null
           destinatario_id: string | null
           fatturato: boolean
           giorni_scadenza: number
           id: string
           note: string | null
           operatore_id: string
+          priorita: string | null
           settore: string | null
-          tipo_promemoria_id: string
+          tipo_promemoria_id: string | null
+          titolo: string | null
           updated_at: string | null
           working_progress: string
         }
@@ -876,14 +892,17 @@ export type Database = {
           da_fatturare?: boolean
           data_inserimento?: string
           data_scadenza: string
+          descrizione?: string | null
           destinatario_id?: string | null
           fatturato?: boolean
           giorni_scadenza?: number
           id?: string
           note?: string | null
           operatore_id: string
+          priorita?: string | null
           settore?: string | null
-          tipo_promemoria_id: string
+          tipo_promemoria_id?: string | null
+          titolo?: string | null
           updated_at?: string | null
           working_progress?: string
         }
@@ -892,14 +911,17 @@ export type Database = {
           da_fatturare?: boolean
           data_inserimento?: string
           data_scadenza?: string
+          descrizione?: string | null
           destinatario_id?: string | null
           fatturato?: boolean
           giorni_scadenza?: number
           id?: string
           note?: string | null
           operatore_id?: string
+          priorita?: string | null
           settore?: string | null
-          tipo_promemoria_id?: string
+          tipo_promemoria_id?: string | null
+          titolo?: string | null
           updated_at?: string | null
           working_progress?: string
         }
@@ -2212,6 +2234,7 @@ export type Database = {
           responsabile: boolean | null
           ruolo_operatore_id: string | null
           settore: string | null
+          studio_id: string | null
           tipo_utente: string
           updated_at: string | null
         }
@@ -2225,6 +2248,7 @@ export type Database = {
           responsabile?: boolean | null
           ruolo_operatore_id?: string | null
           settore?: string | null
+          studio_id?: string | null
           tipo_utente: string
           updated_at?: string | null
         }
@@ -2238,6 +2262,7 @@ export type Database = {
           responsabile?: boolean | null
           ruolo_operatore_id?: string | null
           settore?: string | null
+          studio_id?: string | null
           tipo_utente?: string
           updated_at?: string | null
         }
@@ -2247,6 +2272,13 @@ export type Database = {
             columns: ["ruolo_operatore_id"]
             isOneToOne: false
             referencedRelation: "tbroperatore"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbutenti_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
         ]
