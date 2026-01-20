@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { promemoriaService } from "@/services/promemoriaService";
 import { utenteService } from "@/services/utenteService";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,12 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2, User } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/supabase/types";
 
 type Promemoria = any;
@@ -126,10 +125,6 @@ export default function PromemoriaPage() {
       settore: currentUser?.settore || ""
     });
   };
-
-  const handleFormChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,117 +246,6 @@ export default function PromemoriaPage() {
     return <div className="p-8 text-center">Caricamento...</div>;
   }
 
-  const FormFields = () => (
-    <>
-      <div>
-        <Label>Titolo *</Label>
-        <Input 
-          value={formData.titolo}
-          onChange={e => handleFormChange("titolo", e.target.value)}
-          required
-          placeholder="Inserisci titolo promemoria"
-        />
-      </div>
-      
-      <div>
-        <Label>Descrizione</Label>
-        <Input 
-          value={formData.descrizione}
-          onChange={e => handleFormChange("descrizione", e.target.value)}
-          placeholder="Dettagli aggiuntivi"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Settore</Label>
-          <Input 
-            value={formData.settore} 
-            disabled 
-            className="bg-gray-100" 
-            placeholder="Automatico"
-          />
-        </div>
-        <div>
-          <Label>Destinatario</Label>
-          <Select
-            value={formData.destinatario_id || "none"}
-            onValueChange={val => handleFormChange("destinatario_id", val === "none" ? "" : val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Seleziona..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nessuno</SelectItem>
-              {utenti.map(u => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.nome} {u.cognome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label>Priorità *</Label>
-          <Select
-            value={formData.priorita}
-            onValueChange={val => handleFormChange("priorita", val)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Bassa">Bassa</SelectItem>
-              <SelectItem value="Media">Media</SelectItem>
-              <SelectItem value="Alta">Alta</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Stato *</Label>
-          <Select
-            value={formData.working_progress}
-            onValueChange={val => handleFormChange("working_progress", val)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Aperto">Aperto</SelectItem>
-              <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-              <SelectItem value="Presa visione">Presa visione</SelectItem>
-              <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-              <SelectItem value="Completato">Completato</SelectItem>
-              <SelectItem value="Annullato">Annullato</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Scadenza *</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={formData.data_scadenza}
-                onSelect={(date) => handleFormChange("data_scadenza", date || undefined)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-    </>
-  );
-
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
@@ -380,7 +264,116 @@ export default function PromemoriaPage() {
               <DialogTitle>Nuovo Promemoria</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 pt-4">
-              <FormFields />
+              <div>
+                <Label>Titolo *</Label>
+                <Input 
+                  value={formData.titolo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titolo: e.target.value }))}
+                  required
+                  placeholder="Inserisci titolo promemoria"
+                />
+              </div>
+              
+              <div>
+                <Label>Descrizione</Label>
+                <Input 
+                  value={formData.descrizione}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
+                  placeholder="Dettagli aggiuntivi"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Settore</Label>
+                  <Input 
+                    value={formData.settore} 
+                    disabled 
+                    className="bg-gray-100" 
+                    placeholder="Automatico"
+                  />
+                </div>
+                <div>
+                  <Label>Destinatario</Label>
+                  <Select
+                    value={formData.destinatario_id || "none"}
+                    onValueChange={(val) => setFormData(prev => ({ 
+                      ...prev, 
+                      destinatario_id: val === "none" ? "" : val 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map(u => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome} {u.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Priorità *</Label>
+                  <Select
+                    value={formData.priorita}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, priorita: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Bassa">Bassa</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Stato *</Label>
+                  <Select
+                    value={formData.working_progress}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, working_progress: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Aperto">Aperto</SelectItem>
+                      <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                      <SelectItem value="Presa visione">Presa visione</SelectItem>
+                      <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                      <SelectItem value="Completato">Completato</SelectItem>
+                      <SelectItem value="Annullato">Annullato</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Scadenza *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.data_scadenza}
+                        onSelect={(date) => setFormData(prev => ({ ...prev, data_scadenza: date || undefined }))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Salvataggio..." : "Crea Promemoria"}
               </Button>
@@ -452,7 +445,7 @@ export default function PromemoriaPage() {
                       {p.destinatario ? `${p.destinatario.nome} ${p.destinatario.cognome}` : "-"}
                     </TableCell>
                     <TableCell>
-                      {p.settore ? <Badge variant="outline">{p.settore}</Badge> : "-"}
+                      <Badge variant="outline">{p.settore || "Non specificato"}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -489,7 +482,116 @@ export default function PromemoriaPage() {
             <DialogTitle>Modifica Promemoria</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4 pt-4">
-            <FormFields />
+            <div>
+              <Label>Titolo *</Label>
+              <Input 
+                value={formData.titolo}
+                onChange={(e) => setFormData(prev => ({ ...prev, titolo: e.target.value }))}
+                required
+                placeholder="Inserisci titolo promemoria"
+              />
+            </div>
+            
+            <div>
+              <Label>Descrizione</Label>
+              <Input 
+                value={formData.descrizione}
+                onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
+                placeholder="Dettagli aggiuntivi"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Settore</Label>
+                <Input 
+                  value={formData.settore} 
+                  disabled 
+                  className="bg-gray-100" 
+                  placeholder="Automatico"
+                />
+              </div>
+              <div>
+                <Label>Destinatario</Label>
+                <Select
+                  value={formData.destinatario_id || "none"}
+                  onValueChange={(val) => setFormData(prev => ({ 
+                    ...prev, 
+                    destinatario_id: val === "none" ? "" : val 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nessuno</SelectItem>
+                    {utenti.map(u => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.nome} {u.cognome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Priorità *</Label>
+                <Select
+                  value={formData.priorita}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, priorita: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bassa">Bassa</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Stato *</Label>
+                <Select
+                  value={formData.working_progress}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, working_progress: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aperto">Aperto</SelectItem>
+                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                    <SelectItem value="Presa visione">Presa visione</SelectItem>
+                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                    <SelectItem value="Completato">Completato</SelectItem>
+                    <SelectItem value="Annullato">Annullato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Scadenza *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data_scadenza}
+                      onSelect={(date) => setFormData(prev => ({ ...prev, data_scadenza: date || undefined }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditDialogOpen(false)}>
                 Annulla
