@@ -63,10 +63,6 @@ export default function PromemoriaPage() {
       const user = await utenteService.getUtenteById(session.user.id);
       setCurrentUser(user);
 
-      if (user?.settore) {
-        setFormData(prev => ({ ...prev, settore: user.settore || "" }));
-      }
-
       const [promData, utentiData] = await Promise.all([
         promemoriaService.getPromemoria(),
         utenteService.getUtenti()
@@ -114,7 +110,7 @@ export default function PromemoriaPage() {
     setFilteredPromemoria(filtered);
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       titolo: "",
       descrizione: "",
@@ -122,9 +118,9 @@ export default function PromemoriaPage() {
       priorita: "Media",
       working_progress: "Aperto",
       destinatario_id: "",
-      settore: currentUser?.settore || ""
+      settore: ""
     });
-  };
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +136,7 @@ export default function PromemoriaPage() {
         stato: formData.working_progress,
         operatore_id: currentUser?.id ?? "",
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || currentUser?.settore || ""
+        settore: formData.settore || ""
       });
 
       toast({ title: "Successo", description: "Promemoria creato" });
@@ -155,7 +151,7 @@ export default function PromemoriaPage() {
     }
   };
 
-  const handleEdit = (promemoria: Promemoria) => {
+  const handleEdit = useCallback((promemoria: Promemoria) => {
     setSelectedPromemoria(promemoria);
     setFormData({
       titolo: promemoria.titolo,
@@ -167,7 +163,7 @@ export default function PromemoriaPage() {
       settore: promemoria.settore || ""
     });
     setIsEditDialogOpen(true);
-  };
+  }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,10 +194,10 @@ export default function PromemoriaPage() {
     }
   };
 
-  const handleDeleteClick = (promemoria: Promemoria) => {
+  const handleDeleteClick = useCallback((promemoria: Promemoria) => {
     setSelectedPromemoria(promemoria);
     setIsDeleteDialogOpen(true);
-  };
+  }, []);
 
   const handleDeleteConfirm = async () => {
     if (!selectedPromemoria) return;
@@ -220,6 +216,23 @@ export default function PromemoriaPage() {
       setLoading(false);
     }
   };
+
+  const handleDestinatarioChange = useCallback((val: string) => {
+    if (val === "none") {
+      setFormData(prev => ({
+        ...prev,
+        destinatario_id: "",
+        settore: ""
+      }));
+    } else {
+      const selectedUser = utenti.find(u => u.id === val);
+      setFormData(prev => ({
+        ...prev,
+        destinatario_id: val,
+        settore: selectedUser?.settore || ""
+      }));
+    }
+  }, [utenti]);
 
   const getStatoBadge = (stato: string) => {
     const styles: Record<string, string> = {
@@ -268,7 +281,7 @@ export default function PromemoriaPage() {
                 <Label>Titolo *</Label>
                 <Input 
                   value={formData.titolo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, titolo: e.target.value }))}
+                  onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                   required
                   placeholder="Inserisci titolo promemoria"
                 />
@@ -278,29 +291,17 @@ export default function PromemoriaPage() {
                 <Label>Descrizione</Label>
                 <Input 
                   value={formData.descrizione}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
+                  onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
                   placeholder="Dettagli aggiuntivi"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Settore</Label>
-                  <Input 
-                    value={formData.settore} 
-                    disabled 
-                    className="bg-gray-100" 
-                    placeholder="Automatico"
-                  />
-                </div>
-                <div>
                   <Label>Destinatario</Label>
                   <Select
                     value={formData.destinatario_id || "none"}
-                    onValueChange={(val) => setFormData(prev => ({ 
-                      ...prev, 
-                      destinatario_id: val === "none" ? "" : val 
-                    }))}
+                    onValueChange={handleDestinatarioChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona..." />
@@ -315,6 +316,15 @@ export default function PromemoriaPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label>Settore</Label>
+                  <Input 
+                    value={formData.settore || ""} 
+                    disabled 
+                    className="bg-gray-100" 
+                    placeholder="Seleziona destinatario"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -322,7 +332,7 @@ export default function PromemoriaPage() {
                   <Label>Priorità *</Label>
                   <Select
                     value={formData.priorita}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, priorita: val }))}
+                    onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -338,7 +348,7 @@ export default function PromemoriaPage() {
                   <Label>Stato *</Label>
                   <Select
                     value={formData.working_progress}
-                    onValueChange={(val) => setFormData(prev => ({ ...prev, working_progress: val }))}
+                    onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -366,7 +376,7 @@ export default function PromemoriaPage() {
                       <Calendar
                         mode="single"
                         selected={formData.data_scadenza}
-                        onSelect={(date) => setFormData(prev => ({ ...prev, data_scadenza: date || undefined }))}
+                        onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
                         initialFocus
                       />
                     </PopoverContent>
@@ -486,7 +496,7 @@ export default function PromemoriaPage() {
               <Label>Titolo *</Label>
               <Input 
                 value={formData.titolo}
-                onChange={(e) => setFormData(prev => ({ ...prev, titolo: e.target.value }))}
+                onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                 required
                 placeholder="Inserisci titolo promemoria"
               />
@@ -496,29 +506,17 @@ export default function PromemoriaPage() {
               <Label>Descrizione</Label>
               <Input 
                 value={formData.descrizione}
-                onChange={(e) => setFormData(prev => ({ ...prev, descrizione: e.target.value }))}
+                onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
                 placeholder="Dettagli aggiuntivi"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Settore</Label>
-                <Input 
-                  value={formData.settore} 
-                  disabled 
-                  className="bg-gray-100" 
-                  placeholder="Automatico"
-                />
-              </div>
-              <div>
                 <Label>Destinatario</Label>
                 <Select
                   value={formData.destinatario_id || "none"}
-                  onValueChange={(val) => setFormData(prev => ({ 
-                    ...prev, 
-                    destinatario_id: val === "none" ? "" : val 
-                  }))}
+                  onValueChange={handleDestinatarioChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona..." />
@@ -533,6 +531,15 @@ export default function PromemoriaPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Settore</Label>
+                <Input 
+                  value={formData.settore || ""} 
+                  disabled 
+                  className="bg-gray-100" 
+                  placeholder="Seleziona destinatario"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -540,7 +547,7 @@ export default function PromemoriaPage() {
                 <Label>Priorità *</Label>
                 <Select
                   value={formData.priorita}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, priorita: val }))}
+                  onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -556,7 +563,7 @@ export default function PromemoriaPage() {
                 <Label>Stato *</Label>
                 <Select
                   value={formData.working_progress}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, working_progress: val }))}
+                  onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -584,7 +591,7 @@ export default function PromemoriaPage() {
                     <Calendar
                       mode="single"
                       selected={formData.data_scadenza}
-                      onSelect={(date) => setFormData(prev => ({ ...prev, data_scadenza: date || undefined }))}
+                      onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
                       initialFocus
                     />
                   </PopoverContent>
