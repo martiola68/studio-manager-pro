@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { promemoriaService } from "@/services/promemoriaService";
@@ -127,6 +127,10 @@ export default function PromemoriaPage() {
     });
   };
 
+  const handleFormChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.titolo || !formData.data_scadenza) return;
@@ -253,7 +257,7 @@ export default function PromemoriaPage() {
         <Label>Titolo *</Label>
         <Input 
           value={formData.titolo}
-          onChange={e => setFormData({...formData, titolo: e.target.value})}
+          onChange={e => handleFormChange("titolo", e.target.value)}
           required
           placeholder="Inserisci titolo promemoria"
         />
@@ -262,8 +266,8 @@ export default function PromemoriaPage() {
       <div>
         <Label>Descrizione</Label>
         <Input 
-          value={formData.descrizione || ""}
-          onChange={e => setFormData({...formData, descrizione: e.target.value})}
+          value={formData.descrizione}
+          onChange={e => handleFormChange("descrizione", e.target.value)}
           placeholder="Dettagli aggiuntivi"
         />
       </div>
@@ -282,7 +286,7 @@ export default function PromemoriaPage() {
           <Label>Destinatario</Label>
           <Select
             value={formData.destinatario_id || "none"}
-            onValueChange={val => setFormData({...formData, destinatario_id: val === "none" ? "" : val})}
+            onValueChange={val => handleFormChange("destinatario_id", val === "none" ? "" : val)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Seleziona..." />
@@ -304,7 +308,7 @@ export default function PromemoriaPage() {
           <Label>Priorità *</Label>
           <Select
             value={formData.priorita}
-            onValueChange={val => setFormData({...formData, priorita: val})}
+            onValueChange={val => handleFormChange("priorita", val)}
           >
             <SelectTrigger>
               <SelectValue />
@@ -320,7 +324,7 @@ export default function PromemoriaPage() {
           <Label>Stato *</Label>
           <Select
             value={formData.working_progress}
-            onValueChange={val => setFormData({...formData, working_progress: val})}
+            onValueChange={val => handleFormChange("working_progress", val)}
           >
             <SelectTrigger>
               <SelectValue />
@@ -348,7 +352,7 @@ export default function PromemoriaPage() {
               <Calendar
                 mode="single"
                 selected={formData.data_scadenza}
-                onSelect={(date) => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
+                onSelect={(date) => handleFormChange("data_scadenza", date || undefined)}
                 initialFocus
               />
             </PopoverContent>
