@@ -281,14 +281,14 @@ export default function PromemoriaPage() {
         <div>
           <Label>Destinatario</Label>
           <Select
-            value={formData.destinatario_id}
-            onValueChange={val => setFormData({...formData, destinatario_id: val})}
+            value={formData.destinatario_id || "none"}
+            onValueChange={val => setFormData({...formData, destinatario_id: val === "none" ? "" : val})}
           >
             <SelectTrigger>
               <SelectValue placeholder="Seleziona..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nessuno</SelectItem>
+              <SelectItem value="none">Nessuno</SelectItem>
               {utenti.map(u => (
                 <SelectItem key={u.id} value={u.id}>
                   {u.nome} {u.cognome}
