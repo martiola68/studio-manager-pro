@@ -18,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import {
@@ -77,6 +87,11 @@ type VerificaAntiriciclaggio = {
   scadenza_antiriciclaggio: Date | undefined;
 };
 
+type PendingRiferimento = {
+  tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce";
+  valore: string;
+} | null;
+
 export default function ClientiPage() {
   const { toast } = useToast();
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -94,6 +109,9 @@ export default function ClientiPage() {
   const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
   const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
   const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
+
+  const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const [formData, setFormData] = useState({
     cod_cliente: "",
@@ -167,6 +185,22 @@ export default function ClientiPage() {
   useEffect(() => {
     filterClienti();
   }, [clienti, searchTerm, selectedLetter]);
+
+  useEffect(() => {
+    if (formData.settore === "Fiscale") {
+      setFormData(prev => ({
+        ...prev,
+        utente_payroll_id: "",
+        professionista_payroll_id: ""
+      }));
+    } else if (formData.settore === "Lavoro") {
+      setFormData(prev => ({
+        ...prev,
+        utente_operatore_id: "",
+        utente_professionista_id: ""
+      }));
+    }
+  }, [formData.settore]);
 
   const loadData = async () => {
     try {
@@ -467,6 +501,75 @@ export default function ClientiPage() {
     });
   };
 
+  const handleRequestNewRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) => {
+    if (!valore.trim()) return;
+
+    const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
+    const exists = lista.some(item => item.valore.toLowerCase() === valore.toLowerCase());
+
+    if (exists) {
+      if (tipo === "matricola_inps") {
+        setFormData({ ...formData, matricola_inps: valore });
+      } else if (tipo === "pat_inail") {
+        setFormData({ ...formData, pat_inail: valore });
+      } else {
+        setFormData({ ...formData, codice_ditta_ce: valore });
+      }
+      return;
+    }
+
+    setPendingRiferimento({ tipo, valore });
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmNewRiferimento = async () => {
+    if (!pendingRiferimento) return;
+
+    try {
+      await riferimentiValoriService.createValore(pendingRiferimento.tipo, pendingRiferimento.valore);
+      
+      if (pendingRiferimento.tipo === "matricola_inps") {
+        const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
+        setMatricoleInps(updated);
+        setFormData({ ...formData, matricola_inps: pendingRiferimento.valore });
+      } else if (pendingRiferimento.tipo === "pat_inail") {
+        const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
+        setPatInail(updated);
+        setFormData({ ...formData, pat_inail: pendingRiferimento.valore });
+      } else {
+        const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
+        setCodiciDittaCe(updated);
+        setFormData({ ...formData, codice_ditta_ce: pendingRiferimento.valore });
+      }
+
+      const nomiTipo = {
+        matricola_inps: "Matricola INPS",
+        pat_inail: "PAT INAIL",
+        codice_ditta_ce: "Codice Ditta CE"
+      };
+
+      toast({
+        title: "Successo",
+        description: `${nomiTipo[pendingRiferimento.tipo]} aggiunto con successo`,
+      });
+    } catch (error) {
+      console.error("Errore salvataggio valore:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare il valore",
+        variant: "destructive",
+      });
+    } finally {
+      setShowConfirmDialog(false);
+      setPendingRiferimento(null);
+    }
+  };
+
+  const handleCancelNewRiferimento = () => {
+    setShowConfirmDialog(false);
+    setPendingRiferimento(null);
+  };
+
   const handleDeleteRiferimentoValore = async (id: string, tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
     try {
       await riferimentiValoriService.deleteValore(id);
@@ -563,8 +666,25 @@ export default function ClientiPage() {
     }
   };
 
+  const isFieldEnabled = (field: "fiscale" | "payroll") => {
+    if (!formData.settore) return true;
+    if (formData.settore === "Fiscale & Lavoro") return true;
+    if (formData.settore === "Fiscale" && field === "fiscale") return true;
+    if (formData.settore === "Lavoro" && field === "payroll") return true;
+    return false;
+  };
+
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
   const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
+
+  const getNomeTipoRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
+    const nomi = {
+      matricola_inps: "Matricola INPS",
+      pat_inail: "PAT INAIL",
+      codice_ditta_ce: "Codice Ditta CE"
+    };
+    return nomi[tipo];
+  };
 
   if (loading) {
     return (
@@ -840,6 +960,25 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
+                  <Label htmlFor="settore">Settore</Label>
+                  <Select
+                    value={formData.settore || undefined}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona settore" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Fiscale">Fiscale</SelectItem>
+                      <SelectItem value="Lavoro">Lavoro</SelectItem>
+                      <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2">
                   <Label htmlFor="ragione_sociale">
                     Ragione Sociale <span className="text-red-500">*</span>
                   </Label>
@@ -877,25 +1016,6 @@ export default function ClientiPage() {
                     }
                     placeholder="RSSMRA80A01H501U"
                   />
-                </div>
-
-                <div>
-                  <Label htmlFor="settore">Settore</Label>
-                  <Select
-                    value={formData.settore || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona settore" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Fiscale">Fiscale</SelectItem>
-                      <SelectItem value="Lavoro">Lavoro</SelectItem>
-                      <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="md:col-span-2">
@@ -983,12 +1103,13 @@ export default function ClientiPage() {
             <TabsContent value="riferimenti" className="space-y-6 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
+                  <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
                   <Select
                     value={formData.utente_operatore_id || "none"}
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
                     }
+                    disabled={!isFieldEnabled("fiscale")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
@@ -1005,15 +1126,16 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
+                  <Label htmlFor="utente_professionista_id">Professionista Fiscale</Label>
                   <Select
                     value={formData.utente_professionista_id || "none"}
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
                     }
+                    disabled={!isFieldEnabled("fiscale")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona utente" />
+                      <SelectValue placeholder="Seleziona professionista" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
@@ -1033,6 +1155,7 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
                     }
+                    disabled={!isFieldEnabled("payroll")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente payroll" />
@@ -1055,6 +1178,7 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
                     }
+                    disabled={!isFieldEnabled("payroll")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona professionista payroll" />
@@ -1208,17 +1332,7 @@ export default function ClientiPage() {
                           <Button
                             variant="ghost"
                             className="w-full"
-                            onClick={async () => {
-                              if (formData.matricola_inps.trim()) {
-                                await riferimentiValoriService.createValore("matricola_inps", formData.matricola_inps);
-                                const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
-                                setMatricoleInps(updated);
-                                toast({
-                                  title: "Successo",
-                                  description: "Matricola INPS salvata",
-                                });
-                              }
-                            }}
+                            onClick={() => handleRequestNewRiferimento("matricola_inps", formData.matricola_inps)}
                           >
                             Crea: {formData.matricola_inps}
                           </Button>
@@ -1276,17 +1390,7 @@ export default function ClientiPage() {
                           <Button
                             variant="ghost"
                             className="w-full"
-                            onClick={async () => {
-                              if (formData.pat_inail.trim()) {
-                                await riferimentiValoriService.createValore("pat_inail", formData.pat_inail);
-                                const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
-                                setPatInail(updated);
-                                toast({
-                                  title: "Successo",
-                                  description: "PAT INAIL salvato",
-                                });
-                              }
-                            }}
+                            onClick={() => handleRequestNewRiferimento("pat_inail", formData.pat_inail)}
                           >
                             Crea: {formData.pat_inail}
                           </Button>
@@ -1344,17 +1448,7 @@ export default function ClientiPage() {
                           <Button
                             variant="ghost"
                             className="w-full"
-                            onClick={async () => {
-                              if (formData.codice_ditta_ce.trim()) {
-                                await riferimentiValoriService.createValore("codice_ditta_ce", formData.codice_ditta_ce);
-                                const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
-                                setCodiciDittaCe(updated);
-                                toast({
-                                  title: "Successo",
-                                  description: "Codice Ditta CE salvato",
-                                });
-                              }
-                            }}
+                            onClick={() => handleRequestNewRiferimento("codice_ditta_ce", formData.codice_ditta_ce)}
                           >
                             Crea: {formData.codice_ditta_ce}
                           </Button>
@@ -1759,6 +1853,22 @@ export default function ClientiPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Conferma Inserimento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vuoi aggiungere il valore <strong>&quot;{pendingRiferimento?.valore}&quot;</strong> all&apos;elenco{" "}
+              {pendingRiferimento ? getNomeTipoRiferimento(pendingRiferimento.tipo) : ""}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelNewRiferimento}>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmNewRiferimento}>Conferma</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <input
         type="file"
