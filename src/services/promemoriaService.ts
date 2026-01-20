@@ -14,7 +14,6 @@ export const promemoriaService = {
       .from("tbpromemoria")
       .select(`
         *,
-        working_progress as stato,
         operatore:operatore_id (
           id,
           nome,
