@@ -38,7 +38,7 @@ export default function PromemoriaPage() {
     descrizione: "",
     data_scadenza: undefined as Date | undefined,
     priorita: "Media",
-    stato: "Aperto", // Valori: Aperto, In lavorazione, Completato, Annullato, Presa visione, Richiesta confronto
+    working_progress: "Aperto", // Corretto: usare working_progress invece di stato
     cliente_id: "",
     destinatario_id: "",
     settore: "" // Auto-popolato
@@ -109,9 +109,9 @@ export default function PromemoriaPage() {
       );
     }
 
-    // Filtro stato
+    // Filtro stato (usare working_progress invece di stato)
     if (filterStato !== "all") {
-      filtered = filtered.filter(p => p.stato === filterStato);
+      filtered = filtered.filter(p => p.working_progress === filterStato);
     }
 
     setFilteredPromemoria(filtered);
@@ -128,7 +128,7 @@ export default function PromemoriaPage() {
         descrizione: formData.descrizione,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
-        stato: formData.stato,
+        stato: formData.working_progress, // Mapping: stato -> working_progress nel service
         operatore_id: currentUser?.id ?? "",
         destinatario_id: formData.destinatario_id || null,
         settore: formData.settore || currentUser?.settore || "",
@@ -139,15 +139,17 @@ export default function PromemoriaPage() {
       setIsDialogOpen(false);
       checkUserAndLoad();
       
-      setFormData(prev => ({
-        ...prev,
+      // Reset form completo
+      setFormData({
         titolo: "",
         descrizione: "",
         data_scadenza: undefined,
         priorita: "Media",
+        working_progress: "Aperto",
         destinatario_id: "",
-        cliente_id: ""
-      }));
+        cliente_id: "",
+        settore: currentUser?.settore || ""
+      });
     } catch (error) {
       console.error("Errore creazione:", error);
       toast({ title: "Errore", description: "Impossibile creare promemoria", variant: "destructive" });
@@ -225,6 +227,7 @@ export default function PromemoriaPage() {
                       <SelectValue placeholder="Seleziona..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">Nessuno</SelectItem>
                       {utenti.map(u => (
                         <SelectItem key={u.id} value={u.id}>
                           {u.nome} {u.cognome}
@@ -261,11 +264,13 @@ export default function PromemoriaPage() {
                         {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona data"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={formData.data_scadenza}
-                        onSelect={date => setFormData({...formData, data_scadenza: date})}
+                        onSelect={(date) => {
+                          setFormData(prev => ({...prev, data_scadenza: date || undefined}));
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -313,7 +318,7 @@ export default function PromemoriaPage() {
               <CardTitle className="text-base font-semibold line-clamp-1" title={p.titolo}>
                 {p.titolo}
               </CardTitle>
-              {getStatoBadge(p.stato || "Aperto")}
+              {getStatoBadge(p.working_progress || "Aperto")}
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-500 mb-4 line-clamp-2">{p.descrizione || "Nessuna descrizione"}</p>
