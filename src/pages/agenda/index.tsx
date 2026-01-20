@@ -1,595 +1,734 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { eventoService } from "@/services/eventoService";
-import { utenteService } from "@/services/utenteService";
-import { clienteService } from "@/services/clienteService";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon, Plus, List, CalendarDays, Users, MapPin, Link as LinkIcon } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils"; // Added missing import
-import type { Database } from "@/lib/supabase/types";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Users, 
+  MapPin, 
+  Clock, 
+  Building, 
+  List, 
+  Grid, 
+  CalendarDays,
+  Filter
+} from "lucide-react";
+import type { Database } from "@/integrations/supabase/types";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, startOfDay, parseISO } from "date-fns";
+import { it } from "date-fns/locale";
 
-type Evento = Database["public"]["Tables"]["tbagenda"]["Row"];
+// DEFINIZIONE TIPI CORRETTA
+type ClienteBase = Pick<Database["public"]["Tables"]["tbclienti"]["Row"], "id" | "ragione_sociale" | "codice_fiscale" | "partita_iva">;
+type UtenteBase = Pick<Database["public"]["Tables"]["tbutenti"]["Row"], "id" | "nome" | "cognome" | "email" | "settore">;
+
+// Tipo personalizzato per l'evento con le relazioni popolate
+type EventoWithRelations = Omit<Database["public"]["Tables"]["tbagenda"]["Row"], "cliente_id" | "utente_id"> & {
+  cliente_id: string | null;
+  utente_id: string;
+  cliente: ClienteBase | null;
+  utente: UtenteBase | null;
+};
+
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 
-const SALE_CONFIG: Record<string, { nome: string; colore: string }> = {
-  "sala1": { nome: "Sala 1", colore: "#3B82F6" },
-  "sala2": { nome: "Sala 2", colore: "#10B981" },
-  "sala3": { nome: "Sala 3", colore: "#F59E0B" },
-  "sala4": { nome: "Sala 4", colore: "#EF4444" }
+// Configurazione sale
+const SALE_CONFIG: Record<string, { label: string; color: string }> = {
+  "A": { label: "A - Sala riunioni", color: "#3B82F6" },
+  "B": { label: "B - Sala Briefing", color: "#8B5CF6" },
+  "C": { label: "C - Stanza personale", color: "#F59E0B" }
 };
 
 export default function AgendaPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [eventi, setEventi] = useState<Evento[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
+  
+  // Stati principali
+  const [eventi, setEventi] = useState<EventoWithRelations[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
-  const [currentUser, setCurrentUser] = useState<Utente | null>(null);
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
-  const [selectedPartecipanti, setSelectedPartecipanti] = useState<string[]>([]);
-
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Stati UI
+  const [view, setView] = useState<"list" | "month" | "week">("week"); // Default view week
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [filtroUtente, setFiltroUtente] = useState<string>("tutti");
+  
+  // Stati dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
+  const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
+  
+  // Stati form
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
     data_inizio: "",
+    ora_inizio: "09:00",
     data_fine: "",
+    ora_fine: "10:00",
     tutto_giorno: false,
+    cliente_id: "",
+    utente_id: "",
+    in_sede: false,
+    sala: "",
     evento_generico: false,
     riunione_teams: false,
     link_teams: "",
-    cliente_id: null as string | null,
-    in_sede: true,
-    sala: null as string | null,
-    luogo: "",
-    invia_a_tutti: false,
-    utente_id: "",
-    colore: "#3B82F6"
+    partecipanti: [] as string[]
   });
 
+  // Caricamento dati
   useEffect(() => {
-    checkUserAndLoad();
+    loadData();
   }, []);
 
-  const checkUserAndLoad = async () => {
+  const loadData = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      setLoading(true);
 
-      const user = await utenteService.getUtenteById(session.user.id);
-      setCurrentUser(user);
-      setFormData(prev => ({ ...prev, utente_id: user?.id || "" }));
+      // Carica eventi
+      const { data: eventiData, error: eventiError } = await supabase
+        .from("tbagenda")
+        .select(`
+          *,
+          cliente:cliente_id(id, ragione_sociale, codice_fiscale, partita_iva),
+          utente:utente_id(id, nome, cognome, email, settore)
+        `)
+        .order("data_inizio", { ascending: true });
 
-      const [eventiData, utentiData, clientiData] = await Promise.all([
-        eventoService.getEventi(),
-        utenteService.getUtenti(),
-        clienteService.getClienti()
-      ]);
+      if (eventiError) throw eventiError;
+      
+      // Casting sicuro dei dati
+      const typedEventi = (eventiData || []) as unknown as EventoWithRelations[];
+      setEventi(typedEventi);
 
-      setEventi(eventiData || []);
-      setUtenti(utentiData || []);
+      // Carica clienti
+      const { data: clientiData, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select("*")
+        .eq("attivo", true)
+        .order("ragione_sociale");
+
+      if (clientiError) throw clientiError;
       setClienti(clientiData || []);
+
+      // Carica utenti
+      const { data: utentiData, error: utentiError } = await supabase
+        .from("tbutenti")
+        .select("*")
+        .eq("attivo", true)
+        .order("cognome", { ascending: true });
+
+      if (utentiError) throw utentiError;
+      setUtenti(utentiData || []);
+
     } catch (error) {
       console.error("Errore caricamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const getSalaLabel = (salaId: string | null) => {
-    if (!salaId) return "";
-    return SALE_CONFIG[salaId]?.nome || salaId;
-  };
+  // --- GESTIONE FORM ---
 
-  const getColoreEvento = (evento: Evento) => {
-    if (evento.riunione_teams) return "#F97316"; // Orange for Teams
-    if (evento.evento_generico) return "#3B82F6";
-    if (evento.in_sede) return "#10B981";
-    return "#EF4444";
-  };
-
-  const eventiConDettagli = eventi.map(evento => {
-    const cliente = clienti.find(c => c.id === evento.cliente_id);
-    const utente = utenti.find(u => u.id === evento.utente_id);
-    return {
-      ...evento,
-      cliente_nome: cliente?.ragione_sociale || "",
-      utente_nome: utente ? `${utente.nome} ${utente.cognome}` : "",
-      colore: getColoreEvento(evento)
-    };
-  });
-
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth)
-  });
-
-  const eventiDelGiorno = (giorno: Date) => {
-    return eventiConDettagli.filter(e => {
-      const dataEvento = parseISO(e.data_inizio);
-      return isSameDay(dataEvento, giorno);
+  const resetForm = () => {
+    setEditingEventoId(null);
+    setFormData({
+      titolo: "",
+      descrizione: "",
+      data_inizio: format(new Date(), "yyyy-MM-dd"),
+      ora_inizio: "09:00",
+      data_fine: format(new Date(), "yyyy-MM-dd"),
+      ora_fine: "10:00",
+      tutto_giorno: false,
+      cliente_id: "",
+      utente_id: "",
+      in_sede: false,
+      sala: "",
+      evento_generico: false,
+      riunione_teams: false,
+      link_teams: "",
+      partecipanti: []
     });
   };
 
-  const openDialog = (evento?: Evento) => {
-    if (evento) {
-      setEditingEvento(evento);
-      setFormData({
-        titolo: evento.titolo,
-        descrizione: evento.descrizione || "",
-        data_inizio: evento.data_inizio.split("T")[0],
-        data_fine: evento.data_fine.split("T")[0],
-        tutto_giorno: evento.tutto_giorno || false,
-        evento_generico: evento.evento_generico || false,
-        riunione_teams: evento.riunione_teams || false,
-        link_teams: evento.link_teams || "",
-        cliente_id: evento.cliente_id,
-        in_sede: evento.in_sede ?? true,
-        sala: evento.sala,
-        luogo: evento.luogo || "",
-        invia_a_tutti: false,
-        utente_id: evento.utente_id || "",
-        colore: evento.colore || "#3B82F6"
-      });
-    } else {
-      setFormData({
-        titolo: "",
-        descrizione: "",
-        data_inizio: format(new Date(), "yyyy-MM-dd"),
-        data_fine: format(new Date(), "yyyy-MM-dd"),
-        tutto_giorno: false,
-        evento_generico: false,
-        riunione_teams: false,
-        link_teams: "",
-        cliente_id: null,
-        in_sede: true,
-        sala: null,
-        luogo: "",
-        invia_a_tutti: false,
-        utente_id: currentUser?.id || "",
-        colore: "#3B82F6"
-      });
-      setSelectedPartecipanti([]);
+  const handleNuovoEvento = (date?: Date, hour?: number) => {
+    resetForm();
+    if (date) {
+      const dateStr = format(date, "yyyy-MM-dd");
+      let startHour = "09:00";
+      let endHour = "10:00";
+      
+      if (hour !== undefined) {
+        startHour = `${String(hour).padStart(2, '0')}:00`;
+        endHour = `${String(hour + 1).padStart(2, '0')}:00`;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        data_inizio: dateStr,
+        data_fine: dateStr,
+        ora_inizio: startHour,
+        ora_fine: endHour
+      }));
     }
-    setIsDialogOpen(true);
+    setDialogOpen(true);
   };
 
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingEvento(null);
-    setSelectedPartecipanti([]);
-  };
-
-  const toggleSettoreParticipants = (settore: "Fiscale" | "Lavoro") => {
-    const utentiSettore = utenti
-      .filter(u => u.settore === settore || u.settore === "Fiscale & lavoro")
-      .map(u => u.id);
+  const handleEditEvento = (evento: EventoWithRelations) => {
+    const startDate = parseISO(evento.data_inizio);
+    const endDate = parseISO(evento.data_fine);
     
-    // Add only new ones, avoiding duplicates is handled by Set in state update if needed,
-    // but here we just want to ensure all from this sector are selected.
-    setSelectedPartecipanti(prev => {
-      const newSet = new Set([...prev, ...utentiSettore]);
-      return Array.from(newSet);
+    // Converti Json[] in string[] in modo sicuro
+    let partecipanti: string[] = [];
+    if (Array.isArray(evento.partecipanti)) {
+      partecipanti = evento.partecipanti.map(p => String(p));
+    }
+
+    setEditingEventoId(evento.id);
+    setFormData({
+      titolo: evento.titolo,
+      descrizione: evento.descrizione || "",
+      data_inizio: format(startDate, "yyyy-MM-dd"),
+      ora_inizio: format(startDate, "HH:mm"),
+      data_fine: format(endDate, "yyyy-MM-dd"),
+      ora_fine: format(endDate, "HH:mm"),
+      tutto_giorno: evento.tutto_giorno || false,
+      cliente_id: evento.cliente_id || "",
+      utente_id: evento.utente_id,
+      in_sede: evento.in_sede || false,
+      sala: evento.sala || "",
+      evento_generico: evento.evento_generico || false,
+      riunione_teams: evento.riunione_teams || false,
+      link_teams: evento.link_teams || "",
+      partecipanti: partecipanti
     });
+    setDialogOpen(true);
   };
 
-  const deselectAllParticipants = () => {
-    setSelectedPartecipanti([]);
-  };
-
-  const togglePartecipante = (utenteId: string) => {
-    setSelectedPartecipanti(prev => 
-      prev.includes(utenteId) 
-        ? prev.filter(id => id !== utenteId)
-        : [...prev, utenteId]
-    );
-  };
-
-  const handleSubmit = async () => {
+  const handleSaveEvento = async () => {
     try {
-      if (!formData.data_inizio || !formData.data_fine) {
-        toast({ title: "Errore", description: "Date mancanti", variant: "destructive" });
+      if (!formData.titolo.trim()) {
+        toast({ title: "Errore", description: "Titolo obbligatorio", variant: "destructive" });
+        return;
+      }
+      if (!formData.utente_id) {
+        toast({ title: "Errore", description: "Seleziona un utente", variant: "destructive" });
         return;
       }
 
-      const eventoData = {
+      // Costruzione date ISO
+      const startDateTime = formData.tutto_giorno 
+        ? `${formData.data_inizio}T00:00:00` 
+        : `${formData.data_inizio}T${formData.ora_inizio}:00`;
+        
+      const endDateTime = formData.tutto_giorno 
+        ? `${formData.data_fine || formData.data_inizio}T23:59:59` 
+        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00`;
+
+      const payload = {
         titolo: formData.titolo,
-        descrizione: formData.descrizione,
-        data_inizio: new Date(formData.data_inizio).toISOString(),
-        data_fine: new Date(formData.data_fine).toISOString(),
+        descrizione: formData.descrizione || null,
+        data_inizio: startDateTime,
+        data_fine: endDateTime,
         tutto_giorno: formData.tutto_giorno,
+        cliente_id: formData.cliente_id || null,
+        utente_id: formData.utente_id,
+        in_sede: formData.in_sede,
+        sala: formData.in_sede ? formData.sala : null,
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
-        link_teams: formData.riunione_teams ? formData.link_teams : null,
-        cliente_id: formData.cliente_id,
-        in_sede: formData.in_sede,
-        sala: formData.sala,
-        luogo: formData.luogo,
-        utente_id: formData.utente_id,
-        colore: formData.colore,
-        studio_id: currentUser?.studio_id || null // Handle potential missing studio_id
+        link_teams: formData.link_teams || null,
+        partecipanti: formData.partecipanti.length ? formData.partecipanti : null
       };
 
-      if (editingEvento) {
-        await eventoService.updateEvento(editingEvento.id, eventoData);
+      if (editingEventoId) {
+        const { error } = await supabase.from("tbagenda").update(payload).eq("id", editingEventoId);
+        if (error) throw error;
         toast({ title: "Successo", description: "Evento aggiornato" });
       } else {
-        await eventoService.createEvento(eventoData);
+        const { error } = await supabase.from("tbagenda").insert([payload]);
+        if (error) throw error;
         toast({ title: "Successo", description: "Evento creato" });
       }
 
-      closeDialog();
-      checkUserAndLoad();
+      setDialogOpen(false);
+      loadData();
     } catch (error) {
-      console.error("Errore salvataggio:", error);
-      toast({ title: "Errore", description: "Impossibile salvare", variant: "destructive" });
+      console.error(error);
+      toast({ title: "Errore", description: "Salvataggio fallito", variant: "destructive" });
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Caricamento...</div>;
+  const handleDeleteEvento = async () => {
+    if (!eventoToDelete) return;
+    try {
+      const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
+      if (error) throw error;
+      toast({ title: "Successo", description: "Evento eliminato" });
+      setDeleteDialogOpen(false);
+      setEventoToDelete(null);
+      loadData();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Errore", description: "Eliminazione fallita", variant: "destructive" });
+    }
+  };
 
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Agenda</h1>
-          <p className="text-gray-500">Gestione appuntamenti e calendario</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setViewMode(viewMode === "calendar" ? "list" : "calendar")}>
-            {viewMode === "calendar" ? <List className="mr-2 h-4 w-4" /> : <CalendarDays className="mr-2 h-4 w-4" />}
-            {viewMode === "calendar" ? "Vista Lista" : "Vista Calendario"}
-          </Button>
-          <Button onClick={() => openDialog()}>
-            <Plus className="mr-2 h-4 w-4" /> Nuovo Evento
-          </Button>
-        </div>
-      </div>
+  // --- UTILITIES ---
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Sistema Colori
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-500" />
-              <span className="text-sm">Blu — Evento generico</span>
+  const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
+    const ids = utenti.filter(u => u.settore === settore).map(u => u.id);
+    setFormData(prev => ({ ...prev, partecipanti: ids }));
+  };
+
+  const getEventColor = (evento: EventoWithRelations) => {
+    if (evento.evento_generico) return "#3B82F6"; // Blu
+    if (evento.in_sede) return "#10B981"; // Verde
+    if (evento.riunione_teams) return "#F97316"; // Arancio
+    return "#EF4444"; // Rosso (Fuori sede)
+  };
+
+  // Filtro eventi
+  const filteredEvents = eventi.filter(e => filtroUtente === "tutti" || e.utente_id === filtroUtente);
+
+  // --- RENDERERS ---
+
+  const renderEventCard = (evento: EventoWithRelations, showDate: boolean = false) => {
+    const color = getEventColor(evento);
+    const startDate = parseISO(evento.data_inizio);
+    const endDate = parseISO(evento.data_fine);
+    
+    return (
+      <Card 
+        key={evento.id}
+        className="mb-2 cursor-pointer hover:shadow-md transition-shadow border-l-4 overflow-hidden shadow-sm"
+        style={{ borderLeftColor: color }}
+        onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}
+      >
+        <CardContent className="p-3">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 overflow-hidden">
+              {/* UTENTE (Focus Principale) */}
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="h-4 w-4 text-gray-500" />
+                <span className="font-bold text-gray-900 truncate">
+                  {evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Utente sconosciuto"}
+                </span>
+              </div>
+
+              {/* Cliente */}
+              {(!evento.evento_generico && evento.cliente) && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                  <Building className="h-3 w-3" />
+                  <span className="truncate">{evento.cliente.ragione_sociale}</span>
+                </div>
+              )}
+
+              {/* Orario e Sala */}
+              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
+                <div className="flex items-center">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {showDate && <span className="mr-1">{format(startDate, "dd/MM")}</span>}
+                  {evento.tutto_giorno 
+                    ? "Tutto il giorno" 
+                    : `${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}`
+                  }
+                </div>
+                
+                {evento.in_sede && evento.sala && (
+                  <Badge variant="secondary" className="h-5 px-1 bg-green-100 text-green-700 hover:bg-green-200 border-0">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    SALA {evento.sala}
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-green-500" />
-              <span className="text-sm">Verde — In sede</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-red-500" />
-              <span className="text-sm">Rosso — Fuori sede</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#F97316]" />
-              <span className="text-sm">Arancio — Riunione Teams</span>
+
+            {/* Azioni */}
+            <div className="flex flex-col gap-1 ml-2">
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}>
+                <Pencil className="h-3 w-3 text-blue-600" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEventoToDelete(evento.id); setDeleteDialogOpen(true); }}>
+                <Trash2 className="h-3 w-3 text-red-600" />
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+    );
+  };
 
-      {viewMode === "calendar" ? (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <Button variant="outline" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>←</Button>
-            <CardTitle>{format(currentMonth, "MMMM yyyy", { locale: it })}</CardTitle>
-            <Button variant="outline" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>→</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-2">
-              {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(day => (
-                <div key={day} className="text-center font-semibold text-sm p-2">{day}</div>
-              ))}
-              {daysInMonth.map(day => {
-                const eventiGiorno = eventiDelGiorno(day);
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      "min-h-[100px] border rounded p-2 cursor-pointer hover:bg-gray-50",
-                      !isSameMonth(day, currentMonth) && "bg-gray-100 text-gray-400"
-                    )}
-                    onClick={() => openDialog()}
-                  >
-                    <div className="font-semibold text-sm mb-1">{format(day, "d")}</div>
-                    <div className="space-y-1">
-                      {eventiGiorno.map(e => (
-                        <div
-                          key={e.id}
-                          className="text-xs p-1 rounded text-white truncate"
-                          style={{ backgroundColor: e.colore }}
-                          title={e.titolo}
-                        >
-                          {e.titolo}
-                        </div>
-                      ))}
+  const renderMonthView = () => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const startDate = startOfWeek(monthStart, { locale: it });
+    const endDate = endOfWeek(monthEnd, { locale: it });
+    
+    const days = [];
+    let day = startDate;
+    while (day <= endDate) { days.push(day); day = addDays(day, 1); }
+
+    return (
+      <div className="grid grid-cols-7 gap-px bg-gray-200 border rounded-lg overflow-hidden">
+        {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(d => (
+          <div key={d} className="bg-gray-50 p-2 text-center text-sm font-semibold text-gray-600">
+            {d}
+          </div>
+        ))}
+        {days.map(dayItem => {
+          const isCurrentMonth = isSameMonth(dayItem, currentDate);
+          const dayEvents = filteredEvents.filter(e => isSameDay(parseISO(e.data_inizio), dayItem));
+
+          return (
+            <div 
+              key={dayItem.toISOString()} 
+              className={`min-h-[120px] bg-white p-2 cursor-pointer hover:bg-gray-50 transition-colors ${!isCurrentMonth ? 'text-gray-400 bg-gray-50/50' : ''}`}
+              onClick={() => handleNuovoEvento(dayItem)}
+            >
+              <div className="font-semibold text-sm mb-1">{format(dayItem, "d")}</div>
+              <div className="space-y-1">
+                {dayEvents.slice(0, 3).map(ev => {
+                  const color = getEventColor(ev);
+                  return (
+                    <div 
+                      key={ev.id}
+                      className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm"
+                      style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
+                      onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
+                    >
+                      {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
                     </div>
+                  );
+                })}
+                {dayEvents.length > 3 && (
+                  <div className="text-xs text-gray-500 font-medium">+{dayEvents.length - 3} altri</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderWeekView = () => {
+    const weekStart = startOfWeek(currentDate, { locale: it });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8:00 - 20:00
+
+    return (
+      <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
+        {/* Header Giorni */}
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-gray-50">
+          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">Ora</div>
+          {weekDays.map(day => (
+            <div key={day.toISOString()} className={`p-2 text-center border-r ${isSameDay(day, new Date()) ? 'bg-blue-50 text-blue-700' : ''}`}>
+              <div className="text-xs font-medium uppercase">{format(day, "EEE", { locale: it })}</div>
+              <div className="text-lg font-bold">{format(day, "d")}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Griglia Orari */}
+        <div className="overflow-y-auto flex-1">
+          {hours.map(hour => (
+            <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b min-h-[100px]">
+              {/* Colonna Ora */}
+              <div className="p-2 text-xs text-gray-400 text-right border-r font-mono">
+                {String(hour).padStart(2, '0')}:00
+              </div>
+
+              {/* Colonne Giorni */}
+              {weekDays.map(day => {
+                // Filtra eventi per Giorno E Ora
+                const cellEvents = filteredEvents.filter(e => {
+                  const eventDate = parseISO(e.data_inizio);
+                  const eventHour = parseInt(format(eventDate, "HH"));
+                  
+                  // Gestione eventi tutto il giorno: mostrali alle 9:00 per convenzione
+                  if (e.tutto_giorno) {
+                    return isSameDay(eventDate, day) && hour === 9;
+                  }
+                  
+                  return isSameDay(eventDate, day) && eventHour === hour;
+                });
+
+                return (
+                  <div 
+                    key={`${day.toISOString()}-${hour}`} 
+                    className="border-r p-1 hover:bg-gray-50 transition-colors cursor-pointer relative"
+                    onClick={() => handleNuovoEvento(day, hour)}
+                  >
+                    {cellEvents.map(ev => {
+                      const color = getEventColor(ev);
+                      return (
+                        <div 
+                          key={ev.id}
+                          className="text-xs p-2 mb-1 rounded shadow-sm border-l-4 text-white cursor-pointer hover:opacity-90 transition-opacity"
+                          style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
+                          onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
+                        >
+                          <div className="font-bold truncate">
+                            {ev.utente ? `${ev.utente.cognome} ${ev.utente.nome?.charAt(0)}.` : 'N/A'}
+                          </div>
+                          {!ev.evento_generico && ev.cliente && (
+                            <div className="truncate opacity-90 text-[10px]">
+                              {ev.cliente.ragione_sociale}
+                            </div>
+                          )}
+                          {ev.in_sede && ev.sala && (
+                            <div className="mt-1 inline-block bg-white/20 px-1 rounded text-[10px] font-bold">
+                              SALA {ev.sala}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              {eventiConDettagli.map(e => (
-                <div
-                  key={e.id}
-                  className="flex items-center gap-4 p-4 border rounded hover:bg-gray-50 cursor-pointer"
-                  onClick={() => openDialog(e)}
-                >
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: e.colore }} />
-                  <div className="flex-1">
-                    <div className="font-semibold">{e.titolo}</div>
-                    <div className="text-sm text-gray-500">
-                      {format(parseISO(e.data_inizio), "dd/MM/yyyy", { locale: it })}
-                    </div>
-                  </div>
-                  {e.cliente_nome && <Badge>{e.cliente_nome}</Badge>}
-                  {e.riunione_teams && <Badge variant="outline"><LinkIcon className="h-3 w-3" /></Badge>}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          ))}
+        </div>
+      </div>
+    );
+  };
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+  if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
+
+  return (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
+      {/* Header Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(prev => view === 'week' ? subWeeks(prev, 1) : subMonths(prev, 1))}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="font-bold px-4 min-w-[150px] text-center">
+              {format(currentDate, view === 'week' ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", { locale: it })}
+            </span>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(prev => view === 'week' ? addWeeks(prev, 1) : addMonths(prev, 1))}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          <Button onClick={() => handleNuovoEvento()} className="gap-2">
+            <Plus className="h-4 w-4" /> Nuovo Evento
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Filtro Utente */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <Select value={filtroUtente} onValueChange={setFiltroUtente}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtra utente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutti gli utenti</SelectItem>
+                {utenti.map(u => (
+                  <SelectItem key={u.id} value={u.id}>{u.cognome} {u.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* View Toggles */}
+          <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
+            <Button variant={view === "list" ? "default" : "ghost"} size="sm" onClick={() => setView("list")}>
+              <List className="h-4 w-4 mr-2" /> Elenco
+            </Button>
+            <Button variant={view === "month" ? "default" : "ghost"} size="sm" onClick={() => setView("month")}>
+              <Grid className="h-4 w-4 mr-2" /> Mese
+            </Button>
+            <Button variant={view === "week" ? "default" : "ghost"} size="sm" onClick={() => setView("week")}>
+              <CalendarDays className="h-4 w-4 mr-2" /> Settimana
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-lg shadow-sm">
+        {view === "list" && (
+          <div className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredEvents.map(e => renderEventCard(e, true))}
+            {filteredEvents.length === 0 && <div className="p-8 text-center text-gray-500 col-span-full">Nessun evento</div>}
+          </div>
+        )}
+        {view === "month" && renderMonthView()}
+        {view === "week" && renderWeekView()}
+      </div>
+
+      {/* Dialog Form */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingEvento ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle>
+            <DialogTitle>{editingEventoId ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
+          
+          <div className="space-y-4 py-2">
             <div>
-              <Label>Titolo</Label>
-              <Input
-                value={formData.titolo}
-                onChange={e => setFormData({ ...formData, titolo: e.target.value })}
-                placeholder="Titolo evento"
-              />
-            </div>
-
-            <div>
-              <Label>Descrizione</Label>
-              <Textarea
-                value={formData.descrizione}
-                onChange={e => setFormData({ ...formData, descrizione: e.target.value })}
-                placeholder="Descrizione evento"
-              />
+              <Label>Titolo Evento *</Label>
+              <Input value={formData.titolo} onChange={e => setFormData({...formData, titolo: e.target.value})} placeholder="Es. Riunione Cliente" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data Inizio</Label>
-                <Input
-                  type="date"
-                  value={formData.data_inizio}
-                  onChange={e => setFormData({ ...formData, data_inizio: e.target.value })}
-                />
+                <Input type="date" value={formData.data_inizio} onChange={e => setFormData({...formData, data_inizio: e.target.value})} />
               </div>
               <div>
+                <Label>Ora Inizio</Label>
+                <Input type="time" disabled={formData.tutto_giorno} value={formData.ora_inizio} onChange={e => setFormData({...formData, ora_inizio: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label>Data Fine</Label>
-                <Input
-                  type="date"
-                  value={formData.data_fine}
-                  onChange={e => setFormData({ ...formData, data_fine: e.target.value })}
-                />
+                <Input type="date" value={formData.data_fine} onChange={e => setFormData({...formData, data_fine: e.target.value})} />
+              </div>
+              <div>
+                <Label>Ora Fine</Label>
+                <Input type="time" disabled={formData.tutto_giorno} value={formData.ora_fine} onChange={e => setFormData({...formData, ora_fine: e.target.value})} />
               </div>
             </div>
 
-            {/* Layout in una riga singola come richiesto */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="tutto_giorno"
-                  checked={formData.tutto_giorno}
-                  onCheckedChange={checked => setFormData({ ...formData, tutto_giorno: checked as boolean })}
-                />
-                <Label htmlFor="tutto_giorno">Tutto il giorno</Label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="evento_generico"
-                  checked={formData.evento_generico}
-                  onCheckedChange={checked => setFormData({ ...formData, evento_generico: checked as boolean })}
-                />
-                <Label htmlFor="evento_generico">Evento Generico (senza cliente)</Label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="riunione_teams"
-                  checked={formData.riunione_teams}
-                  onCheckedChange={checked => setFormData({ ...formData, riunione_teams: checked as boolean })}
-                />
-                <Label htmlFor="riunione_teams">Riunione Teams</Label>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="allday" checked={formData.tutto_giorno} onCheckedChange={c => setFormData({...formData, tutto_giorno: !!c})} />
+              <Label htmlFor="allday">Tutto il giorno</Label>
             </div>
 
-            {/* Link Teams sempre visibile ma disabilitato se non spuntato */}
             <div>
-              <Label htmlFor="link_teams">Link Teams</Label>
-              <Input
-                id="link_teams"
-                type="url"
-                placeholder="https://teams.microsoft.com/..."
-                value={formData.link_teams}
-                onChange={e => setFormData({ ...formData, link_teams: e.target.value })}
-                disabled={!formData.riunione_teams}
-                className={!formData.riunione_teams ? "bg-gray-100 cursor-not-allowed opacity-50" : ""}
-              />
+              <Label>Assegna a Utente *</Label>
+              <Select value={formData.utente_id} onValueChange={v => setFormData({...formData, utente_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Seleziona utente" /></SelectTrigger>
+                <SelectContent>
+                  {utenti.map(u => <SelectItem key={u.id} value={u.id}>{u.cognome} {u.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             {!formData.evento_generico && (
               <div>
                 <Label>Cliente</Label>
-                <Select
-                  value={formData.cliente_id || ""}
-                  onValueChange={val => setFormData({ ...formData, cliente_id: val || null })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona cliente" />
-                  </SelectTrigger>
+                <Select value={formData.cliente_id} onValueChange={v => setFormData({...formData, cliente_id: v})}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona cliente" /></SelectTrigger>
                   <SelectContent>
-                    {clienti.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.ragione_sociale}
-                      </SelectItem>
-                    ))}
+                    {clienti.map(c => <SelectItem key={c.id} value={c.id}>{c.ragione_sociale}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="in_sede"
-                  checked={formData.in_sede}
-                  onCheckedChange={checked => setFormData({ ...formData, in_sede: checked as boolean })}
-                />
-                <Label htmlFor="in_sede">In Sede</Label>
+            <div className="space-y-3 border p-3 rounded-md bg-gray-50">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="generico" checked={formData.evento_generico} onCheckedChange={c => setFormData({...formData, evento_generico: !!c})} />
+                <Label htmlFor="generico">Evento Generico (No Cliente)</Label>
               </div>
 
-              {formData.in_sede ? (
-                <div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="sede" checked={formData.in_sede} onCheckedChange={c => setFormData({...formData, in_sede: !!c})} />
+                <Label htmlFor="sede">In Sede</Label>
+              </div>
+
+              {formData.in_sede && (
+                <div className="ml-6">
                   <Label>Sala</Label>
-                  <Select
-                    value={formData.sala || ""}
-                    onValueChange={val => setFormData({ ...formData, sala: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona sala" />
-                    </SelectTrigger>
+                  <Select value={formData.sala} onValueChange={v => setFormData({...formData, sala: v})}>
+                    <SelectTrigger><SelectValue placeholder="Seleziona Sala" /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(SALE_CONFIG).map(([id, info]) => (
-                        <SelectItem key={id} value={id}>{info.nome}</SelectItem>
-                      ))}
+                      <SelectItem value="A">A - Sala riunioni</SelectItem>
+                      <SelectItem value="B">B - Sala Briefing</SelectItem>
+                      <SelectItem value="C">C - Stanza personale</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
-                <div>
-                  <Label>Luogo</Label>
-                  <Input
-                    value={formData.luogo}
-                    onChange={e => setFormData({ ...formData, luogo: e.target.value })}
-                    placeholder="Indirizzo o luogo"
-                  />
-                </div>
               )}
-            </div>
 
-            <div className="border-t pt-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="h-5 w-5" />
-                <Label className="text-base font-semibold">Partecipanti (Notifiche Email)</Label>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4 text-sm text-blue-800">
-                ℹ️ I partecipanti riceveranno un'email con i dettagli
-              </div>
-
-              <div className="flex items-center gap-2 mb-4">
-                <Checkbox
-                  id="invia_a_tutti"
-                  checked={formData.invia_a_tutti}
-                  onCheckedChange={checked => setFormData({ ...formData, invia_a_tutti: checked as boolean })}
-                />
-                <Label htmlFor="invia_a_tutti" className="font-semibold">
-                  🚀 Invia a TUTTI ({utenti.length} persone)
-                </Label>
-              </div>
-
-              {/* Pulsanti selezione rapida */}
-              <div className="mb-3">
-                <Label className="mb-2 block font-medium">Selezione rapida partecipanti</Label>
-                <div className="flex gap-2 mb-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleSettoreParticipants("Lavoro")}
-                  >
-                    Settore Lavoro
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleSettoreParticipants("Fiscale")}
-                  >
-                    Settore Fiscale
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={deselectAllParticipants}
-                  >
-                    Deseleziona Tutti
-                  </Button>
-                </div>
-
-                <ScrollArea className="h-[200px] border rounded-md p-4">
-                  <div className="space-y-2">
-                    {utenti.map(u => (
-                      <div key={u.id} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`user-${u.id}`}
-                          checked={selectedPartecipanti.includes(u.id)}
-                          onCheckedChange={() => togglePartecipante(u.id)}
-                        />
-                        <Label htmlFor={`user-${u.id}`} className="cursor-pointer flex-1">
-                          {u.nome} {u.cognome}
-                          {u.settore && (
-                            <span className="ml-2 text-xs text-gray-500">({u.settore})</span>
-                          )}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="teams" checked={formData.riunione_teams} onCheckedChange={c => setFormData({...formData, riunione_teams: !!c})} />
+                <Label htmlFor="teams">Riunione Teams</Label>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSubmit} className="flex-1">
-                {editingEvento ? "Aggiorna" : "Crea"} Evento
-              </Button>
-              <Button variant="outline" onClick={closeDialog}>
-                Annulla
-              </Button>
+            {/* Partecipanti Rapidi */}
+            <div>
+               <Label className="mb-2 block">Partecipanti</Label>
+               <div className="flex gap-2 mb-2">
+                 <Button type="button" variant="outline" size="sm" onClick={() => handleSelezioneSettore('Lavoro')}>Settore Lavoro</Button>
+                 <Button type="button" variant="outline" size="sm" onClick={() => handleSelezioneSettore('Fiscale')}>Settore Fiscale</Button>
+                 <Button type="button" variant="outline" size="sm" onClick={() => setFormData({...formData, partecipanti: []})}>Deseleziona Tutti</Button>
+               </div>
+               <ScrollArea className="h-[150px] border rounded p-2">
+                 {utenti.map(u => (
+                   <div key={u.id} className="flex items-center space-x-2 mb-1">
+                     <Checkbox 
+                       checked={formData.partecipanti.includes(u.id)}
+                       onCheckedChange={(checked) => {
+                         const newPart = checked 
+                           ? [...formData.partecipanti, u.id]
+                           : formData.partecipanti.filter(id => id !== u.id);
+                         setFormData({...formData, partecipanti: newPart});
+                       }}
+                     />
+                     <span className="text-sm">{u.cognome} {u.nome} {u.settore && `(${u.settore})`}</span>
+                   </div>
+                 ))}
+               </ScrollArea>
+            </div>
+
+            <div>
+              <Label>Descrizione</Label>
+              <Textarea value={formData.descrizione} onChange={e => setFormData({...formData, descrizione: e.target.value})} />
             </div>
           </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
+            <Button onClick={handleSaveEvento}>{editingEventoId ? "Aggiorna" : "Salva"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Eliminazione */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Evento</AlertDialogTitle>
+            <AlertDialogDescription>Sei sicuro? L'azione è irreversibile.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEvento} className="bg-red-600">Elimina</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
