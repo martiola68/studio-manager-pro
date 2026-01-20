@@ -531,104 +531,114 @@ export default function ClientiPage() {
   const handleConfirmNewRiferimento = async () => {
     if (!pendingRiferimento) return;
 
+    const { tipo, valore } = pendingRiferimento;
+
     try {
-      const existingValue = await riferimentiValoriService.checkExists(
-        pendingRiferimento.tipo,
-        pendingRiferimento.valore
-      );
+      // ✅ STEP 1: Verifica se il valore esiste già nel database (case-insensitive)
+      const existingValue = await riferimentiValoriService.checkExists(tipo, valore);
 
       if (existingValue) {
-        if (pendingRiferimento.tipo === "matricola_inps") {
-          const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
-          setMatricoleInps(updated);
+        // ✅ Valore già esistente nel database
+        toast({
+          title: "ℹ️ Valore già esistente",
+          description: `Il valore "${existingValue.valore}" è già presente nell'elenco`,
+          variant: "default",
+        });
+
+        // ✅ Aggiorna la lista locale con i dati dal database
+        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+        
+        if (tipo === "matricola_inps") {
+          setMatricoleInps(updatedList);
           setFormData({ ...formData, matricola_inps: existingValue.valore });
           setShowMatricolaDropdown(false);
-        } else if (pendingRiferimento.tipo === "pat_inail") {
-          const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
-          setPatInail(updated);
+        } else if (tipo === "pat_inail") {
+          setPatInail(updatedList);
           setFormData({ ...formData, pat_inail: existingValue.valore });
           setShowPatDropdown(false);
-        } else {
-          const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
-          setCodiciDittaCe(updated);
+        } else if (tipo === "codice_ditta_ce") {
+          setCodiciDittaCe(updatedList);
           setFormData({ ...formData, codice_ditta_ce: existingValue.valore });
           setShowCodiceDropdown(false);
         }
 
-        toast({
-          title: "ℹ️ Valore esistente",
-          description: `Il valore "${existingValue.valore}" è già presente ed è stato selezionato`,
-          variant: "default",
-        });
-
+        // ✅ Chiude solo il popup conferma, NON il dialog principale
         setShowConfirmDialog(false);
         setPendingRiferimento(null);
-        return;
+        return; // ✅ Exit - non tenta l'inserimento
       }
 
-      await riferimentiValoriService.createValore(pendingRiferimento.tipo, pendingRiferimento.valore);
-      
-      if (pendingRiferimento.tipo === "matricola_inps") {
-        const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
-        setMatricoleInps(updated);
-        setFormData({ ...formData, matricola_inps: pendingRiferimento.valore });
-        setShowMatricolaDropdown(false);
-      } else if (pendingRiferimento.tipo === "pat_inail") {
-        const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
-        setPatInail(updated);
-        setFormData({ ...formData, pat_inail: pendingRiferimento.valore });
-        setShowPatDropdown(false);
-      } else {
-        const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
-        setCodiciDittaCe(updated);
-        setFormData({ ...formData, codice_ditta_ce: pendingRiferimento.valore });
-        setShowCodiceDropdown(false);
+      // ✅ STEP 2: Valore non esiste, procedi con l'inserimento
+      const newValue = await riferimentiValoriService.createValore(tipo, valore);
+
+      if (newValue) {
+        // ✅ Inserimento riuscito
+        toast({
+          title: "✅ Successo",
+          description: `${tipo === "matricola_inps" ? "Matricola INPS" : tipo === "pat_inail" ? "Pat INAIL" : "Codice Ditta CE"} aggiunto con successo`,
+        });
+
+        // ✅ Aggiorna la lista e seleziona il nuovo valore
+        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+        
+        if (tipo === "matricola_inps") {
+          setMatricoleInps(updatedList);
+          setFormData({ ...formData, matricola_inps: newValue.valore });
+          setShowMatricolaDropdown(false);
+        } else if (tipo === "pat_inail") {
+          setPatInail(updatedList);
+          setFormData({ ...formData, pat_inail: newValue.valore });
+          setShowPatDropdown(false);
+        } else if (tipo === "codice_ditta_ce") {
+          setCodiciDittaCe(updatedList);
+          setFormData({ ...formData, codice_ditta_ce: newValue.valore });
+          setShowCodiceDropdown(false);
+        }
       }
-
-      const nomiTipo = {
-        matricola_inps: "Matricola INPS",
-        pat_inail: "PAT INAIL",
-        codice_ditta_ce: "Codice Ditta CE"
-      };
-
-      toast({
-        title: "Successo",
-        description: `${nomiTipo[pendingRiferimento.tipo]} aggiunto con successo`,
-      });
     } catch (error: any) {
-      console.error("Errore salvataggio valore:", error);
-      
-      if (error.message?.includes("duplicate key") || error.message?.includes("unique constraint")) {
+      // ✅ STEP 3: Gestione errori (incluso fallback per 409)
+      console.error("Errore durante l'inserimento del riferimento:", error);
+
+      if (error.message?.includes("duplicate key") || error.message?.includes("unique constraint") || error.code === "23505") {
+        // ✅ Errore 409 - Race condition (valore inserito da altro utente nello stesso momento)
         toast({
           title: "⚠️ Valore già esistente",
-          description: `Il valore "${pendingRiferimento.valore}" è già presente nell'elenco`,
+          description: `Il valore "${valore}" è già presente nell'elenco`,
           variant: "default",
         });
 
-        if (pendingRiferimento.tipo === "matricola_inps") {
-          const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
-          setMatricoleInps(updated);
-          setFormData({ ...formData, matricola_inps: pendingRiferimento.valore });
-          setShowMatricolaDropdown(false);
-        } else if (pendingRiferimento.tipo === "pat_inail") {
-          const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
-          setPatInail(updated);
-          setFormData({ ...formData, pat_inail: pendingRiferimento.valore });
-          setShowPatDropdown(false);
-        } else {
-          const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
-          setCodiciDittaCe(updated);
-          setFormData({ ...formData, codice_ditta_ce: pendingRiferimento.valore });
-          setShowCodiceDropdown(false);
+        // ✅ Ricarica la lista e seleziona il valore esistente
+        try {
+          const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+          
+          if (tipo === "matricola_inps") {
+            setMatricoleInps(updatedList);
+            setFormData({ ...formData, matricola_inps: valore });
+            setShowMatricolaDropdown(false);
+          } else if (tipo === "pat_inail") {
+            setPatInail(updatedList);
+            setFormData({ ...formData, pat_inail: valore });
+            setShowPatDropdown(false);
+          } else if (tipo === "codice_ditta_ce") {
+            setCodiciDittaCe(updatedList);
+            setFormData({ ...formData, codice_ditta_ce: valore });
+            setShowCodiceDropdown(false);
+          }
+        } catch (reloadError) {
+          console.error("Errore durante il ricaricamento della lista:", reloadError);
         }
       } else {
+        // ✅ Altri errori generici
         toast({
-          title: "Errore",
-          description: "Impossibile salvare il valore",
+          title: "❌ Errore",
+          description: "Impossibile salvare il valore. Riprova.",
           variant: "destructive",
         });
       }
     } finally {
+      // ✅ Chiude SOLO il popup di conferma
+      // ✅ Il dialog principale rimane aperto
+      // ✅ Il tab "Altri Dati" rimane attivo
       setShowConfirmDialog(false);
       setPendingRiferimento(null);
     }
