@@ -522,14 +522,25 @@ export default function AgendaPage() {
                 {dayEvents.slice(0, 3).map(ev => {
                   const color = getEventColor(ev);
                   return (
-                    <div 
-                      key={ev.id}
-                      className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm"
-                      style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
-                      onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
-                    >
-                      {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
-                    </div>
+                    <TooltipProvider key={ev.id}>
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
+                            onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
+                          >
+                            {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent 
+                          side="right" 
+                          className="max-w-sm p-4 text-sm whitespace-pre-line"
+                        >
+                          {getEventoSummary(ev)}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   );
                 })}
                 {dayEvents.length > 3 && (
