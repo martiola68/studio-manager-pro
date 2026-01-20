@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -76,9 +76,6 @@ export default function PromemoriaPage() {
   const loadPromemoria = async () => {
     try {
       setLoading(true);
-      // Query automatica - RLS gestisce il filtro:
-      // - Responsabile: vede tutti i promemoria del suo settore
-      // - Utente generico: vede solo i suoi promemoria
       const data = await promemoriaService.getPromemoria();
       setPromemoria(data || []);
     } catch (error: any) {
@@ -158,16 +155,37 @@ export default function PromemoriaPage() {
   };
 
   const resetForm = useCallback(() => {
-    setFormData({
-      titolo: "",
-      descrizione: "",
-      data_scadenza: undefined,
-      priorita: "Media",
-      working_progress: "Aperto",
-      destinatario_id: "",
-      settore: ""
-    });
-  }, []);
+    if (!currentUser) return;
+    
+    // Se utente NON è responsabile → auto-seleziona se stesso come destinatario
+    if (!currentUser.responsabile) {
+      setFormData({
+        titolo: "",
+        descrizione: "",
+        data_scadenza: undefined,
+        priorita: "Media",
+        working_progress: "Aperto",
+        destinatario_id: currentUser.id,
+        settore: currentUser.settore || ""
+      });
+    } else {
+      // Se responsabile → form vuoto
+      setFormData({
+        titolo: "",
+        descrizione: "",
+        data_scadenza: undefined,
+        priorita: "Media",
+        working_progress: "Aperto",
+        destinatario_id: "",
+        settore: ""
+      });
+    }
+  }, [currentUser]);
+
+  const handleOpenCreateDialog = useCallback(() => {
+    resetForm();
+    setIsCreateDialogOpen(true);
+  }, [resetForm]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,7 +333,7 @@ export default function PromemoriaPage() {
             <div className="flex items-center gap-2 mt-2">
               {currentUser.responsabile ? (
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  👁️ Modalità Responsabile: Visualizzi tutti i promemoria del settore "{currentUser.settore}"
+                  👁️ Modalità Responsabile: Visualizzi tutti i promemoria del settore &quot;{currentUser.settore}&quot;
                 </Badge>
               ) : (
                 <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
@@ -325,7 +343,7 @@ export default function PromemoriaPage() {
             </div>
           )}
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={handleOpenCreateDialog}>
           <Plus className="w-4 h-4 mr-2" />
           Nuovo Promemoria
         </Button>
@@ -425,6 +443,143 @@ export default function PromemoriaPage() {
         </CardContent>
       </Card>
 
+      {/* DIALOG CREAZIONE PROMEMORIA */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nuovo Promemoria</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4 pt-4">
+            <div>
+              <Label>Titolo *</Label>
+              <Input 
+                value={formData.titolo}
+                onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
+                required
+                placeholder="Inserisci titolo promemoria"
+              />
+            </div>
+            
+            <div>
+              <Label>Descrizione</Label>
+              <Input 
+                value={formData.descrizione}
+                onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
+                placeholder="Dettagli aggiuntivi"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Destinatario</Label>
+                {currentUser?.responsabile ? (
+                  // RESPONSABILE: Select abilitato
+                  <Select
+                    value={formData.destinatario_id || "none"}
+                    onValueChange={handleDestinatarioChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map(u => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nome} {u.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  // UTENTE GENERICO: Input disabilitato con se stesso
+                  <Input 
+                    value={currentUser ? `${currentUser.nome} ${currentUser.cognome}` : ""} 
+                    disabled 
+                    className="bg-gray-100" 
+                  />
+                )}
+              </div>
+              <div>
+                <Label>Settore</Label>
+                <Input 
+                  value={formData.settore || ""} 
+                  disabled 
+                  className="bg-gray-100" 
+                  placeholder={currentUser?.responsabile ? "Seleziona destinatario" : ""}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Priorità *</Label>
+                <Select
+                  value={formData.priorita}
+                  onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bassa">Bassa</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Stato *</Label>
+                <Select
+                  value={formData.working_progress}
+                  onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aperto">Aperto</SelectItem>
+                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                    <SelectItem value="Presa visione">Presa visione</SelectItem>
+                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                    <SelectItem value="Completato">Completato</SelectItem>
+                    <SelectItem value="Annullato">Annullato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Scadenza *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data_scadenza}
+                      onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>
+                Annulla
+              </Button>
+              <Button type="submit" className="flex-1" disabled={loading}>
+                {loading ? "Creazione..." : "Crea Promemoria"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG MODIFICA PROMEMORIA */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -550,6 +705,7 @@ export default function PromemoriaPage() {
         </DialogContent>
       </Dialog>
 
+      {/* DIALOG ELIMINAZIONE */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
