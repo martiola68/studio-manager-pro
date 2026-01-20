@@ -534,18 +534,15 @@ export default function ClientiPage() {
     const { tipo, valore } = pendingRiferimento;
 
     try {
-      // ✅ STEP 1: Verifica se il valore esiste già nel database (case-insensitive)
       const existingValue = await riferimentiValoriService.checkExists(tipo, valore);
 
       if (existingValue) {
-        // ✅ Valore già esistente nel database
         toast({
           title: "ℹ️ Valore già esistente",
           description: `Il valore "${existingValue.valore}" è già presente nell'elenco`,
           variant: "default",
         });
 
-        // ✅ Aggiorna la lista locale con i dati dal database
         const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
         
         if (tipo === "matricola_inps") {
@@ -562,23 +559,19 @@ export default function ClientiPage() {
           setShowCodiceDropdown(false);
         }
 
-        // ✅ Chiude solo il popup conferma, NON il dialog principale
         setShowConfirmDialog(false);
         setPendingRiferimento(null);
-        return; // ✅ Exit - non tenta l'inserimento
+        return;
       }
 
-      // ✅ STEP 2: Valore non esiste, procedi con l'inserimento
       const newValue = await riferimentiValoriService.createValore(tipo, valore);
 
       if (newValue) {
-        // ✅ Inserimento riuscito
         toast({
           title: "✅ Successo",
           description: `${tipo === "matricola_inps" ? "Matricola INPS" : tipo === "pat_inail" ? "Pat INAIL" : "Codice Ditta CE"} aggiunto con successo`,
         });
 
-        // ✅ Aggiorna la lista e seleziona il nuovo valore
         const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
         
         if (tipo === "matricola_inps") {
@@ -596,18 +589,15 @@ export default function ClientiPage() {
         }
       }
     } catch (error: any) {
-      // ✅ STEP 3: Gestione errori (incluso fallback per 409)
       console.error("Errore durante l'inserimento del riferimento:", error);
 
       if (error.message?.includes("duplicate key") || error.message?.includes("unique constraint") || error.code === "23505") {
-        // ✅ Errore 409 - Race condition (valore inserito da altro utente nello stesso momento)
         toast({
           title: "⚠️ Valore già esistente",
           description: `Il valore "${valore}" è già presente nell'elenco`,
           variant: "default",
         });
 
-        // ✅ Ricarica la lista e seleziona il valore esistente
         try {
           const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
           
@@ -628,7 +618,6 @@ export default function ClientiPage() {
           console.error("Errore durante il ricaricamento della lista:", reloadError);
         }
       } else {
-        // ✅ Altri errori generici
         toast({
           title: "❌ Errore",
           description: "Impossibile salvare il valore. Riprova.",
@@ -636,9 +625,6 @@ export default function ClientiPage() {
         });
       }
     } finally {
-      // ✅ Chiude SOLO il popup di conferma
-      // ✅ Il dialog principale rimane aperto
-      // ✅ Il tab "Altri Dati" rimane attivo
       setShowConfirmDialog(false);
       setPendingRiferimento(null);
     }
@@ -1972,11 +1958,7 @@ export default function ClientiPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={(open) => {
-        if (!open) {
-          handleCancelNewRiferimento();
-        }
-      }}>
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>⚠️ Conferma Inserimento</AlertDialogTitle>
@@ -1986,24 +1968,10 @@ export default function ClientiPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleCancelNewRiferimento();
-              }}
-            >
+            <AlertDialogCancel onClick={handleCancelNewRiferimento}>
               Annulla
             </AlertDialogCancel>
-            <AlertDialogAction 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleConfirmNewRiferimento();
-              }}
-            >
+            <AlertDialogAction onClick={handleConfirmNewRiferimento}>
               Conferma
             </AlertDialogAction>
           </AlertDialogFooter>
