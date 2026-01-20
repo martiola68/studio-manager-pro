@@ -26,11 +26,20 @@ import {
   Grid, 
   CalendarDays,
   Filter,
-  Calendar
+  Calendar,
+  User,
+  Building2,
+  FileText
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, startOfDay, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // DEFINIZIONE TIPI CORRETTA
 type ClienteBase = Pick<Database["public"]["Tables"]["tbclienti"]["Row"], "id" | "ragione_sociale" | "codice_fiscale" | "partita_iva">;
@@ -334,74 +343,150 @@ export default function AgendaPage() {
     return "#EF4444"; // Rosso (Fuori sede)
   };
 
+  // Helper: Genera testo riepilogativo per tooltip
+  const getEventoSummary = (evento: EventoWithRelations): string => {
+    const startDate = parseISO(evento.data_inizio);
+    const endDate = parseISO(evento.data_fine);
+    
+    const utenteNome = evento.utente 
+      ? `${evento.utente.nome} ${evento.utente.cognome}${evento.utente.settore ? ` (${evento.utente.settore})` : ""}`
+      : "Non assegnato";
+    
+    const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
+    
+    const luogo = evento.in_sede 
+      ? `Sala ${evento.sala || "??"} (In Sede)` 
+      : "Fuori Sede";
+    
+    const tipo = evento.evento_generico 
+      ? "Evento Generico" 
+      : evento.riunione_teams 
+        ? "Riunione Teams" 
+        : "Appuntamento";
+    
+    let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
+    summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
+    summary += `⏰ ${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}\n\n`;
+    summary += `👤 Assegnato a: ${utenteNome}\n\n`;
+    summary += `🏢 Cliente: ${clienteNome}\n\n`;
+    summary += `📍 Luogo: ${luogo}\n\n`;
+    summary += `🔵 Tipo: ${tipo}\n`;
+    
+    if (evento.riunione_teams) {
+      summary += `💻 Riunione Teams: Sì\n`;
+      if (evento.link_teams) {
+        summary += `🔗 Link: ${evento.link_teams}\n`;
+      }
+    }
+    
+    if (evento.descrizione) {
+      summary += `\n📝 Note:\n${evento.descrizione}`;
+    }
+    
+    return summary;
+  };
+
   // Filtro eventi
   const filteredEvents = eventi.filter(e => filtroUtente === "tutti" || e.utente_id === filtroUtente);
 
   // --- RENDERERS ---
 
-  const renderEventCard = (evento: EventoWithRelations, showDate: boolean = false) => {
-    const color = getEventColor(evento);
+  // Render Event Card (Lista e Mese) con Tooltip
+  const renderEventCard = (evento: Evento, compact: boolean = false) => {
+    if (!evento) return null;
+
     const startDate = parseISO(evento.data_inizio);
     const endDate = parseISO(evento.data_fine);
-    
+    const utenteNome = evento.utente
+      ? `${evento.utente.nome} ${evento.utente.cognome}`
+      : "Non assegnato";
+    const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
+
+    const colorClass = evento.evento_generico
+      ? "border-l-blue-500"
+      : evento.in_sede
+      ? "border-l-green-500"
+      : "border-l-red-500";
+
     return (
-      <Card 
-        key={evento.id}
-        className="mb-2 cursor-pointer hover:shadow-md transition-shadow border-l-4 overflow-hidden shadow-sm"
-        style={{ borderLeftColor: color }}
-        onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}
-      >
-        <CardContent className="p-3">
-          <div className="flex justify-between items-start">
-            <div className="flex-1 overflow-hidden">
-              {/* UTENTE (Focus Principale) */}
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-4 w-4 text-gray-500" />
-                <span className="font-bold text-gray-900 truncate">
-                  {evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Utente sconosciuto"}
-                </span>
-              </div>
-
-              {/* Cliente */}
-              {(!evento.evento_generico && evento.cliente) && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                  <Building className="h-3 w-3" />
-                  <span className="truncate">{evento.cliente.ragione_sociale}</span>
+      <TooltipProvider key={evento.id}>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <Card
+              className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${colorClass}`}
+              onClick={() => handleEditEvento(evento)}
+            >
+              <CardContent className="p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditEvento(evento);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEventoToDelete(evento.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
                 </div>
-              )}
 
-              {/* Orario e Sala */}
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-1">
-                <div className="flex items-center">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {showDate && <span className="mr-1">{format(startDate, "dd/MM")}</span>}
-                  {evento.tutto_giorno 
-                    ? "Tutto il giorno" 
-                    : `${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}`
-                  }
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-base">{utenteNome}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    <span>{clienteNome}</span>
+                  </div>
+
+                  {evento.in_sede && evento.sala && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-green-600" />
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                        SALA {evento.sala}
+                      </span>
+                    </div>
+                  )}
+
+                  {!compact && evento.titolo && (
+                    <div className="flex items-center gap-2 text-sm mt-2">
+                      <FileText className="h-4 w-4" />
+                      <span className="text-muted-foreground">{evento.titolo}</span>
+                    </div>
+                  )}
                 </div>
-                
-                {evento.in_sede && evento.sala && (
-                  <Badge variant="secondary" className="h-5 px-1 bg-green-100 text-green-700 hover:bg-green-200 border-0">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    SALA {evento.sala}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Azioni */}
-            <div className="flex flex-col gap-1 ml-2">
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}>
-                <Pencil className="h-3 w-3 text-blue-600" />
-              </Button>
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setEventoToDelete(evento.id); setDeleteDialogOpen(true); }}>
-                <Trash2 className="h-3 w-3 text-red-600" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent 
+            side="right" 
+            className="max-w-sm p-4 text-sm whitespace-pre-line"
+          >
+            {getEventoSummary(evento)}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -506,31 +591,56 @@ export default function AgendaPage() {
                     className="border-r p-1 hover:bg-gray-50 transition-colors cursor-pointer relative"
                     onClick={() => handleNuovoEvento(day, hour)}
                   >
-                    {cellEvents.map(ev => {
-                      const color = getEventColor(ev);
-                      return (
-                        <div 
-                          key={ev.id}
-                          className="text-xs p-2 mb-1 rounded shadow-sm border-l-4 text-white cursor-pointer hover:opacity-90 transition-opacity"
-                          style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
-                          onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
-                        >
-                          <div className="font-bold truncate">
-                            {ev.utente ? `${ev.utente.cognome} ${ev.utente.nome?.charAt(0)}.` : 'N/A'}
-                          </div>
-                          {!ev.evento_generico && ev.cliente && (
-                            <div className="truncate opacity-90 text-[10px]">
-                              {ev.cliente.ragione_sociale}
-                            </div>
-                          )}
-                          {ev.in_sede && ev.sala && (
-                            <div className="mt-1 inline-block bg-white/20 px-1 rounded text-[10px] font-bold">
-                              SALA {ev.sala}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {cellEvents.length > 0 && (
+                      <div className="space-y-1">
+                        {cellEvents.map((evento) => {
+                          const utenteNome = evento.utente
+                            ? `${evento.utente.nome?.charAt(0) || ""}. ${evento.utente.cognome || ""}`
+                            : "?";
+                          const clienteNome = evento.cliente?.ragione_sociale || "";
+
+                          const colorClass = evento.evento_generico
+                            ? "bg-blue-50 border-blue-500"
+                            : evento.in_sede
+                            ? "bg-green-50 border-green-500"
+                            : "bg-red-50 border-red-500";
+
+                          return (
+                            <TooltipProvider key={evento.id}>
+                              <Tooltip delayDuration={300}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`p-2 rounded border-l-2 ${colorClass} cursor-pointer hover:shadow-sm transition-shadow text-xs`}
+                                    onClick={() => handleEditEvento(evento)}
+                                  >
+                                    <div className="font-semibold text-gray-900">
+                                      👤 {utenteNome}
+                                    </div>
+                                    <div className="text-gray-600 truncate">
+                                      🏢 {clienteNome}
+                                    </div>
+                                    {evento.in_sede && evento.sala && (
+                                      <div className="text-green-700 font-medium mt-1">
+                                        📍 SALA {evento.sala}
+                                      </div>
+                                    )}
+                                    <div className="text-gray-500 mt-1">
+                                      ⏰ {format(parseISO(evento.data_inizio), "HH:mm")}
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent 
+                                  side="right" 
+                                  className="max-w-sm p-4 text-sm whitespace-pre-line"
+                                >
+                                  {getEventoSummary(evento)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
