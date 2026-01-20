@@ -93,6 +93,15 @@ export default function PromemoriaPage() {
     }
   };
 
+  const loadUtenti = async () => {
+    try {
+      const data = await utenteService.getUtenti();
+      setUtenti(data || []);
+    } catch (error) {
+      console.error("Errore caricamento utenti:", error);
+    }
+  };
+
   const checkUserAndLoad = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
