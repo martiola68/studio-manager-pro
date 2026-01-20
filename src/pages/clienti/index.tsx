@@ -41,7 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar, X } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar, X, ChevronDown } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
@@ -52,7 +52,6 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
@@ -109,6 +108,10 @@ export default function ClientiPage() {
   const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
   const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
   const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
+
+  const [showMatricolaDropdown, setShowMatricolaDropdown] = useState(false);
+  const [showPatDropdown, setShowPatDropdown] = useState(false);
+  const [showCodiceDropdown, setShowCodiceDropdown] = useState(false);
 
   const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -501,7 +504,7 @@ export default function ClientiPage() {
     });
   };
 
-  const handleRequestNewRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) => {
+  const handleRequestNewRiferimento = async (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) => {
     if (!valore.trim()) return;
 
     const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
@@ -510,10 +513,13 @@ export default function ClientiPage() {
     if (exists) {
       if (tipo === "matricola_inps") {
         setFormData({ ...formData, matricola_inps: valore });
+        setShowMatricolaDropdown(false);
       } else if (tipo === "pat_inail") {
         setFormData({ ...formData, pat_inail: valore });
+        setShowPatDropdown(false);
       } else {
         setFormData({ ...formData, codice_ditta_ce: valore });
+        setShowCodiceDropdown(false);
       }
       return;
     }
@@ -532,14 +538,17 @@ export default function ClientiPage() {
         const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
         setMatricoleInps(updated);
         setFormData({ ...formData, matricola_inps: pendingRiferimento.valore });
+        setShowMatricolaDropdown(false);
       } else if (pendingRiferimento.tipo === "pat_inail") {
         const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
         setPatInail(updated);
         setFormData({ ...formData, pat_inail: pendingRiferimento.valore });
+        setShowPatDropdown(false);
       } else {
         const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
         setCodiciDittaCe(updated);
         setFormData({ ...formData, codice_ditta_ce: pendingRiferimento.valore });
+        setShowCodiceDropdown(false);
       }
 
       const nomiTipo = {
@@ -552,13 +561,39 @@ export default function ClientiPage() {
         title: "Successo",
         description: `${nomiTipo[pendingRiferimento.tipo]} aggiunto con successo`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore salvataggio valore:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile salvare il valore",
-        variant: "destructive",
-      });
+      
+      if (error.message?.includes("duplicate key") || error.message?.includes("unique constraint")) {
+        toast({
+          title: "⚠️ Valore già esistente",
+          description: `Il valore "${pendingRiferimento.valore}" è già presente nell'elenco`,
+          variant: "default",
+        });
+
+        if (pendingRiferimento.tipo === "matricola_inps") {
+          const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
+          setMatricoleInps(updated);
+          setFormData({ ...formData, matricola_inps: pendingRiferimento.valore });
+          setShowMatricolaDropdown(false);
+        } else if (pendingRiferimento.tipo === "pat_inail") {
+          const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
+          setPatInail(updated);
+          setFormData({ ...formData, pat_inail: pendingRiferimento.valore });
+          setShowPatDropdown(false);
+        } else {
+          const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
+          setCodiciDittaCe(updated);
+          setFormData({ ...formData, codice_ditta_ce: pendingRiferimento.valore });
+          setShowCodiceDropdown(false);
+        }
+      } else {
+        toast({
+          title: "Errore",
+          description: "Impossibile salvare il valore",
+          variant: "destructive",
+        });
+      }
     } finally {
       setShowConfirmDialog(false);
       setPendingRiferimento(null);
@@ -684,6 +719,12 @@ export default function ClientiPage() {
       codice_ditta_ce: "Codice Ditta CE"
     };
     return nomi[tipo];
+  };
+
+  const getFilteredSuggestions = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", searchValue: string) => {
+    const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
+    if (!searchValue) return lista;
+    return lista.filter(item => item.valore.toLowerCase().includes(searchValue.toLowerCase()));
   };
 
   if (loading) {
@@ -1309,176 +1350,209 @@ export default function ClientiPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Matricola INPS</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {formData.matricola_inps || "Seleziona o digita..."}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
-                      <Command>
-                        <CommandInput 
-                          placeholder="Cerca o crea matricola..."
-                          value={formData.matricola_inps}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, matricola_inps: value });
-                          }}
-                        />
-                        <CommandEmpty>
-                          <Button
-                            variant="ghost"
-                            className="w-full"
+                  <div className="relative">
+                    <Input
+                      value={formData.matricola_inps}
+                      onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+                      onFocus={() => setShowMatricolaDropdown(true)}
+                      placeholder="Digita valore..."
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowMatricolaDropdown(!showMatricolaDropdown)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    
+                    {showMatricolaDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
+                        {formData.matricola_inps && !matricoleInps.some(m => m.valore === formData.matricola_inps) && (
+                          <div
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
                             onClick={() => handleRequestNewRiferimento("matricola_inps", formData.matricola_inps)}
                           >
-                            Crea: {formData.matricola_inps}
-                          </Button>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {matricoleInps.map((m) => (
-                            <CommandItem
-                              key={m.id}
-                              onSelect={() => {
-                                setFormData({ ...formData, matricola_inps: m.valore });
+                            <span className="text-sm text-blue-600">+ Crea: {formData.matricola_inps}</span>
+                          </div>
+                        )}
+                        
+                        {getFilteredSuggestions("matricola_inps", formData.matricola_inps).map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
+                          >
+                            <span
+                              onClick={() => {
+                                setFormData({ ...formData, matricola_inps: item.valore });
+                                setShowMatricolaDropdown(false);
+                              }}
+                              className="flex-1"
+                            >
+                              {item.valore}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRiferimentoValore(item.id, "matricola_inps");
                               }}
                             >
-                              <span className="flex-1">{m.valore}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteRiferimentoValore(m.id, "matricola_inps");
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                        
+                        {getFilteredSuggestions("matricola_inps", formData.matricola_inps).length === 0 && !formData.matricola_inps && (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Nessun valore salvato. Digita per creare.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <Label>Pat INAIL</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {formData.pat_inail || "Seleziona o digita..."}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
-                      <Command>
-                        <CommandInput 
-                          placeholder="Cerca o crea PAT..."
-                          value={formData.pat_inail}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, pat_inail: value });
-                          }}
-                        />
-                        <CommandEmpty>
-                          <Button
-                            variant="ghost"
-                            className="w-full"
+                  <div className="relative">
+                    <Input
+                      value={formData.pat_inail}
+                      onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+                      onFocus={() => setShowPatDropdown(true)}
+                      placeholder="Digita valore..."
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowPatDropdown(!showPatDropdown)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    
+                    {showPatDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
+                        {formData.pat_inail && !patInail.some(p => p.valore === formData.pat_inail) && (
+                          <div
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
                             onClick={() => handleRequestNewRiferimento("pat_inail", formData.pat_inail)}
                           >
-                            Crea: {formData.pat_inail}
-                          </Button>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {patInail.map((p) => (
-                            <CommandItem
-                              key={p.id}
-                              onSelect={() => {
-                                setFormData({ ...formData, pat_inail: p.valore });
+                            <span className="text-sm text-blue-600">+ Crea: {formData.pat_inail}</span>
+                          </div>
+                        )}
+                        
+                        {getFilteredSuggestions("pat_inail", formData.pat_inail).map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
+                          >
+                            <span
+                              onClick={() => {
+                                setFormData({ ...formData, pat_inail: item.valore });
+                                setShowPatDropdown(false);
+                              }}
+                              className="flex-1"
+                            >
+                              {item.valore}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRiferimentoValore(item.id, "pat_inail");
                               }}
                             >
-                              <span className="flex-1">{p.valore}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteRiferimentoValore(p.id, "pat_inail");
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                        
+                        {getFilteredSuggestions("pat_inail", formData.pat_inail).length === 0 && !formData.pat_inail && (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Nessun valore salvato. Digita per creare.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
                   <Label>Codice Ditta CE</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {formData.codice_ditta_ce || "Seleziona o digita..."}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[400px] p-0">
-                      <Command>
-                        <CommandInput 
-                          placeholder="Cerca o crea codice..."
-                          value={formData.codice_ditta_ce}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, codice_ditta_ce: value });
-                          }}
-                        />
-                        <CommandEmpty>
-                          <Button
-                            variant="ghost"
-                            className="w-full"
+                  <div className="relative">
+                    <Input
+                      value={formData.codice_ditta_ce}
+                      onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+                      onFocus={() => setShowCodiceDropdown(true)}
+                      placeholder="Digita valore..."
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowCodiceDropdown(!showCodiceDropdown)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    
+                    {showCodiceDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
+                        {formData.codice_ditta_ce && !codiciDittaCe.some(c => c.valore === formData.codice_ditta_ce) && (
+                          <div
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
                             onClick={() => handleRequestNewRiferimento("codice_ditta_ce", formData.codice_ditta_ce)}
                           >
-                            Crea: {formData.codice_ditta_ce}
-                          </Button>
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {codiciDittaCe.map((c) => (
-                            <CommandItem
-                              key={c.id}
-                              onSelect={() => {
-                                setFormData({ ...formData, codice_ditta_ce: c.valore });
+                            <span className="text-sm text-blue-600">+ Crea: {formData.codice_ditta_ce}</span>
+                          </div>
+                        )}
+                        
+                        {getFilteredSuggestions("codice_ditta_ce", formData.codice_ditta_ce).map((item) => (
+                          <div
+                            key={item.id}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
+                          >
+                            <span
+                              onClick={() => {
+                                setFormData({ ...formData, codice_ditta_ce: item.valore });
+                                setShowCodiceDropdown(false);
+                              }}
+                              className="flex-1"
+                            >
+                              {item.valore}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRiferimentoValore(item.id, "codice_ditta_ce");
                               }}
                             >
-                              <span className="flex-1">{c.valore}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteRiferimentoValore(c.id, "codice_ditta_ce");
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                        
+                        {getFilteredSuggestions("codice_ditta_ce", formData.codice_ditta_ce).length === 0 && !formData.codice_ditta_ce && (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Nessun valore salvato. Digita per creare.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
