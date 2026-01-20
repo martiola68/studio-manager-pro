@@ -949,6 +949,27 @@ export type Database = {
           },
         ]
       }
+      tbreferimenti_valori: {
+        Row: {
+          created_at: string | null
+          id: string
+          tipo: string
+          valore: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          tipo: string
+          valore: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          tipo?: string
+          valore?: string
+        }
+        Relationships: []
+      }
       tbroperatore: {
         Row: {
           created_at: string | null

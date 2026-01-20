@@ -31,16 +31,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, FolderOpen, Calendar } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar, X } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
 import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
+import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
@@ -48,6 +50,7 @@ type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
+type RiferimentoValore = Database["public"]["Tables"]["tbreferimenti_valori"]["Row"];
 
 type ScadenzariSelezionati = {
   iva: boolean;
@@ -88,6 +91,10 @@ export default function ClientiPage() {
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
 
+  const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
+  const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
+  const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
+
   const [formData, setFormData] = useState({
     cod_cliente: "",
     ragione_sociale: "",
@@ -99,6 +106,7 @@ export default function ClientiPage() {
     provincia: "",
     email: "",
     tipo_cliente: "PERSONA_FISICA" as string,
+    tipologia_cliente: "" as "Interno" | "Esterno" | "",
     attivo: true,
     note: "",
     utente_operatore_id: "",
@@ -111,7 +119,6 @@ export default function ClientiPage() {
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
     settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
-    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
@@ -164,12 +171,24 @@ export default function ClientiPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [clientiData, contattiData, utentiData, cassettiData, prestazioniData] = await Promise.all([
+      const [
+        clientiData,
+        contattiData,
+        utentiData,
+        cassettiData,
+        prestazioniData,
+        matricoleData,
+        patData,
+        codiciData
+      ] = await Promise.all([
         clienteService.getClienti(),
         contattoService.getContatti(),
         utenteService.getUtenti(),
         cassettiFiscaliService.getCassettiFiscali(),
         supabase.from("tbprestazioni").select("*").order("descrizione"),
+        riferimentiValoriService.getValoriByTipo("matricola_inps"),
+        riferimentiValoriService.getValoriByTipo("pat_inail"),
+        riferimentiValoriService.getValoriByTipo("codice_ditta_ce")
       ]);
 
       setClienti(clientiData);
@@ -177,6 +196,9 @@ export default function ClientiPage() {
       setUtenti(utentiData);
       setCassettiFiscali(cassettiData);
       setPrestazioni(prestazioniData.data || []);
+      setMatricoleInps(matricoleData);
+      setPatInail(patData);
+      setCodiciDittaCe(codiciData);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
@@ -228,6 +250,8 @@ export default function ClientiPage() {
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
+        utente_payroll_id: formData.utente_payroll_id || null,
+        professionista_payroll_id: formData.professionista_payroll_id || null,
         contatto1_id: formData.contatto1_id || null,
         contatto2_id: formData.contatto2_id || null,
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
@@ -235,8 +259,6 @@ export default function ClientiPage() {
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
         settore: formData.settore || null,
         tipologia_cliente: formData.tipologia_cliente || null,
-        utente_payroll_id: formData.utente_payroll_id || null,
-        professionista_payroll_id: formData.professionista_payroll_id || null,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -335,7 +357,6 @@ export default function ClientiPage() {
         description: "Scadenzari aggiornati con successo. Il nominativo è stato inserito/aggiornato negli scadenzari selezionati.",
       });
       
-      // Ricarica i dati per aggiornare la lista
       loadData();
       setScadenzariDialogOpen(false);
       setSelectedClienteForScadenzari(null);
@@ -367,6 +388,7 @@ export default function ClientiPage() {
       provincia: cliente.provincia || "",
       email: cliente.email || "",
       tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
+      tipologia_cliente: (cliente.tipologia_cliente as "Interno" | "Esterno") || "",
       attivo: cliente.attivo ?? true,
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
@@ -379,7 +401,6 @@ export default function ClientiPage() {
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
       settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
-      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
       matricola_inps: cliente.matricola_inps || "",
       pat_inail: cliente.pat_inail || "",
       codice_ditta_ce: cliente.codice_ditta_ce || "",
@@ -400,6 +421,7 @@ export default function ClientiPage() {
       provincia: "",
       email: "",
       tipo_cliente: "PERSONA_FISICA",
+      tipologia_cliente: "",
       attivo: true,
       note: "",
       utente_operatore_id: "",
@@ -412,7 +434,6 @@ export default function ClientiPage() {
       tipo_redditi: "",
       cassetto_fiscale_id: "",
       settore: "",
-      tipologia_cliente: "",
       matricola_inps: "",
       pat_inail: "",
       codice_ditta_ce: "",
@@ -444,6 +465,32 @@ export default function ClientiPage() {
       data_ultima_verifica: undefined,
       scadenza_antiriciclaggio: undefined,
     });
+  };
+
+  const handleDeleteRiferimentoValore = async (id: string, tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
+    try {
+      await riferimentiValoriService.deleteValore(id);
+      
+      if (tipo === "matricola_inps") {
+        setMatricoleInps(matricoleInps.filter(m => m.id !== id));
+      } else if (tipo === "pat_inail") {
+        setPatInail(patInail.filter(p => p.id !== id));
+      } else {
+        setCodiciDittaCe(codiciDittaCe.filter(c => c.id !== id));
+      }
+
+      toast({
+        title: "Successo",
+        description: "Valore eliminato con successo",
+      });
+    } catch (error) {
+      console.error("Errore eliminazione valore:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il valore",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportCSV = () => {
@@ -532,7 +579,6 @@ export default function ClientiPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-2">
           <div>
@@ -558,7 +604,6 @@ export default function ClientiPage() {
         </div>
       </div>
 
-      {/* Statistiche */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -597,13 +642,11 @@ export default function ClientiPage() {
         </Card>
       </div>
 
-      {/* Ricerca e Filtri */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Barra di ricerca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
@@ -614,7 +657,6 @@ export default function ClientiPage() {
             />
           </div>
 
-          {/* Filtro alfabetico */}
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Button
@@ -641,7 +683,6 @@ export default function ClientiPage() {
         </CardContent>
       </Card>
 
-      {/* Tabella Clienti */}
       <Card>
         <CardContent className="p-0">
           {filteredClienti.length === 0 ? (
@@ -730,7 +771,6 @@ export default function ClientiPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog Nuovo/Modifica Cliente */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -777,6 +817,24 @@ export default function ClientiPage() {
                     <SelectContent>
                       <SelectItem value="PERSONA_FISICA">Persona Fisica</SelectItem>
                       <SelectItem value="PERSONA_GIURIDICA">Persona Giuridica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
+                  <Select
+                    value={formData.tipologia_cliente || undefined}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, tipologia_cliente: value as "Interno" | "Esterno" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipologia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Interno">Interno</SelectItem>
+                      <SelectItem value="Esterno">Esterno</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -927,15 +985,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
                   <Select
-                    value={formData.utente_operatore_id || undefined}
+                    value={formData.utente_operatore_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_operatore_id: value })
+                      setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -948,15 +1007,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_professionista_id">Utente Professionista</Label>
                   <Select
-                    value={formData.utente_professionista_id || undefined}
+                    value={formData.utente_professionista_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_professionista_id: value })
+                      setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -969,15 +1029,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
                   <Select
-                    value={formData.utente_payroll_id || undefined}
+                    value={formData.utente_payroll_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_payroll_id: value })
+                      setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -990,15 +1051,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
                   <Select
-                    value={formData.professionista_payroll_id || undefined}
+                    value={formData.professionista_payroll_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, professionista_payroll_id: value })
+                      setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -1011,15 +1073,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto1_id">Contatto 1</Label>
                   <Select
-                    value={formData.contatto1_id || undefined}
+                    value={formData.contatto1_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value })
+                      setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -1032,15 +1095,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="contatto2_id">Contatto 2</Label>
                   <Select
-                    value={formData.contatto2_id || undefined}
+                    value={formData.contatto2_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto2_id: value })
+                      setFormData({ ...formData, contatto2_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {contatti.map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
                           {contatto.nome} {contatto.cognome}
@@ -1053,15 +1117,16 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
                   <Select
-                    value={formData.tipo_prestazione_id || undefined}
+                    value={formData.tipo_prestazione_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value })
+                      setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona prestazione" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {prestazioni.map((prestazione) => (
                         <SelectItem key={prestazione.id} value={prestazione.id}>
                           {prestazione.descrizione}
@@ -1095,15 +1160,16 @@ export default function ClientiPage() {
                 <div className="md:col-span-2">
                   <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
                   <Select
-                    value={formData.cassetto_fiscale_id || undefined}
+                    value={formData.cassetto_fiscale_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value })
+                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona cassetto" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
                           {cassetto.nominativo}
@@ -1118,33 +1184,207 @@ export default function ClientiPage() {
             <TabsContent value="altri_dati" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
-                  <Input
-                    id="matricola_inps"
-                    value={formData.matricola_inps}
-                    onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
-                    placeholder="Inserisci matricola"
-                  />
+                  <Label>Matricola INPS</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {formData.matricola_inps || "Seleziona o digita..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Cerca o crea matricola..."
+                          value={formData.matricola_inps}
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, matricola_inps: value });
+                          }}
+                        />
+                        <CommandEmpty>
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={async () => {
+                              if (formData.matricola_inps.trim()) {
+                                await riferimentiValoriService.createValore("matricola_inps", formData.matricola_inps);
+                                const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
+                                setMatricoleInps(updated);
+                                toast({
+                                  title: "Successo",
+                                  description: "Matricola INPS salvata",
+                                });
+                              }
+                            }}
+                          >
+                            Crea: {formData.matricola_inps}
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {matricoleInps.map((m) => (
+                            <CommandItem
+                              key={m.id}
+                              onSelect={() => {
+                                setFormData({ ...formData, matricola_inps: m.valore });
+                              }}
+                            >
+                              <span className="flex-1">{m.valore}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteRiferimentoValore(m.id, "matricola_inps");
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div>
-                  <Label htmlFor="pat_inail">Pat INAIL</Label>
-                  <Input
-                    id="pat_inail"
-                    value={formData.pat_inail}
-                    onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
-                    placeholder="Inserisci PAT"
-                  />
+                  <Label>Pat INAIL</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {formData.pat_inail || "Seleziona o digita..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Cerca o crea PAT..."
+                          value={formData.pat_inail}
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, pat_inail: value });
+                          }}
+                        />
+                        <CommandEmpty>
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={async () => {
+                              if (formData.pat_inail.trim()) {
+                                await riferimentiValoriService.createValore("pat_inail", formData.pat_inail);
+                                const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
+                                setPatInail(updated);
+                                toast({
+                                  title: "Successo",
+                                  description: "PAT INAIL salvato",
+                                });
+                              }
+                            }}
+                          >
+                            Crea: {formData.pat_inail}
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {patInail.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              onSelect={() => {
+                                setFormData({ ...formData, pat_inail: p.valore });
+                              }}
+                            >
+                              <span className="flex-1">{p.valore}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteRiferimentoValore(p.id, "pat_inail");
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
-                  <Input
-                    id="codice_ditta_ce"
-                    value={formData.codice_ditta_ce}
-                    onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
-                    placeholder="Codice ditta..."
-                  />
+                  <Label>Codice Ditta CE</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {formData.codice_ditta_ce || "Seleziona o digita..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0">
+                      <Command>
+                        <CommandInput 
+                          placeholder="Cerca o crea codice..."
+                          value={formData.codice_ditta_ce}
+                          onValueChange={(value) => {
+                            setFormData({ ...formData, codice_ditta_ce: value });
+                          }}
+                        />
+                        <CommandEmpty>
+                          <Button
+                            variant="ghost"
+                            className="w-full"
+                            onClick={async () => {
+                              if (formData.codice_ditta_ce.trim()) {
+                                await riferimentiValoriService.createValore("codice_ditta_ce", formData.codice_ditta_ce);
+                                const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
+                                setCodiciDittaCe(updated);
+                                toast({
+                                  title: "Successo",
+                                  description: "Codice Ditta CE salvato",
+                                });
+                              }
+                            }}
+                          >
+                            Crea: {formData.codice_ditta_ce}
+                          </Button>
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {codiciDittaCe.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              onSelect={() => {
+                                setFormData({ ...formData, codice_ditta_ce: c.valore });
+                              }}
+                            >
+                              <span className="flex-1">{c.valore}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteRiferimentoValore(c.id, "codice_ditta_ce");
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </TabsContent>
@@ -1528,7 +1768,6 @@ export default function ClientiPage() {
         id="csv-upload"
       />
 
-      {/* Dialog Gestione Scadenzari */}
       <Dialog open={scadenzariDialogOpen} onOpenChange={setScadenzariDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
