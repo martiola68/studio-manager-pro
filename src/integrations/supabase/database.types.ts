@@ -163,8 +163,10 @@ export type Database = {
           descrizione: string | null
           id: string
           in_sede: boolean | null
+          link_teams: string | null
           luogo: string | null
           partecipanti: Json | null
+          riunione_teams: boolean | null
           sala: string | null
           titolo: string
           tutto_giorno: boolean | null
@@ -180,8 +182,10 @@ export type Database = {
           descrizione?: string | null
           id?: string
           in_sede?: boolean | null
+          link_teams?: string | null
           luogo?: string | null
           partecipanti?: Json | null
+          riunione_teams?: boolean | null
           sala?: string | null
           titolo: string
           tutto_giorno?: boolean | null
@@ -197,8 +201,10 @@ export type Database = {
           descrizione?: string | null
           id?: string
           in_sede?: boolean | null
+          link_teams?: string | null
           luogo?: string | null
           partecipanti?: Json | null
+          riunione_teams?: boolean | null
           sala?: string | null
           titolo?: string
           tutto_giorno?: boolean | null
@@ -285,6 +291,7 @@ export type Database = {
           cassetto_fiscale_id: string | null
           citta: string
           cod_cliente: string
+          codice_ditta_ce: string | null
           codice_fiscale: string
           contatto1_id: string | null
           contatto2_id: string | null
@@ -308,8 +315,11 @@ export type Database = {
           flag_proforma: boolean | null
           id: string
           indirizzo: string
+          matricola_inps: string | null
           note: string | null
           partita_iva: string
+          pat_inail: string | null
+          professionista_payroll_id: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric: string | null
@@ -320,8 +330,10 @@ export type Database = {
           tipo_prestazione_b: string | null
           tipo_prestazione_id: string | null
           tipo_redditi: string | null
+          tipologia_cliente: string | null
           updated_at: string | null
           utente_operatore_id: string | null
+          utente_payroll_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
@@ -330,6 +342,7 @@ export type Database = {
           cassetto_fiscale_id?: string | null
           citta: string
           cod_cliente: string
+          codice_ditta_ce?: string | null
           codice_fiscale: string
           contatto1_id?: string | null
           contatto2_id?: string | null
@@ -353,8 +366,11 @@ export type Database = {
           flag_proforma?: boolean | null
           id?: string
           indirizzo: string
+          matricola_inps?: string | null
           note?: string | null
           partita_iva: string
+          pat_inail?: string | null
+          professionista_payroll_id?: string | null
           provincia: string
           ragione_sociale: string
           scadenza_antiric?: string | null
@@ -365,8 +381,10 @@ export type Database = {
           tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
+          tipologia_cliente?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
+          utente_payroll_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
@@ -375,6 +393,7 @@ export type Database = {
           cassetto_fiscale_id?: string | null
           citta?: string
           cod_cliente?: string
+          codice_ditta_ce?: string | null
           codice_fiscale?: string
           contatto1_id?: string | null
           contatto2_id?: string | null
@@ -398,8 +417,11 @@ export type Database = {
           flag_proforma?: boolean | null
           id?: string
           indirizzo?: string
+          matricola_inps?: string | null
           note?: string | null
           partita_iva?: string
+          pat_inail?: string | null
+          professionista_payroll_id?: string | null
           provincia?: string
           ragione_sociale?: string
           scadenza_antiric?: string | null
@@ -410,8 +432,10 @@ export type Database = {
           tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
+          tipologia_cliente?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
+          utente_payroll_id?: string | null
           utente_professionista_id?: string | null
         }
         Relationships: [
@@ -437,6 +461,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tbclienti_professionista_payroll_id_fkey"
+            columns: ["professionista_payroll_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tbclienti_tipo_prestazione_id_fkey"
             columns: ["tipo_prestazione_id"]
             isOneToOne: false
@@ -446,6 +477,13 @@ export type Database = {
           {
             foreignKeyName: "tbclienti_utente_operatore_id_fkey"
             columns: ["utente_operatore_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbclienti_utente_payroll_id_fkey"
+            columns: ["utente_payroll_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
             referencedColumns: ["id"]
@@ -635,6 +673,63 @@ export type Database = {
           },
         ]
       }
+      tbcredenziali_accesso: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          indirizzo_url: string | null
+          login_pin: string | null
+          login_pw: string | null
+          login_utente: string | null
+          note: string | null
+          portale: string
+          studio_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          indirizzo_url?: string | null
+          login_pin?: string | null
+          login_pw?: string | null
+          login_utente?: string | null
+          note?: string | null
+          portale: string
+          studio_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          indirizzo_url?: string | null
+          login_pin?: string | null
+          login_pw?: string | null
+          login_utente?: string | null
+          note?: string | null
+          portale?: string
+          studio_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbcredenziali_accesso_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbcredenziali_accesso_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbmessaggi: {
         Row: {
           cliente_id: string | null
@@ -765,11 +860,13 @@ export type Database = {
           da_fatturare: boolean
           data_inserimento: string
           data_scadenza: string
+          destinatario_id: string | null
           fatturato: boolean
           giorni_scadenza: number
           id: string
           note: string | null
           operatore_id: string
+          settore: string | null
           tipo_promemoria_id: string
           updated_at: string | null
           working_progress: string
@@ -779,11 +876,13 @@ export type Database = {
           da_fatturare?: boolean
           data_inserimento?: string
           data_scadenza: string
+          destinatario_id?: string | null
           fatturato?: boolean
           giorni_scadenza?: number
           id?: string
           note?: string | null
           operatore_id: string
+          settore?: string | null
           tipo_promemoria_id: string
           updated_at?: string | null
           working_progress?: string
@@ -793,16 +892,25 @@ export type Database = {
           da_fatturare?: boolean
           data_inserimento?: string
           data_scadenza?: string
+          destinatario_id?: string | null
           fatturato?: boolean
           giorni_scadenza?: number
           id?: string
           note?: string | null
           operatore_id?: string
+          settore?: string | null
           tipo_promemoria_id?: string
           updated_at?: string | null
           working_progress?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tbpromemoria_destinatario_id_fkey"
+            columns: ["destinatario_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tbpromemoria_operatore_id_fkey"
             columns: ["operatore_id"]
@@ -857,6 +965,7 @@ export type Database = {
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
+          utente_payroll_id: string | null
           utente_professionista_id: string | null
         }
         Insert: {
@@ -875,6 +984,7 @@ export type Database = {
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
+          utente_payroll_id?: string | null
           utente_professionista_id?: string | null
         }
         Update: {
@@ -893,6 +1003,7 @@ export type Database = {
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
+          utente_payroll_id?: string | null
           utente_professionista_id?: string | null
         }
         Relationships: [
@@ -913,6 +1024,13 @@ export type Database = {
           {
             foreignKeyName: "tbscad770_utente_operatore_id_fkey"
             columns: ["utente_operatore_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscad770_utente_payroll_id_fkey"
+            columns: ["utente_payroll_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
             referencedColumns: ["id"]
@@ -2091,7 +2209,9 @@ export type Database = {
           email: string
           id: string
           nome: string
+          responsabile: boolean | null
           ruolo_operatore_id: string | null
+          settore: string | null
           tipo_utente: string
           updated_at: string | null
         }
@@ -2102,7 +2222,9 @@ export type Database = {
           email: string
           id?: string
           nome: string
+          responsabile?: boolean | null
           ruolo_operatore_id?: string | null
+          settore?: string | null
           tipo_utente: string
           updated_at?: string | null
         }
@@ -2113,7 +2235,9 @@ export type Database = {
           email?: string
           id?: string
           nome?: string
+          responsabile?: boolean | null
           ruolo_operatore_id?: string | null
+          settore?: string | null
           tipo_utente?: string
           updated_at?: string | null
         }

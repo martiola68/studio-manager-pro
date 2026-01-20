@@ -12,9 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight, Search, User, List, Grid3x3 } from "lucide-react";
+import { Calendar, Plus, Edit, Trash2, MapPin, Building2, Clock, Navigation, Users, ChevronLeft, ChevronRight, Search, User, List, Grid3x3, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
@@ -41,20 +43,44 @@ export default function AgendaPage() {
   const [editingEvento, setEditingEvento] = useState<EventoAgenda | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
+  // Funzioni Helper
+  const getSalaLabel = (salaId: string | null) => {
+    if (!salaId || !SALE_CONFIG[salaId]) return "Nessuna";
+    return `${salaId} - ${SALE_CONFIG[salaId].nome}`;
+  };
+
+  const getBordoStanza = (salaId: string | null) => {
+    if (!salaId || !SALE_CONFIG[salaId]) return null;
+    return SALE_CONFIG[salaId].bordoColore;
+  };
+
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null) => {
+    if (eventoGenerico) return "#3B82F6"; // Blu
+    if (!inSede) return "#EF4444"; // Rosso
+    
+    // Verde (In Sede)
+    return "#10B981"; 
+  };
+
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
-    data_inizio: "",
-    data_fine: "",
-    tutto_giorno: false,
-    utente_id: "",
+    data_inizio: new Date(),
+    data_fine: new Date(),
+    type: "appuntamento" as "appuntamento" | "scadenza" | "task",
     cliente_id: "",
+    allDay: false,
+    tutto_giorno: false,
     evento_generico: false,
-    in_sede: true,
-    sala: "",
-    luogo: "",
+    riunione_teams: false,
+    link_teams: "",
     partecipanti: [] as string[],
-    invia_a_tutti: false
+    in_sede: true,
+    sala: "riunioni" as string | null,
+    luogo: "",
+    invia_a_tutti: false,
+    utente_id: "",
+    colore: "#3B82F6"
   });
 
   useEffect(() => {
@@ -104,181 +130,55 @@ export default function AgendaPage() {
     }
   };
 
-  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null): string => {
-    if (eventoGenerico) {
-      return "#3B82F6";
-    }
+  // Funzione per selezionare tutti i partecipanti di un settore
+  const toggleSettoreParticipants = (settore: "Fiscale" | "Lavoro") => {
+    const utentiSettore = utenti
+      .filter(u => u.settore === settore || u.settore === "Fiscale & Lavoro") // Include anche chi fa entrambi
+      .map(u => u.id);
     
-    return inSede ? "#10B981" : "#EF4444";
-  };
-
-  const getBordoStanza = (sala: string | null): string | null => {
-    if (!sala || !SALE_CONFIG[sala]) return null;
-    return SALE_CONFIG[sala].bordoColore;
-  };
-
-  const getSalaLabel = (sala: string | null): string => {
-    if (!sala) return "";
-    const config = SALE_CONFIG[sala];
-    return config ? `${sala} - ${config.nome}` : sala;
-  };
-
-  const generaFileICS = (evento: any): string => {
-    const formatDateICS = (dateString: string): string => {
-      const date = new Date(dateString);
-      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-    };
-
-    const icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Studio Manager Pro//Agenda//IT",
-      "BEGIN:VEVENT",
-      `UID:${evento.id || Date.now()}@studiomanagerpro.it`,
-      `DTSTAMP:${formatDateICS(new Date().toISOString())}`,
-      `DTSTART:${formatDateICS(evento.data_inizio)}`,
-      `DTEND:${formatDateICS(evento.data_fine)}`,
-      `SUMMARY:${evento.titolo}`,
-      evento.descrizione ? `DESCRIPTION:${evento.descrizione.replace(/\n/g, "\\n")}` : "",
-      evento.luogo ? `LOCATION:${evento.luogo}` : "",
-      "STATUS:CONFIRMED",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].filter(Boolean).join("\r\n");
-
-    return icsContent;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.titolo || !formData.data_inizio || !formData.data_fine) {
-      toast({
-        title: "Errore",
-        description: "Compila i campi obbligatori (Titolo, Data Inizio, Data Fine)",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!formData.evento_generico && !formData.cliente_id) {
-      toast({
-        title: "Errore",
-        description: "Seleziona un cliente oppure attiva 'Evento Generico'",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const colore = getColoreEvento(formData.evento_generico, formData.in_sede, formData.sala);
-
-      const partecipantiFinal = formData.invia_a_tutti 
-        ? utenti.map(u => u.id)
-        : formData.partecipanti;
-
-      const dataToSave = {
-        titolo: formData.titolo,
-        descrizione: formData.descrizione,
-        data_inizio: formData.data_inizio,
-        data_fine: formData.data_fine,
-        tutto_giorno: formData.tutto_giorno,
-        utente_id: formData.utente_id || null,
-        cliente_id: formData.evento_generico ? null : (formData.cliente_id || null),
-        in_sede: formData.in_sede,
-        sala: formData.sala || null,
-        luogo: formData.luogo || null,
-        colore: colore,
-        partecipanti: partecipantiFinal
-      };
-
-      let savedEventoId: string;
-
-      if (editingEvento) {
-        await eventoService.updateEvento(editingEvento.id, dataToSave);
-        savedEventoId = editingEvento.id;
-        toast({
-          title: "Successo",
-          description: "Evento aggiornato con successo"
-        });
+    setFormData(prev => {
+      const currentParticipants = new Set(prev.partecipanti);
+      const allSelected = utentiSettore.every(id => currentParticipants.has(id));
+      
+      if (allSelected) {
+        // Deseleziona tutti
+        utentiSettore.forEach(id => currentParticipants.delete(id));
       } else {
-        const nuovoEvento = await eventoService.createEvento(dataToSave);
-        if (!nuovoEvento) {
-          throw new Error("Errore durante la creazione dell'evento");
-        }
-        savedEventoId = nuovoEvento.id;
-        toast({
-          title: "Successo",
-          description: "Evento creato con successo"
-        });
+        // Seleziona tutti
+        utentiSettore.forEach(id => currentParticipants.add(id));
       }
+      
+      return { ...prev, partecipanti: Array.from(currentParticipants) };
+    });
+  };
 
-      if (!editingEvento && (partecipantiFinal.length > 0 || formData.utente_id || formData.cliente_id)) {
-        try {
-          console.log("🔍 DEBUG - Inizio invio notifiche email");
-          
-          const responsabile = utenti.find(u => u.id === formData.utente_id);
-          const cliente = clienti.find(c => c.id === formData.cliente_id);
-          const partecipantiUtenti = utenti.filter(u => partecipantiFinal.includes(u.id));
-
-          console.log("👤 Responsabile:", responsabile);
-          console.log("🏢 Cliente:", cliente);
-          console.log("👥 Partecipanti:", partecipantiUtenti);
-
-          const dataInizio = new Date(formData.data_inizio);
-          const dataFine = new Date(formData.data_fine);
-
-          const emailData = {
-            eventoId: savedEventoId,
-            eventoTitolo: formData.titolo,
-            eventoData: dataInizio.toISOString(),
-            eventoOraInizio: dataInizio.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
-            eventoOraFine: dataFine.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }),
-            eventoLuogo: formData.luogo || (formData.in_sede && formData.sala ? `Sede - ${getSalaLabel(formData.sala)}` : undefined),
-            eventoDescrizione: formData.descrizione || undefined,
-            responsabileEmail: responsabile?.email || "",
-            responsabileNome: responsabile ? `${responsabile.nome} ${responsabile.cognome}` : "Studio",
-            partecipantiEmails: partecipantiUtenti.map(u => u.email).filter(Boolean),
-            partecipantiNomi: partecipantiUtenti.map(u => `${u.nome} ${u.cognome}`),
-            clienteEmail: cliente?.email || undefined,
-            clienteNome: cliente?.ragione_sociale || undefined
-          };
-
-          console.log("📧 Dati email preparati:", emailData);
-          console.log("📬 Email totali da inviare:", 
-            [emailData.responsabileEmail, ...emailData.partecipantiEmails, emailData.clienteEmail].filter(Boolean).length
-          );
-
-          const risultato = await sendEventNotification(emailData);
-
-          console.log("✅ Risultato invio email:", risultato);
-
-          if (risultato.success) {
-            toast({
-              title: "✅ Email Inviate",
-              description: `${risultato.sent} notifica${risultato.sent > 1 ? "e" : ""} email inviata${risultato.sent > 1 ? "e" : ""} con successo`,
-            });
-          } else {
-            console.error("❌ Errore invio email:", risultato.error);
-            toast({
-              title: "⚠️ Attenzione",
-              description: `Evento salvato ma errore nell'invio delle email: ${risultato.error}`,
-              variant: "destructive"
-            });
-          }
-        } catch (emailError) {
-          console.error("❌ Errore invio email (catch):", emailError);
-          toast({
-            title: "⚠️ Attenzione",
-            description: "Evento salvato ma impossibile inviare le notifiche email",
-            variant: "destructive"
-          });
-        }
+  const handleSave = async () => {
+    try {
+      const eventoData = {
+        ...formData,
+        // Conversione Date -> ISO String per Supabase
+        data_inizio: formData.data_inizio.toISOString(),
+        data_fine: formData.data_fine.toISOString(),
+        cliente_id: formData.cliente_id || null,
+        sala: formData.in_sede ? formData.sala : null,
+        luogo: formData.in_sede ? null : formData.luogo,
+        // Fix partecipanti: assicurarsi che sia array di stringhe
+        partecipanti: formData.partecipanti || [],
+        // Fix campi Teams
+        riunione_teams: formData.riunione_teams,
+        link_teams: formData.riunione_teams ? formData.link_teams : null
+      };
+      
+      if (selectedEvent?.id) {
+        await eventoService.updateEvento(selectedEvent.id, eventoData);
+        toast({ title: "Evento aggiornato" });
+      } else {
+        await eventoService.createEvento(eventoData);
+        toast({ title: "Evento creato" });
       }
-
-      setDialogOpen(false);
-      resetForm();
-      await loadData();
+      
+      closeDialog();
+      loadEventi();
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -676,6 +576,44 @@ export default function AgendaPage() {
                     </Label>
                   </div>
 
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="evento_generico"
+                      checked={formData.evento_generico}
+                      onCheckedChange={(checked) => setFormData({...formData, evento_generico: checked as boolean})}
+                    />
+                    <Label htmlFor="evento_generico">Evento Generico (non legato a cliente)</Label>
+                  </div>
+
+                  {/* NUOVI CAMPI TEAMS */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="riunione_teams"
+                      checked={formData.riunione_teams}
+                      onCheckedChange={(checked) => setFormData({...formData, riunione_teams: checked as boolean})}
+                    />
+                    <Label htmlFor="riunione_teams">Riunione Teams</Label>
+                  </div>
+
+                  {formData.riunione_teams && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <Label>Link Teams</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={formData.link_teams}
+                          onChange={e => setFormData({...formData, link_teams: e.target.value})}
+                          placeholder="https://teams.microsoft.com/..."
+                          className="border-orange-200 focus:border-orange-500"
+                        />
+                        {formData.link_teams && (
+                          <Button size="icon" variant="outline" type="button" onClick={() => window.open(formData.link_teams, '_blank')}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
                     <p className="font-semibold mb-2">ℹ️ Sistema Colori:</p>
                     <div className="space-y-1">
@@ -851,35 +789,18 @@ export default function AgendaPage() {
                   {!formData.invia_a_tutti && (
                     <div className="space-y-2">
                       <Label>Seleziona Partecipanti</Label>
-                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-gray-50">
-                        {utenti.length === 0 ? (
-                          <p className="text-sm text-gray-500 text-center py-4">
-                            Nessun utente disponibile
-                          </p>
-                        ) : (
-                          utenti.map((utente) => (
-                            <div key={utente.id} className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`part-${utente.id}`}
-                                checked={formData.partecipanti.includes(utente.id)}
-                                onChange={() => togglePartecipante(utente.id)}
-                                className="rounded w-4 h-4"
-                              />
-                              <Label 
-                                htmlFor={`part-${utente.id}`} 
-                                className="cursor-pointer flex-1 py-1"
-                              >
-                                {utente.nome} {utente.cognome}
-                                {utente.email && (
-                                  <span className="text-xs text-gray-500 ml-2">
-                                    ({utente.email})
-                                  </span>
-                                )}
-                              </Label>
-                            </div>
-                          ))
-                        )}
+                      <div className="border rounded-lg p-3 mb-4">
+                        <p className="text-sm text-gray-600 mb-2">
+                          {utenti.length === 0 ? "Nessun utente disponibile" : "Seleziona gli utenti partecipanti"}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => toggleSettoreParticipants("Lavoro")}>
+                            Settore Lavoro
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => toggleSettoreParticipants("Fiscale")}>
+                            Settore Fiscale
+                          </Button>
+                        </div>
                       </div>
                       {formData.partecipanti.length > 0 && (
                         <p className="text-sm text-gray-600 mt-2">

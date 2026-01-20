@@ -1,513 +1,341 @@
 import { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
 import { supabase } from "@/lib/supabase/client";
-import { authService } from "@/services/authService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Edit, Trash2, Filter, Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/router";
-import type { Database } from "@/lib/supabase/types";
+import { Loader2, Search, Calendar, User, Save, RefreshCw, Filter } from "lucide-react";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type Scadenza770 = Database["public"]["Tables"]["scadenze_770"]["Row"] & {
-  tbclienti?: {
+// Tipi
+type Scadenza770 = {
+  id: string;
+  cliente_id: string;
+  anno: number;
+  stato: string;
+  note?: string;
+  created_at: string | null; // Aggiunto per matchare DB
+  cliente?: {
     ragione_sociale: string;
+    settore?: string;
   };
+  utente_payroll?: {
+    nome: string;
+    cognome: string;
+  };
+  utente_payroll_id?: string | null; // Aggiunto
 };
 
-export default function Scadenze770Page() {
-  const router = useRouter();
+export default function Modello770Page() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<Scadenza770[]>([]);
   const [filteredScadenze, setFilteredScadenze] = useState<Scadenza770[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingScadenza, setEditingScadenza] = useState<Scadenza770 | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const { toast } = useToast();
-
-  const [filterAnno, setFilterAnno] = useState<string>("");
-  const [filterStato, setFilterStato] = useState<string>("");
-
-  const [formData, setFormData] = useState({
-    cliente_id: "",
-    anno: new Date().getFullYear(),
-    data_scadenza: "",
-    stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
-    note: "",
-  });
-
-  const [editFormData, setEditFormData] = useState({
-    stato: "da_fare" as "da_fare" | "in_lavorazione" | "completato",
-    note: "",
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAnno, setSelectedAnno] = useState<number>(new Date().getFullYear());
+  const [activeTab, setActiveTab] = useState("fiscale"); // 'fiscale' | 'lavoro'
 
   useEffect(() => {
-    checkAuthAndLoad();
-  }, []);
+    loadData();
+  }, [selectedAnno]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
+    filterData();
+  }, [scadenze, searchTerm, activeTab]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [scadenze, filterAnno, filterStato]);
-
-  const checkAuthAndLoad = async () => {
+  const loadData = async () => {
     try {
-      const authUser = await authService.getCurrentUser();
-      if (!authUser) {
-        router.push("/login");
-        return;
-      }
-
-      const profile = await authService.getUserProfile(authUser.id);
-      if (!profile) {
-        router.push("/login");
-        return;
-      }
-
-      setCurrentUser(profile);
-    } catch (error) {
-      console.error("Auth error:", error);
-      router.push("/login");
-    }
-  };
-
-  const fetchData = async () => {
-    if (!currentUser) return;
-    setLoading(true);
-    await fetchScadenze();
-    setLoading(false);
-  };
-
-  const fetchScadenze = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("scadenze_770")
+      setLoading(true);
+      
+      // Query base
+      const query = supabase
+        .from("tbscad770")
         .select(`
           *,
-          tbclienti(ragione_sociale)
+          cliente:tbclienti!cliente_id (
+            ragione_sociale,
+            settore
+          ),
+          utente_payroll:tbutenti!utente_payroll_id (
+            nome,
+            cognome
+          )
         `)
-        .order("anno", { ascending: false })
-        .order("data_scadenza", { ascending: true });
+        .eq("anno", selectedAnno);
+
+      // Filtro per settore (lato server se possibile, altrimenti client)
+      // Nota: tbscad770 non ha il settore diretto, lo prendiamo dal cliente
+      
+      const { data, error } = await query;
 
       if (error) throw error;
+      
+      // Filtraggio client-side per settore (più sicuro se la relazione è complessa)
+      const filteredData = (data as any[]).filter(item => {
+        if (!activeTab || activeTab === "all") return true;
+        
+        const settoreCliente = item.cliente?.settore;
+        
+        if (activeTab === "lavoro") {
+          return settoreCliente === "Lavoro" || settoreCliente === "Fiscale & Lavoro";
+        }
+        if (activeTab === "fiscale") {
+          return settoreCliente === "Fiscale" || settoreCliente === "Fiscale & Lavoro";
+        }
+        return true;
+      });
 
-      setScadenze((data || []) as Scadenza770[]);
-    } catch (error: any) {
-      console.error("Errore caricamento scadenze 770:", error);
+      setScadenze(filteredData as Scadenza770[]);
+    } catch (error) {
+      console.error("Errore caricamento 770:", error);
       toast({
         title: "Errore",
-        description: "Impossibile caricare le scadenze 770",
-        variant: "destructive",
+        description: "Impossibile caricare i dati",
+        variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...scadenze];
+  const filterData = () => {
+    let filtered = scadenze;
 
-    if (filterAnno) {
-      filtered = filtered.filter((s) => s.anno.toString() === filterAnno);
+    // Filtro per Tab (Settore)
+    if (activeTab === "fiscale") {
+      // 770 Rep Fiscale: Solo settore Fiscale o Fiscale & lavoro
+      filtered = filtered.filter(s => 
+        s.cliente?.settore === "Fiscale" || s.cliente?.settore === "Fiscale & Lavoro" || !s.cliente?.settore
+      );
+    } else {
+      // 770 Rep Lavoro: Solo settore Lavoro o Fiscale & lavoro
+      filtered = filtered.filter(s => 
+        s.cliente?.settore === "Lavoro" || s.cliente?.settore === "Fiscale & Lavoro"
+      );
     }
 
-    if (filterStato) {
-      filtered = filtered.filter((s) => s.stato === filterStato);
+    // Filtro ricerca
+    if (searchTerm) {
+      filtered = filtered.filter(s => 
+        s.cliente?.ragione_sociale.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     setFilteredScadenze(filtered);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!editingScadenza) return;
-
+  const handleSyncClienti = async () => {
     try {
-      const { error } = await supabase
-        .from("scadenze_770")
-        .update({
-          stato: editFormData.stato,
-          note: editFormData.note,
-        })
-        .eq("id", editingScadenza.id);
-
-      if (error) throw error;
+      setLoading(true);
       
-      toast({ title: "Successo", description: "Scadenza aggiornata" });
-      setShowDialog(false);
-      setEditingScadenza(null);
-      fetchScadenze();
-    } catch (error: any) {
-      console.error("Errore aggiornamento:", error);
+      // 1. Trova tutti i clienti che hanno il flag_770 = true
+      const { data: clienti, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select("id, ragione_sociale")
+        .eq("flag_770", true)
+        .eq("attivo", true);
+
+      if (clientiError) throw clientiError;
+
+      if (!clienti || clienti.length === 0) {
+        toast({
+          title: "Nessun cliente trovato",
+          description: "Nessun cliente attivo ha il flag 770 abilitato.",
+        });
+        return;
+      }
+
+      let insertedCount = 0;
+
+      // 2. Per ogni cliente, controlla se esiste già il record per l'anno corrente
+      for (const cliente of clienti) {
+        const exists = scadenze.some(s => s.cliente_id === cliente.id && s.anno === selectedAnno);
+        
+        if (!exists) {
+          // Inserisci nuovo record
+          const { error: insertError } = await supabase
+            .from("tbscad770")
+            .insert({
+              cliente_id: cliente.id,
+              anno: selectedAnno,
+              stato: "Da elaborare"
+            } as any);
+
+          if (insertError) {
+            console.error(`Errore inserimento per ${cliente.ragione_sociale}:`, insertError);
+          } else {
+            insertedCount++;
+          }
+        }
+      }
+
+      if (insertedCount > 0) {
+        toast({
+          title: "Sincronizzazione completata",
+          description: `Inseriti ${insertedCount} nuovi clienti nello scadenzario ${selectedAnno}.`,
+        });
+        await loadData();
+      } else {
+        toast({
+          title: "Sincronizzazione completata",
+          description: "Tutti i clienti con flag 770 sono già presenti nello scadenzario.",
+        });
+      }
+
+    } catch (error) {
+      console.error("Errore sincronizzazione:", error);
       toast({
         title: "Errore",
-        description: error.message || "Errore nell'aggiornamento",
-        variant: "destructive",
+        description: "Errore durante la sincronizzazione clienti",
+        variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questa scadenza?")) return;
-
-    try {
-      const { error } = await supabase.from("scadenze_770").delete().eq("id", id);
-      if (error) throw error;
-      toast({ title: "Successo", description: "Scadenza eliminata" });
-      fetchScadenze();
-    } catch (error: any) {
-      toast({ title: "Errore", description: "Impossibile eliminare", variant: "destructive" });
-    }
-  };
-
-  const handleEdit = (scadenza: Scadenza770) => {
-    setEditingScadenza(scadenza);
-    setFormData({
-      cliente_id: scadenza.cliente_id,
-      anno: scadenza.anno,
-      data_scadenza: scadenza.data_scadenza,
-      stato: scadenza.stato as "da_fare" | "in_lavorazione" | "completato",
-      note: scadenza.note || "",
-    });
-    setShowDialog(true);
-  };
-
-  const resetForm = () => {
-    setEditingScadenza(null);
-    setFormData({
-      cliente_id: "",
-      anno: new Date().getFullYear(),
-      data_scadenza: "",
-      stato: "da_fare",
-      note: "",
-    });
-  };
-
-  const getStatoColor = (stato: string) => {
-    switch (stato) {
-      case "completato":
-        return "text-green-600 bg-green-50";
-      case "in_lavorazione":
-        return "text-yellow-600 bg-yellow-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const getStatoLabel = (stato: string) => {
-    switch (stato) {
-      case "completato":
-        return "Completato";
-      case "in_lavorazione":
-        return "In Lavorazione";
-      default:
-        return "Da Fare";
-    }
-  };
-
-  const statistiche = {
-    totali: filteredScadenze.length,
-    daFare: filteredScadenze.filter((s) => s.stato === "da_fare").length,
-    inLavorazione: filteredScadenze.filter((s) => s.stato === "in_lavorazione").length,
-    completate: filteredScadenze.filter((s) => s.stato === "completato").length,
-  };
-
-  const anni = Array.from(
-    new Set(scadenze.map((s) => s.anno))
-  ).sort((a, b) => b - a);
-
-  if (loading && !currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex-1 p-8">
-      <div className="max-w-full mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Scadenze Modello 770</h1>
-            <p className="text-muted-foreground mt-2">
-              Gestione delle scadenze per il Modello 770
-            </p>
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
+          <p className="text-gray-500">Gestione Modello 770</p>
+        </div>
+        <div className="flex gap-4 items-center">
+          <div className="flex items-center gap-2 bg-white p-2 rounded-md border">
+            <span className="text-sm font-medium">Anno:</span>
+            <Select 
+              value={selectedAnno.toString()} 
+              onValueChange={(val) => setSelectedAnno(parseInt(val))}
+            >
+              <SelectTrigger className="w-24 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2026">2026</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          <Button onClick={handleSyncClienti} disabled={loading}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Sincronizza Clienti
+          </Button>
         </div>
+      </div>
 
-        {/* Edit Dialog */}
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Modifica Scadenza 770</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <Label>Cliente</Label>
-                <Input
-                  value={editingScadenza?.tbclienti?.ragione_sociale || "N/D"}
-                  disabled
-                  className="bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label>Anno</Label>
-                <Input
-                  value={editingScadenza?.anno || ""}
-                  disabled
-                  className="bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label>Data Scadenza</Label>
-                <Input
-                  value={editingScadenza?.data_scadenza || ""}
-                  disabled
-                  className="bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_stato">Stato *</Label>
-                <Select
-                  value={editFormData.stato}
-                  onValueChange={(value: "da_fare" | "in_lavorazione" | "completato") =>
-                    setEditFormData({ ...editFormData, stato: value })
-                  }
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="da_fare">Da Fare</SelectItem>
-                    <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
-                    <SelectItem value="completato">Completato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit_note">Note</Label>
-                <Input
-                  id="edit_note"
-                  value={editFormData.note}
-                  onChange={(e) => setEditFormData({ ...editFormData, note: e.target.value })}
-                  placeholder="Note aggiuntive"
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                  Annulla
-                </Button>
-                <Button type="submit">Aggiorna</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtri
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="filter_anno">Anno</Label>
-                <Select value={filterAnno} onValueChange={setFilterAnno}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tutti gli anni" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {anni.map((anno) => (
-                      <SelectItem key={anno} value={anno.toString()}>
-                        {anno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="filter_stato">Stato</Label>
-                <Select value={filterStato} onValueChange={setFilterStato}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tutti gli stati" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="da_fare">Da Fare</SelectItem>
-                    <SelectItem value="in_lavorazione">In Lavorazione</SelectItem>
-                    <SelectItem value="completato">Completato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Cerca cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div className="flex gap-2 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFilterAnno("");
-                  setFilterStato("");
-                }}
-              >
-                Cancella Filtri
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Totali
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistiche.totali}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Da Fare
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{statistiche.daFare}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                In Lavorazione
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
-                {statistiche.inLavorazione}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Completate
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{statistiche.completate}</div>
-            </CardContent>
-          </Card>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="fiscale">770 Rep Fiscale</TabsTrigger>
+          <TabsTrigger value="lavoro">770 Rep Lavoro</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Elenco Scadenze 770</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Anno</TableHead>
-                  <TableHead>Data Scadenza</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead>Note</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
+        <TabsContent value="fiscale" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Reparto Fiscale (Settore: Fiscale, Fiscale & Lavoro)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="inline-block h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    </TableCell>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Settore</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead>Note</TableHead>
                   </TableRow>
-                ) : filteredScadenze.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nessuna scadenza 770 trovata
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredScadenze.map((scadenza) => (
-                    <TableRow key={scadenza.id}>
-                      <TableCell className="font-medium">
-                        {scadenza.tbclienti?.ragione_sociale || "N/D"}
-                      </TableCell>
-                      <TableCell>{scadenza.anno}</TableCell>
-                      <TableCell>
-                        {format(parseISO(scadenza.data_scadenza), "dd/MM/yyyy", { locale: it })}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatoColor(
-                            scadenza.stato
-                          )}`}
-                        >
-                          {getStatoLabel(scadenza.stato)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{scadenza.note || "-"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(scadenza)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(scadenza.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredScadenze.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                        Nessuna scadenza trovata
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+                  ) : (
+                    filteredScadenze.map((scadenza) => (
+                      <TableRow key={scadenza.id}>
+                        <TableCell className="font-medium">{scadenza.cliente?.ragione_sociale}</TableCell>
+                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
+                        <TableCell>{scadenza.stato}</TableCell>
+                        <TableCell>{scadenza.note}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="lavoro" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Reparto Lavoro (Settore: Lavoro, Fiscale & Lavoro)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Settore</TableHead>
+                    <TableHead>Utente Payroll</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead>Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredScadenze.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        Nessuna scadenza trovata
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredScadenze.map((scadenza) => (
+                      <TableRow key={scadenza.id}>
+                        <TableCell className="font-medium">{scadenza.cliente?.ragione_sociale}</TableCell>
+                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
+                        <TableCell>
+                          {scadenza.utente_payroll 
+                            ? `${scadenza.utente_payroll.nome} ${scadenza.utente_payroll.cognome}`
+                            : "-"
+                          }
+                        </TableCell>
+                        <TableCell>{scadenza.stato}</TableCell>
+                        <TableCell>{scadenza.note}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

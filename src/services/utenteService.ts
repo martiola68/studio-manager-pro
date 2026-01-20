@@ -6,30 +6,30 @@ type UtenteInsert = Database["public"]["Tables"]["tbutenti"]["Insert"];
 type UtenteUpdate = Database["public"]["Tables"]["tbutenti"]["Update"];
 
 export const utenteService = {
-  async getUtenti(): Promise<Utente[]> {
+  async getUtenti() {
     const { data, error } = await supabase
       .from("tbutenti")
-      .select("*")
+      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile")
       .order("cognome", { ascending: true });
 
     if (error) {
-      console.error("Error fetching utenti:", error);
-      return [];
+      throw error;
     }
-    return data || [];
+
+    return data;
   },
 
-  async getUtenteById(id: string): Promise<Utente | null> {
+  async getUtenteById(id: string) {
     const { data, error } = await supabase
       .from("tbutenti")
-      .select("*")
+      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile")
       .eq("id", id)
       .single();
 
     if (error) {
-      console.error("Error fetching utente:", error);
-      return null;
+      throw error;
     }
+
     return data;
   },
 

@@ -47,17 +47,36 @@ export function TopNavBar() {
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
 
+  // ⚠️ FEATURE DISABILITATA TEMPORANEAMENTE - Causava network errors
+  // useEffect(() => {
+  //   if (currentUser) {
+  //     loadMessaggiNonLetti();
+  //     const interval = setInterval(loadMessaggiNonLetti, 60000);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [currentUser]);
+
+  // const loadMessaggiNonLetti = async () => {
+  //   try {
+  //     const { data: { session } } = await supabase.auth.getSession();
+  //     if (!session?.user?.id) {
+  //       console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
+  //       setMessaggiNonLetti(0);
+  //       return;
+  //     }
+  //
+  //     const { messaggioService } = await import("@/services/messaggioService");
+  //     const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
+  //     setMessaggiNonLetti(count);
+  //   } catch (error) {
+  //     console.warn("⚠️ Errore caricamento messaggi non letti (gestito):", error);
+  //     setMessaggiNonLetti(0);
+  //   }
+  // };
+
   useEffect(() => {
     loadCurrentUser();
   }, []);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadMessaggiNonLetti();
-      const interval = setInterval(loadMessaggiNonLetti, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [currentUser]);
 
   const loadCurrentUser = async () => {
     try {
@@ -78,25 +97,6 @@ export function TopNavBar() {
       console.error("Errore caricamento utente:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadMessaggiNonLetti = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
-        console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
-        setMessaggiNonLetti(0);
-        return;
-      }
-
-      const { messaggioService } = await import("@/services/messaggioService");
-      const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
-      setMessaggiNonLetti(count);
-    } catch (error) {
-      // Log dell'errore ma non bloccare l'UI
-      console.warn("⚠️ Errore caricamento messaggi non letti (gestito):", error);
-      setMessaggiNonLetti(0);
     }
   };
 

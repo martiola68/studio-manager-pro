@@ -2,7 +2,7 @@
 // Types are generated from the Supabase database schema using the Supabase CLI.
  
 
-import type { Database as DB } from './database.types';
+import type { Database as DB } from '@/integrations/supabase/database.types';
 
 export type Database = DB;
 

@@ -61,7 +61,9 @@ export default function GestioneUtentiPage() {
     password: "",
     tipo_utente: "User" as "Admin" | "User",
     ruolo_operatore_id: "",
-    attivo: true
+    attivo: true,
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & lavoro" | "",
+    responsabile: false
   });
 
   useEffect(() => {
@@ -152,7 +154,9 @@ export default function GestioneUtentiPage() {
           email: formData.email,
           tipo_utente: formData.tipo_utente,
           ruolo_operatore_id: formData.ruolo_operatore_id || null,
-          attivo: formData.attivo
+          attivo: formData.attivo,
+          settore: formData.settore || null,
+          responsabile: formData.responsabile
         });
         
         toast({
@@ -200,7 +204,9 @@ export default function GestioneUtentiPage() {
             useAutoPassword,
             tipo_utente: formData.tipo_utente,
             ruolo_operatore_id: formData.ruolo_operatore_id || null,
-            attivo: formData.attivo
+            attivo: formData.attivo,
+            settore: formData.settore || null,
+            responsabile: formData.responsabile
           })
         });
 
@@ -215,7 +221,9 @@ export default function GestioneUtentiPage() {
           .update({
             tipo_utente: formData.tipo_utente,
             ruolo_operatore_id: formData.ruolo_operatore_id || null,
-            attivo: formData.attivo
+            attivo: formData.attivo,
+            settore: formData.settore || null,
+            responsabile: formData.responsabile
           })
           .eq("id", result.userId);
         
@@ -407,7 +415,9 @@ export default function GestioneUtentiPage() {
       password: "",
       tipo_utente: utente.tipo_utente as "Admin" | "User",
       ruolo_operatore_id: utente.ruolo_operatore_id || "",
-      attivo: utente.attivo ?? true
+      attivo: utente.attivo ?? true,
+      settore: (utente.settore as "Fiscale" | "Lavoro" | "Fiscale & lavoro") || "",
+      responsabile: utente.responsabile ?? false
     });
     setDialogOpen(true);
   };
@@ -420,7 +430,9 @@ export default function GestioneUtentiPage() {
       password: "",
       tipo_utente: "User",
       ruolo_operatore_id: "",
-      attivo: true
+      attivo: true,
+      settore: "",
+      responsabile: false
     });
     setEditingUtente(null);
     setUseAutoPassword(true);
@@ -633,15 +645,47 @@ export default function GestioneUtentiPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="attivo"
-                  checked={formData.attivo}
-                  onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
-                  className="rounded"
-                />
-                <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
+              <div className="space-y-2">
+                <Label htmlFor="settore">Settore</Label>
+                <Select
+                  value={formData.settore}
+                  onValueChange={(value: "Fiscale" | "Lavoro" | "Fiscale & lavoro") => 
+                    setFormData({ ...formData, settore: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona settore" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fiscale">Fiscale</SelectItem>
+                    <SelectItem value="Lavoro">Lavoro</SelectItem>
+                    <SelectItem value="Fiscale & lavoro">Fiscale & Lavoro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="responsabile"
+                    checked={formData.responsabile}
+                    onChange={(e) => setFormData({ ...formData, responsabile: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="responsabile" className="cursor-pointer font-medium">Responsabile (può vedere promemoria del gruppo)</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="attivo"
+                    checked={formData.attivo}
+                    onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -724,6 +768,7 @@ export default function GestioneUtentiPage() {
                 <TableHead>Cognome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Settore</TableHead>
                 <TableHead>Ruolo</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
@@ -732,7 +777,7 @@ export default function GestioneUtentiPage() {
             <TableBody>
               {filteredUtenti.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                     Nessun utente trovato
                   </TableCell>
                 </TableRow>
@@ -750,6 +795,14 @@ export default function GestioneUtentiPage() {
                         <Badge variant={utente.tipo_utente === "Admin" ? "default" : "secondary"}>
                           {utente.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {utente.settore ? (
+                          <Badge variant="outline">{utente.settore}</Badge>
+                        ) : "-"}
+                        {utente.responsabile && (
+                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-200">Resp.</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {ruolo ? ruolo.ruolo : "-"}

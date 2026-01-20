@@ -9,33 +9,30 @@ export const promemoriaService = {
   /**
    * Ottiene tutti i promemoria dell'utente loggato
    */
-  async getPromemoria(utenteId: string): Promise<Promemoria[]> {
+  async getPromemoria() {
     const { data, error } = await supabase
       .from("tbpromemoria")
       .select(`
         *,
-        tbtipopromemoria (
+        cliente:cliente_id (
           id,
-          nome,
-          descrizione,
-          colore
+          ragione_sociale
         ),
-        tbutenti (
+        operatore:operatore_id (
           id,
           nome,
-          cognome,
-          email
+          cognome
+        ),
+        destinatario:destinatario_id (
+          id,
+          nome,
+          cognome
         )
       `)
-      .eq("operatore_id", utenteId)
       .order("data_scadenza", { ascending: true });
 
-    if (error) {
-      console.error("Errore caricamento promemoria:", error);
-      throw error;
-    }
-
-    return data || [];
+    if (error) throw error;
+    return data;
   },
 
   /**
@@ -75,23 +72,15 @@ export const promemoriaService = {
   /**
    * Crea un nuovo promemoria
    */
-  async creaPromemoria(promemoria: Omit<Promemoria, "id" | "created_at" | "updated_at">) {
-    const { error } = await supabase.from("tbpromemoria").insert({
-      operatore_id: promemoria.operatore_id,
-      tipo_promemoria_id: promemoria.tipo_promemoria_id,
-      data_inserimento: promemoria.data_inserimento,
-      giorni_scadenza: promemoria.giorni_scadenza,
-      data_scadenza: promemoria.data_scadenza,
-      working_progress: promemoria.working_progress,
-      da_fatturare: promemoria.da_fatturare,
-      fatturato: promemoria.fatturato,
-      note: promemoria.note
-    });
+  async createPromemoria(promemoria: Database["public"]["Tables"]["tbpromemoria"]["Insert"]) {
+    const { data, error } = await supabase
+      .from("tbpromemoria")
+      .insert(promemoria)
+      .select()
+      .single();
 
-    if (error) {
-      console.error("Errore creazione promemoria:", error);
-      throw error;
-    }
+    if (error) throw error;
+    return data;
   },
 
   /**

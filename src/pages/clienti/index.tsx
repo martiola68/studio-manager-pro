@@ -103,12 +103,18 @@ export default function ClientiPage() {
     note: "",
     utente_operatore_id: "",
     utente_professionista_id: "",
+    utente_payroll_id: "",
+    professionista_payroll_id: "",
     contatto1_id: "",
     contatto2_id: "",
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
     settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
+    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
+    matricola_inps: "",
+    pat_inail: "",
+    codice_ditta_ce: "",
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -228,6 +234,12 @@ export default function ClientiPage() {
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
         settore: formData.settore || null,
+        tipologia_cliente: formData.tipologia_cliente || null,
+        utente_payroll_id: formData.utente_payroll_id || null,
+        professionista_payroll_id: formData.professionista_payroll_id || null,
+        matricola_inps: formData.matricola_inps || null,
+        pat_inail: formData.pat_inail || null,
+        codice_ditta_ce: formData.codice_ditta_ce || null,
       };
 
       if (editingCliente) {
@@ -359,12 +371,18 @@ export default function ClientiPage() {
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
       utente_professionista_id: cliente.utente_professionista_id || "",
+      utente_payroll_id: cliente.utente_payroll_id || "",
+      professionista_payroll_id: cliente.professionista_payroll_id || "",
       contatto1_id: cliente.contatto1_id || "",
       contatto2_id: cliente.contatto2_id || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
       settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
+      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
+      matricola_inps: cliente.matricola_inps || "",
+      pat_inail: cliente.pat_inail || "",
+      codice_ditta_ce: cliente.codice_ditta_ce || "",
     });
     setIsDialogOpen(true);
   };
@@ -386,12 +404,18 @@ export default function ClientiPage() {
       note: "",
       utente_operatore_id: "",
       utente_professionista_id: "",
+      utente_payroll_id: "",
+      professionista_payroll_id: "",
       contatto1_id: "",
       contatto2_id: "",
       tipo_prestazione_id: "",
       tipo_redditi: "",
       cassetto_fiscale_id: "",
       settore: "",
+      tipologia_cliente: "",
+      matricola_inps: "",
+      pat_inail: "",
+      codice_ditta_ce: "",
     });
     setScadenzari({
       iva: true,
@@ -716,14 +740,16 @@ export default function ClientiPage() {
           </DialogHeader>
 
           <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-6 overflow-x-auto">
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+              <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
+              <TabsTrigger value="antiriciclaggio">Antiriciclaggio</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
               <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="anagrafica" className="space-y-4">
+            <TabsContent value="anagrafica" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="cod_cliente">Codice Cliente</Label>
@@ -896,7 +922,7 @@ export default function ClientiPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="riferimenti" className="space-y-6">
+            <TabsContent value="riferimenti" className="space-y-6 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="utente_operatore_id">Utente Operatore</Label>
@@ -929,6 +955,48 @@ export default function ClientiPage() {
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
+                  <Select
+                    value={formData.utente_payroll_id || undefined}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_payroll_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona utente payroll" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
+                  <Select
+                    value={formData.professionista_payroll_id || undefined}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, professionista_payroll_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
                       {utenti.map((utente) => (
@@ -1045,13 +1113,48 @@ export default function ClientiPage() {
                   </Select>
                 </div>
               </div>
+            </TabsContent>
 
-              {/* Adeguata Verifica Clientela */}
-              <div className="space-y-6 pt-6 border-t">
-                <h3 className="font-semibold text-lg">
-                  Adeguata Verifica Clientela (Antiriciclaggio)
-                </h3>
+            <TabsContent value="altri_dati" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
+                  <Input
+                    id="matricola_inps"
+                    value={formData.matricola_inps}
+                    onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+                    placeholder="Inserisci matricola"
+                  />
+                </div>
 
+                <div>
+                  <Label htmlFor="pat_inail">Pat INAIL</Label>
+                  <Input
+                    id="pat_inail"
+                    value={formData.pat_inail}
+                    onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+                    placeholder="Inserisci PAT"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+                  <Input
+                    id="codice_ditta_ce"
+                    value={formData.codice_ditta_ce}
+                    onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+                    placeholder="Codice ditta..."
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="antiriciclaggio" className="space-y-6 pt-4">
+              <h3 className="font-semibold text-lg mb-4">
+                Adeguata Verifica Clientela (Antiriciclaggio)
+              </h3>
+              
+              <div className="space-y-6">
                 <Card className="bg-blue-50 dark:bg-blue-950/20">
                   <CardHeader>
                     <div className="flex items-center gap-3">
@@ -1248,7 +1351,7 @@ export default function ClientiPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="scadenzari" className="space-y-4">
+            <TabsContent value="scadenzari" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground mb-4">
                 Seleziona gli scadenzari attivi per questo cliente
               </p>
@@ -1365,7 +1468,7 @@ export default function ClientiPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="comunicazioni" className="space-y-4">
+            <TabsContent value="comunicazioni" className="space-y-4 pt-4">
               <p className="text-sm text-muted-foreground mb-4">
                 Gestisci le preferenze di comunicazione del cliente
               </p>
