@@ -16,6 +16,18 @@ export const riferimentiValoriService = {
     return data || [];
   },
 
+  async checkExists(tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) {
+    const { data, error } = await supabase
+      .from("tbreferimenti_valori")
+      .select("*")
+      .eq("tipo", tipo)
+      .ilike("valore", valore)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
   async createValore(tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) {
     if (!valore.trim()) return null;
 

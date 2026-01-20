@@ -532,6 +532,40 @@ export default function ClientiPage() {
     if (!pendingRiferimento) return;
 
     try {
+      const existingValue = await riferimentiValoriService.checkExists(
+        pendingRiferimento.tipo,
+        pendingRiferimento.valore
+      );
+
+      if (existingValue) {
+        if (pendingRiferimento.tipo === "matricola_inps") {
+          const updated = await riferimentiValoriService.getValoriByTipo("matricola_inps");
+          setMatricoleInps(updated);
+          setFormData({ ...formData, matricola_inps: existingValue.valore });
+          setShowMatricolaDropdown(false);
+        } else if (pendingRiferimento.tipo === "pat_inail") {
+          const updated = await riferimentiValoriService.getValoriByTipo("pat_inail");
+          setPatInail(updated);
+          setFormData({ ...formData, pat_inail: existingValue.valore });
+          setShowPatDropdown(false);
+        } else {
+          const updated = await riferimentiValoriService.getValoriByTipo("codice_ditta_ce");
+          setCodiciDittaCe(updated);
+          setFormData({ ...formData, codice_ditta_ce: existingValue.valore });
+          setShowCodiceDropdown(false);
+        }
+
+        toast({
+          title: "ℹ️ Valore esistente",
+          description: `Il valore "${existingValue.valore}" è già presente ed è stato selezionato`,
+          variant: "default",
+        });
+
+        setShowConfirmDialog(false);
+        setPendingRiferimento(null);
+        return;
+      }
+
       await riferimentiValoriService.createValore(pendingRiferimento.tipo, pendingRiferimento.valore);
       
       if (pendingRiferimento.tipo === "matricola_inps") {
