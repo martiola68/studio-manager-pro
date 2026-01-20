@@ -55,6 +55,44 @@ export default function PromemoriaPage() {
     filterData();
   }, [promemoria, searchTerm, filterStato]);
 
+  // Carica promemoria e utenti all'avvio
+  useEffect(() => {
+    if (currentUser) {
+      loadPromemoria();
+      loadUtenti();
+      
+      // ✅ CONTROLLO AUTOMATICO NOTIFICHE SCADENZA
+      if (currentUser.studio_id) {
+        promemoriaService.controllaEInviaNotificheScadenza(
+          currentUser.id,
+          currentUser.studio_id
+        ).catch(err => {
+          console.error("Errore controllo notifiche:", err);
+        });
+      }
+    }
+  }, [currentUser]);
+
+  const loadPromemoria = async () => {
+    try {
+      setLoading(true);
+      // Query automatica - RLS gestisce il filtro:
+      // - Responsabile: vede tutti i promemoria del suo settore
+      // - Utente generico: vede solo i suoi promemoria
+      const data = await promemoriaService.getPromemoria();
+      setPromemoria(data || []);
+    } catch (error: any) {
+      console.error("Errore caricamento promemoria:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i promemoria",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const checkUserAndLoad = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -261,135 +299,27 @@ export default function PromemoriaPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Promemoria</h1>
-          <p className="text-gray-500">Gestione attività e scadenze personali</p>
+          <h1 className="text-3xl font-bold">Gestione Promemoria</h1>
+          {currentUser && (
+            <div className="flex items-center gap-2 mt-2">
+              {currentUser.responsabile ? (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  👁️ Modalità Responsabile: Visualizzi tutti i promemoria del settore "{currentUser.settore}"
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                  👤 Modalità Utente: Visualizzi solo i tuoi promemoria
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Nuovo Promemoria
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Nuovo Promemoria</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4 pt-4">
-              <div>
-                <Label>Titolo *</Label>
-                <Input 
-                  value={formData.titolo}
-                  onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
-                  required
-                  placeholder="Inserisci titolo promemoria"
-                />
-              </div>
-              
-              <div>
-                <Label>Descrizione</Label>
-                <Input 
-                  value={formData.descrizione}
-                  onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
-                  placeholder="Dettagli aggiuntivi"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Destinatario</Label>
-                  <Select
-                    value={formData.destinatario_id || "none"}
-                    onValueChange={handleDestinatarioChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map(u => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.nome} {u.cognome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Settore</Label>
-                  <Input 
-                    value={formData.settore || ""} 
-                    disabled 
-                    className="bg-gray-100" 
-                    placeholder="Seleziona destinatario"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Priorità *</Label>
-                  <Select
-                    value={formData.priorita}
-                    onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Bassa">Bassa</SelectItem>
-                      <SelectItem value="Media">Media</SelectItem>
-                      <SelectItem value="Alta">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Stato *</Label>
-                  <Select
-                    value={formData.working_progress}
-                    onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Aperto">Aperto</SelectItem>
-                      <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                      <SelectItem value="Presa visione">Presa visione</SelectItem>
-                      <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                      <SelectItem value="Completato">Completato</SelectItem>
-                      <SelectItem value="Annullato">Annullato</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Scadenza *</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.data_scadenza}
-                        onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Salvataggio..." : "Crea Promemoria"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nuovo Promemoria
+        </Button>
       </div>
 
       <div className="flex gap-4 mb-6">

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
+import { messaggioService } from "./messaggioService";
 
 type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 type PromemoriaInsert = Database["public"]["Tables"]["tbpromemoria"]["Insert"];
@@ -7,7 +8,10 @@ type PromemoriaUpdate = Database["public"]["Tables"]["tbpromemoria"]["Update"];
 
 export const promemoriaService = {
   /**
-   * Ottiene tutti i promemoria dell'utente loggato
+   * Ottiene tutti i promemoria visibili all'utente loggato
+   * FILTRO AUTOMATICO tramite RLS:
+   * - Responsabile: vede tutti i promemoria del suo settore
+   * - Utente generico: vede solo i promemoria assegnati a lui o creati da lui
    */
   async getPromemoria() {
     const { data, error } = await supabase
@@ -17,12 +21,16 @@ export const promemoriaService = {
         operatore:operatore_id (
           id,
           nome,
-          cognome
+          cognome,
+          settore,
+          responsabile
         ),
         destinatario:destinatario_id (
           id,
           nome,
-          cognome
+          cognome,
+          settore,
+          responsabile
         )
       `)
       .order("data_scadenza", { ascending: true });
@@ -63,6 +71,125 @@ export const promemoriaService = {
     }
 
     return data || [];
+  },
+
+  /**
+   * Controlla promemoria in scadenza e invia notifiche automatiche
+   * ai destinatari tramite sistema messaggi interni
+   */
+  async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
+    try {
+      console.log("🔔 Controllo promemoria in scadenza...");
+
+      const oggi = new Date();
+      oggi.setHours(0, 0, 0, 0);
+      const domani = new Date(oggi);
+      domani.setDate(domani.getDate() + 1);
+      const dopodomani = new Date(oggi);
+      dopodomani.setDate(dopodomani.getDate() + 2);
+
+      // Ottieni tutti i promemoria visibili (RLS fa il filtro)
+      const { data: promemoria, error } = await supabase
+        .from("tbpromemoria")
+        .select(`
+          *,
+          destinatario:destinatario_id (
+            id,
+            nome,
+            cognome,
+            email
+          )
+        `)
+        .in("working_progress", ["Aperto", "In lavorazione"])
+        .gte("data_scadenza", oggi.toISOString().split("T")[0])
+        .lte("data_scadenza", dopodomani.toISOString().split("T")[0]);
+
+      if (error) {
+        console.error("Errore recupero promemoria per notifiche:", error);
+        return;
+      }
+
+      if (!promemoria || promemoria.length === 0) {
+        console.log("✅ Nessun promemoria in scadenza");
+        return;
+      }
+
+      console.log(`📋 Trovati ${promemoria.length} promemoria in scadenza`);
+
+      // Per ogni promemoria in scadenza con destinatario
+      for (const p of promemoria) {
+        if (!p.destinatario_id || !p.destinatario) continue;
+
+        const scadenza = new Date(p.data_scadenza);
+        scadenza.setHours(0, 0, 0, 0);
+        
+        let urgenza = "";
+        let giorniRimasti = 0;
+
+        if (scadenza.getTime() === oggi.getTime()) {
+          urgenza = "🔴 SCADE OGGI";
+          giorniRimasti = 0;
+        } else if (scadenza.getTime() === domani.getTime()) {
+          urgenza = "🟡 SCADE DOMANI";
+          giorniRimasti = 1;
+        } else {
+          urgenza = "🟢 SCADE TRA 2 GIORNI";
+          giorniRimasti = 2;
+        }
+
+        // Controlla se abbiamo già inviato notifica oggi per questo promemoria
+        const { data: notificheEsistenti } = await supabase
+          .from("tbmessaggi")
+          .select("id")
+          .ilike("testo", `%Promemoria in scadenza: ${p.titolo}%`)
+          .gte("created_at", oggi.toISOString());
+
+        if (notificheEsistenti && notificheEsistenti.length > 0) {
+          console.log(`⏭️  Notifica già inviata per promemoria: ${p.titolo}`);
+          continue;
+        }
+
+        // Crea o ottieni conversazione diretta con destinatario
+        try {
+          const conversazione = await messaggioService.getOrCreateConversazioneDiretta(
+            currentUserId,
+            p.destinatario_id,
+            studioId
+          );
+
+          if (!conversazione) {
+            console.error(`❌ Impossibile creare conversazione per promemoria: ${p.titolo}`);
+            continue;
+          }
+
+          // Formatta data scadenza
+          const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
+
+          // Invia messaggio di notifica
+          const messaggioTesto = `${urgenza}\n\n📌 **Promemoria in scadenza: ${p.titolo}**\n\n` +
+            `📅 Scadenza: ${dataScadenzaFormattata} (${giorniRimasti === 0 ? "oggi" : giorniRimasti === 1 ? "domani" : "tra 2 giorni"})\n` +
+            `📝 Descrizione: ${p.descrizione || "Nessuna descrizione"}\n` +
+            `⚡ Priorità: ${p.priorita}\n` +
+            `📊 Stato: ${p.working_progress}\n\n` +
+            `👉 Vai su /promemoria per gestire questo promemoria.`;
+
+          await messaggioService.inviaMessaggio(
+            conversazione.id,
+            currentUserId,
+            messaggioTesto
+          );
+
+          console.log(`✅ Notifica inviata per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`);
+
+        } catch (msgError) {
+          console.error(`❌ Errore invio notifica per promemoria ${p.titolo}:`, msgError);
+        }
+      }
+
+      console.log("🎉 Controllo notifiche completato");
+    } catch (error) {
+      console.error("❌ Errore controllo notifiche scadenza:", error);
+    }
   },
 
   /**
