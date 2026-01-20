@@ -1928,8 +1928,12 @@ export default function ClientiPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
+      <AlertDialog open={showConfirmDialog} onOpenChange={(open) => {
+        if (!open) {
+          handleCancelNewRiferimento();
+        }
+      }}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>⚠️ Conferma Inserimento</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1938,8 +1942,26 @@ export default function ClientiPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelNewRiferimento}>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmNewRiferimento}>Conferma</AlertDialogAction>
+            <AlertDialogCancel 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCancelNewRiferimento();
+              }}
+            >
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleConfirmNewRiferimento();
+              }}
+            >
+              Conferma
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
