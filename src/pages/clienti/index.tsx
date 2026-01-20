@@ -124,7 +124,7 @@ export default function ClientiPage() {
     provincia: "",
     email: "",
     tipo_cliente: "PERSONA_FISICA" as string,
-    tipologia_cliente: "" as "Interno" | "Esterno" | "",
+    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
     attivo: true,
     note: "",
     utente_operatore_id: "",
@@ -422,7 +422,7 @@ export default function ClientiPage() {
       provincia: cliente.provincia || "",
       email: cliente.email || "",
       tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
-      tipologia_cliente: (cliente.tipologia_cliente as "Interno" | "Esterno") || "",
+      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
       attivo: cliente.attivo ?? true,
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
@@ -946,15 +946,15 @@ export default function ClientiPage() {
                   <Select
                     value={formData.tipologia_cliente || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipologia_cliente: value as "Interno" | "Esterno" })
+                      setFormData({ ...formData, tipologia_cliente: value as "CL interno" | "CL esterno" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipologia" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Interno">Interno</SelectItem>
-                      <SelectItem value="Esterno">Esterno</SelectItem>
+                      <SelectItem value="CL interno">Interno</SelectItem>
+                      <SelectItem value="CL esterno">Esterno</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
