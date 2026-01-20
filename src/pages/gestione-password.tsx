@@ -97,11 +97,9 @@ export default function GestionePasswordPage() {
       };
 
       if (editingId) {
-        // @ts-expect-error - Tipo parziale vs completo: Supabase update accetta partial
         await passwordService.updateCredenziale(editingId, payload);
         toast({ title: "Aggiornato", description: "Credenziale aggiornata con successo" });
       } else {
-        // @ts-expect-error - Tipo insert: Supabase insert accetta partial se i campi mancanti sono nullable
         await passwordService.createCredenziale(payload as any);
         toast({ title: "Creato", description: "Nuova credenziale salvata" });
       }

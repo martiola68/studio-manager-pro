@@ -34,7 +34,7 @@ export const passwordService = {
       .order("portale", { ascending: true });
 
     if (error) throw error;
-    return data as Credenziale[];
+    return data as unknown as Credenziale[];
   },
 
   async getCredenzialeById(id: string) {
@@ -45,32 +45,30 @@ export const passwordService = {
       .single();
 
     if (error) throw error;
-    return data as Credenziale;
+    return data as unknown as Credenziale;
   },
 
   async createCredenziale(credenziale: CredenzialeInsert) {
     const { data, error } = await supabase
       .from("credenziali_accesso" as any)
-      // @ts-expect-error - Supabase type workaround
       .insert(credenziale)
       .select()
       .single();
 
     if (error) throw error;
-    return data as Credenziale;
+    return data as unknown as Credenziale;
   },
 
   async updateCredenziale(id: string, updates: CredenzialeUpdate) {
     const { data, error } = await supabase
       .from("credenziali_accesso" as any)
-      // @ts-expect-error - Supabase type workaround
       .update(updates)
       .eq("id", id)
       .select()
       .single();
 
     if (error) throw error;
-    return data as Credenziale;
+    return data as unknown as Credenziale;
   },
 
   async deleteCredenziale(id: string) {

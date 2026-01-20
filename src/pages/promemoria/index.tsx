@@ -201,7 +201,7 @@ export default function PromemoriaPage() {
               <div>
                 <Label>Descrizione</Label>
                 <Input 
-                  value={formData.descrizione}
+                  value={formData.descrizione || ""}
                   onChange={e => setFormData({...formData, descrizione: e.target.value})}
                 />
               </div>

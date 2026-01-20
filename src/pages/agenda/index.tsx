@@ -65,8 +65,8 @@ export default function AgendaPage() {
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
-    data_inizio: new Date(),
-    data_fine: new Date(),
+    data_inizio: "", // Uso stringa per datetime-local
+    data_fine: "",   // Uso stringa per datetime-local
     type: "appuntamento" as "appuntamento" | "scadenza" | "task",
     cliente_id: "",
     allDay: false,
@@ -154,31 +154,35 @@ export default function AgendaPage() {
 
   const handleSave = async () => {
     try {
+      // Validazione base
+      if (!formData.data_inizio || !formData.data_fine) {
+        toast({ title: "Errore", description: "Date mancanti", variant: "destructive" });
+        return;
+      }
+
       const eventoData = {
         ...formData,
-        // Conversione Date -> ISO String per Supabase
-        data_inizio: formData.data_inizio.toISOString(),
-        data_fine: formData.data_fine.toISOString(),
+        // Stringhe datetime-local sono già ISO compatibili parzialmente, ma aggiungiamo i secondi se mancano o convertiamo in Date poi ISO
+        data_inizio: new Date(formData.data_inizio).toISOString(),
+        data_fine: new Date(formData.data_fine).toISOString(),
         cliente_id: formData.cliente_id || null,
         sala: formData.in_sede ? formData.sala : null,
         luogo: formData.in_sede ? null : formData.luogo,
-        // Fix partecipanti: assicurarsi che sia array di stringhe
         partecipanti: formData.partecipanti || [],
-        // Fix campi Teams
         riunione_teams: formData.riunione_teams,
         link_teams: formData.riunione_teams ? formData.link_teams : null
       };
       
-      if (selectedEvent?.id) {
-        await eventoService.updateEvento(selectedEvent.id, eventoData);
+      if (editingEvento?.id) {
+        await eventoService.updateEvento(editingEvento.id, eventoData);
         toast({ title: "Evento aggiornato" });
       } else {
         await eventoService.createEvento(eventoData);
         toast({ title: "Evento creato" });
       }
       
-      closeDialog();
-      loadEventi();
+      setDialogOpen(false);
+      loadData();
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -201,7 +205,7 @@ export default function AgendaPage() {
           ? evento.partecipanti.map(p => String(p)) 
           : [];
         
-        if (partecipantiArray.length === utenti.length && 
+        if (partecipantiArray.length === utenti.length && utenti.length > 0 &&
             utenti.every(u => partecipantiArray.includes(u.id))) {
           inviaATutti = true;
         }
@@ -214,6 +218,7 @@ export default function AgendaPage() {
       if (!isoString) return "";
       try {
         const date = new Date(isoString);
+        // Format: YYYY-MM-DDThh:mm
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
@@ -230,15 +235,20 @@ export default function AgendaPage() {
       descrizione: evento.descrizione || "",
       data_inizio: convertToDatetimeLocal(evento.data_inizio),
       data_fine: convertToDatetimeLocal(evento.data_fine),
-      tutto_giorno: evento.tutto_giorno || false,
-      utente_id: evento.utente_id || "",
+      type: "appuntamento", // Default o recuperato se presente
       cliente_id: evento.cliente_id || "",
+      allDay: evento.tutto_giorno || false,
+      tutto_giorno: evento.tutto_giorno || false,
       evento_generico: !evento.cliente_id,
+      riunione_teams: evento.riunione_teams || false,
+      link_teams: evento.link_teams || "",
+      partecipanti: partecipantiArray,
       in_sede: evento.in_sede ?? true,
       sala: evento.sala || "",
       luogo: evento.luogo || "",
-      partecipanti: partecipantiArray,
-      invia_a_tutti: inviaATutti
+      invia_a_tutti: inviaATutti,
+      utente_id: evento.utente_id || "",
+      colore: evento.colore || "#3B82F6"
     });
     setDialogOpen(true);
   };
@@ -269,15 +279,20 @@ export default function AgendaPage() {
       descrizione: "",
       data_inizio: "",
       data_fine: "",
-      tutto_giorno: false,
-      utente_id: currentUser?.id || "",
+      type: "appuntamento",
       cliente_id: "",
+      allDay: false,
+      tutto_giorno: false,
       evento_generico: false,
-      in_sede: true,
-      sala: "",
-      luogo: "",
+      riunione_teams: false,
+      link_teams: "",
       partecipanti: [],
-      invia_a_tutti: false
+      in_sede: true,
+      sala: "riunioni",
+      luogo: "",
+      invia_a_tutti: false,
+      utente_id: currentUser?.id || "",
+      colore: "#3B82F6"
     });
     setEditingEvento(null);
   };
