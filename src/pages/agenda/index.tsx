@@ -54,7 +54,8 @@ export default function AgendaPage() {
     return SALE_CONFIG[salaId].bordoColore;
   };
 
-  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null) => {
+  const getColoreEvento = (eventoGenerico: boolean, inSede: boolean, sala: string | null, riunione_teams: boolean) => {
+    if (riunione_teams) return "#F97316"; // Arancio (Teams)
     if (eventoGenerico) return "#3B82F6"; // Blu
     if (!inSede) return "#EF4444"; // Rosso
     
@@ -152,7 +153,9 @@ export default function AgendaPage() {
     });
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
     try {
       // Validazione base
       if (!formData.data_inizio || !formData.data_fine) {
@@ -248,7 +251,7 @@ export default function AgendaPage() {
       luogo: evento.luogo || "",
       invia_a_tutti: inviaATutti,
       utente_id: evento.utente_id || "",
-      colore: evento.colore || "#3B82F6"
+      colore: getColoreEvento(!evento.cliente_id, evento.in_sede ?? true, evento.sala, evento.riunione_teams || false)
     });
     setDialogOpen(true);
   };

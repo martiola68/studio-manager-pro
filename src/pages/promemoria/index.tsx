@@ -129,17 +129,16 @@ export default function PromemoriaPage() {
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
         stato: formData.stato,
-        operatore_id: currentUser?.id ?? null, // Fix: assicura string o null
+        operatore_id: currentUser?.id ?? "",
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || currentUser?.settore || null, // Auto-popola settore
+        settore: formData.settore || currentUser?.settore || "",
         cliente_id: formData.cliente_id || null
       });
 
       toast({ title: "Successo", description: "Promemoria creato" });
       setIsDialogOpen(false);
-      checkUserAndLoad(); // Ricarica dati
+      checkUserAndLoad();
       
-      // Reset form parziale (mantiene settore)
       setFormData(prev => ({
         ...prev,
         titolo: "",
