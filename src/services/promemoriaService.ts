@@ -103,32 +103,38 @@ export const promemoriaService = {
   /**
    * Aggiorna un promemoria esistente
    */
-  async aggiornaPromemoria(id: string, promemoria: Partial<Promemoria>) {
-    const { error } = await supabase
+  async updatePromemoria(id: string, promemoria: {
+    titolo?: string;
+    descrizione?: string;
+    data_scadenza?: string;
+    priorita?: string;
+    working_progress?: string;
+    destinatario_id?: string | null;
+    settore?: string;
+  }) {
+    const { data, error } = await supabase
       .from("tbpromemoria")
-      .update({
-        tipo_promemoria_id: promemoria.tipo_promemoria_id,
-        data_inserimento: promemoria.data_inserimento,
-        giorni_scadenza: promemoria.giorni_scadenza,
-        data_scadenza: promemoria.data_scadenza,
-        working_progress: promemoria.working_progress,
-        da_fatturare: promemoria.da_fatturare,
-        fatturato: promemoria.fatturato,
-        note: promemoria.note
-      })
-      .eq("id", id);
+      .update(promemoria)
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) {
       console.error("Errore aggiornamento promemoria:", error);
       throw error;
     }
+
+    return data;
   },
 
   /**
    * Elimina un promemoria
    */
-  async eliminaPromemoria(id: string): Promise<void> {
-    const { error } = await supabase.from("tbpromemoria").delete().eq("id", id);
+  async deletePromemoria(id: string): Promise<void> {
+    const { error } = await supabase
+      .from("tbpromemoria")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       console.error("Errore eliminazione promemoria:", error);
