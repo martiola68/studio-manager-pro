@@ -392,7 +392,7 @@ export default function AgendaPage() {
   // --- RENDERERS ---
 
   // Render Event Card (Lista e Mese) con Tooltip
-  const renderEventCard = (evento: Evento, compact: boolean = false) => {
+  const renderEventCard = (evento: EventoWithRelations, compact: boolean = false) => {
     if (!evento) return null;
 
     const startDate = parseISO(evento.data_inizio);
