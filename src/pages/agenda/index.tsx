@@ -25,7 +25,8 @@ import {
   List, 
   Grid, 
   CalendarDays,
-  Filter
+  Filter,
+  Calendar
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, startOfDay, parseISO } from "date-fns";
@@ -280,18 +281,42 @@ export default function AgendaPage() {
     }
   };
 
+  // Delete Event Handler - FIX: Reset tutti gli stati per evitare blocchi
   const handleDeleteEvento = async () => {
     if (!eventoToDelete) return;
+
     try {
-      const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
+      const { error } = await supabase
+        .from("tbagenda")
+        .delete()
+        .eq("id", eventoToDelete);
+
       if (error) throw error;
-      toast({ title: "Successo", description: "Evento eliminato" });
+
+      // FIX: Chiudi TUTTI i dialog e resetta TUTTI gli stati
+      setDeleteDialogOpen(false);
+      setDialogOpen(false);
+      setEventoToDelete(null);
+      setEditingEventoId(null);
+      
+      // Ricarica eventi
+      loadData();
+      
+      toast({
+        title: "Evento eliminato",
+        description: "L'evento è stato eliminato con successo",
+      });
+    } catch (error: any) {
+      console.error("Errore eliminazione evento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'evento",
+        variant: "destructive",
+      });
+      
+      // FIX: Anche in caso di errore, resetta gli stati
       setDeleteDialogOpen(false);
       setEventoToDelete(null);
-      loadData();
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Errore", description: "Eliminazione fallita", variant: "destructive" });
     }
   };
 
@@ -516,6 +541,32 @@ export default function AgendaPage() {
     );
   };
 
+  // Render List View - SOLO EVENTI PASSATI/SCADUTI
+  const renderListView = () => {
+    const now = new Date();
+    
+    // FIX: Filtra SOLO eventi PASSATI (scaduti, < oggi)
+    const pastEvents = filteredEvents.filter(evento => {
+      const eventoDate = parseISO(evento.data_inizio);
+      return eventoDate < now;
+    });
+
+    if (pastEvents.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">Nessun evento scaduto trovato</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+        {pastEvents.map((evento) => renderEventCard(evento, false))}
+      </div>
+    );
+  };
+
   if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
 
   return (
@@ -559,27 +610,39 @@ export default function AgendaPage() {
 
           {/* View Toggles */}
           <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
-            <Button variant={view === "list" ? "default" : "ghost"} size="sm" onClick={() => setView("list")}>
-              <List className="h-4 w-4 mr-2" /> Elenco
-            </Button>
-            <Button variant={view === "month" ? "default" : "ghost"} size="sm" onClick={() => setView("month")}>
-              <Grid className="h-4 w-4 mr-2" /> Mese
-            </Button>
-            <Button variant={view === "week" ? "default" : "ghost"} size="sm" onClick={() => setView("week")}>
-              <CalendarDays className="h-4 w-4 mr-2" /> Settimana
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant={view === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setView("list")}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Scaduti
+              </Button>
+              <Button
+                variant={view === "month" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setView("month")}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Mese
+              </Button>
+              <Button
+                variant={view === "week" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setView("week")}
+              >
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Settimana
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="bg-white rounded-lg shadow-sm">
-        {view === "list" && (
-          <div className="p-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEvents.map(e => renderEventCard(e, true))}
-            {filteredEvents.length === 0 && <div className="p-8 text-center text-gray-500 col-span-full">Nessun evento</div>}
-          </div>
-        )}
+        {view === "list" && renderListView()}
         {view === "month" && renderMonthView()}
         {view === "week" && renderWeekView()}
       </div>
@@ -672,9 +735,31 @@ export default function AgendaPage() {
               )}
 
               <div className="flex items-center space-x-2">
-                <Checkbox id="teams" checked={formData.riunione_teams} onCheckedChange={c => setFormData({...formData, riunione_teams: !!c})} />
-                <Label htmlFor="teams">Riunione Teams</Label>
+                <Checkbox
+                  id="riunione_teams"
+                  checked={formData.riunione_teams}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, riunione_teams: !!checked })
+                  }
+                />
+                <Label htmlFor="riunione_teams">Riunione Teams</Label>
               </div>
+
+              {/* Campo Link Teams - REINSERITO */}
+              {formData.riunione_teams && (
+                <div className="space-y-2">
+                  <Label htmlFor="link_teams">Link Teams</Label>
+                  <Input
+                    id="link_teams"
+                    type="url"
+                    placeholder="https://teams.microsoft.com/..."
+                    value={formData.link_teams}
+                    onChange={(e) =>
+                      setFormData({ ...formData, link_teams: e.target.value })
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             {/* Partecipanti Rapidi */}
@@ -709,9 +794,38 @@ export default function AgendaPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
-            <Button onClick={handleSaveEvento}>{editingEventoId ? "Aggiorna" : "Salva"}</Button>
+          <DialogFooter className="flex justify-between items-center">
+            {/* Pulsante Elimina a sinistra - AGGIUNTO */}
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setDialogOpen(false);
+                setEventoToDelete(editingEventoId!);
+                setDeleteDialogOpen(true);
+              }}
+              className="mr-auto"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Elimina Evento
+            </Button>
+
+            {/* Pulsanti a destra */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setEditingEventoId(null);
+                }}
+              >
+                Annulla
+              </Button>
+              <Button type="submit" onClick={handleSaveEvento}>
+                {editingEventoId ? "Aggiorna Evento" : "Crea Evento"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
