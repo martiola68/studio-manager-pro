@@ -171,8 +171,8 @@ export default function PromemoriaPage() {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(p => 
-        p.titolo.toLowerCase().includes(search) ||
-        p.descrizione?.toLowerCase().includes(search)
+        (p.titolo || "").toLowerCase().includes(search) ||
+        (p.descrizione || "").toLowerCase().includes(search)
       );
     }
 
@@ -298,7 +298,7 @@ export default function PromemoriaPage() {
         priorita: formData.priorita,
         working_progress: formData.working_progress,
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore
+        settore: formData.settore || undefined
       });
 
       toast({ title: "Successo", description: "Promemoria aggiornato" });
@@ -472,7 +472,7 @@ export default function PromemoriaPage() {
                   
                   return (
                     <TableRow key={p.id} className={rowClass}>
-                      <TableCell className={`font-medium ${textClass}`}>{p.titolo}</TableCell>
+                      <TableCell className={`font-medium ${textClass}`}>{p.titolo || "Senza titolo"}</TableCell>
                       <TableCell className={`max-w-xs truncate ${textClass}`}>{p.descrizione || "-"}</TableCell>
                       <TableCell className={textClass}>{format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it })}</TableCell>
                       <TableCell>{getPrioritaBadge(p.priorita)}</TableCell>
