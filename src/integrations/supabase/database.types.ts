@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -869,6 +869,7 @@ export type Database = {
       }
       tbpromemoria: {
         Row: {
+          allegati: Json | null
           created_at: string | null
           da_fatturare: boolean
           data_inserimento: string
@@ -888,6 +889,7 @@ export type Database = {
           working_progress: string
         }
         Insert: {
+          allegati?: Json | null
           created_at?: string | null
           da_fatturare?: boolean
           data_inserimento?: string
@@ -907,6 +909,7 @@ export type Database = {
           working_progress?: string
         }
         Update: {
+          allegati?: Json | null
           created_at?: string | null
           da_fatturare?: boolean
           data_inserimento?: string
