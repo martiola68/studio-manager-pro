@@ -71,11 +71,7 @@ export default function Modello770Page() {
       // Filtro per settore (lato server se possibile, altrimenti client)
       // Nota: tbscad770 non ha il settore diretto, lo prendiamo dal cliente
       
-      const { data, error } = await query
-        .from("tbscad770")
-        .select(`
-          *,
-        `);
+      const { data, error } = await query;
 
       if (error) throw error;
       

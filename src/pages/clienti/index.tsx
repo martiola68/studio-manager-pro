@@ -480,7 +480,7 @@ export default function ClientiPage() {
           supabase.from("tbscadiva").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -491,7 +491,7 @@ export default function ClientiPage() {
           supabase.from("tbscadcu").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -502,7 +502,7 @@ export default function ClientiPage() {
           supabase.from("tbscadbilanci").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -513,7 +513,7 @@ export default function ClientiPage() {
           supabase.from("tbscadfiscali").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -524,7 +524,7 @@ export default function ClientiPage() {
           supabase.from("tbscadlipe").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -537,7 +537,7 @@ export default function ClientiPage() {
             id: cliente.id,
             utente_payroll_id: cliente.utente_payroll_id,
             professionista_payroll_id: cliente.professionista_payroll_id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -548,7 +548,7 @@ export default function ClientiPage() {
           supabase.from("tbscadestero").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -559,7 +559,7 @@ export default function ClientiPage() {
           supabase.from("tbscadccgg").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -570,7 +570,7 @@ export default function ClientiPage() {
           supabase.from("tbscadproforma").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
@@ -582,7 +582,7 @@ export default function ClientiPage() {
             ...baseData,
             id: cliente.id,
             studio_id: (cliente as any).studio_id // Fallback if studio_id is needed but not in Cliente type
-          }, { onConflict: "id", ignoreDuplicates: true })
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
 
