@@ -237,7 +237,7 @@ export default function PromemoriaPage() {
       await promemoriaService.createPromemoria({
         titolo: formData.titolo,
         descrizione: formData.descrizione,
-        data_inserimento: format(formData.data, "yyyy-MM-dd"),
+        data_inserimento: format(new Date(), "yyyy-MM-dd"),
         giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
@@ -584,31 +584,12 @@ export default function PromemoriaPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>Data *</Label>
-                <Popover open={isDataCalendarOpen} onOpenChange={setIsDataCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className={`w-full justify-start text-left font-normal ${!formData.data && "text-muted-foreground"}`}
-                      type="button"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.data}
-                      onSelect={(date) => {
-                        if (date) {
-                          setFormData(prev => ({...prev, data: date}));
-                          setIsDataCalendarOpen(false);
-                        }
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input 
+                  value={formData.data ? format(formData.data, "dd/MM/yyyy") : ""}
+                  disabled
+                  className="bg-gray-100"
+                  placeholder="Calcolata"
+                />
               </div>
               <div>
                 <Label>Giorni Scadenza *</Label>
@@ -739,31 +720,12 @@ export default function PromemoriaPage() {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>Data *</Label>
-                <Popover open={isEditDataCalendarOpen} onOpenChange={setIsEditDataCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className={`w-full justify-start text-left font-normal ${!formData.data && "text-muted-foreground"}`}
-                      type="button"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.data}
-                      onSelect={(date) => {
-                        if (date) {
-                          setFormData(prev => ({...prev, data: date}));
-                          setIsEditDataCalendarOpen(false);
-                        }
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input 
+                  value={formData.data ? format(formData.data, "dd/MM/yyyy") : ""}
+                  disabled
+                  className="bg-gray-100"
+                  placeholder="Calcolata"
+                />
               </div>
               <div>
                 <Label>Giorni Scadenza *</Label>
