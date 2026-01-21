@@ -198,6 +198,8 @@ export const promemoriaService = {
   async createPromemoria(promemoria: {
     titolo: string;
     descrizione?: string;
+    data_inserimento: string;
+    giorni_scadenza: number;
     data_scadenza: string;
     priorita: string;
     stato: string;
@@ -210,6 +212,8 @@ export const promemoriaService = {
       .insert({
         titolo: promemoria.titolo,
         descrizione: promemoria.descrizione,
+        data_inserimento: promemoria.data_inserimento,
+        giorni_scadenza: promemoria.giorni_scadenza,
         data_scadenza: promemoria.data_scadenza,
         priorita: promemoria.priorita,
         working_progress: promemoria.stato,
@@ -233,6 +237,8 @@ export const promemoriaService = {
   async updatePromemoria(id: string, promemoria: {
     titolo?: string;
     descrizione?: string;
+    data_inserimento?: string;
+    giorni_scadenza?: number;
     data_scadenza?: string;
     priorita?: string;
     working_progress?: string;

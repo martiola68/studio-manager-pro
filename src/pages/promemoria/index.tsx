@@ -231,7 +231,7 @@ export default function PromemoriaPage() {
       await promemoriaService.createPromemoria({
         titolo: formData.titolo,
         descrizione: formData.descrizione,
-        data: format(formData.data, "yyyy-MM-dd"),
+        data_inserimento: format(formData.data, "yyyy-MM-dd"),
         giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
@@ -258,7 +258,7 @@ export default function PromemoriaPage() {
     setFormData({
       titolo: promemoria.titolo,
       descrizione: promemoria.descrizione || "",
-      data: new Date(promemoria.data),
+      data: new Date(promemoria.data_inserimento), // Load from data_inserimento
       giorni_scadenza: promemoria.giorni_scadenza || 0,
       data_scadenza: new Date(promemoria.data_scadenza),
       priorita: promemoria.priorita,
@@ -286,7 +286,7 @@ export default function PromemoriaPage() {
       await promemoriaService.updatePromemoria(selectedPromemoria.id, {
         titolo: formData.titolo,
         descrizione: formData.descrizione,
-        data: format(formData.data, "yyyy-MM-dd"),
+        data_inserimento: format(formData.data, "yyyy-MM-dd"),
         giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
@@ -453,7 +453,7 @@ export default function PromemoriaPage() {
                   
                   // ✅ PRIORITÀ: Annullato > Scaduto > Normale
                   const rowClass = annullato 
-                    ? "bg-gray-50" 
+                    ? "bg-gray-100" // Darkened from bg-gray-50
                     : scaduto 
                     ? "bg-red-50" 
                     : "";
