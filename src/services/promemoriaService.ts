@@ -215,6 +215,7 @@ export const promemoriaService = {
     operatore_id: string;
     destinatario_id?: string | null;
     settore?: string;
+    tipo_promemoria_id?: string | null;
   }) {
     const { data, error } = await supabase
       .from("tbpromemoria")
@@ -228,8 +229,9 @@ export const promemoriaService = {
         working_progress: promemoria.stato,
         operatore_id: promemoria.operatore_id,
         destinatario_id: promemoria.destinatario_id,
-        settore: promemoria.settore
-      } as any)
+        settore: promemoria.settore,
+        tipo_promemoria_id: promemoria.tipo_promemoria_id
+      })
       .select()
       .single();
 
@@ -253,6 +255,7 @@ export const promemoriaService = {
     working_progress?: string;
     destinatario_id?: string | null;
     settore?: string;
+    tipo_promemoria_id?: string | null;
   }) {
     const { data, error } = await supabase
       .from("tbpromemoria")

@@ -138,13 +138,24 @@ export default function PromemoriaPage() {
       if (userProfile) setCurrentUser(userProfile);
 
       // 3. Load Data in parallel
-      const [promemoriaData, utentiData, tipiData] = await Promise.all([
-        promemoriaService.getPromemoria(),
+      const [promemoriaResult, utentiData, tipiData] = await Promise.all([
+        supabase
+          .from("tbpromemoria")
+          .select("*")
+          .order("data_scadenza", { ascending: true, nullsFirst: false }),
         supabase.from("tbutenti").select("*").order("cognome"),
         supabase.from("tbtipopromemoria").select("*").order("nome")
       ]);
 
-      if (promemoriaData) setPromemoria(promemoriaData);
+      if (promemoriaResult.data) {
+        const promemoriaWithAllegati = await Promise.all(
+          promemoriaResult.data.map(async (p) => {
+            const allegati = await promemoriaService.getAllegati(p.id);
+            return { ...p, allegati };
+          })
+        );
+        setPromemoria(promemoriaWithAllegati);
+      }
       if (utentiData.data) setUtenti(utentiData.data);
       if (tipiData.data) setTipiPromemoria(tipiData.data);
 
@@ -243,7 +254,8 @@ export default function PromemoriaPage() {
         stato: formData.working_progress,
         operatore_id: currentUser?.id ?? "",
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || ""
+        settore: formData.settore || "",
+        tipo_promemoria_id: formData.tipo_promemoria_id || null
       });
 
       if (filesToUpload.length > 0 && newPromemoria) {
@@ -306,7 +318,8 @@ export default function PromemoriaPage() {
         priorita: formData.priorita,
         working_progress: formData.working_progress,
         destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || undefined
+        settore: formData.settore || undefined,
+        tipo_promemoria_id: formData.tipo_promemoria_id || null
       });
 
       // Elimina allegati
@@ -409,10 +422,24 @@ export default function PromemoriaPage() {
                   {destinatario ? `${destinatario.nome} ${destinatario.cognome}` : "-"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={
-                    p.working_progress === "Completato" ? "default" :
-                    p.working_progress === "In lavorazione" ? "secondary" : "outline"
-                  }>
+                  <Badge 
+                    variant={
+                      p.working_progress === "Completato" ? "default" :
+                      p.working_progress === "Conclusa" ? "default" :
+                      p.working_progress === "In lavorazione" ? "secondary" :
+                      p.working_progress === "Richiesta confronto" ? "secondary" :
+                      p.working_progress === "Annullata" ? "destructive" :
+                      "outline"
+                    }
+                    className={
+                      p.working_progress === "Completato" ? "bg-green-500 hover:bg-green-600" :
+                      p.working_progress === "Conclusa" ? "bg-green-500 hover:bg-green-600" :
+                      p.working_progress === "In lavorazione" ? "bg-yellow-500 hover:bg-yellow-600" :
+                      p.working_progress === "Richiesta confronto" ? "bg-blue-500 hover:bg-blue-600" :
+                      p.working_progress === "Annullata" ? "" :
+                      ""
+                    }
+                  >
                     {p.working_progress}
                   </Badge>
                 </TableCell>
