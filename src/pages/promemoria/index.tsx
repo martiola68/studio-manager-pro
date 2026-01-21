@@ -47,6 +47,19 @@ export default function PromemoriaPage() {
     settore: ""
   });
 
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
+
+  // Helper per verificare se scaduto
+  const isScaduto = (p: Promemoria) => {
+    if (p.working_progress === "Completato") return false;
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const scadenza = new Date(p.data_scadenza);
+    scadenza.setHours(0, 0, 0, 0);
+    return scadenza < oggi;
+  };
+
   useEffect(() => {
     checkUserAndLoad();
   }, []);
@@ -184,6 +197,7 @@ export default function PromemoriaPage() {
 
   const handleOpenCreateDialog = useCallback(() => {
     resetForm();
+    setIsCalendarOpen(false);
     setIsCreateDialogOpen(true);
   }, [resetForm]);
 
@@ -227,6 +241,7 @@ export default function PromemoriaPage() {
       destinatario_id: promemoria.destinatario_id || "",
       settore: promemoria.settore || ""
     });
+    setIsEditCalendarOpen(false);
     setIsEditDialogOpen(true);
   }, []);
 
@@ -320,6 +335,12 @@ export default function PromemoriaPage() {
     return <Badge variant="outline" className={styles[priorita] || ""}>{priorita}</Badge>;
   };
 
+  const isPromemoriaExpired = (promemoria: Promemoria) => {
+    const scadenza = new Date(promemoria.data_scadenza);
+    const oggi = new Date();
+    return scadenza < oggi;
+  };
+
   if (loading && promemoria.length === 0) {
     return <div className="p-8 text-center">Caricamento...</div>;
   }
@@ -398,45 +419,60 @@ export default function PromemoriaPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPromemoria.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.titolo}</TableCell>
-                    <TableCell className="max-w-xs truncate">{p.descrizione || "-"}</TableCell>
-                    <TableCell>{format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it })}</TableCell>
-                    <TableCell>{getPrioritaBadge(p.priorita)}</TableCell>
-                    <TableCell>{getStatoBadge(p.working_progress || "Aperto")}</TableCell>
-                    <TableCell>
-                      {p.operatore ? `${p.operatore.nome} ${p.operatore.cognome}` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {p.destinatario ? `${p.destinatario.nome} ${p.destinatario.cognome}` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{p.settore || "Non specificato"}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(p)}
-                          title="Modifica"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteClick(p)}
-                          title="Elimina"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredPromemoria.map(p => {
+                  const scaduto = isScaduto(p);
+                  const annullato = p.working_progress === "Annullato";
+                  const rowClass = annullato 
+                    ? "bg-gray-50" 
+                    : scaduto 
+                    ? "bg-red-50" 
+                    : "";
+                  const textClass = annullato 
+                    ? "text-gray-500" 
+                    : scaduto 
+                    ? "text-red-700" 
+                    : "";
+                  
+                  return (
+                    <TableRow key={p.id} className={rowClass}>
+                      <TableCell className={`font-medium ${textClass}`}>{p.titolo}</TableCell>
+                      <TableCell className={`max-w-xs truncate ${textClass}`}>{p.descrizione || "-"}</TableCell>
+                      <TableCell className={textClass}>{format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it })}</TableCell>
+                      <TableCell>{getPrioritaBadge(p.priorita)}</TableCell>
+                      <TableCell>{getStatoBadge(p.working_progress || "Aperto")}</TableCell>
+                      <TableCell className={textClass}>
+                        {p.operatore ? `${p.operatore.nome} ${p.operatore.cognome}` : "-"}
+                      </TableCell>
+                      <TableCell className={textClass}>
+                        {p.destinatario ? `${p.destinatario.nome} ${p.destinatario.cognome}` : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{p.settore || "Non specificato"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(p)}
+                            title="Modifica"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteClick(p)}
+                            title="Elimina"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -548,9 +584,9 @@ export default function PromemoriaPage() {
               </div>
               <div>
                 <Label>Scadenza *</Label>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
                     </Button>
@@ -559,7 +595,10 @@ export default function PromemoriaPage() {
                     <Calendar
                       mode="single"
                       selected={formData.data_scadenza}
-                      onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
+                      onSelect={(date) => {
+                        setFormData(prev => ({...prev, data_scadenza: date || undefined}));
+                        setIsCalendarOpen(false);
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
@@ -674,9 +713,9 @@ export default function PromemoriaPage() {
               </div>
               <div>
                 <Label>Scadenza *</Label>
-                <Popover>
+                <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
                     </Button>
@@ -685,7 +724,10 @@ export default function PromemoriaPage() {
                     <Calendar
                       mode="single"
                       selected={formData.data_scadenza}
-                      onSelect={date => setFormData(prev => ({...prev, data_scadenza: date || undefined}))}
+                      onSelect={(date) => {
+                        setFormData(prev => ({...prev, data_scadenza: date || undefined}));
+                        setIsEditCalendarOpen(false);
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
