@@ -393,9 +393,9 @@ export default function PromemoriaPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Tipo</TableHead>
             <TableHead>Titolo</TableHead>
             <TableHead>Descrizione</TableHead>
-            <TableHead>Tipo</TableHead>
             <TableHead>Data Scadenza</TableHead>
             <TableHead>Destinatario</TableHead>
             <TableHead>Stato</TableHead>
@@ -407,46 +407,55 @@ export default function PromemoriaPage() {
         <TableBody>
           {promemoria.map((p) => {
             const destinatario = utenti.find(u => u.id === p.destinatario_id);
+            const isOverdue = new Date(p.data_scadenza) < new Date() && p.working_progress !== "Completato";
+            const isCompleted = p.working_progress === "Completato";
+            const isAnnullata = p.working_progress === "Annullata";
+            
             return (
-              <TableRow key={p.id}>
+              <TableRow 
+                key={p.id}
+                className={
+                  isOverdue ? "bg-red-50" :
+                  isCompleted ? "bg-green-50" :
+                  isAnnullata ? "bg-gray-100" :
+                  ""
+                }
+              >
+                <TableCell>{tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || "-"}</TableCell>
                 <TableCell className="font-medium">{p.titolo}</TableCell>
-                <TableCell className="max-w-md truncate">{p.descrizione}</TableCell>
-                <TableCell>
-                  {tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || 
-                   <span className="text-gray-400">-</span>}
-                </TableCell>
-                <TableCell>
-                  {p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it }) : "-"}
-                </TableCell>
-                <TableCell>
-                  {destinatario ? `${destinatario.nome} ${destinatario.cognome}` : "-"}
-                </TableCell>
+                <TableCell>{p.descrizione}</TableCell>
+                <TableCell>{p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy") : "-"}</TableCell>
+                <TableCell>{utenti.find(u => u.id === p.destinatario_id)?.nome || "-"}</TableCell>
                 <TableCell>
                   <Badge 
                     variant={
                       p.working_progress === "Completato" ? "default" :
                       p.working_progress === "In lavorazione" ? "secondary" :
+                      p.working_progress === "Aperto" ? "outline" :
+                      p.working_progress === "Presa visione" ? "outline" :
+                      p.working_progress === "Richiesta confronto" ? "secondary" :
+                      p.working_progress === "Annullata" ? "destructive" :
                       "outline"
+                    }
+                    className={
+                      p.working_progress === "Aperto" ? "border-blue-500 text-blue-700" :
+                      p.working_progress === "In lavorazione" ? "bg-yellow-100 text-yellow-800" :
+                      p.working_progress === "Completato" ? "bg-green-100 text-green-800" :
+                      p.working_progress === "Presa visione" ? "border-cyan-500 text-cyan-700 bg-cyan-50" :
+                      p.working_progress === "Richiesta confronto" ? "bg-purple-100 text-purple-800" :
+                      p.working_progress === "Annullata" ? "bg-red-100 text-red-800" :
+                      ""
                     }
                   >
                     {p.working_progress}
                   </Badge>
                 </TableCell>
-                <TableCell>{p.settore || "-"}</TableCell>
+                <TableCell>{p.settore}</TableCell>
                 <TableCell>
                   {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewAllegati(p)}
-                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                    >
-                      <Paperclip className="h-4 w-4 mr-1" />
-                      {(p.allegati as unknown as Allegato[]).length}
-                      <Eye className="h-3 w-3 ml-2 opacity-50" />
-                    </Button>
+                    <span className="text-gray-600">📎 {p.allegati.length}</span>
                   ) : (
-                    <span className="text-gray-400 text-sm pl-2">-</span>
+                    <span className="text-gray-400">-</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
@@ -558,12 +567,17 @@ export default function PromemoriaPage() {
               </div>
               <div>
                 <Label>Stato</Label>
-                <Select value={formData.working_progress} onValueChange={v => setFormData(prev => ({...prev, working_progress: v}))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={formData.working_progress} onValueChange={(val) => setFormData({...formData, working_progress: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona stato"/>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Aperto">Aperto</SelectItem>
                     <SelectItem value="In lavorazione">In lavorazione</SelectItem>
                     <SelectItem value="Completato">Completato</SelectItem>
+                    <SelectItem value="Presa visione">Presa visione</SelectItem>
+                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                    <SelectItem value="Annullata">Annullata</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -692,12 +706,17 @@ export default function PromemoriaPage() {
               </div>
               <div>
                 <Label>Stato</Label>
-                <Select value={formData.working_progress} onValueChange={v => setFormData(prev => ({...prev, working_progress: v}))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={formData.working_progress} onValueChange={(val) => setFormData({...formData, working_progress: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona stato"/>
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Aperto">Aperto</SelectItem>
                     <SelectItem value="In lavorazione">In lavorazione</SelectItem>
                     <SelectItem value="Completato">Completato</SelectItem>
+                    <SelectItem value="Presa visione">Presa visione</SelectItem>
+                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                    <SelectItem value="Annullata">Annullata</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
