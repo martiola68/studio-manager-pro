@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -40,6 +40,8 @@ export default function PromemoriaPage() {
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
+    data: undefined as Date | undefined,
+    giorni_scadenza: 0,
     data_scadenza: undefined as Date | undefined,
     priorita: "Media",
     working_progress: "Aperto",
@@ -47,8 +49,16 @@ export default function PromemoriaPage() {
     settore: ""
   });
 
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
+  const [isDataCalendarOpen, setIsDataCalendarOpen] = useState(false);
+  const [isEditDataCalendarOpen, setIsEditDataCalendarOpen] = useState(false);
+
+  // Calcola automaticamente data_scadenza quando cambiano data o giorni_scadenza
+  useEffect(() => {
+    if (formData.data && formData.giorni_scadenza >= 0) {
+      const scadenza = addDays(formData.data, formData.giorni_scadenza);
+      setFormData(prev => ({ ...prev, data_scadenza: scadenza }));
+    }
+  }, [formData.data, formData.giorni_scadenza]);
 
   // Helper per verificare se scaduto
   const isScaduto = (p: Promemoria) => {
@@ -175,6 +185,8 @@ export default function PromemoriaPage() {
       setFormData({
         titolo: "",
         descrizione: "",
+        data: undefined,
+        giorni_scadenza: 0,
         data_scadenza: undefined,
         priorita: "Media",
         working_progress: "Aperto",
@@ -186,6 +198,8 @@ export default function PromemoriaPage() {
       setFormData({
         titolo: "",
         descrizione: "",
+        data: undefined,
+        giorni_scadenza: 0,
         data_scadenza: undefined,
         priorita: "Media",
         working_progress: "Aperto",
@@ -197,19 +211,28 @@ export default function PromemoriaPage() {
 
   const handleOpenCreateDialog = useCallback(() => {
     resetForm();
-    setIsCalendarOpen(false);
+    setIsDataCalendarOpen(false);
     setIsCreateDialogOpen(true);
   }, [resetForm]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.titolo || !formData.data_scadenza) return;
+    if (!formData.titolo || !formData.data || !formData.data_scadenza) {
+      toast({
+        title: "Errore",
+        description: "Compila tutti i campi obbligatori",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       await promemoriaService.createPromemoria({
         titolo: formData.titolo,
         descrizione: formData.descrizione,
+        data: format(formData.data, "yyyy-MM-dd"),
+        giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
         stato: formData.working_progress,
@@ -235,25 +258,36 @@ export default function PromemoriaPage() {
     setFormData({
       titolo: promemoria.titolo,
       descrizione: promemoria.descrizione || "",
+      data: new Date(promemoria.data),
+      giorni_scadenza: promemoria.giorni_scadenza || 0,
       data_scadenza: new Date(promemoria.data_scadenza),
       priorita: promemoria.priorita,
       working_progress: promemoria.working_progress,
       destinatario_id: promemoria.destinatario_id || "",
       settore: promemoria.settore || ""
     });
-    setIsEditCalendarOpen(false);
+    setIsEditDataCalendarOpen(false);
     setIsEditDialogOpen(true);
   }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPromemoria || !formData.titolo || !formData.data_scadenza) return;
+    if (!selectedPromemoria || !formData.titolo || !formData.data || !formData.data_scadenza) {
+      toast({
+        title: "Errore",
+        description: "Compila tutti i campi obbligatori",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       await promemoriaService.updatePromemoria(selectedPromemoria.id, {
         titolo: formData.titolo,
         descrizione: formData.descrizione,
+        data: format(formData.data, "yyyy-MM-dd"),
+        giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
         working_progress: formData.working_progress,
@@ -333,12 +367,6 @@ export default function PromemoriaPage() {
       "Alta": "bg-red-100 text-red-800"
     };
     return <Badge variant="outline" className={styles[priorita] || ""}>{priorita}</Badge>;
-  };
-
-  const isPromemoriaExpired = (promemoria: Promemoria) => {
-    const scadenza = new Date(promemoria.data_scadenza);
-    const oggi = new Date();
-    return scadenza < oggi;
   };
 
   if (loading && promemoria.length === 0) {
@@ -422,11 +450,14 @@ export default function PromemoriaPage() {
                 filteredPromemoria.map(p => {
                   const scaduto = isScaduto(p);
                   const annullato = p.working_progress === "Annullato";
+                  
+                  // ✅ PRIORITÀ: Annullato > Scaduto > Normale
                   const rowClass = annullato 
                     ? "bg-gray-50" 
                     : scaduto 
                     ? "bg-red-50" 
                     : "";
+                  
                   const textClass = annullato 
                     ? "text-gray-500" 
                     : scaduto 
@@ -447,7 +478,7 @@ export default function PromemoriaPage() {
                         {p.destinatario ? `${p.destinatario.nome} ${p.destinatario.cognome}` : "-"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{p.settore || "Non specificato"}</Badge>
+                        <Badge variant="outline" className={textClass}>{p.settore || "Non specificato"}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -509,7 +540,6 @@ export default function PromemoriaPage() {
               <div>
                 <Label>Destinatario</Label>
                 {currentUser?.responsabile ? (
-                  // RESPONSABILE: Select abilitato
                   <Select
                     value={formData.destinatario_id || "none"}
                     onValueChange={handleDestinatarioChange}
@@ -527,7 +557,6 @@ export default function PromemoriaPage() {
                     </SelectContent>
                   </Select>
                 ) : (
-                  // UTENTE GENERICO: Input disabilitato con se stesso
                   <Input 
                     value={currentUser ? `${currentUser.nome} ${currentUser.cognome}` : ""} 
                     disabled 
@@ -546,7 +575,48 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>Data *</Label>
+                <Popover open={isDataCalendarOpen} onOpenChange={setIsDataCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data}
+                      onSelect={(date) => {
+                        setFormData(prev => ({...prev, data: date || undefined}));
+                        setIsDataCalendarOpen(false);
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Giorni Scadenza *</Label>
+                <Input 
+                  type="number"
+                  min="0"
+                  value={formData.giorni_scadenza}
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Data Scadenza</Label>
+                <Input 
+                  value={formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : ""}
+                  disabled
+                  className="bg-gray-100"
+                  placeholder="Calcolata"
+                />
+              </div>
               <div>
                 <Label>Priorità *</Label>
                 <Select
@@ -563,47 +633,26 @@ export default function PromemoriaPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Stato *</Label>
-                <Select
-                  value={formData.working_progress}
-                  onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Aperto">Aperto</SelectItem>
-                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                    <SelectItem value="Presa visione">Presa visione</SelectItem>
-                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                    <SelectItem value="Completato">Completato</SelectItem>
-                    <SelectItem value="Annullato">Annullato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Scadenza *</Label>
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.data_scadenza}
-                      onSelect={(date) => {
-                        setFormData(prev => ({...prev, data_scadenza: date || undefined}));
-                        setIsCalendarOpen(false);
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            </div>
+
+            <div>
+              <Label>Stato *</Label>
+              <Select
+                value={formData.working_progress}
+                onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aperto">Aperto</SelectItem>
+                  <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                  <SelectItem value="Presa visione">Presa visione</SelectItem>
+                  <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                  <SelectItem value="Completato">Completato</SelectItem>
+                  <SelectItem value="Annullato">Annullato</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-2">
@@ -675,7 +724,48 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <Label>Data *</Label>
+                <Popover open={isEditDataCalendarOpen} onOpenChange={setIsEditDataCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data}
+                      onSelect={(date) => {
+                        setFormData(prev => ({...prev, data: date || undefined}));
+                        setIsEditDataCalendarOpen(false);
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Giorni Scadenza *</Label>
+                <Input 
+                  type="number"
+                  min="0"
+                  value={formData.giorni_scadenza}
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>Data Scadenza</Label>
+                <Input 
+                  value={formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : ""}
+                  disabled
+                  className="bg-gray-100"
+                  placeholder="Calcolata"
+                />
+              </div>
               <div>
                 <Label>Priorità *</Label>
                 <Select
@@ -692,47 +782,26 @@ export default function PromemoriaPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Stato *</Label>
-                <Select
-                  value={formData.working_progress}
-                  onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Aperto">Aperto</SelectItem>
-                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                    <SelectItem value="Presa visione">Presa visione</SelectItem>
-                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                    <SelectItem value="Completato">Completato</SelectItem>
-                    <SelectItem value="Annullato">Annullato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Scadenza *</Label>
-                <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : "Seleziona"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.data_scadenza}
-                      onSelect={(date) => {
-                        setFormData(prev => ({...prev, data_scadenza: date || undefined}));
-                        setIsEditCalendarOpen(false);
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            </div>
+
+            <div>
+              <Label>Stato *</Label>
+              <Select
+                value={formData.working_progress}
+                onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aperto">Aperto</SelectItem>
+                  <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                  <SelectItem value="Presa visione">Presa visione</SelectItem>
+                  <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
+                  <SelectItem value="Completato">Completato</SelectItem>
+                  <SelectItem value="Annullato">Annullato</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-2">
