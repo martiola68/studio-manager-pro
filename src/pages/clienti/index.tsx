@@ -84,7 +84,52 @@ type VerificaAntiriciclaggio = {
   tipo_prestazione_id: string;
   data_ultima_verifica: Date | undefined;
   scadenza_antiriciclaggio: Date | undefined;
+  rischio?: "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
+  gg_ver?: number;
 };
+
+const RISK_TO_MONTHS: Record<
+  "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo",
+  number
+> = {
+  "Non significativo": 36,
+  "Poco significativo": 36,
+  "Abbastanza significativo": 12,
+  "Molto significativo": 6,
+};
+
+const TIPO_PRESTAZIONE_OPTIONS: string[] = [
+  "Amministrazione e liquidazione di aziende, patrimoni, singoli beni",
+  "Amministrazione di società, enti, trust o strutture analoghe",
+  "Assistenza, consulenza e rappresentanza in materia tributaria",
+  "Assistenza per richiesta finanziamenti",
+  "Assistenza e consulenza societaria continuativa e generica",
+  "Attività di valutazione tecnica dell'iniziativa di impresa e di asseverazione dei business plan per l'accesso a finanziamenti pubblici",
+  "Consulenza aziendale",
+  "Consulenza contrattuale",
+  "Consulenza economico finanziaria",
+  "Tenuta della contabilità",
+  "Consulenza in materia di redazione bilancio",
+  "Revisione legale dei conti",
+  "Valutazioni di aziende, rami di azienda, patrimoni, singoli beni e diritti",
+  "Collegio sindacale",
+  "Apposizione del visto di conformità su dichiarazioni fiscali",
+  "Predisposizione di interpelli",
+  "Risposte di carattere fiscale e societario",
+  "Incarico di curatore, commissario giudiziale e commissario liquidatore",
+  "Liquidatore nominato dal Tribunale",
+  "Invio telematico di Bilanci",
+];
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + months);
+  if (d.getDate() < day) {
+    d.setDate(0);
+  }
+  return d;
+}
 
 type PendingRiferimento = {
   tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce";
@@ -168,16 +213,64 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     data_ultima_verifica: undefined,
     scadenza_antiriciclaggio: undefined,
+    rischio: undefined,
+    gg_ver: undefined,
   });
 
   const [verificaB, setVerificaB] = useState<VerificaAntiriciclaggio>({
     tipo_prestazione_id: "",
     data_ultima_verifica: undefined,
     scadenza_antiriciclaggio: undefined,
+    rischio: undefined,
+    gg_ver: undefined,
   });
 
   const [scadenzariDialogOpen, setScadenzariDialogOpen] = useState(false);
   const [selectedClienteForScadenzari, setSelectedClienteForScadenzari] = useState<Cliente | null>(null);
+
+  const handleRiskChange = (
+    blocco: "A" | "B",
+    rischio: "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo"
+  ) => {
+    const mesi = RISK_TO_MONTHS[rischio];
+    if (blocco === "A") {
+      setVerificaA(prev => {
+        const updated: VerificaAntiriciclaggio = { ...prev, rischio, gg_ver: mesi };
+        if (updated.data_ultima_verifica) {
+          updated.scadenza_antiriciclaggio = addMonths(updated.data_ultima_verifica, mesi);
+        }
+        return updated;
+      });
+    } else {
+      setVerificaB(prev => {
+        const updated: VerificaAntiriciclaggio = { ...prev, rischio, gg_ver: mesi };
+        if (updated.data_ultima_verifica) {
+          updated.scadenza_antiriciclaggio = addMonths(updated.data_ultima_verifica, mesi);
+        }
+        return updated;
+      });
+    }
+  };
+
+  const handleVerificaDateChange = (blocco: "A" | "B", date: Date | undefined) => {
+    if (blocco === "A") {
+      setVerificaA(prev => {
+        const updated: VerificaAntiriciclaggio = { ...prev, data_ultima_verifica: date };
+        if (date && prev.gg_ver) {
+          updated.scadenza_antiriciclaggio = addMonths(date, prev.gg_ver);
+        }
+        return updated;
+      });
+    } else {
+      setVerificaB(prev => {
+        const updated: VerificaAntiriciclaggio = { ...prev, data_ultima_verifica: date };
+        if (date && prev.gg_ver) {
+          updated.scadenza_antiriciclaggio = addMonths(date, prev.gg_ver);
+        }
+        return updated;
+      });
+    }
+  };
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -1602,24 +1695,73 @@ export default function ClientiPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="verifica_a_tipo">Tipo Prestazione A</Label>
+                      <Label>Tipo Prestazione A</Label>
                       <Select
-                        value={verificaA.tipo_prestazione_id || undefined}
+                        value={verificaA.tipo_prestazione_id || ""}
                         onValueChange={(value) =>
-                          setVerificaA({ ...verificaA, tipo_prestazione_id: value })
+                          setVerificaA(prev => ({ ...prev, tipo_prestazione_id: value }))
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleziona prestazione" />
+                          <SelectValue placeholder="Seleziona tipo prestazione A" />
                         </SelectTrigger>
                         <SelectContent>
-                          {prestazioni.map((prestazione) => (
-                            <SelectItem key={prestazione.id} value={prestazione.id}>
-                              {prestazione.descrizione}
+                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Rischio Verifica A</Label>
+                        <Select
+                          value={verificaA.rischio || ""}
+                          onValueChange={(value) =>
+                            handleRiskChange(
+                              "A",
+                              value as
+                                | "Non significativo"
+                                | "Poco significativo"
+                                | "Abbastanza significativo"
+                                | "Molto significativo"
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona rischio A" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non significativo">Non significativo</SelectItem>
+                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
+                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
+                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>GgVerA (mesi)</Label>
+                        <Input
+                          type="number"
+                          value={verificaA.gg_ver ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : undefined;
+                            setVerificaA(prev => {
+                              const updated: VerificaAntiriciclaggio = { ...prev, gg_ver: value };
+                              if (updated.data_ultima_verifica && value) {
+                                updated.scadenza_antiriciclaggio = addMonths(
+                                  updated.data_ultima_verifica,
+                                  value
+                                );
+                              }
+                              return updated;
+                            });
+                          }}
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -1646,9 +1788,7 @@ export default function ClientiPage() {
                             <CalendarComponent
                               mode="single"
                               selected={verificaA.data_ultima_verifica}
-                              onSelect={(date) =>
-                                setVerificaA({ ...verificaA, data_ultima_verifica: date })
-                              }
+                              onSelect={(date) => handleVerificaDateChange("A", date || undefined)}
                               locale={it}
                             />
                           </PopoverContent>
@@ -1657,34 +1797,21 @@ export default function ClientiPage() {
 
                       <div>
                         <Label>Scadenza Antiriciclaggio A</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !verificaA.scadenza_antiriciclaggio && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {verificaA.scadenza_antiriciclaggio ? (
-                                format(verificaA.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
-                              ) : (
-                                <span>gg/mm/aaaa</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <CalendarComponent
-                              mode="single"
-                              selected={verificaA.scadenza_antiriciclaggio}
-                              onSelect={(date) =>
-                                setVerificaA({ ...verificaA, scadenza_antiriciclaggio: date })
-                              }
-                              locale={it}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !verificaA.scadenza_antiriciclaggio && "text-muted-foreground"
+                          )}
+                          disabled
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {verificaA.scadenza_antiriciclaggio ? (
+                            format(verificaA.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                          ) : (
+                            <span>gg/mm/aaaa</span>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -1699,24 +1826,73 @@ export default function ClientiPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="verifica_b_tipo">Tipo Prestazione B</Label>
+                      <Label>Tipo Prestazione B</Label>
                       <Select
-                        value={verificaB.tipo_prestazione_id || undefined}
+                        value={verificaB.tipo_prestazione_id || ""}
                         onValueChange={(value) =>
-                          setVerificaB({ ...verificaB, tipo_prestazione_id: value })
+                          setVerificaB(prev => ({ ...prev, tipo_prestazione_id: value }))
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Nessuna" />
+                          <SelectValue placeholder="Seleziona tipo prestazione B" />
                         </SelectTrigger>
                         <SelectContent>
-                          {prestazioni.map((prestazione) => (
-                            <SelectItem key={prestazione.id} value={prestazione.id}>
-                              {prestazione.descrizione}
+                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Rischio Verifica B</Label>
+                        <Select
+                          value={verificaB.rischio || ""}
+                          onValueChange={(value) =>
+                            handleRiskChange(
+                              "B",
+                              value as
+                                | "Non significativo"
+                                | "Poco significativo"
+                                | "Abbastanza significativo"
+                                | "Molto significativo"
+                            )
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona rischio B" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non significativo">Non significativo</SelectItem>
+                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
+                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
+                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>GgVerB (mesi)</Label>
+                        <Input
+                          type="number"
+                          value={verificaB.gg_ver ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : undefined;
+                            setVerificaB(prev => {
+                              const updated: VerificaAntiriciclaggio = { ...prev, gg_ver: value };
+                              if (updated.data_ultima_verifica && value) {
+                                updated.scadenza_antiriciclaggio = addMonths(
+                                  updated.data_ultima_verifica,
+                                  value
+                                );
+                              }
+                              return updated;
+                            });
+                          }}
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -1743,9 +1919,7 @@ export default function ClientiPage() {
                             <CalendarComponent
                               mode="single"
                               selected={verificaB.data_ultima_verifica}
-                              onSelect={(date) =>
-                                setVerificaB({ ...verificaB, data_ultima_verifica: date })
-                              }
+                              onSelect={(date) => handleVerificaDateChange("B", date || undefined)}
                               locale={it}
                             />
                           </PopoverContent>
@@ -1754,34 +1928,21 @@ export default function ClientiPage() {
 
                       <div>
                         <Label>Scadenza Antiriciclaggio B</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !verificaB.scadenza_antiriciclaggio && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {verificaB.scadenza_antiriciclaggio ? (
-                                format(verificaB.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
-                              ) : (
-                                <span>gg/mm/aaaa</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <CalendarComponent
-                              mode="single"
-                              selected={verificaB.scadenza_antiriciclaggio}
-                              onSelect={(date) =>
-                                setVerificaB({ ...verificaB, scadenza_antiriciclaggio: date })
-                              }
-                              locale={it}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !verificaB.scadenza_antiriciclaggio && "text-muted-foreground"
+                          )}
+                          disabled
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {verificaB.scadenza_antiriciclaggio ? (
+                            format(verificaB.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                          ) : (
+                            <span>gg/mm/aaaa</span>
+                          )}
+                        </Button>
                       </div>
                     </div>
                   </CardContent>

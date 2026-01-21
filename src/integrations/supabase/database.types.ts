@@ -326,6 +326,8 @@ export type Database = {
           flag_mail_newsletter: boolean | null
           flag_mail_scadenze: boolean | null
           flag_proforma: boolean | null
+          gg_ver_a: number | null
+          gg_ver_b: number | null
           id: string
           indirizzo: string
           matricola_inps: string | null
@@ -335,6 +337,8 @@ export type Database = {
           professionista_payroll_id: string | null
           provincia: string
           ragione_sociale: string
+          rischio_ver_a: string | null
+          rischio_ver_b: string | null
           scadenza_antiric: string | null
           scadenza_antiric_b: string | null
           settore: string | null
@@ -377,6 +381,8 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gg_ver_a?: number | null
+          gg_ver_b?: number | null
           id?: string
           indirizzo: string
           matricola_inps?: string | null
@@ -386,6 +392,8 @@ export type Database = {
           professionista_payroll_id?: string | null
           provincia: string
           ragione_sociale: string
+          rischio_ver_a?: string | null
+          rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
           settore?: string | null
@@ -428,6 +436,8 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gg_ver_a?: number | null
+          gg_ver_b?: number | null
           id?: string
           indirizzo?: string
           matricola_inps?: string | null
@@ -437,6 +447,8 @@ export type Database = {
           professionista_payroll_id?: string | null
           provincia?: string
           ragione_sociale?: string
+          rischio_ver_a?: string | null
+          rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
           settore?: string | null
