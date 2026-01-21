@@ -80,14 +80,6 @@ type ComunicazioniPreferenze = {
   ricevi_newsletter: boolean;
 };
 
-type VerificaAntiriciclaggio = {
-  tipo_prestazione_id: string;
-  data_ultima_verifica: Date | undefined;
-  scadenza_antiriciclaggio: Date | undefined;
-  rischio?: "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
-  gg_ver?: number;
-};
-
 const RISK_TO_MONTHS: Record<
   "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo",
   number
@@ -188,6 +180,16 @@ export default function ClientiPage() {
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
+    tipo_prestazione_a: "",
+    tipo_prestazione_b: "",
+    rischio_ver_a: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
+    rischio_ver_b: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
+    gg_ver_a: undefined as number | undefined,
+    gg_ver_b: undefined as number | undefined,
+    data_ultima_verifica_antiric: undefined as Date | undefined,
+    scadenza_antiric: undefined as Date | undefined,
+    data_ultima_verifica_b: undefined as Date | undefined,
+    scadenza_antiric_b: undefined as Date | undefined,
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
@@ -209,22 +211,6 @@ export default function ClientiPage() {
     ricevi_newsletter: true,
   });
 
-  const [verificaA, setVerificaA] = useState<VerificaAntiriciclaggio>({
-    tipo_prestazione_id: "",
-    data_ultima_verifica: undefined,
-    scadenza_antiriciclaggio: undefined,
-    rischio: undefined,
-    gg_ver: undefined,
-  });
-
-  const [verificaB, setVerificaB] = useState<VerificaAntiriciclaggio>({
-    tipo_prestazione_id: "",
-    data_ultima_verifica: undefined,
-    scadenza_antiriciclaggio: undefined,
-    rischio: undefined,
-    gg_ver: undefined,
-  });
-
   const [scadenzariDialogOpen, setScadenzariDialogOpen] = useState(false);
   const [selectedClienteForScadenzari, setSelectedClienteForScadenzari] = useState<Cliente | null>(null);
 
@@ -234,18 +220,38 @@ export default function ClientiPage() {
   ) => {
     const mesi = RISK_TO_MONTHS[rischio];
     if (blocco === "A") {
-      setVerificaA(prev => {
-        const updated: VerificaAntiriciclaggio = { ...prev, rischio, gg_ver: mesi };
-        if (updated.data_ultima_verifica) {
-          updated.scadenza_antiriciclaggio = addMonths(updated.data_ultima_verifica, mesi);
+      setFormData(prev => {
+        const updated = { ...prev, rischio_ver_a: rischio, gg_ver_a: mesi };
+        if (updated.data_ultima_verifica_antiric && mesi) {
+          updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, mesi);
         }
         return updated;
       });
     } else {
-      setVerificaB(prev => {
-        const updated: VerificaAntiriciclaggio = { ...prev, rischio, gg_ver: mesi };
-        if (updated.data_ultima_verifica) {
-          updated.scadenza_antiriciclaggio = addMonths(updated.data_ultima_verifica, mesi);
+      setFormData(prev => {
+        const updated = { ...prev, rischio_ver_b: rischio, gg_ver_b: mesi };
+        if (updated.data_ultima_verifica_b && mesi) {
+          updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, mesi);
+        }
+        return updated;
+      });
+    }
+  };
+
+  const handleGgVerChange = (blocco: "A" | "B", value: number | undefined) => {
+    if (blocco === "A") {
+      setFormData(prev => {
+        const updated = { ...prev, gg_ver_a: value };
+        if (updated.data_ultima_verifica_antiric && value) {
+          updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, value);
+        }
+        return updated;
+      });
+    } else {
+      setFormData(prev => {
+        const updated = { ...prev, gg_ver_b: value };
+        if (updated.data_ultima_verifica_b && value) {
+          updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, value);
         }
         return updated;
       });
@@ -254,18 +260,18 @@ export default function ClientiPage() {
 
   const handleVerificaDateChange = (blocco: "A" | "B", date: Date | undefined) => {
     if (blocco === "A") {
-      setVerificaA(prev => {
-        const updated: VerificaAntiriciclaggio = { ...prev, data_ultima_verifica: date };
-        if (date && prev.gg_ver) {
-          updated.scadenza_antiriciclaggio = addMonths(date, prev.gg_ver);
+      setFormData(prev => {
+        const updated = { ...prev, data_ultima_verifica_antiric: date };
+        if (date && prev.gg_ver_a) {
+          updated.scadenza_antiric = addMonths(date, prev.gg_ver_a);
         }
         return updated;
       });
     } else {
-      setVerificaB(prev => {
-        const updated: VerificaAntiriciclaggio = { ...prev, data_ultima_verifica: date };
-        if (date && prev.gg_ver) {
-          updated.scadenza_antiriciclaggio = addMonths(date, prev.gg_ver);
+      setFormData(prev => {
+        const updated = { ...prev, data_ultima_verifica_b: date };
+        if (date && prev.gg_ver_b) {
+          updated.scadenza_antiric_b = addMonths(date, prev.gg_ver_b);
         }
         return updated;
       });
@@ -392,6 +398,16 @@ export default function ClientiPage() {
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
+        tipo_prestazione_a: formData.tipo_prestazione_a || null,
+        tipo_prestazione_b: formData.tipo_prestazione_b || null,
+        rischio_ver_a: formData.rischio_ver_a || null,
+        rischio_ver_b: formData.rischio_ver_b || null,
+        gg_ver_a: formData.gg_ver_a || null,
+        gg_ver_b: formData.gg_ver_b || null,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
+        scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
+        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
       };
 
       if (editingCliente) {
@@ -534,6 +550,16 @@ export default function ClientiPage() {
       matricola_inps: cliente.matricola_inps || "",
       pat_inail: cliente.pat_inail || "",
       codice_ditta_ce: cliente.codice_ditta_ce || "",
+      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
+      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
+      rischio_ver_a: (cliente.rischio_ver_a as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
+      rischio_ver_b: (cliente.rischio_ver_b as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
+      gg_ver_a: cliente.gg_ver_a || undefined,
+      gg_ver_b: cliente.gg_ver_b || undefined,
+      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
+      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
+      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
+      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
     });
     setIsDialogOpen(true);
   };
@@ -567,6 +593,16 @@ export default function ClientiPage() {
       matricola_inps: "",
       pat_inail: "",
       codice_ditta_ce: "",
+      tipo_prestazione_a: "",
+      tipo_prestazione_b: "",
+      rischio_ver_a: "",
+      rischio_ver_b: "",
+      gg_ver_a: undefined,
+      gg_ver_b: undefined,
+      data_ultima_verifica_antiric: undefined,
+      scadenza_antiric: undefined,
+      data_ultima_verifica_b: undefined,
+      scadenza_antiric_b: undefined,
     });
     setScadenzari({
       iva: true,
@@ -584,16 +620,6 @@ export default function ClientiPage() {
       email_attiva: true,
       ricevi_mailing_scadenze: true,
       ricevi_newsletter: true,
-    });
-    setVerificaA({
-      tipo_prestazione_id: "",
-      data_ultima_verifica: undefined,
-      scadenza_antiriciclaggio: undefined,
-    });
-    setVerificaB({
-      tipo_prestazione_id: "",
-      data_ultima_verifica: undefined,
-      scadenza_antiriciclaggio: undefined,
     });
   };
 
@@ -1697,9 +1723,9 @@ export default function ClientiPage() {
                     <div>
                       <Label>Tipo Prestazione A</Label>
                       <Select
-                        value={verificaA.tipo_prestazione_id || ""}
+                        value={formData.tipo_prestazione_a || ""}
                         onValueChange={(value) =>
-                          setVerificaA(prev => ({ ...prev, tipo_prestazione_id: value }))
+                          setFormData({ ...formData, tipo_prestazione_a: value })
                         }
                       >
                         <SelectTrigger>
@@ -1715,11 +1741,11 @@ export default function ClientiPage() {
                       </Select>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Rischio Verifica A</Label>
                         <Select
-                          value={verificaA.rischio || ""}
+                          value={formData.rischio_ver_a || ""}
                           onValueChange={(value) =>
                             handleRiskChange(
                               "A",
@@ -1743,23 +1769,15 @@ export default function ClientiPage() {
                         </Select>
                       </div>
                       <div>
-                        <Label>GgVerA (mesi)</Label>
+                        <Label>Scadenza in mesi</Label>
                         <Input
                           type="number"
-                          value={verificaA.gg_ver ?? ""}
+                          value={formData.gg_ver_a ?? ""}
                           onChange={(e) => {
                             const value = e.target.value ? Number(e.target.value) : undefined;
-                            setVerificaA(prev => {
-                              const updated: VerificaAntiriciclaggio = { ...prev, gg_ver: value };
-                              if (updated.data_ultima_verifica && value) {
-                                updated.scadenza_antiriciclaggio = addMonths(
-                                  updated.data_ultima_verifica,
-                                  value
-                                );
-                              }
-                              return updated;
-                            });
+                            handleGgVerChange("A", value);
                           }}
+                          placeholder="36, 12 o 6"
                         />
                       </div>
                     </div>
@@ -1773,12 +1791,12 @@ export default function ClientiPage() {
                               variant="outline"
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !verificaA.data_ultima_verifica && "text-muted-foreground"
+                                !formData.data_ultima_verifica_antiric && "text-muted-foreground"
                               )}
                             >
                               <Calendar className="mr-2 h-4 w-4" />
-                              {verificaA.data_ultima_verifica ? (
-                                format(verificaA.data_ultima_verifica, "dd/MM/yyyy", { locale: it })
+                              {formData.data_ultima_verifica_antiric ? (
+                                format(formData.data_ultima_verifica_antiric, "dd/MM/yyyy", { locale: it })
                               ) : (
                                 <span>gg/mm/aaaa</span>
                               )}
@@ -1787,8 +1805,8 @@ export default function ClientiPage() {
                           <PopoverContent className="w-auto p-0">
                             <CalendarComponent
                               mode="single"
-                              selected={verificaA.data_ultima_verifica}
-                              onSelect={(date) => handleVerificaDateChange("A", date || undefined)}
+                              selected={formData.data_ultima_verifica_antiric}
+                              onSelect={(date) => handleVerificaDateChange("A", date)}
                               locale={it}
                             />
                           </PopoverContent>
@@ -1801,13 +1819,13 @@ export default function ClientiPage() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !verificaA.scadenza_antiriciclaggio && "text-muted-foreground"
+                            !formData.scadenza_antiric && "text-muted-foreground"
                           )}
                           disabled
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {verificaA.scadenza_antiriciclaggio ? (
-                            format(verificaA.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                          {formData.scadenza_antiric ? (
+                            format(formData.scadenza_antiric, "dd/MM/yyyy", { locale: it })
                           ) : (
                             <span>gg/mm/aaaa</span>
                           )}
@@ -1828,9 +1846,9 @@ export default function ClientiPage() {
                     <div>
                       <Label>Tipo Prestazione B</Label>
                       <Select
-                        value={verificaB.tipo_prestazione_id || ""}
+                        value={formData.tipo_prestazione_b || ""}
                         onValueChange={(value) =>
-                          setVerificaB(prev => ({ ...prev, tipo_prestazione_id: value }))
+                          setFormData({ ...formData, tipo_prestazione_b: value })
                         }
                       >
                         <SelectTrigger>
@@ -1846,11 +1864,11 @@ export default function ClientiPage() {
                       </Select>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Rischio Verifica B</Label>
                         <Select
-                          value={verificaB.rischio || ""}
+                          value={formData.rischio_ver_b || ""}
                           onValueChange={(value) =>
                             handleRiskChange(
                               "B",
@@ -1874,23 +1892,15 @@ export default function ClientiPage() {
                         </Select>
                       </div>
                       <div>
-                        <Label>GgVerB (mesi)</Label>
+                        <Label>Scadenza in mesi</Label>
                         <Input
                           type="number"
-                          value={verificaB.gg_ver ?? ""}
+                          value={formData.gg_ver_b ?? ""}
                           onChange={(e) => {
                             const value = e.target.value ? Number(e.target.value) : undefined;
-                            setVerificaB(prev => {
-                              const updated: VerificaAntiriciclaggio = { ...prev, gg_ver: value };
-                              if (updated.data_ultima_verifica && value) {
-                                updated.scadenza_antiriciclaggio = addMonths(
-                                  updated.data_ultima_verifica,
-                                  value
-                                );
-                              }
-                              return updated;
-                            });
+                            handleGgVerChange("B", value);
                           }}
+                          placeholder="36, 12 o 6"
                         />
                       </div>
                     </div>
@@ -1904,12 +1914,12 @@ export default function ClientiPage() {
                               variant="outline"
                               className={cn(
                                 "w-full justify-start text-left font-normal",
-                                !verificaB.data_ultima_verifica && "text-muted-foreground"
+                                !formData.data_ultima_verifica_b && "text-muted-foreground"
                               )}
                             >
                               <Calendar className="mr-2 h-4 w-4" />
-                              {verificaB.data_ultima_verifica ? (
-                                format(verificaB.data_ultima_verifica, "dd/MM/yyyy", { locale: it })
+                              {formData.data_ultima_verifica_b ? (
+                                format(formData.data_ultima_verifica_b, "dd/MM/yyyy", { locale: it })
                               ) : (
                                 <span>gg/mm/aaaa</span>
                               )}
@@ -1918,8 +1928,8 @@ export default function ClientiPage() {
                           <PopoverContent className="w-auto p-0">
                             <CalendarComponent
                               mode="single"
-                              selected={verificaB.data_ultima_verifica}
-                              onSelect={(date) => handleVerificaDateChange("B", date || undefined)}
+                              selected={formData.data_ultima_verifica_b}
+                              onSelect={(date) => handleVerificaDateChange("B", date)}
                               locale={it}
                             />
                           </PopoverContent>
@@ -1932,13 +1942,13 @@ export default function ClientiPage() {
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !verificaB.scadenza_antiriciclaggio && "text-muted-foreground"
+                            !formData.scadenza_antiric_b && "text-muted-foreground"
                           )}
                           disabled
                         >
                           <Calendar className="mr-2 h-4 w-4" />
-                          {verificaB.scadenza_antiriciclaggio ? (
-                            format(verificaB.scadenza_antiriciclaggio, "dd/MM/yyyy", { locale: it })
+                          {formData.scadenza_antiric_b ? (
+                            format(formData.scadenza_antiric_b, "dd/MM/yyyy", { locale: it })
                           ) : (
                             <span>gg/mm/aaaa</span>
                           )}
