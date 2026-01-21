@@ -126,7 +126,7 @@ export default function PromemoriaPage() {
       
       // 1. Get Current User Auth
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return; // Gestire redirect se necessario
+      if (!user) return;
 
       // 2. Get User Profile
       const { data: userProfile } = await supabase
@@ -171,7 +171,6 @@ export default function PromemoriaPage() {
       setFormData(prev => ({ ...prev, data_scadenza: scadenza }));
     }
   }, [formData.data_inserimento, formData.giorni_scadenza]);
-
 
   // Handlers Allegati
   const handleViewAllegati = (p: Promemoria) => {
@@ -384,52 +383,72 @@ export default function PromemoriaPage() {
             <TableHead>Titolo</TableHead>
             <TableHead>Descrizione</TableHead>
             <TableHead>Tipo</TableHead>
+            <TableHead>Data Scadenza</TableHead>
+            <TableHead>Destinatario</TableHead>
+            <TableHead>Stato</TableHead>
             <TableHead>Settore</TableHead>
             <TableHead>Allegati</TableHead>
             <TableHead className="text-right">Azioni</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {promemoria.map((p) => (
-            <TableRow key={p.id}>
-              <TableCell className="font-medium">{p.titolo}</TableCell>
-              <TableCell className="max-w-md truncate">{p.descrizione}</TableCell>
-              <TableCell>
-                {tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || 
-                 <span className="text-gray-400">-</span>}
-              </TableCell>
-              <TableCell>{p.settore || "-"}</TableCell>
-              <TableCell>
-                {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewAllegati(p)}
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                  >
-                    <Paperclip className="h-4 w-4 mr-1" />
-                    {(p.allegati as unknown as Allegato[]).length}
-                    <Eye className="h-3 w-3 ml-2 opacity-50" />
-                  </Button>
-                ) : (
-                  <span className="text-gray-400 text-sm pl-2">-</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(p)}>
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {promemoria.map((p) => {
+            const destinatario = utenti.find(u => u.id === p.destinatario_id);
+            return (
+              <TableRow key={p.id}>
+                <TableCell className="font-medium">{p.titolo}</TableCell>
+                <TableCell className="max-w-md truncate">{p.descrizione}</TableCell>
+                <TableCell>
+                  {tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || 
+                   <span className="text-gray-400">-</span>}
+                </TableCell>
+                <TableCell>
+                  {p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it }) : "-"}
+                </TableCell>
+                <TableCell>
+                  {destinatario ? `${destinatario.nome} ${destinatario.cognome}` : "-"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={
+                    p.working_progress === "Completato" ? "default" :
+                    p.working_progress === "In lavorazione" ? "secondary" : "outline"
+                  }>
+                    {p.working_progress}
+                  </Badge>
+                </TableCell>
+                <TableCell>{p.settore || "-"}</TableCell>
+                <TableCell>
+                  {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewAllegati(p)}
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    >
+                      <Paperclip className="h-4 w-4 mr-1" />
+                      {(p.allegati as unknown as Allegato[]).length}
+                      <Eye className="h-3 w-3 ml-2 opacity-50" />
+                    </Button>
+                  ) : (
+                    <span className="text-gray-400 text-sm pl-2">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(p)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
           {promemoria.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
               </TableCell>
             </TableRow>
@@ -439,12 +458,11 @@ export default function PromemoriaPage() {
 
       {/* DIALOG CREAZIONE */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nuovo Promemoria</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 pt-4">
-            {/* Form Fields */}
             <div>
               <Label>Titolo *</Label>
               <Input 
@@ -458,6 +476,36 @@ export default function PromemoriaPage() {
               <Textarea 
                 value={formData.descrizione}
                 onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data Inserimento</Label>
+                <Input 
+                  type="date"
+                  value={format(formData.data_inserimento, "yyyy-MM-dd")}
+                  onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
+                />
+              </div>
+              <div>
+                <Label>Giorni Scadenza</Label>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  value={formData.giorni_scadenza}
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))} 
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Data Scadenza (calcolata automaticamente)</Label>
+              <Input 
+                type="date"
+                value={format(formData.data_scadenza, "yyyy-MM-dd")}
+                disabled
+                className="bg-gray-100"
               />
             </div>
 
@@ -480,36 +528,7 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
-            {/* Upload Section */}
-            <div>
-              <Label className="flex items-center gap-2 mb-2">
-                <Paperclip className="h-4 w-4" /> Allegati
-              </Label>
-              <div className="border border-dashed rounded-md p-4 bg-gray-50">
-                <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
-                <div className="space-y-2 mt-2">
-                  {filesToUpload.map((file, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                      <span className="truncate">{file.name}</span>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Giorni Scadenza</Label>
-                <Input 
-                  type="number" 
-                  min="0" 
-                  value={formData.giorni_scadenza}
-                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))} 
-                />
-              </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Priorità</Label>
                 <Select value={formData.priorita} onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}>
@@ -534,6 +553,37 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
+            <div>
+              <Label>Tipo Promemoria</Label>
+              <Select value={formData.tipo_promemoria_id} onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tipo..." /></SelectTrigger>
+                <SelectContent>
+                  {tipiPromemoria.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="flex items-center gap-2 mb-2">
+                <Paperclip className="h-4 w-4" /> Allegati
+              </Label>
+              <div className="border border-dashed rounded-md p-4 bg-gray-50">
+                <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
+                <div className="space-y-2 mt-2">
+                  {filesToUpload.map((file, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
+                      <span className="truncate">{file.name}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Annulla</Button>
               <Button type="submit" disabled={loading}>{loading ? "Salvataggio..." : "Crea"}</Button>
@@ -544,7 +594,7 @@ export default function PromemoriaPage() {
 
       {/* DIALOG MODIFICA */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Modifica Promemoria</DialogTitle></DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4 pt-4">
             <div>
@@ -555,8 +605,100 @@ export default function PromemoriaPage() {
                 required
               />
             </div>
+            <div>
+              <Label>Descrizione</Label>
+              <Textarea 
+                value={formData.descrizione}
+                onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data Inserimento</Label>
+                <Input 
+                  type="date"
+                  value={format(formData.data_inserimento, "yyyy-MM-dd")}
+                  onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
+                />
+              </div>
+              <div>
+                <Label>Giorni Scadenza</Label>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  value={formData.giorni_scadenza}
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))} 
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Data Scadenza (calcolata automaticamente)</Label>
+              <Input 
+                type="date"
+                value={format(formData.data_scadenza, "yyyy-MM-dd")}
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Destinatario</Label>
+                <Select value={formData.destinatario_id || "none"} onValueChange={handleDestinatarioChange}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nessuno</SelectItem>
+                    {utenti.map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Settore</Label>
+                <Input value={formData.settore} disabled className="bg-gray-100" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Priorità</Label>
+                <Select value={formData.priorita} onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Bassa">Bassa</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Stato</Label>
+                <Select value={formData.working_progress} onValueChange={v => setFormData(prev => ({...prev, working_progress: v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aperto">Aperto</SelectItem>
+                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                    <SelectItem value="Completato">Completato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Tipo Promemoria</Label>
+              <Select value={formData.tipo_promemoria_id} onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}>
+                <SelectTrigger><SelectValue placeholder="Seleziona tipo..." /></SelectTrigger>
+                <SelectContent>
+                  {tipiPromemoria.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
-            {/* Gestione Allegati Esistenti */}
             <div>
               <Label>Allegati Esistenti</Label>
               <div className="space-y-2 mt-2">
@@ -593,7 +735,6 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
-            {/* Upload Nuovi Allegati */}
             <div>
               <Label>Aggiungi Nuovi Allegati</Label>
               <div className="border border-dashed rounded-md p-4 bg-gray-50 mt-1">
