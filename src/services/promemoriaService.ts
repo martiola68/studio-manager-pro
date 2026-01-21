@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
 
-type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
+export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 type PromemoriaInsert = Database["public"]["Tables"]["tbpromemoria"]["Insert"];
 type PromemoriaUpdate = Database["public"]["Tables"]["tbpromemoria"]["Update"];
 

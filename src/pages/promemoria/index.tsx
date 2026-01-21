@@ -52,13 +52,13 @@ interface Utente {
   cognome: string;
   email: string;
   settore: string | null;
-  responsabile: boolean;
+  responsabile: boolean | null;
 }
 
 interface TipoPromemoria {
   id: string;
   nome: string;
-  colore: string;
+  colore: string | null;
 }
 
 export default function PromemoriaPage() {
