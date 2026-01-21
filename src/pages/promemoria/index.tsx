@@ -112,7 +112,8 @@ export default function PromemoriaPage() {
     try {
       setLoading(true);
       const data = await promemoriaService.getPromemoria();
-      setPromemoria(data || []);
+      // Cast esplicito per gestire la conversione da Json DB a tipo Allegato[] frontend
+      setPromemoria((data as unknown as Promemoria[]) || []);
     } catch (error: any) {
       console.error("Errore caricamento promemoria:", error);
       toast({
@@ -147,7 +148,8 @@ export default function PromemoriaPage() {
         utenteService.getUtenti()
       ]);
 
-      setPromemoria(promData || []);
+      // Cast esplicito per gestire la conversione da Json DB a tipo Allegato[] frontend
+      setPromemoria((promData as unknown as Promemoria[]) || []);
       setUtenti(utentiData || []);
     } catch (error) {
       console.error("Errore caricamento:", error);
