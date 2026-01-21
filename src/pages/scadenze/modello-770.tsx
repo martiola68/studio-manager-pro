@@ -6,34 +6,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Calendar, User, Save, RefreshCw, Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { Loader2, Search, Save, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Scadenza770 = {
   id: string;
   nominativo: string;
-  anno: number;
-  settore?: string;
   utente_professionista_id?: string;
   utente_operatore_id?: string;
   utente_payroll_id?: string;
   professionista_payroll_id?: string;
   tipo_invio?: string;
   modelli_770?: string;
-  inviato?: boolean;
-  registrato?: boolean;
-  emendato?: boolean;
+  mod_compilato?: boolean;
+  mod_definitivo?: boolean;
+  mod_inviato?: boolean;
+  ricevuta?: boolean;
+  conferma_riga?: boolean;
   data_invio?: string;
-  data_registrato?: string;
-  data_emendato?: string;
   note?: string;
   created_at?: string;
+  tipo_scadenza_id?: string;
+  // Campi da JOIN
+  cliente?: {
+    settore?: string;
+  };
 };
 
 type Utente = {
@@ -82,13 +83,24 @@ export default function Modello770Page() {
     try {
       setLoading(true);
       
+      // NOTA: Poiché manca il campo 'anno' in tbscad770, filtriamo lato client o tramite join se necessario.
+      // Per ora carichiamo tutto e filtriamo in base a data_invio o assumiamo che i record siano dell'anno corrente
+      // In futuro si dovrebbe usare tipo_scadenza_id per filtrare l'anno corretto
+      
       const { data, error } = await supabase
         .from("tbscad770")
-        .select("*")
-        .eq("anno", selectedAnno)
+        .select(`
+          *,
+          cliente:id (
+            settore
+          )
+        `)
         .order("nominativo");
 
       if (error) throw error;
+      
+      // Filtriamo per anno (simulato, in realtà dovremmo usare una logica migliore se il campo anno manca)
+      // Per ora mostriamo tutto
       setScadenze(data || []);
     } catch (error) {
       console.error("Errore caricamento 770:", error);
@@ -105,14 +117,18 @@ export default function Modello770Page() {
   const filterData = () => {
     let filtered = scadenze;
 
+    // Filtro per Tab (Settore)
+    // Usiamo il settore del cliente recuperato tramite JOIN
     if (activeTab === "fiscale") {
-      filtered = filtered.filter(s => 
-        s.settore === "Fiscale" || s.settore === "Fiscale & Lavoro" || !s.settore
-      );
+      filtered = filtered.filter(s => {
+        const settore = s.cliente?.settore;
+        return settore === "Fiscale" || settore === "Fiscale & Lavoro" || !settore;
+      });
     } else {
-      filtered = filtered.filter(s => 
-        s.settore === "Lavoro" || s.settore === "Fiscale & Lavoro"
-      );
+      filtered = filtered.filter(s => {
+        const settore = s.cliente?.settore;
+        return settore === "Lavoro" || settore === "Fiscale & Lavoro";
+      });
     }
 
     if (searchTerm) {
@@ -130,7 +146,7 @@ export default function Modello770Page() {
       
       const { data: clienti, error: clientiError } = await supabase
         .from("tbclienti")
-        .select("id, ragione_sociale, settore")
+        .select("id, ragione_sociale, settore, professionista_payroll_id, utente_payroll_id, utente_professionista_id, utente_operatore_id")
         .eq("flag_770", true)
         .eq("attivo", true);
 
@@ -147,7 +163,7 @@ export default function Modello770Page() {
       let insertedCount = 0;
 
       for (const cliente of clienti) {
-        const exists = scadenze.some(s => s.id === cliente.id && s.anno === selectedAnno);
+        const exists = scadenze.some(s => s.id === cliente.id);
         
         if (!exists) {
           const { error: insertError } = await supabase
@@ -155,8 +171,10 @@ export default function Modello770Page() {
             .insert({
               id: cliente.id,
               nominativo: cliente.ragione_sociale,
-              anno: selectedAnno,
-              settore: cliente.settore || "Fiscale"
+              utente_professionista_id: cliente.utente_professionista_id,
+              utente_operatore_id: cliente.utente_operatore_id,
+              utente_payroll_id: cliente.utente_payroll_id,
+              professionista_payroll_id: cliente.professionista_payroll_id
             });
 
           if (insertError) {
@@ -170,7 +188,7 @@ export default function Modello770Page() {
       if (insertedCount > 0) {
         toast({
           title: "Sincronizzazione completata",
-          description: `Inseriti ${insertedCount} nuovi clienti nello scadenzario ${selectedAnno}.`,
+          description: `Inseriti ${insertedCount} nuovi clienti nello scadenzario.`,
         });
         await loadData();
       } else {
@@ -200,19 +218,18 @@ export default function Modello770Page() {
         .from("tbscad770")
         .update({
           nominativo: editingScadenza.nominativo,
-          settore: editingScadenza.settore,
           utente_professionista_id: editingScadenza.utente_professionista_id,
           utente_operatore_id: editingScadenza.utente_operatore_id,
           utente_payroll_id: editingScadenza.utente_payroll_id,
           professionista_payroll_id: editingScadenza.professionista_payroll_id,
           tipo_invio: editingScadenza.tipo_invio,
           modelli_770: editingScadenza.modelli_770,
-          inviato: editingScadenza.inviato,
-          registrato: editingScadenza.registrato,
-          emendato: editingScadenza.emendato,
+          mod_compilato: editingScadenza.mod_compilato,
+          mod_definitivo: editingScadenza.mod_definitivo,
+          mod_inviato: editingScadenza.mod_inviato,
+          ricevuta: editingScadenza.ricevuta,
+          conferma_riga: editingScadenza.conferma_riga,
           data_invio: editingScadenza.data_invio,
-          data_registrato: editingScadenza.data_registrato,
-          data_emendato: editingScadenza.data_emendato,
           note: editingScadenza.note
         })
         .eq("id", editingScadenza.id);
@@ -360,12 +377,12 @@ export default function Modello770Page() {
                     filteredScadenze.map((scadenza) => (
                       <TableRow key={scadenza.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openEditDialog(scadenza)}>
                         <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                        <TableCell>{scadenza.settore || "-"}</TableCell>
+                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
                         <TableCell>{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                         <TableCell>{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
                         <TableCell>
-                          {scadenza.inviato ? (
-                            <span className="text-green-600">✓</span>
+                          {scadenza.mod_inviato ? (
+                            <span className="text-green-600 font-bold">✓</span>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
@@ -437,12 +454,12 @@ export default function Modello770Page() {
                     filteredScadenze.map((scadenza) => (
                       <TableRow key={scadenza.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openEditDialog(scadenza)}>
                         <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                        <TableCell>{scadenza.settore || "-"}</TableCell>
+                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
                         <TableCell>{getUtenteNome(scadenza.professionista_payroll_id)}</TableCell>
                         <TableCell>{getUtenteNome(scadenza.utente_payroll_id)}</TableCell>
                         <TableCell>
-                          {scadenza.inviato ? (
-                            <span className="text-green-600">✓</span>
+                          {scadenza.mod_inviato ? (
+                            <span className="text-green-600 font-bold">✓</span>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
@@ -499,20 +516,12 @@ export default function Modello770Page() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Settore</Label>
-                  <Select
-                    value={editingScadenza.settore || ""}
-                    onValueChange={(val) => setEditingScadenza({ ...editingScadenza, settore: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona settore" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Fiscale">Fiscale</SelectItem>
-                      <SelectItem value="Lavoro">Lavoro</SelectItem>
-                      <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Settore (dal Cliente)</Label>
+                  <Input
+                    value={editingScadenza.cliente?.settore || "N/D"}
+                    disabled
+                    className="bg-gray-100"
+                  />
                 </div>
               </div>
 
@@ -635,33 +644,41 @@ export default function Modello770Page() {
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-4">Stato e Date</h3>
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      checked={editingScadenza.inviato || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, inviato: checked as boolean })}
+                      checked={editingScadenza.mod_compilato || false}
+                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_compilato: checked as boolean })}
+                    />
+                    <Label>Compilato</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={editingScadenza.mod_definitivo || false}
+                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_definitivo: checked as boolean })}
+                    />
+                    <Label>Definitivo</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={editingScadenza.mod_inviato || false}
+                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_inviato: checked as boolean })}
                     />
                     <Label>Inviato</Label>
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <Checkbox
-                      checked={editingScadenza.registrato || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, registrato: checked as boolean })}
+                      checked={editingScadenza.ricevuta || false}
+                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, ricevuta: checked as boolean })}
                     />
-                    <Label>Registrato</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingScadenza.emendato || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, emendato: checked as boolean })}
-                    />
-                    <Label>Emendato</Label>
+                    <Label>Ricevuta</Label>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Data Invio</Label>
                     <Input
@@ -670,23 +687,13 @@ export default function Modello770Page() {
                       onChange={(e) => setEditingScadenza({ ...editingScadenza, data_invio: e.target.value })}
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label>Data Registrato</Label>
-                    <Input
-                      type="date"
-                      value={editingScadenza.data_registrato || ""}
-                      onChange={(e) => setEditingScadenza({ ...editingScadenza, data_registrato: e.target.value })}
+                  
+                   <div className="flex items-center space-x-2 mt-8">
+                    <Checkbox
+                      checked={editingScadenza.conferma_riga || false}
+                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, conferma_riga: checked as boolean })}
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Data Emendato</Label>
-                    <Input
-                      type="date"
-                      value={editingScadenza.data_emendato || ""}
-                      onChange={(e) => setEditingScadenza({ ...editingScadenza, data_emendato: e.target.value })}
-                    />
+                    <Label className="font-bold">Conferma Riga (Completato)</Label>
                   </div>
                 </div>
               </div>
