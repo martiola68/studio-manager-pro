@@ -3,10 +3,7 @@ import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
 
 export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
-type PromemoriaInsert = Database["public"]["Tables"]["tbpromemoria"]["Insert"];
-type PromemoriaUpdate = Database["public"]["Tables"]["tbpromemoria"]["Update"];
 
-// Tipo per allegati
 export interface Allegato {
   nome: string;
   url: string;
@@ -16,41 +13,65 @@ export interface Allegato {
 }
 
 export const promemoriaService = {
-  /**
-   * Ottiene tutti i promemoria visibili all'utente loggato
-   * FILTRO AUTOMATICO tramite RLS:
-   * - Responsabile: vede tutti i promemoria del suo settore
-   * - Utente generico: vede solo i promemoria assegnati a lui o creati da lui
-   */
   async getPromemoria() {
     const { data, error } = await supabase
       .from("tbpromemoria")
       .select(`
         *,
         operatore:tbutenti!operatore_id (
-          id,
-          nome,
-          cognome,
-          settore,
-          responsabile
+          id, nome, cognome, settore, responsabile
         ),
         destinatario:tbutenti!destinatario_id (
-          id,
-          nome,
-          cognome,
-          settore,
-          responsabile
+          id, nome, cognome, settore, responsabile
         )
       `)
-      .order("data_scadenza", { ascending: true });
+      .order("data_scadenza", { ascending: true, nullsFirst: false });
 
     if (error) throw error;
     return data;
   },
 
-  /**
-   * Ottiene promemoria in scadenza (prossimi 7 giorni)
-   */
+  async getAllegati(promemoriaId: string) {
+    const { data, error } = await supabase
+      .from("tbpromemoria")
+      .select("allegati")
+      .eq("id", promemoriaId)
+      .single();
+
+    if (error) {
+      console.error("Errore recupero allegati DB:", error);
+      return [];
+    }
+
+    if (data.allegati && Array.isArray(data.allegati)) {
+      return data.allegati as unknown as Allegato[];
+    }
+
+    const { data: storageFiles, error: storageError } = await supabase.storage
+      .from("promemoria-allegati")
+      .list(promemoriaId);
+
+    if (storageError) {
+      return [];
+    }
+
+    return storageFiles
+      .filter(f => f.name !== ".emptyFolderPlaceholder")
+      .map(file => {
+        const { data: { publicUrl } } = supabase.storage
+          .from("promemoria-allegati")
+          .getPublicUrl(`${promemoriaId}/${file.name}`);
+          
+        return {
+          nome: file.name,
+          url: publicUrl,
+          size: file.metadata?.size || 0,
+          tipo: file.metadata?.mimetype || "application/octet-stream",
+          data_upload: file.created_at
+        };
+      });
+  },
+
   async getPromemoriaInScadenza(utenteId: string): Promise<Promemoria[]> {
     const oggi = new Date().toISOString().split("T")[0];
     const traSetteGiorni = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -62,10 +83,7 @@ export const promemoriaService = {
       .select(`
         *,
         tbtipopromemoria (
-          id,
-          nome,
-          descrizione,
-          colore
+          id, nome, descrizione, colore
         )
       `)
       .eq("operatore_id", utenteId)
@@ -82,13 +100,9 @@ export const promemoriaService = {
     return data || [];
   },
 
-  /**
-   * Controlla promemoria in scadenza e invia notifiche automatiche
-   * ai destinatari tramite sistema messaggi interni
-   */
   async controllaEInviaNotificheScadenza(currentUserId: string, studioId: string) {
     try {
-      console.log("🔔 Controllo promemoria in scadenza...");
+      console.log("Controllo promemoria in scadenza...");
 
       const oggi = new Date();
       oggi.setHours(0, 0, 0, 0);
@@ -97,16 +111,12 @@ export const promemoriaService = {
       const dopodomani = new Date(oggi);
       dopodomani.setDate(dopodomani.getDate() + 2);
 
-      // Ottieni tutti i promemoria visibili (RLS fa il filtro)
       const { data: promemoria, error } = await supabase
         .from("tbpromemoria")
         .select(`
           *,
           destinatario:tbutenti!destinatario_id (
-            id,
-            nome,
-            cognome,
-            email
+            id, nome, cognome, email
           )
         `)
         .in("working_progress", ["Aperto", "In lavorazione"])
@@ -119,13 +129,12 @@ export const promemoriaService = {
       }
 
       if (!promemoria || promemoria.length === 0) {
-        console.log("✅ Nessun promemoria in scadenza");
+        console.log("Nessun promemoria in scadenza");
         return;
       }
 
-      console.log(`📋 Trovati ${promemoria.length} promemoria in scadenza`);
+      console.log(`Trovati ${promemoria.length} promemoria in scadenza`);
 
-      // Per ogni promemoria in scadenza con destinatario
       for (const p of promemoria) {
         if (!p.destinatario_id || !p.destinatario) continue;
 
@@ -136,17 +145,16 @@ export const promemoriaService = {
         let giorniRimasti = 0;
 
         if (scadenza.getTime() === oggi.getTime()) {
-          urgenza = "🔴 SCADE OGGI";
+          urgenza = "SCADE OGGI";
           giorniRimasti = 0;
         } else if (scadenza.getTime() === domani.getTime()) {
-          urgenza = "🟡 SCADE DOMANI";
+          urgenza = "SCADE DOMANI";
           giorniRimasti = 1;
         } else {
-          urgenza = "🟢 SCADE TRA 2 GIORNI";
+          urgenza = "SCADE TRA 2 GIORNI";
           giorniRimasti = 2;
         }
 
-        // Controlla se abbiamo già inviato notifica oggi per questo promemoria
         const { data: notificheEsistenti } = await supabase
           .from("tbmessaggi")
           .select("id")
@@ -154,11 +162,10 @@ export const promemoriaService = {
           .gte("created_at", oggi.toISOString());
 
         if (notificheEsistenti && notificheEsistenti.length > 0) {
-          console.log(`⏭️  Notifica già inviata per promemoria: ${p.titolo}`);
+          console.log(`Notifica già inviata per promemoria: ${p.titolo}`);
           continue;
         }
 
-        // Crea o ottieni conversazione diretta con destinatario
         try {
           const conversazione = await messaggioService.getOrCreateConversazioneDiretta(
             currentUserId,
@@ -167,20 +174,18 @@ export const promemoriaService = {
           );
 
           if (!conversazione) {
-            console.error(`❌ Impossibile creare conversazione per promemoria: ${p.titolo}`);
+            console.error(`Impossibile creare conversazione per promemoria: ${p.titolo}`);
             continue;
           }
 
-          // Formatta data scadenza
           const dataScadenzaFormattata = new Date(p.data_scadenza).toLocaleDateString("it-IT");
 
-          // Invia messaggio di notifica
-          const messaggioTesto = `${urgenza}\n\n📌 **Promemoria in scadenza: ${p.titolo}**\n\n` +
-            `📅 Scadenza: ${dataScadenzaFormattata} (${giorniRimasti === 0 ? "oggi" : giorniRimasti === 1 ? "domani" : "tra 2 giorni"})\n` +
-            `📝 Descrizione: ${p.descrizione || "Nessuna descrizione"}\n` +
-            `⚡ Priorità: ${p.priorita}\n` +
-            `📊 Stato: ${p.working_progress}\n\n` +
-            `👉 Vai su /promemoria per gestire questo promemoria.`;
+          const messaggioTesto = `${urgenza}\n\nPromemoria in scadenza: ${p.titolo}\n\n` +
+            `Scadenza: ${dataScadenzaFormattata} (${giorniRimasti === 0 ? "oggi" : giorniRimasti === 1 ? "domani" : "tra 2 giorni"})\n` +
+            `Descrizione: ${p.descrizione || "Nessuna descrizione"}\n` +
+            `Priorità: ${p.priorita}\n` +
+            `Stato: ${p.working_progress}\n\n` +
+            `Vai su /promemoria per gestire questo promemoria.`;
 
           await messaggioService.inviaMessaggio(
             conversazione.id,
@@ -188,22 +193,19 @@ export const promemoriaService = {
             messaggioTesto
           );
 
-          console.log(`✅ Notifica inviata per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`);
+          console.log(`Notifica inviata per promemoria: ${p.titolo} a ${p.destinatario.nome} ${p.destinatario.cognome}`);
 
         } catch (msgError) {
-          console.error(`❌ Errore invio notifica per promemoria ${p.titolo}:`, msgError);
+          console.error(`Errore invio notifica per promemoria ${p.titolo}:`, msgError);
         }
       }
 
-      console.log("🎉 Controllo notifiche completato");
+      console.log("Controllo notifiche completato");
     } catch (error) {
-      console.error("❌ Errore controllo notifiche scadenza:", error);
+      console.error("Errore controllo notifiche scadenza:", error);
     }
   },
 
-  /**
-   * Crea un nuovo promemoria
-   */
   async createPromemoria(promemoria: {
     titolo: string;
     descrizione?: string;
@@ -242,9 +244,6 @@ export const promemoriaService = {
     return data;
   },
 
-  /**
-   * Aggiorna un promemoria esistente
-   */
   async updatePromemoria(id: string, promemoria: {
     titolo?: string;
     descrizione?: string;
@@ -272,9 +271,6 @@ export const promemoriaService = {
     return data;
   },
 
-  /**
-   * Elimina un promemoria
-   */
   async deletePromemoria(id: string): Promise<void> {
     const { error } = await supabase
       .from("tbpromemoria")
@@ -287,18 +283,12 @@ export const promemoriaService = {
     }
   },
 
-  /**
-   * Calcola la data di scadenza basata su data + giorni
-   */
   calcolaDataScadenza(dataInizio: string, giorniScadenza: number): string {
     const data = new Date(dataInizio);
     data.setDate(data.getDate() + giorniScadenza);
     return data.toISOString().split("T")[0];
   },
 
-  /**
-   * Ottiene statistiche promemoria per dashboard
-   */
   async getStatistiche(utenteId: string) {
     const { data, error } = await supabase
       .from("tbpromemoria")
@@ -329,20 +319,15 @@ export const promemoriaService = {
     };
   },
 
-  /**
-   * Carica un file allegato per un promemoria
-   */
   async uploadAllegato(
     promemoriaId: string,
     file: File
   ): Promise<Allegato> {
-    // Validazione file
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       throw new Error("File troppo grande. Dimensione massima: 10MB");
     }
 
-    // Tipi file accettati
     const tipiAccettati = [
       "application/pdf",
       "application/msword",
@@ -358,11 +343,9 @@ export const promemoriaService = {
       throw new Error("Tipo file non supportato. Usa: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF");
     }
 
-    // Genera nome file univoco
     const timestamp = Date.now();
     const nomeFile = `${promemoriaId}/${timestamp}_${file.name}`;
 
-    // Upload su Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("promemoria-allegati")
       .upload(nomeFile, file, {
@@ -375,12 +358,10 @@ export const promemoriaService = {
       throw new Error("Errore durante l'upload del file");
     }
 
-    // Ottieni URL pubblico
     const { data: urlData } = supabase.storage
       .from("promemoria-allegati")
       .getPublicUrl(nomeFile);
 
-    // Crea oggetto allegato
     const allegato: Allegato = {
       nome: file.name,
       url: urlData.publicUrl,
@@ -389,7 +370,6 @@ export const promemoriaService = {
       data_upload: new Date().toISOString()
     };
 
-    // Aggiungi allegato al promemoria
     const { data: currentPromemoria } = await supabase
       .from("tbpromemoria")
       .select("allegati")
@@ -405,7 +385,6 @@ export const promemoriaService = {
       .eq("id", promemoriaId);
 
     if (updateError) {
-      // Rollback: elimina file caricato
       await supabase.storage
         .from("promemoria-allegati")
         .remove([nomeFile]);
@@ -415,14 +394,10 @@ export const promemoriaService = {
     return allegato;
   },
 
-  /**
-   * Elimina un allegato
-   */
   async deleteAllegato(
     promemoriaId: string,
     allegatoUrl: string
   ): Promise<void> {
-    // Ottieni allegati attuali
     const { data: currentPromemoria } = await supabase
       .from("tbpromemoria")
       .select("allegati")
@@ -436,12 +411,10 @@ export const promemoriaService = {
       throw new Error("Allegato non trovato");
     }
 
-    // Estrai nome file dall'URL
     const url = new URL(allegatoDaEliminare.url);
     const pathParts = url.pathname.split("/");
-    const nomeFile = pathParts.slice(-2).join("/"); // promemoriaId/timestamp_nome.ext
+    const nomeFile = pathParts.slice(-2).join("/");
 
-    // Elimina da Storage
     const { error: storageError } = await supabase.storage
       .from("promemoria-allegati")
       .remove([nomeFile]);
@@ -450,7 +423,6 @@ export const promemoriaService = {
       console.error("Errore eliminazione file storage:", storageError);
     }
 
-    // Rimuovi da database
     const nuoviAllegati = allegatiAttuali.filter(a => a.url !== allegatoUrl);
 
     const { error: updateError } = await supabase
@@ -463,9 +435,6 @@ export const promemoriaService = {
     }
   },
 
-  /**
-   * Ottieni URL di download per un allegato
-   */
   getUrlAllegato(allegato: Allegato): string {
     return allegato.url;
   },
