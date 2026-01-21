@@ -453,7 +453,21 @@ export default function PromemoriaPage() {
                 <TableCell>{p.settore}</TableCell>
                 <TableCell>
                   {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
-                    <span className="text-gray-600">📎 {p.allegati.length}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-gray-600">
+                        <Paperclip className="h-4 w-4" />
+                        {p.allegati.length}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewAllegati(p)}
+                        className="h-8 w-8 p-0"
+                        title="Visualizza allegati"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
