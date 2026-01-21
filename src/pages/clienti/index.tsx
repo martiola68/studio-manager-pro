@@ -462,32 +462,154 @@ export default function ClientiPage() {
   };
 
   const handleInsertIntoScadenzari = async (cliente: Cliente) => {
-    const scadenzariAttivi: string[] = [];
-    
-    if (cliente.flag_iva) scadenzariAttivi.push("IVA");
-    if (cliente.flag_cu) scadenzariAttivi.push("CU");
-    if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
-    if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
-    if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
-    if (cliente.flag_770) scadenzariAttivi.push("770");
-    if (cliente.flag_esterometro) scadenzariAttivi.push("Esterometro");
-    if (cliente.flag_ccgg) scadenzariAttivi.push("CCGG");
-    if (cliente.flag_proforma) scadenzariAttivi.push("Proforma");
-    if (cliente.flag_imu) scadenzariAttivi.push("IMU");
+    try {
+      const scadenzariAttivi: string[] = [];
+      const inserimenti: Promise<any>[] = [];
 
-    if (scadenzariAttivi.length === 0) {
+      // Dati comuni per tutti gli scadenzari
+      const baseData = {
+        nominativo: cliente.ragione_sociale,
+        utente_professionista_id: cliente.utente_professionista_id,
+        utente_operatore_id: cliente.utente_operatore_id,
+      };
+
+      // IVA
+      if (cliente.flag_iva) {
+        scadenzariAttivi.push("IVA");
+        inserimenti.push(
+          supabase.from("tbscadiva").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // CU
+      if (cliente.flag_cu) {
+        scadenzariAttivi.push("CU");
+        inserimenti.push(
+          supabase.from("tbscadcu").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // Bilanci
+      if (cliente.flag_bilancio) {
+        scadenzariAttivi.push("Bilanci");
+        inserimenti.push(
+          supabase.from("tbscadbilanci").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // Fiscali
+      if (cliente.flag_fiscali) {
+        scadenzariAttivi.push("Fiscali");
+        inserimenti.push(
+          supabase.from("tbscadfiscali").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // LIPE
+      if (cliente.flag_lipe) {
+        scadenzariAttivi.push("LIPE");
+        inserimenti.push(
+          supabase.from("tbscadlipe").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // 770 - USA tbscad770 con campi payroll
+      if (cliente.flag_770) {
+        scadenzariAttivi.push("770");
+        inserimenti.push(
+          supabase.from("tbscad770").upsert({
+            ...baseData,
+            id: cliente.id,
+            utente_payroll_id: cliente.utente_payroll_id,
+            professionista_payroll_id: cliente.professionista_payroll_id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // Esterometro
+      if (cliente.flag_esterometro) {
+        scadenzariAttivi.push("Esterometro");
+        inserimenti.push(
+          supabase.from("tbscadestero").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // CCGG
+      if (cliente.flag_ccgg) {
+        scadenzariAttivi.push("CCGG");
+        inserimenti.push(
+          supabase.from("tbscadccgg").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // Proforma
+      if (cliente.flag_proforma) {
+        scadenzariAttivi.push("Proforma");
+        inserimenti.push(
+          supabase.from("tbscadproforma").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      // IMU
+      if (cliente.flag_imu) {
+        scadenzariAttivi.push("IMU");
+        inserimenti.push(
+          supabase.from("tbscadimu").upsert({
+            ...baseData,
+            id: cliente.id,
+            studio_id: (cliente as any).studio_id // Fallback if studio_id is needed but not in Cliente type
+          }, { onConflict: "id", ignoreDuplicates: true })
+        );
+      }
+
+      if (scadenzariAttivi.length === 0) {
+        toast({
+          title: "Attenzione",
+          description: "Nessuno scadenzario selezionato per questo cliente nell'anagrafica",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Esegui tutti gli inserimenti
+      await Promise.all(inserimenti);
+
       toast({
-        title: "Attenzione",
-        description: "Nessuno scadenzario selezionato per questo cliente nell'anagrafica",
+        title: "Successo",
+        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(", ")}`,
+      });
+    } catch (error) {
+      console.error("Errore inserimento scadenzari:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inserire il cliente negli scadenzari",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Successo",
-      description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(", ")}`,
-    });
   };
 
   const handleAddNew = () => {

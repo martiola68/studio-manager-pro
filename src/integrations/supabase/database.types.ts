@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -977,6 +977,7 @@ export type Database = {
           modelli_770: string | null
           nominativo: string
           note: string | null
+          professionista_payroll_id: string | null
           ricevuta: boolean | null
           tipo_invio: string | null
           tipo_scadenza_id: string | null
@@ -996,6 +997,7 @@ export type Database = {
           modelli_770?: string | null
           nominativo: string
           note?: string | null
+          professionista_payroll_id?: string | null
           ricevuta?: boolean | null
           tipo_invio?: string | null
           tipo_scadenza_id?: string | null
@@ -1015,6 +1017,7 @@ export type Database = {
           modelli_770?: string | null
           nominativo?: string
           note?: string | null
+          professionista_payroll_id?: string | null
           ricevuta?: boolean | null
           tipo_invio?: string | null
           tipo_scadenza_id?: string | null
@@ -1029,6 +1032,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscad770_professionista_payroll_id_fkey"
+            columns: ["professionista_payroll_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
             referencedColumns: ["id"]
           },
           {
