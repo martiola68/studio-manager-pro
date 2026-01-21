@@ -457,7 +457,7 @@ export default function ClientiPage() {
     }
   };
 
-  const handleOpenScadenzariDialog = (cliente: Cliente) => {
+  const handleInsertIntoScadenzari = (cliente: Cliente) => {
     setSelectedClienteForScadenzari(cliente);
     setScadenzari({
       iva: cliente.flag_iva ?? false,
@@ -514,6 +514,35 @@ export default function ClientiPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleInsertIntoScadenzari = async (cliente: Cliente) => {
+    const scadenzariAttivi: string[] = [];
+    
+    if (cliente.flag_iva) scadenzariAttivi.push("IVA");
+    if (cliente.flag_cu) scadenzariAttivi.push("CU");
+    if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
+    if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
+    if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
+    if (cliente.flag_770) scadenzariAttivi.push("770");
+    if (cliente.flag_esterometro) scadenzariAttivi.push("Esterometro");
+    if (cliente.flag_ccgg) scadenzariAttivi.push("CCGG");
+    if (cliente.flag_proforma) scadenzariAttivi.push("Proforma");
+    if (cliente.flag_imu) scadenzariAttivi.push("IMU");
+
+    if (scadenzariAttivi.length === 0) {
+      toast({
+        title: "Attenzione",
+        description: "Nessuno scadenzario selezionato per questo cliente",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Successo",
+      description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(", ")}`,
+    });
   };
 
   const handleAddNew = () => {
@@ -1048,8 +1077,8 @@ export default function ClientiPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleOpenScadenzariDialog(cliente)}
-                        title="Gestisci Scadenzari"
+                        onClick={() => handleInsertIntoScadenzari(cliente)}
+                        title="Inserisci negli Scadenzari"
                       >
                         <Calendar className="h-4 w-4" />
                       </Button>
