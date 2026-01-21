@@ -393,7 +393,7 @@ export const promemoriaService = {
       .eq("id", promemoriaId)
       .single();
 
-    const allegatiAttuali = (currentPromemoria?.allegati as Allegato[]) || [];
+    const allegatiAttuali = (currentPromemoria?.allegati as unknown as Allegato[]) || [];
     const nuoviAllegati = [...allegatiAttuali, allegato];
 
     const { error: updateError } = await supabase
@@ -426,7 +426,7 @@ export const promemoriaService = {
       .eq("id", promemoriaId)
       .single();
 
-    const allegatiAttuali = (currentPromemoria?.allegati as Allegato[]) || [];
+    const allegatiAttuali = (currentPromemoria?.allegati as unknown as Allegato[]) || [];
     const allegatoDaEliminare = allegatiAttuali.find(a => a.url === allegatoUrl);
 
     if (!allegatoDaEliminare) {
