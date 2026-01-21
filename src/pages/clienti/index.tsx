@@ -48,11 +48,6 @@ import { utenteService } from "@/services/utenteService";
 import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -210,9 +205,6 @@ export default function ClientiPage() {
     ricevi_mailing_scadenze: true,
     ricevi_newsletter: true,
   });
-
-  const [scadenzariDialogOpen, setScadenzariDialogOpen] = useState(false);
-  const [selectedClienteForScadenzari, setSelectedClienteForScadenzari] = useState<Cliente | null>(null);
 
   const handleRiskChange = (
     blocco: "A" | "B",
@@ -408,6 +400,18 @@ export default function ClientiPage() {
         scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
         data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
         scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
+        
+        // Save flags
+        flag_iva: scadenzari.iva,
+        flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilancio,
+        flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
+        flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
+        flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
+        flag_imu: scadenzari.imu,
       };
 
       if (editingCliente) {
@@ -457,65 +461,6 @@ export default function ClientiPage() {
     }
   };
 
-  const handleInsertIntoScadenzari = (cliente: Cliente) => {
-    setSelectedClienteForScadenzari(cliente);
-    setScadenzari({
-      iva: cliente.flag_iva ?? false,
-      cu: cliente.flag_cu ?? false,
-      bilancio: cliente.flag_bilancio ?? false,
-      fiscali: cliente.flag_fiscali ?? false,
-      lipe: cliente.flag_lipe ?? false,
-      modello_770: cliente.flag_770 ?? false,
-      esterometro: cliente.flag_esterometro ?? false,
-      ccgg: cliente.flag_ccgg ?? false,
-      proforma: cliente.flag_proforma ?? false,
-      imu: cliente.flag_imu ?? false,
-    });
-    setScadenzariDialogOpen(true);
-  };
-
-  const handleSaveScadenzari = async () => {
-    if (!selectedClienteForScadenzari) return;
-
-    try {
-      const updates = {
-        flag_iva: scadenzari.iva,
-        flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_fiscali: scadenzari.fiscali,
-        flag_lipe: scadenzari.lipe,
-        flag_770: scadenzari.modello_770,
-        flag_esterometro: scadenzari.esterometro,
-        flag_ccgg: scadenzari.ccgg,
-        flag_proforma: scadenzari.proforma,
-        flag_imu: scadenzari.imu,
-      };
-
-      const { error } = await supabase
-        .from("tbclienti")
-        .update(updates)
-        .eq("id", selectedClienteForScadenzari.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Successo",
-        description: "Scadenzari aggiornati con successo. Il nominativo è stato inserito/aggiornato negli scadenzari selezionati.",
-      });
-      
-      loadData();
-      setScadenzariDialogOpen(false);
-      setSelectedClienteForScadenzari(null);
-    } catch (error) {
-      console.error("Errore salvataggio scadenzari:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile salvare gli scadenzari",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleInsertIntoScadenzari = async (cliente: Cliente) => {
     const scadenzariAttivi: string[] = [];
     
@@ -533,7 +478,7 @@ export default function ClientiPage() {
     if (scadenzariAttivi.length === 0) {
       toast({
         title: "Attenzione",
-        description: "Nessuno scadenzario selezionato per questo cliente",
+        description: "Nessuno scadenzario selezionato per questo cliente nell'anagrafica",
         variant: "destructive",
       });
       return;
@@ -590,6 +535,21 @@ export default function ClientiPage() {
       data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
       scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
     });
+    
+    // Load existing flags
+    setScadenzari({
+      iva: cliente.flag_iva ?? false,
+      cu: cliente.flag_cu ?? false,
+      bilancio: cliente.flag_bilancio ?? false,
+      fiscali: cliente.flag_fiscali ?? false,
+      lipe: cliente.flag_lipe ?? false,
+      modello_770: cliente.flag_770 ?? false,
+      esterometro: cliente.flag_esterometro ?? false,
+      ccgg: cliente.flag_ccgg ?? false,
+      proforma: cliente.flag_proforma ?? false,
+      imu: cliente.flag_imu ?? false,
+    });
+    
     setIsDialogOpen(true);
   };
 
@@ -2133,143 +2093,6 @@ export default function ClientiPage() {
         className="hidden"
         id="csv-upload"
       />
-
-      <Dialog open={scadenzariDialogOpen} onOpenChange={setScadenzariDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              Gestione Scadenzari - {selectedClienteForScadenzari?.ragione_sociale}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Seleziona gli scadenzari da assegnare a questo cliente
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_iva"
-                  checked={scadenzari.iva}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, iva: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_iva">IVA</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_cu"
-                  checked={scadenzari.cu}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, cu: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_cu">CU (Certificazione Unica)</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_bilancio"
-                  checked={scadenzari.bilancio}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, bilancio: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_bilancio">Bilanci</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_fiscali"
-                  checked={scadenzari.fiscali}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, fiscali: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_fiscali">Fiscali</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_lipe"
-                  checked={scadenzari.lipe}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, lipe: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_lipe">Lipe</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_modello_770"
-                  checked={scadenzari.modello_770}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, modello_770: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_modello_770">770</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_esterometro"
-                  checked={scadenzari.esterometro}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, esterometro: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_esterometro">Esterometro</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_ccgg"
-                  checked={scadenzari.ccgg}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, ccgg: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_ccgg">CCGG</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_proforma"
-                  checked={scadenzari.proforma}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, proforma: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_proforma">Proforma</Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scad_imu"
-                  checked={scadenzari.imu}
-                  onCheckedChange={(checked) =>
-                    setScadenzari({ ...scadenzari, imu: checked as boolean })
-                  }
-                />
-                <Label htmlFor="scad_imu">IMU</Label>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <Button variant="outline" onClick={() => setScadenzariDialogOpen(false)}>
-              Annulla
-            </Button>
-            <Button onClick={handleSaveScadenzari}>
-              Salva Scadenzari
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
