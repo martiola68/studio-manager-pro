@@ -1785,51 +1785,25 @@ export default function ClientiPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Data Ultima Verifica A</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.data_ultima_verifica_antiric && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {formData.data_ultima_verifica_antiric ? (
-                                format(formData.data_ultima_verifica_antiric, "dd/MM/yyyy", { locale: it })
-                              ) : (
-                                <span>gg/mm/aaaa</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <CalendarComponent
-                              mode="single"
-                              selected={formData.data_ultima_verifica_antiric}
-                              onSelect={(date) => handleVerificaDateChange("A", date)}
-                              locale={it}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Input
+                          type="date"
+                          value={formData.data_ultima_verifica_antiric ? formData.data_ultima_verifica_antiric.toISOString().split('T')[0] : ""}
+                          onChange={(e) => {
+                            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+                            handleVerificaDateChange("A", dateValue);
+                          }}
+                          className="w-full"
+                        />
                       </div>
 
                       <div>
                         <Label>Scadenza Antiriciclaggio A</Label>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.scadenza_antiric && "text-muted-foreground"
-                          )}
+                        <Input
+                          type="date"
+                          value={formData.scadenza_antiric ? formData.scadenza_antiric.toISOString().split('T')[0] : ""}
                           disabled
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formData.scadenza_antiric ? (
-                            format(formData.scadenza_antiric, "dd/MM/yyyy", { locale: it })
-                          ) : (
-                            <span>gg/mm/aaaa</span>
-                          )}
-                        </Button>
+                          className="w-full bg-muted"
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -1908,51 +1882,25 @@ export default function ClientiPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Data Ultima Verifica B</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.data_ultima_verifica_b && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {formData.data_ultima_verifica_b ? (
-                                format(formData.data_ultima_verifica_b, "dd/MM/yyyy", { locale: it })
-                              ) : (
-                                <span>gg/mm/aaaa</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <CalendarComponent
-                              mode="single"
-                              selected={formData.data_ultima_verifica_b}
-                              onSelect={(date) => handleVerificaDateChange("B", date)}
-                              locale={it}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Input
+                          type="date"
+                          value={formData.data_ultima_verifica_b ? formData.data_ultima_verifica_b.toISOString().split('T')[0] : ""}
+                          onChange={(e) => {
+                            const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+                            handleVerificaDateChange("B", dateValue);
+                          }}
+                          className="w-full"
+                        />
                       </div>
 
                       <div>
                         <Label>Scadenza Antiriciclaggio B</Label>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.scadenza_antiric_b && "text-muted-foreground"
-                          )}
+                        <Input
+                          type="date"
+                          value={formData.scadenza_antiric_b ? formData.scadenza_antiric_b.toISOString().split('T')[0] : ""}
                           disabled
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formData.scadenza_antiric_b ? (
-                            format(formData.scadenza_antiric_b, "dd/MM/yyyy", { locale: it })
-                          ) : (
-                            <span>gg/mm/aaaa</span>
-                          )}
-                        </Button>
+                          className="w-full bg-muted"
+                        />
                       </div>
                     </div>
                   </CardContent>
