@@ -581,7 +581,7 @@ export default function ClientiPage() {
           supabase.from("tbscadimu").upsert({
             ...baseData,
             id: cliente.id,
-            studio_id: (cliente as any).studio_id // Fallback if studio_id is needed but not in Cliente type
+            studio_id: (cliente as any).studio_id
           }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
