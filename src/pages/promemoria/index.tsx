@@ -1,70 +1,170 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { promemoriaService, type Allegato } from "@/services/promemoriaService";
-import { utenteService } from "@/services/utenteService";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2, Paperclip, X, File as FileIcon, Loader2, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Pencil, 
+  Trash2, 
+  Plus, 
+  Paperclip, 
+  Eye, 
+  FileText, 
+  Image as ImageIcon, 
+  File, 
+  X,
+  Calendar as CalendarIcon
+} from "lucide-react";
+import { promemoriaService, type Promemoria, type Allegato } from "@/services/promemoriaService";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Database } from "@/lib/supabase/types";
 
-// Definisco i tipi esatti restituiti dalla query Supabase
-type UtenteJoin = Pick<Database["public"]["Tables"]["tbutenti"]["Row"], "id" | "nome" | "cognome" | "settore" | "responsabile">;
+// Definizioni tipi locali se non esportati globalmente
+interface Utente {
+  id: string;
+  nome: string;
+  cognome: string;
+  email: string;
+  settore: string | null;
+  responsabile: boolean;
+}
 
-type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"] & {
-  operatore?: UtenteJoin | null;
-  destinatario?: UtenteJoin | null;
-  allegati?: Allegato[] | null;
-};
-type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+interface TipoPromemoria {
+  id: string;
+  nome: string;
+  colore: string;
+}
 
 export default function PromemoriaPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
+  
+  // Stati Dati
   const [promemoria, setPromemoria] = useState<Promemoria[]>([]);
-  const [filteredPromemoria, setFilteredPromemoria] = useState<Promemoria[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [tipiPromemoria, setTipiPromemoria] = useState<TipoPromemoria[]>([]);
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStato, setFilterStato] = useState<string>("all");
+  // Stati UI
+  const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedPromemoria, setSelectedPromemoria] = useState<Promemoria | null>(null);
+  const [isAllegatiDialogOpen, setIsAllegatiDialogOpen] = useState(false);
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   
-  // State per allegati
+  // Stati Selezione
+  const [selectedPromemoria, setSelectedPromemoria] = useState<Promemoria | null>(null);
+  const [viewAllegatiPromemoria, setViewAllegatiPromemoria] = useState<Promemoria | null>(null);
+  const [currentDocUrl, setCurrentDocUrl] = useState<string>("");
+  
+  // Stati File
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
-  
+
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
     data_inserimento: new Date(),
     giorni_scadenza: 0,
-    data_scadenza: undefined as Date | undefined,
+    data_scadenza: new Date(),
     priorita: "Media",
     working_progress: "Aperto",
     destinatario_id: "",
-    settore: ""
+    settore: "",
+    tipo_promemoria_id: ""
   });
 
-  const [isDataCalendarOpen, setIsDataCalendarOpen] = useState(false);
-  const [isEditDataCalendarOpen, setIsEditDataCalendarOpen] = useState(false);
+  // Reset form helper
+  const resetForm = () => {
+    setFormData({
+      titolo: "",
+      descrizione: "",
+      data_inserimento: new Date(),
+      giorni_scadenza: 0,
+      data_scadenza: new Date(),
+      priorita: "Media",
+      working_progress: "Aperto",
+      destinatario_id: "",
+      settore: "",
+      tipo_promemoria_id: ""
+    });
+    setFilesToUpload([]);
+    setAttachmentsToDelete([]);
+  };
 
-  // Calcola automaticamente data_scadenza quando cambiano data o giorni_scadenza
+  // Caricamento Iniziale
+  const checkUserAndLoad = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // 1. Get Current User Auth
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return; // Gestire redirect se necessario
+
+      // 2. Get User Profile
+      const { data: userProfile } = await supabase
+        .from("tbutenti")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (userProfile) setCurrentUser(userProfile);
+
+      // 3. Load Data in parallel
+      const [promemoriaData, utentiData, tipiData] = await Promise.all([
+        promemoriaService.getPromemoria(),
+        supabase.from("tbutenti").select("*").order("cognome"),
+        supabase.from("tbtipopromemoria").select("*").order("nome")
+      ]);
+
+      if (promemoriaData) setPromemoria(promemoriaData);
+      if (utentiData.data) setUtenti(utentiData.data);
+      if (tipiData.data) setTipiPromemoria(tipiData.data);
+
+    } catch (error) {
+      console.error("Errore caricamento dati:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    checkUserAndLoad();
+  }, [checkUserAndLoad]);
+
+  // Calcolo Data Scadenza Automatico
   useEffect(() => {
     if (formData.data_inserimento && formData.giorni_scadenza >= 0) {
       const scadenza = addDays(formData.data_inserimento, formData.giorni_scadenza);
@@ -72,307 +172,38 @@ export default function PromemoriaPage() {
     }
   }, [formData.data_inserimento, formData.giorni_scadenza]);
 
-  // Helper per verificare se scaduto
-  const isScaduto = (p: Promemoria) => {
-    if (p.working_progress === "Completato") return false;
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
-    const scadenza = new Date(p.data_scadenza);
-    scadenza.setHours(0, 0, 0, 0);
-    return scadenza < oggi;
+
+  // Handlers Allegati
+  const handleViewAllegati = (p: Promemoria) => {
+    setViewAllegatiPromemoria(p);
+    setIsAllegatiDialogOpen(true);
   };
 
-  useEffect(() => {
-    checkUserAndLoad();
-  }, []);
-
-  useEffect(() => {
-    filterData();
-  }, [promemoria, searchTerm, filterStato]);
-
-  // Carica promemoria e utenti all'avvio
-  useEffect(() => {
-    if (currentUser) {
-      loadPromemoria();
-      loadUtenti();
-      
-      // ✅ CONTROLLO AUTOMATICO NOTIFICHE SCADENZA
-      if (currentUser.studio_id) {
-        promemoriaService.controllaEInviaNotificheScadenza(
-          currentUser.id,
-          currentUser.studio_id
-        ).catch(err => {
-          console.error("Errore controllo notifiche:", err);
-        });
-      }
-    }
-  }, [currentUser]);
-
-  const loadPromemoria = async () => {
-    try {
-      setLoading(true);
-      const data = await promemoriaService.getPromemoria();
-      // Cast esplicito per gestire la conversione da Json DB a tipo Allegato[] frontend
-      setPromemoria((data as unknown as Promemoria[]) || []);
-    } catch (error: any) {
-      console.error("Errore caricamento promemoria:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile caricare i promemoria",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUtenti = async () => {
-    try {
-      const data = await utenteService.getUtenti();
-      setUtenti(data || []);
-    } catch (error) {
-      console.error("Errore caricamento utenti:", error);
-    }
-  };
-
-  const checkUserAndLoad = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const user = await utenteService.getUtenteById(session.user.id);
-      setCurrentUser(user);
-
-      const [promData, utentiData] = await Promise.all([
-        promemoriaService.getPromemoria(),
-        utenteService.getUtenti()
-      ]);
-
-      // Cast esplicito per gestire la conversione da Json DB a tipo Allegato[] frontend
-      setPromemoria((promData as unknown as Promemoria[]) || []);
-      setUtenti(utentiData || []);
-    } catch (error) {
-      console.error("Errore caricamento:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterData = () => {
-    if (!currentUser) return;
-
-    let filtered = promemoria;
-
-    if (currentUser.responsabile) {
-      filtered = filtered.filter(p => 
-        p.operatore_id === currentUser.id || 
-        p.destinatario_id === currentUser.id ||
-        (p.settore === currentUser.settore && currentUser.settore)
-      );
-    } else {
-      filtered = filtered.filter(p => 
-        p.operatore_id === currentUser.id || 
-        p.destinatario_id === currentUser.id
-      );
-    }
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(p => 
-        (p.titolo || "").toLowerCase().includes(search) ||
-        (p.descrizione || "").toLowerCase().includes(search)
-      );
-    }
-
-    if (filterStato !== "all") {
-      filtered = filtered.filter(p => p.working_progress === filterStato);
-    }
-
-    setFilteredPromemoria(filtered);
-  };
-
-  const resetForm = useCallback(() => {
-    setFilesToUpload([]);
-    setAttachmentsToDelete([]);
-    if (!currentUser) return;
+  const handleOpenAllegato = (allegato: Allegato) => {
+    const fileExt = allegato.nome.split('.').pop()?.toLowerCase();
     
-    const oggi = new Date(); // ← Data odierna
-    
-    // Se utente NON è responsabile → auto-seleziona se stesso come destinatario
-    if (!currentUser.responsabile) {
-      setFormData({
-        titolo: "",
-        descrizione: "",
-        data_inserimento: oggi, // ← Sempre data odierna
-        giorni_scadenza: 0,
-        data_scadenza: addDays(oggi, 0),
-        priorita: "Media",
-        working_progress: "Aperto",
-        destinatario_id: currentUser.id,
-        settore: currentUser.settore || ""
-      });
-    } else {
-      // Se responsabile → form vuoto ma con data odierna
-      setFormData({
-        titolo: "",
-        descrizione: "",
-        data_inserimento: oggi, // ← Sempre data odierna
-        giorni_scadenza: 0,
-        data_scadenza: addDays(oggi, 0),
-        priorita: "Media",
-        working_progress: "Aperto",
-        destinatario_id: "",
-        settore: ""
-      });
+    // PDF e immagini si aprono direttamente in nuova tab
+    if (fileExt === 'pdf' || ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt || '')) {
+      window.open(allegato.url, '_blank');
+    } 
+    // Documenti Office usano Google Docs Viewer
+    else if (['doc', 'docx', 'xls', 'xlsx'].includes(fileExt || '')) {
+      setCurrentDocUrl(`https://docs.google.com/viewer?url=${encodeURIComponent(allegato.url)}&embedded=true`);
+      setIsDocViewerOpen(true);
     }
-  }, [currentUser]);
-
-  const handleOpenCreateDialog = useCallback(() => {
-    resetForm();
-    setIsDataCalendarOpen(false);
-    setIsCreateDialogOpen(true);
-  }, [resetForm]);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.titolo || !formData.data_inserimento) {
-      toast({
-        title: "Errore",
-        description: "Compila tutti i campi obbligatori",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setIsUploading(true);
-      
-      const dataScadenza = addDays(formData.data_inserimento, formData.giorni_scadenza);
-      
-      const newPromemoria = await promemoriaService.createPromemoria({
-        titolo: formData.titolo,
-        descrizione: formData.descrizione,
-        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
-        giorni_scadenza: formData.giorni_scadenza,
-        data_scadenza: format(dataScadenza, "yyyy-MM-dd"),
-        priorita: formData.priorita,
-        stato: formData.working_progress,
-        operatore_id: currentUser?.id ?? "",
-        destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || ""
-      });
-
-      // Upload allegati sequenziale
-      if (filesToUpload.length > 0 && newPromemoria) {
-        for (const file of filesToUpload) {
-          try {
-            await promemoriaService.uploadAllegato(newPromemoria.id, file);
-          } catch (err) {
-            console.error(`Errore upload file ${file.name}:`, err);
-            toast({
-              title: "Attenzione",
-              description: `Impossibile caricare ${file.name}`,
-              variant: "destructive"
-            });
-          }
-        }
-      }
-
-      toast({ title: "Successo", description: "Promemoria creato" });
-      setIsCreateDialogOpen(false);
-      resetForm();
-      checkUserAndLoad();
-    } catch (error) {
-      console.error("Errore creazione:", error);
-      toast({ title: "Errore", description: "Impossibile creare promemoria", variant: "destructive" });
-    } finally {
-      setLoading(false);
-      setIsUploading(false);
+    // Altri file si aprono in nuova tab
+    else {
+      window.open(allegato.url, '_blank');
     }
   };
 
-  const handleEdit = useCallback((promemoria: Promemoria) => {
-    setSelectedPromemoria(promemoria);
-    setFilesToUpload([]);
-    setAttachmentsToDelete([]);
-    
-    setFormData({
-      titolo: promemoria.titolo || "",
-      descrizione: promemoria.descrizione || "",
-      data_inserimento: promemoria.data_inserimento ? new Date(promemoria.data_inserimento) : new Date(),
-      giorni_scadenza: promemoria.giorni_scadenza || 0,
-      data_scadenza: promemoria.data_scadenza ? new Date(promemoria.data_scadenza) : undefined,
-      priorita: promemoria.priorita || "Media",
-      working_progress: promemoria.working_progress || "Aperto",
-      destinatario_id: promemoria.destinatario_id || "",
-      settore: promemoria.settore || ""
-    });
-    setIsEditDialogOpen(true);
-  }, []);
-
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPromemoria || !formData.titolo || !formData.data_inserimento || !formData.data_scadenza) {
-      toast({
-        title: "Errore",
-        description: "Compila tutti i campi obbligatori",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setIsUploading(true);
-
-      // 1. Aggiorna dati testuali
-      await promemoriaService.updatePromemoria(selectedPromemoria.id, {
-        titolo: formData.titolo,
-        descrizione: formData.descrizione,
-        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
-        giorni_scadenza: formData.giorni_scadenza,
-        data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
-        priorita: formData.priorita,
-        working_progress: formData.working_progress,
-        destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || undefined
-      });
-
-      // 2. Elimina allegati rimossi
-      if (attachmentsToDelete.length > 0) {
-        for (const url of attachmentsToDelete) {
-          try {
-            await promemoriaService.deleteAllegato(selectedPromemoria.id, url);
-          } catch (err) {
-            console.error("Errore eliminazione allegato:", err);
-          }
-        }
-      }
-
-      // 3. Carica nuovi allegati
-      if (filesToUpload.length > 0) {
-        for (const file of filesToUpload) {
-          try {
-            await promemoriaService.uploadAllegato(selectedPromemoria.id, file);
-          } catch (err) {
-            console.error(`Errore upload file ${file.name}:`, err);
-          }
-        }
-      }
-
-      toast({ title: "Successo", description: "Promemoria aggiornato" });
-      setIsEditDialogOpen(false);
-      setSelectedPromemoria(null);
-      resetForm();
-      checkUserAndLoad();
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
-      toast({ title: "Errore", description: "Impossibile aggiornare promemoria", variant: "destructive" });
-    } finally {
-      setLoading(false);
-      setIsUploading(false);
-    }
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return <FileText className="h-4 w-4 text-red-500" />;
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return <ImageIcon className="h-4 w-4 text-blue-500" />;
+    if (['doc', 'docx'].includes(ext || '')) return <FileText className="h-4 w-4 text-blue-600" />;
+    if (['xls', 'xlsx'].includes(ext || '')) return <FileText className="h-4 w-4 text-green-600" />;
+    return <File className="h-4 w-4 text-gray-500" />;
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,378 +225,295 @@ export default function PromemoriaPage() {
     setAttachmentsToDelete(prev => prev.filter(u => u !== url));
   };
 
-  const getVisibleAttachments = () => {
-    if (!selectedPromemoria?.allegati) return [];
-    return (selectedPromemoria.allegati as Allegato[]).filter(a => !attachmentsToDelete.includes(a.url));
+  // Handlers CRUD
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.titolo) return;
+
+    try {
+      setLoading(true);
+      setIsUploading(true);
+      
+      const newPromemoria = await promemoriaService.createPromemoria({
+        titolo: formData.titolo,
+        descrizione: formData.descrizione,
+        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
+        giorni_scadenza: formData.giorni_scadenza,
+        data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
+        priorita: formData.priorita,
+        stato: formData.working_progress,
+        operatore_id: currentUser?.id ?? "",
+        destinatario_id: formData.destinatario_id || null,
+        settore: formData.settore || ""
+      });
+
+      if (filesToUpload.length > 0 && newPromemoria) {
+        for (const file of filesToUpload) {
+          try {
+            await promemoriaService.uploadAllegato(newPromemoria.id, file);
+          } catch (err) {
+            console.error(`Errore upload ${file.name}`, err);
+          }
+        }
+      }
+
+      toast({ title: "Successo", description: "Promemoria creato" });
+      setIsCreateDialogOpen(false);
+      resetForm();
+      checkUserAndLoad();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Errore", description: "Impossibile creare promemoria", variant: "destructive" });
+    } finally {
+      setLoading(false);
+      setIsUploading(false);
+    }
   };
 
-  const handleDeleteClick = useCallback((promemoria: Promemoria) => {
-    setSelectedPromemoria(promemoria);
-    setIsDeleteDialogOpen(true);
+  const handleEdit = useCallback((p: Promemoria) => {
+    setSelectedPromemoria(p);
+    setFilesToUpload([]);
+    setAttachmentsToDelete([]);
+    
+    setFormData({
+      titolo: p.titolo || "",
+      descrizione: p.descrizione || "",
+      data_inserimento: p.data_inserimento ? new Date(p.data_inserimento) : new Date(),
+      giorni_scadenza: p.giorni_scadenza || 0,
+      data_scadenza: p.data_scadenza ? new Date(p.data_scadenza) : new Date(),
+      priorita: p.priorita || "Media",
+      working_progress: p.working_progress || "Aperto",
+      destinatario_id: p.destinatario_id || "",
+      settore: p.settore || "",
+      tipo_promemoria_id: p.tipo_promemoria_id || ""
+    });
+    setIsEditDialogOpen(true);
   }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedPromemoria) return;
 
     try {
       setLoading(true);
-      await promemoriaService.deletePromemoria(selectedPromemoria.id);
-      toast({ title: "Successo", description: "Promemoria eliminato" });
-      setIsDeleteDialogOpen(false);
+      setIsUploading(true);
+
+      await promemoriaService.updatePromemoria(selectedPromemoria.id, {
+        titolo: formData.titolo,
+        descrizione: formData.descrizione,
+        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
+        giorni_scadenza: formData.giorni_scadenza,
+        data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
+        priorita: formData.priorita,
+        working_progress: formData.working_progress,
+        destinatario_id: formData.destinatario_id || null,
+        settore: formData.settore || undefined
+      });
+
+      // Elimina allegati
+      for (const url of attachmentsToDelete) {
+        await promemoriaService.deleteAllegato(selectedPromemoria.id, url);
+      }
+
+      // Upload nuovi
+      for (const file of filesToUpload) {
+        await promemoriaService.uploadAllegato(selectedPromemoria.id, file);
+      }
+
+      toast({ title: "Successo", description: "Promemoria aggiornato" });
+      setIsEditDialogOpen(false);
       setSelectedPromemoria(null);
+      resetForm();
       checkUserAndLoad();
     } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({ title: "Errore", description: "Impossibile eliminare promemoria", variant: "destructive" });
+      console.error(error);
+      toast({ title: "Errore", description: "Impossibile aggiornare", variant: "destructive" });
+    } finally {
+      setLoading(false);
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteClick = (p: Promemoria) => {
+    setSelectedPromemoria(p);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedPromemoria) return;
+    try {
+      setLoading(true);
+      await promemoriaService.deletePromemoria(selectedPromemoria.id);
+      toast({ title: "Successo", description: "Eliminato correttamente" });
+      setIsDeleteDialogOpen(false);
+      checkUserAndLoad();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Errore", description: "Impossibile eliminare", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDestinatarioChange = useCallback((val: string) => {
+  const handleDestinatarioChange = (val: string) => {
     if (val === "none") {
-      setFormData(prev => ({
-        ...prev,
-        destinatario_id: "",
-        settore: ""
-      }));
+      setFormData(prev => ({ ...prev, destinatario_id: "", settore: "" }));
     } else {
-      const selectedUser = utenti.find(u => u.id === val);
-      setFormData(prev => ({
-        ...prev,
-        destinatario_id: val,
-        settore: selectedUser?.settore || ""
-      }));
+      const u = utenti.find(u => u.id === val);
+      setFormData(prev => ({ ...prev, destinatario_id: val, settore: u?.settore || "" }));
     }
-  }, [utenti]);
-
-  const getStatoBadge = (stato: string) => {
-    const styles: Record<string, string> = {
-      "Aperto": "bg-blue-100 text-blue-800",
-      "In lavorazione": "bg-yellow-100 text-yellow-800",
-      "Completato": "bg-green-100 text-green-800",
-      "Annullato": "bg-gray-100 text-gray-800",
-      "Presa visione": "bg-purple-100 text-purple-800",
-      "Richiesta confronto": "bg-orange-100 text-orange-800"
-    };
-    return <Badge className={styles[stato] || "bg-gray-100 text-gray-800"}>{stato}</Badge>;
-  };
-
-  const getPrioritaBadge = (priorita: string) => {
-    const styles: Record<string, string> = {
-      "Bassa": "bg-gray-100 text-gray-800",
-      "Media": "bg-blue-100 text-blue-800",
-      "Alta": "bg-red-100 text-red-800"
-    };
-    return <Badge variant="outline" className={styles[priorita] || ""}>{priorita}</Badge>;
   };
 
   if (loading && promemoria.length === 0) {
-    return <div className="p-8 text-center">Caricamento...</div>;
+    return <div className="p-8 text-center">Caricamento in corso...</div>;
   }
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Gestione Promemoria</h1>
-          {currentUser && (
-            <div className="flex items-center gap-2 mt-2">
-              {currentUser.responsabile ? (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  👁️ Modalità Responsabile: Visualizzi tutti i promemoria del settore &quot;{currentUser.settore}&quot;
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-                  👤 Modalità Utente: Visualizzi solo i tuoi promemoria
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-        <Button onClick={handleOpenCreateDialog}>
-          <Plus className="w-4 h-4 mr-2" />
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Promemoria</h1>
+        <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
+          <Plus className="mr-2 h-4 w-4" />
           Nuovo Promemoria
         </Button>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input 
-            placeholder="Cerca promemoria..." 
-            className="pl-10"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={filterStato} onValueChange={setFilterStato}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtra stato" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti gli stati</SelectItem>
-            <SelectItem value="Aperto">Aperto</SelectItem>
-            <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-            <SelectItem value="Presa visione">Presa visione</SelectItem>
-            <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-            <SelectItem value="Completato">Completato</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Titolo</TableHead>
+            <TableHead>Descrizione</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Settore</TableHead>
+            <TableHead>Allegati</TableHead>
+            <TableHead className="text-right">Azioni</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {promemoria.map((p) => (
+            <TableRow key={p.id}>
+              <TableCell className="font-medium">{p.titolo}</TableCell>
+              <TableCell className="max-w-md truncate">{p.descrizione}</TableCell>
+              <TableCell>
+                {tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || 
+                 <span className="text-gray-400">-</span>}
+              </TableCell>
+              <TableCell>{p.settore || "-"}</TableCell>
+              <TableCell>
+                {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewAllegati(p)}
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                  >
+                    <Paperclip className="h-4 w-4 mr-1" />
+                    {p.allegati.length}
+                    <Eye className="h-3 w-3 ml-2 opacity-50" />
+                  </Button>
+                ) : (
+                  <span className="text-gray-400 text-sm pl-2">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(p)}>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+          {promemoria.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                Nessun promemoria trovato
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Titolo</TableHead>
-                <TableHead>Descrizione</TableHead>
-                <TableHead>Scadenza</TableHead>
-                <TableHead>Priorità</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead>Operatore</TableHead>
-                <TableHead>Destinatario</TableHead>
-                <TableHead>Settore</TableHead>
-                <TableHead>Allegati</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPromemoria.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                    Nessun promemoria trovato
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPromemoria.map(p => {
-                  const scaduto = isScaduto(p);
-                  const annullato = p.working_progress === "Annullato";
-                  const allegatiCount = (p.allegati as Allegato[])?.length || 0;
-                  
-                  // ✅ PRIORITÀ: Annullato > Scaduto > Normale
-                  const rowClass = annullato 
-                    ? "bg-gray-100" 
-                    : scaduto 
-                    ? "bg-red-50" 
-                    : "";
-                  
-                  const textClass = annullato 
-                    ? "text-gray-500" 
-                    : scaduto 
-                    ? "text-red-700" 
-                    : "";
-                  
-                  return (
-                    <TableRow key={p.id} className={rowClass}>
-                      <TableCell className={`font-medium ${textClass}`}>{p.titolo || "Senza titolo"}</TableCell>
-                      <TableCell className={`max-w-xs truncate ${textClass}`}>{p.descrizione || "-"}</TableCell>
-                      <TableCell className={textClass}>{format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it })}</TableCell>
-                      <TableCell>{getPrioritaBadge(p.priorita || "Media")}</TableCell>
-                      <TableCell>{getStatoBadge(p.working_progress || "Aperto")}</TableCell>
-                      <TableCell className={textClass}>
-                        {p.operatore ? `${p.operatore.nome} ${p.operatore.cognome}` : "-"}
-                      </TableCell>
-                      <TableCell className={textClass}>
-                        {p.destinatario ? `${p.destinatario.nome} ${p.destinatario.cognome}` : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={textClass}>{p.settore || "Non specificato"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {allegatiCount > 0 ? (
-                          <div className="flex items-center gap-1 text-blue-600">
-                            <Paperclip className="h-4 w-4" />
-                            <span className="font-medium">{allegatiCount}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(p)}
-                            title="Modifica"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(p)}
-                            title="Elimina"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* DIALOG CREAZIONE PROMEMORIA */}
+      {/* DIALOG CREAZIONE */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Nuovo Promemoria</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 pt-4">
+            {/* Form Fields */}
             <div>
               <Label>Titolo *</Label>
               <Input 
                 value={formData.titolo}
                 onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                 required
-                placeholder="Inserisci titolo promemoria"
               />
             </div>
-            
             <div>
               <Label>Descrizione</Label>
-              <Input 
+              <Textarea 
                 value={formData.descrizione}
                 onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
-                placeholder="Dettagli aggiuntivi"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Destinatario</Label>
-                {currentUser?.responsabile ? (
-                  <Select
-                    value={formData.destinatario_id || "none"}
-                    onValueChange={handleDestinatarioChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map(u => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.nome} {u.cognome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input 
-                    value={currentUser ? `${currentUser.nome} ${currentUser.cognome}` : ""} 
-                    disabled 
-                    className="bg-gray-100" 
-                  />
-                )}
+                <Select value={formData.destinatario_id || "none"} onValueChange={handleDestinatarioChange}>
+                  <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nessuno</SelectItem>
+                    {utenti.map(u => (
+                      <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Settore</Label>
-                <Input 
-                  value={formData.settore || ""} 
-                  disabled 
-                  className="bg-gray-100" 
-                  placeholder={currentUser?.responsabile ? "Seleziona destinatario" : ""}
-                />
+                <Input value={formData.settore} disabled className="bg-gray-100" />
               </div>
             </div>
 
-            <div>
-              <Label>Settore</Label>
-              <Input 
-                value={formData.settore || ""} 
-                disabled 
-                className="bg-gray-100" 
-                placeholder="Seleziona destinatario"
-              />
-            </div>
-
-            {/* SEZIONE ALLEGATI */}
+            {/* Upload Section */}
             <div>
               <Label className="flex items-center gap-2 mb-2">
-                <Paperclip className="h-4 w-4" />
-                Allegati
+                <Paperclip className="h-4 w-4" /> Allegati
               </Label>
-              <div className="border border-dashed border-gray-300 rounded-md p-4 bg-gray-50">
-                <Input 
-                  type="file" 
-                  multiple 
-                  onChange={handleFileSelect}
-                  className="cursor-pointer mb-2"
-                />
-                <p className="text-xs text-gray-500 mb-3">
-                  Supportati: PDF, DOC, Immagini (max 10MB)
-                </p>
-                
-                {filesToUpload.length > 0 && (
-                  <div className="space-y-2">
-                    {filesToUpload.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-white p-2 rounded border text-sm">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                          <span className="truncate">{file.name}</span>
-                          <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(0)} KB)</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFileToUpload(idx)}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="border border-dashed rounded-md p-4 bg-gray-50">
+                <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
+                <div className="space-y-2 mt-2">
+                  {filesToUpload.map((file, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
+                      <span className="truncate">{file.name}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label>Data Inserimento</Label>
+                <Label>Giorni Scadenza</Label>
                 <Input 
-                  value={formData.data_inserimento ? format(formData.data_inserimento, "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy")}
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
-              <div>
-                <Label>Giorni Scadenza *</Label>
-                <Input 
-                  type="number"
-                  min="0"
+                  type="number" 
+                  min="0" 
                   value={formData.giorni_scadenza}
-                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
-                  placeholder="0"
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))} 
                 />
               </div>
               <div>
-                <Label>Data Scadenza</Label>
-                <Input 
-                  value={formData.data_inserimento ? format(addDays(formData.data_inserimento, formData.giorni_scadenza), "dd/MM/yyyy") : ""}
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
-              <div>
-                <Label>Priorità *</Label>
-                <Select
-                  value={formData.priorita}
-                  onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Label>Priorità</Label>
+                <Select value={formData.priorita} onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Bassa">Bassa</SelectItem>
                     <SelectItem value="Media">Media</SelectItem>
@@ -773,46 +521,31 @@ export default function PromemoriaPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label>Stato</Label>
+                <Select value={formData.working_progress} onValueChange={v => setFormData(prev => ({...prev, working_progress: v}))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Aperto">Aperto</SelectItem>
+                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
+                    <SelectItem value="Completato">Completato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div>
-              <Label>Stato *</Label>
-              <Select
-                value={formData.working_progress}
-                onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Aperto">Aperto</SelectItem>
-                  <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                  <SelectItem value="Presa visione">Presa visione</SelectItem>
-                  <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                  <SelectItem value="Completato">Completato</SelectItem>
-                  <SelectItem value="Annullato">Annullato</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setIsCreateDialogOpen(false)}>
-                Annulla
-              </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? "Creazione..." : "Crea Promemoria"}
-              </Button>
-            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Annulla</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Salvataggio..." : "Crea"}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG MODIFICA PROMEMORIA */}
+      {/* DIALOG MODIFICA */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Modifica Promemoria</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Modifica Promemoria</DialogTitle></DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4 pt-4">
             <div>
               <Label>Titolo *</Label>
@@ -820,247 +553,156 @@ export default function PromemoriaPage() {
                 value={formData.titolo}
                 onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                 required
-                placeholder="Inserisci titolo promemoria"
               />
             </div>
             
+            {/* Gestione Allegati Esistenti */}
             <div>
-              <Label>Descrizione</Label>
-              <Input 
-                value={formData.descrizione}
-                onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
-                placeholder="Dettagli aggiuntivi"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Destinatario</Label>
-                <Select
-                  value={formData.destinatario_id || "none"}
-                  onValueChange={handleDestinatarioChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nessuno</SelectItem>
-                    {utenti.map(u => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.nome} {u.cognome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Settore</Label>
-                <Input 
-                  value={formData.settore || ""} 
-                  disabled 
-                  className="bg-gray-100" 
-                  placeholder="Seleziona destinatario"
-                />
-              </div>
-            </div>
-
-            {/* SEZIONE ALLEGATI EDIT */}
-            <div>
-              <Label className="flex items-center gap-2 mb-2">
-                <Paperclip className="h-4 w-4" />
-                Allegati
-              </Label>
-              <div className="border border-dashed border-gray-300 rounded-md p-4 bg-gray-50">
-                <Input 
-                  type="file" 
-                  multiple 
-                  onChange={handleFileSelect}
-                  className="cursor-pointer mb-2"
-                />
-                <p className="text-xs text-gray-500 mb-3">
-                  Supportati: PDF, DOC, Immagini (max 10MB)
-                </p>
-
-                {/* Lista allegati esistenti */}
-                {selectedPromemoria?.allegati && (selectedPromemoria.allegati as Allegato[]).length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">File esistenti:</p>
-                    {(selectedPromemoria.allegati as Allegato[]).map((allegato, idx) => {
-                      const isMarkedForDeletion = attachmentsToDelete.includes(allegato.url);
-                      return (
-                        <div 
-                          key={idx} 
-                          className={`flex items-center justify-between bg-white p-2 rounded border text-sm ${isMarkedForDeletion ? "opacity-50 bg-red-50" : ""}`}
-                        >
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <FileIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                            <a 
-                              href={allegato.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`truncate hover:underline ${isMarkedForDeletion ? "line-through" : "text-blue-600"}`}
-                            >
-                              {allegato.nome}
-                            </a>
-                            <span className="text-xs text-gray-400">({(allegato.size / 1024).toFixed(0)} KB)</span>
-                          </div>
-                          
-                          <div className="flex gap-1">
-                            {!isMarkedForDeletion && (
-                              <a 
-                                href={allegato.url}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1 text-gray-500 hover:text-blue-600"
-                                title="Scarica"
-                              >
-                                <Download className="h-4 w-4" />
-                              </a>
-                            )}
-                            
-                            {isMarkedForDeletion ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => undoAttachmentDeletion(allegato.url)}
-                                className="h-6 w-auto px-2 text-xs text-blue-600 hover:text-blue-800"
-                              >
-                                Ripristina
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => markAttachmentForDeletion(allegato.url)}
-                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                title="Rimuovi"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                
-                {/* Lista nuovi file da caricare */}
-                {filesToUpload.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-green-600 mb-1">Nuovi file da caricare:</p>
-                    {filesToUpload.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-green-50 p-2 rounded border border-green-200 text-sm">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <FileIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          <span className="truncate">{file.name}</span>
-                          <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(0)} KB)</span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFileToUpload(idx)}
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+              <Label>Allegati Esistenti</Label>
+              <div className="space-y-2 mt-2">
+                {selectedPromemoria?.allegati && (selectedPromemoria.allegati as Allegato[]).map((a, idx) => {
+                  const isDeleted = attachmentsToDelete.includes(a.url);
+                  return (
+                    <div key={idx} className={`flex justify-between items-center p-2 rounded border ${isDeleted ? 'bg-red-50 opacity-50' : 'bg-white'}`}>
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        {getFileIcon(a.nome)}
+                        <span className={`text-sm truncate ${isDeleted ? 'line-through' : ''}`}>{a.nome}</span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="flex gap-1">
+                        {!isDeleted ? (
+                          <>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenAllegato(a)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => markAttachmentForDeletion(a.url)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => undoAttachmentDeletion(a.url)}>
+                            Ripristina
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!selectedPromemoria?.allegati || (selectedPromemoria.allegati as Allegato[]).length === 0) && (
+                  <p className="text-sm text-gray-400 italic">Nessun allegato presente</p>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <Label>Giorni Scadenza *</Label>
-                <Input 
-                  type="number"
-                  min="0"
-                  value={formData.giorni_scadenza}
-                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label>Data Scadenza</Label>
-                <Input 
-                  value={formData.data_inserimento ? format(addDays(formData.data_inserimento, formData.giorni_scadenza), "dd/MM/yyyy") : ""}
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
-              <div>
-                <Label>Priorità *</Label>
-                <Select
-                  value={formData.priorita}
-                  onValueChange={val => setFormData(prev => ({...prev, priorita: val}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Bassa">Bassa</SelectItem>
-                    <SelectItem value="Media">Media</SelectItem>
-                    <SelectItem value="Alta">Alta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Stato *</Label>
-                <Select
-                  value={formData.working_progress}
-                  onValueChange={val => setFormData(prev => ({...prev, working_progress: val}))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Aperto">Aperto</SelectItem>
-                    <SelectItem value="In lavorazione">In lavorazione</SelectItem>
-                    <SelectItem value="Presa visione">Presa visione</SelectItem>
-                    <SelectItem value="Richiesta confronto">Richiesta confronto</SelectItem>
-                    <SelectItem value="Completato">Completato</SelectItem>
-                    <SelectItem value="Annullato">Annullato</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Upload Nuovi Allegati */}
+            <div>
+              <Label>Aggiungi Nuovi Allegati</Label>
+              <div className="border border-dashed rounded-md p-4 bg-gray-50 mt-1">
+                <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
+                <div className="space-y-2">
+                  {filesToUpload.map((file, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
+                      <span className="truncate">{file.name}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setIsEditDialogOpen(false)}>
-                Annulla
-              </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? "Salvataggio..." : "Salva Modifiche"}
-              </Button>
-            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Annulla</Button>
+              <Button type="submit" disabled={loading}>{loading ? "Salvataggio..." : "Aggiorna"}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG ELIMINAZIONE */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler eliminare il promemoria &quot;{selectedPromemoria?.titolo}&quot;?
-              Questa azione non può essere annullata.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedPromemoria(null)}>Annulla</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
-              {loading ? "Eliminazione..." : "Elimina"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* DIALOG VISUALIZZA ALLEGATI (SOLO VISUALIZZA) */}
+      <Dialog open={isAllegatiDialogOpen} onOpenChange={setIsAllegatiDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Allegati
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3 py-4">
+            {viewAllegatiPromemoria?.allegati && (viewAllegatiPromemoria.allegati as Allegato[]).length > 0 ? (
+              (viewAllegatiPromemoria.allegati as Allegato[]).map((allegato, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                    {getFileIcon(allegato.nome)}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{allegato.nome}</p>
+                      <p className="text-xs text-gray-500">
+                        {(allegato.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleOpenAllegato(allegato)}
+                    className="ml-2 shrink-0 gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Apri
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 italic">Nessun allegato</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAllegatiDialogOpen(false)}>
+              Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* VIEWER GOOGLE DOCS */}
+      <Dialog open={isDocViewerOpen} onOpenChange={setIsDocViewerOpen}>
+        <DialogContent className="max-w-5xl h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+            <h3 className="font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Anteprima Documento
+            </h3>
+            <Button variant="ghost" size="icon" onClick={() => setIsDocViewerOpen(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <iframe
+            src={currentDocUrl}
+            className="flex-1 w-full border-0 bg-gray-100"
+            title="Document Viewer"
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG CONFERMA ELIMINAZIONE */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conferma Eliminazione</DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare questo promemoria? L'azione è irreversibile.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Annulla</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>Elimina</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
