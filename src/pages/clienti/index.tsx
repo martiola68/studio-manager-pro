@@ -469,7 +469,6 @@ export default function ClientiPage() {
       // Dati comuni per tutti gli scadenzari
       const baseData = {
         nominativo: cliente.ragione_sociale,
-        utente_professionista_id: cliente.utente_professionista_id,
         utente_operatore_id: cliente.utente_operatore_id,
       };
 
@@ -582,6 +581,18 @@ export default function ClientiPage() {
             ...baseData,
             id: cliente.id,
             studio_id: (cliente as any).studio_id
+          }, { onConflict: "id", ignoreDuplicates: true }).then()
+        );
+      }
+
+      // Antiriciclaggio - NOTA: questa tabella ha una struttura diversa
+      if (cliente.flag_fiscali) {
+        scadenzariAttivi.push("Antiriciclaggio");
+        inserimenti.push(
+          supabase.from("tbscadantiric").upsert({
+            id: cliente.id,
+            nominativo: cliente.ragione_sociale,
+            utente_operatore_id: cliente.utente_operatore_id,
           }, { onConflict: "id", ignoreDuplicates: true }).then()
         );
       }
