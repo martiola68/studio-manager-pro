@@ -6,6 +6,15 @@ type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 type PromemoriaInsert = Database["public"]["Tables"]["tbpromemoria"]["Insert"];
 type PromemoriaUpdate = Database["public"]["Tables"]["tbpromemoria"]["Update"];
 
+// Tipo per allegati
+export interface Allegato {
+  nome: string;
+  url: string;
+  size: number;
+  tipo: string;
+  data_upload: string;
+}
+
 export const promemoriaService = {
   /**
    * Ottiene tutti i promemoria visibili all'utente loggato
@@ -315,5 +324,146 @@ export const promemoriaService = {
       ).length,
       fatturati: promemoria.filter((p) => p.fatturato).length,
     };
+  },
+
+  /**
+   * Carica un file allegato per un promemoria
+   */
+  async uploadAllegato(
+    promemoriaId: string,
+    file: File
+  ): Promise<Allegato> {
+    // Validazione file
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      throw new Error("File troppo grande. Dimensione massima: 10MB");
+    }
+
+    // Tipi file accettati
+    const tipiAccettati = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "image/jpeg",
+      "image/png",
+      "image/gif"
+    ];
+
+    if (!tipiAccettati.includes(file.type)) {
+      throw new Error("Tipo file non supportato. Usa: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, GIF");
+    }
+
+    // Genera nome file univoco
+    const timestamp = Date.now();
+    const nomeFile = `${promemoriaId}/${timestamp}_${file.name}`;
+
+    // Upload su Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("promemoria-allegati")
+      .upload(nomeFile, file, {
+        cacheControl: "3600",
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error("Errore upload allegato:", uploadError);
+      throw new Error("Errore durante l'upload del file");
+    }
+
+    // Ottieni URL pubblico
+    const { data: urlData } = supabase.storage
+      .from("promemoria-allegati")
+      .getPublicUrl(nomeFile);
+
+    // Crea oggetto allegato
+    const allegato: Allegato = {
+      nome: file.name,
+      url: urlData.publicUrl,
+      size: file.size,
+      tipo: file.type,
+      data_upload: new Date().toISOString()
+    };
+
+    // Aggiungi allegato al promemoria
+    const { data: currentPromemoria } = await supabase
+      .from("tbpromemoria")
+      .select("allegati")
+      .eq("id", promemoriaId)
+      .single();
+
+    const allegatiAttuali = (currentPromemoria?.allegati as Allegato[]) || [];
+    const nuoviAllegati = [...allegatiAttuali, allegato];
+
+    const { error: updateError } = await supabase
+      .from("tbpromemoria")
+      .update({ allegati: nuoviAllegati as any })
+      .eq("id", promemoriaId);
+
+    if (updateError) {
+      // Rollback: elimina file caricato
+      await supabase.storage
+        .from("promemoria-allegati")
+        .remove([nomeFile]);
+      throw new Error("Errore aggiornamento database");
+    }
+
+    return allegato;
+  },
+
+  /**
+   * Elimina un allegato
+   */
+  async deleteAllegato(
+    promemoriaId: string,
+    allegatoUrl: string
+  ): Promise<void> {
+    // Ottieni allegati attuali
+    const { data: currentPromemoria } = await supabase
+      .from("tbpromemoria")
+      .select("allegati")
+      .eq("id", promemoriaId)
+      .single();
+
+    const allegatiAttuali = (currentPromemoria?.allegati as Allegato[]) || [];
+    const allegatoDaEliminare = allegatiAttuali.find(a => a.url === allegatoUrl);
+
+    if (!allegatoDaEliminare) {
+      throw new Error("Allegato non trovato");
+    }
+
+    // Estrai nome file dall'URL
+    const url = new URL(allegatoDaEliminare.url);
+    const pathParts = url.pathname.split("/");
+    const nomeFile = pathParts.slice(-2).join("/"); // promemoriaId/timestamp_nome.ext
+
+    // Elimina da Storage
+    const { error: storageError } = await supabase.storage
+      .from("promemoria-allegati")
+      .remove([nomeFile]);
+
+    if (storageError) {
+      console.error("Errore eliminazione file storage:", storageError);
+    }
+
+    // Rimuovi da database
+    const nuoviAllegati = allegatiAttuali.filter(a => a.url !== allegatoUrl);
+
+    const { error: updateError } = await supabase
+      .from("tbpromemoria")
+      .update({ allegati: nuoviAllegati as any })
+      .eq("id", promemoriaId);
+
+    if (updateError) {
+      throw new Error("Errore aggiornamento database");
+    }
+  },
+
+  /**
+   * Ottieni URL di download per un allegato
+   */
+  getUrlAllegato(allegato: Allegato): string {
+    return allegato.url;
   },
 };
