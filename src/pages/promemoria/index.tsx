@@ -46,7 +46,7 @@ export default function PromemoriaPage() {
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
-    data: undefined as Date | undefined,
+    data_inserimento: new Date(),
     giorni_scadenza: 0,
     data_scadenza: undefined as Date | undefined,
     priorita: "Media",
@@ -186,27 +186,29 @@ export default function PromemoriaPage() {
   const resetForm = useCallback(() => {
     if (!currentUser) return;
     
+    const oggi = new Date(); // ← Data odierna
+    
     // Se utente NON è responsabile → auto-seleziona se stesso come destinatario
     if (!currentUser.responsabile) {
       setFormData({
         titolo: "",
         descrizione: "",
-        data: undefined,
+        data_inserimento: oggi, // ← Sempre data odierna
         giorni_scadenza: 0,
-        data_scadenza: undefined,
+        data_scadenza: addDays(oggi, 0),
         priorita: "Media",
         working_progress: "Aperto",
         destinatario_id: currentUser.id,
         settore: currentUser.settore || ""
       });
     } else {
-      // Se responsabile → form vuoto
+      // Se responsabile → form vuoto ma con data odierna
       setFormData({
         titolo: "",
         descrizione: "",
-        data: undefined,
+        data_inserimento: oggi, // ← Sempre data odierna
         giorni_scadenza: 0,
-        data_scadenza: undefined,
+        data_scadenza: addDays(oggi, 0),
         priorita: "Media",
         working_progress: "Aperto",
         destinatario_id: "",
@@ -223,7 +225,7 @@ export default function PromemoriaPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.titolo || !formData.data || !formData.data_scadenza) {
+    if (!formData.titolo || !formData.data_inserimento) { // ← FIX: controllo corretto
       toast({
         title: "Errore",
         description: "Compila tutti i campi obbligatori",
@@ -234,12 +236,15 @@ export default function PromemoriaPage() {
 
     try {
       setLoading(true);
+      
+      const dataScadenza = addDays(formData.data_inserimento, formData.giorni_scadenza);
+      
       await promemoriaService.createPromemoria({
         titolo: formData.titolo,
         descrizione: formData.descrizione,
-        data_inserimento: format(new Date(), "yyyy-MM-dd"),
+        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
         giorni_scadenza: formData.giorni_scadenza,
-        data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
+        data_scadenza: format(dataScadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
         stato: formData.working_progress,
         operatore_id: currentUser?.id ?? "",
@@ -583,12 +588,11 @@ export default function PromemoriaPage() {
 
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label>Data *</Label>
+                <Label>Data Inserimento</Label>
                 <Input 
-                  value={formData.data ? format(formData.data, "dd/MM/yyyy") : ""}
+                  value={formData.data_inserimento ? format(formData.data_inserimento, "dd/MM/yyyy") : format(new Date(), "dd/MM/yyyy")}
                   disabled
                   className="bg-gray-100"
-                  placeholder="Calcolata"
                 />
               </div>
               <div>
@@ -604,10 +608,9 @@ export default function PromemoriaPage() {
               <div>
                 <Label>Data Scadenza</Label>
                 <Input 
-                  value={formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : ""}
+                  value={formData.data_inserimento ? format(addDays(formData.data_inserimento, formData.giorni_scadenza), "dd/MM/yyyy") : ""}
                   disabled
                   className="bg-gray-100"
-                  placeholder="Calcolata"
                 />
               </div>
               <div>
@@ -719,12 +722,11 @@ export default function PromemoriaPage() {
 
             <div className="grid grid-cols-4 gap-4">
               <div>
-                <Label>Data *</Label>
+                <Label>Data Inserimento</Label>
                 <Input 
-                  value={formData.data ? format(formData.data, "dd/MM/yyyy") : ""}
+                  value={formData.data_inserimento ? format(formData.data_inserimento, "dd/MM/yyyy") : ""}
                   disabled
                   className="bg-gray-100"
-                  placeholder="Calcolata"
                 />
               </div>
               <div>
@@ -740,10 +742,9 @@ export default function PromemoriaPage() {
               <div>
                 <Label>Data Scadenza</Label>
                 <Input 
-                  value={formData.data_scadenza ? format(formData.data_scadenza, "dd/MM/yyyy") : ""}
+                  value={formData.data_inserimento ? format(addDays(formData.data_inserimento, formData.giorni_scadenza), "dd/MM/yyyy") : ""}
                   disabled
                   className="bg-gray-100"
-                  placeholder="Calcolata"
                 />
               </div>
               <div>
