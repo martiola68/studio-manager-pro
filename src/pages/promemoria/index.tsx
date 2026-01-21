@@ -267,7 +267,7 @@ export default function PromemoriaPage() {
       data: promemoria.data_inserimento ? new Date(promemoria.data_inserimento) : undefined,
       giorni_scadenza: promemoria.giorni_scadenza || 0,
       data_scadenza: promemoria.data_scadenza ? new Date(promemoria.data_scadenza) : undefined,
-      priorita: promemoria.priorita,
+      priorita: promemoria.priorita || "Media",
       working_progress: promemoria.working_progress || "Aperto",
       destinatario_id: promemoria.destinatario_id || "",
       settore: promemoria.settore || ""
@@ -475,7 +475,7 @@ export default function PromemoriaPage() {
                       <TableCell className={`font-medium ${textClass}`}>{p.titolo || "Senza titolo"}</TableCell>
                       <TableCell className={`max-w-xs truncate ${textClass}`}>{p.descrizione || "-"}</TableCell>
                       <TableCell className={textClass}>{format(new Date(p.data_scadenza), "dd/MM/yyyy", { locale: it })}</TableCell>
-                      <TableCell>{getPrioritaBadge(p.priorita)}</TableCell>
+                      <TableCell>{getPrioritaBadge(p.priorita || "Media")}</TableCell>
                       <TableCell>{getStatoBadge(p.working_progress || "Aperto")}</TableCell>
                       <TableCell className={textClass}>
                         {p.operatore ? `${p.operatore.nome} ${p.operatore.cognome}` : "-"}
