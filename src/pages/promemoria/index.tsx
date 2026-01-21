@@ -408,7 +408,7 @@ export default function PromemoriaPage() {
                     className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                   >
                     <Paperclip className="h-4 w-4 mr-1" />
-                    {p.allegati.length}
+                    {(p.allegati as unknown as Allegato[]).length}
                     <Eye className="h-3 w-3 ml-2 opacity-50" />
                   </Button>
                 ) : (
@@ -560,7 +560,7 @@ export default function PromemoriaPage() {
             <div>
               <Label>Allegati Esistenti</Label>
               <div className="space-y-2 mt-2">
-                {selectedPromemoria?.allegati && (selectedPromemoria.allegati as Allegato[]).map((a, idx) => {
+                {selectedPromemoria?.allegati && (selectedPromemoria.allegati as unknown as Allegato[]).map((a, idx) => {
                   const isDeleted = attachmentsToDelete.includes(a.url);
                   return (
                     <div key={idx} className={`flex justify-between items-center p-2 rounded border ${isDeleted ? 'bg-red-50 opacity-50' : 'bg-white'}`}>
@@ -587,7 +587,7 @@ export default function PromemoriaPage() {
                     </div>
                   );
                 })}
-                {(!selectedPromemoria?.allegati || (selectedPromemoria.allegati as Allegato[]).length === 0) && (
+                {(!selectedPromemoria?.allegati || (selectedPromemoria.allegati as unknown as Allegato[]).length === 0) && (
                   <p className="text-sm text-gray-400 italic">Nessun allegato presente</p>
                 )}
               </div>
@@ -630,8 +630,8 @@ export default function PromemoriaPage() {
           </DialogHeader>
           
           <div className="space-y-3 py-4">
-            {viewAllegatiPromemoria?.allegati && (viewAllegatiPromemoria.allegati as Allegato[]).length > 0 ? (
-              (viewAllegatiPromemoria.allegati as Allegato[]).map((allegato, index) => (
+            {viewAllegatiPromemoria?.allegati && (viewAllegatiPromemoria.allegati as unknown as Allegato[]).length > 0 ? (
+              (viewAllegatiPromemoria.allegati as unknown as Allegato[]).map((allegato, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
