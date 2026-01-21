@@ -16,25 +16,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 type Scadenza770 = {
   id: string;
   nominativo: string;
-  utente_professionista_id?: string;
-  utente_operatore_id?: string;
-  utente_payroll_id?: string;
-  professionista_payroll_id?: string;
-  tipo_invio?: string;
-  modelli_770?: string;
-  mod_compilato?: boolean;
-  mod_definitivo?: boolean;
-  mod_inviato?: boolean;
-  ricevuta?: boolean;
-  conferma_riga?: boolean;
-  data_invio?: string;
-  note?: string;
-  created_at?: string;
-  tipo_scadenza_id?: string;
+  utente_professionista_id?: string | null;
+  utente_operatore_id?: string | null;
+  utente_payroll_id?: string | null;
+  professionista_payroll_id?: string | null;
+  tipo_invio?: string | null;
+  modelli_770?: string | null;
+  mod_compilato?: boolean | null;
+  mod_definitivo?: boolean | null;
+  mod_inviato?: boolean | null;
+  ricevuta?: boolean | null;
+  conferma_riga?: boolean | null;
+  data_invio?: string | null;
+  note?: string | null;
+  created_at?: string | null;
+  tipo_scadenza_id?: string | null;
   // Campi da JOIN
   cliente?: {
-    settore?: string;
-  };
+    settore?: string | null;
+  } | null;
 };
 
 type Utente = {
