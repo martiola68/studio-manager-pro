@@ -592,7 +592,7 @@ export default function PromemoriaPage() {
                       onSelect={(date) => {
                         if (date) {
                           setFormData(prev => ({...prev, data: date}));
-                          setIsDataCalendarOpen(false);
+                          setTimeout(() => setIsDataCalendarOpen(false), 0);
                         }
                       }}
                       initialFocus
@@ -743,7 +743,7 @@ export default function PromemoriaPage() {
                       onSelect={(date) => {
                         if (date) {
                           setFormData(prev => ({...prev, data: date}));
-                          setIsEditDataCalendarOpen(false);
+                          setTimeout(() => setIsEditDataCalendarOpen(false), 0);
                         }
                       }}
                       initialFocus
