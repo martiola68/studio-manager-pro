@@ -19,9 +19,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Database } from "@/lib/supabase/types";
 
+// Definisco i tipi esatti restituiti dalla query Supabase
+type UtenteJoin = Pick<Database["public"]["Tables"]["tbutenti"]["Row"], "id" | "nome" | "cognome" | "settore" | "responsabile">;
+
 type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"] & {
-  operatore?: Utente;
-  destinatario?: Utente;
+  operatore?: UtenteJoin | null;
+  destinatario?: UtenteJoin | null;
 };
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -259,13 +262,13 @@ export default function PromemoriaPage() {
   const handleEdit = useCallback((promemoria: Promemoria) => {
     setSelectedPromemoria(promemoria);
     setFormData({
-      titolo: promemoria.titolo,
+      titolo: promemoria.titolo || "",
       descrizione: promemoria.descrizione || "",
-      data: new Date(promemoria.data_inserimento), // Load from data_inserimento
+      data: promemoria.data_inserimento ? new Date(promemoria.data_inserimento) : undefined,
       giorni_scadenza: promemoria.giorni_scadenza || 0,
-      data_scadenza: new Date(promemoria.data_scadenza),
+      data_scadenza: promemoria.data_scadenza ? new Date(promemoria.data_scadenza) : undefined,
       priorita: promemoria.priorita,
-      working_progress: promemoria.working_progress,
+      working_progress: promemoria.working_progress || "Aperto",
       destinatario_id: promemoria.destinatario_id || "",
       settore: promemoria.settore || ""
     });
@@ -583,7 +586,11 @@ export default function PromemoriaPage() {
                 <Label>Data *</Label>
                 <Popover open={isDataCalendarOpen} onOpenChange={setIsDataCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                    <Button 
+                      variant="outline" 
+                      className={`w-full justify-start text-left font-normal ${!formData.data && "text-muted-foreground"}`}
+                      type="button"
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
                     </Button>
@@ -734,7 +741,11 @@ export default function PromemoriaPage() {
                 <Label>Data *</Label>
                 <Popover open={isEditDataCalendarOpen} onOpenChange={setIsEditDataCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal" type="button">
+                    <Button 
+                      variant="outline" 
+                      className={`w-full justify-start text-left font-normal ${!formData.data && "text-muted-foreground"}`}
+                      type="button"
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.data ? format(formData.data, "dd/MM/yyyy") : "Seleziona"}
                     </Button>
