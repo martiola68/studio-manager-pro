@@ -464,7 +464,7 @@ export default function ClientiPage() {
   const handleInsertIntoScadenzari = async (cliente: Cliente) => {
     try {
       const scadenzariAttivi: string[] = [];
-      const inserimenti: Promise<any>[] = [];
+      const inserimenti: any[] = [];
 
       // Dati comuni per tutti gli scadenzari
       const baseData = {
@@ -1346,7 +1346,9 @@ export default function ClientiPage() {
                   <Input
                     id="citta"
                     value={formData.citta}
-                    onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, citta: e.target.value })
+                    }
                     placeholder="Roma"
                   />
                 </div>
