@@ -19,7 +19,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Database } from "@/lib/supabase/types";
 
-type Promemoria = any;
+type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"] & {
+  operatore?: Utente;
+  destinatario?: Utente;
+};
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function PromemoriaPage() {
@@ -592,7 +595,7 @@ export default function PromemoriaPage() {
                       onSelect={(date) => {
                         if (date) {
                           setFormData(prev => ({...prev, data: date}));
-                          setTimeout(() => setIsDataCalendarOpen(false), 0);
+                          setIsDataCalendarOpen(false);
                         }
                       }}
                       initialFocus
@@ -743,7 +746,7 @@ export default function PromemoriaPage() {
                       onSelect={(date) => {
                         if (date) {
                           setFormData(prev => ({...prev, data: date}));
-                          setTimeout(() => setIsEditDataCalendarOpen(false), 0);
+                          setIsEditDataCalendarOpen(false);
                         }
                       }}
                       initialFocus
