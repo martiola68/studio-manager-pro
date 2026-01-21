@@ -60,11 +60,11 @@ export default function PromemoriaPage() {
 
   // Calcola automaticamente data_scadenza quando cambiano data o giorni_scadenza
   useEffect(() => {
-    if (formData.data && formData.giorni_scadenza >= 0) {
-      const scadenza = addDays(formData.data, formData.giorni_scadenza);
+    if (formData.data_inserimento && formData.giorni_scadenza >= 0) {
+      const scadenza = addDays(formData.data_inserimento, formData.giorni_scadenza);
       setFormData(prev => ({ ...prev, data_scadenza: scadenza }));
     }
-  }, [formData.data, formData.giorni_scadenza]);
+  }, [formData.data_inserimento, formData.giorni_scadenza]);
 
   // Helper per verificare se scaduto
   const isScaduto = (p: Promemoria) => {
@@ -269,7 +269,7 @@ export default function PromemoriaPage() {
     setFormData({
       titolo: promemoria.titolo || "",
       descrizione: promemoria.descrizione || "",
-      data: promemoria.data_inserimento ? new Date(promemoria.data_inserimento) : undefined,
+      data_inserimento: promemoria.data_inserimento ? new Date(promemoria.data_inserimento) : new Date(),
       giorni_scadenza: promemoria.giorni_scadenza || 0,
       data_scadenza: promemoria.data_scadenza ? new Date(promemoria.data_scadenza) : undefined,
       priorita: promemoria.priorita || "Media",
@@ -277,13 +277,12 @@ export default function PromemoriaPage() {
       destinatario_id: promemoria.destinatario_id || "",
       settore: promemoria.settore || ""
     });
-    setIsEditDataCalendarOpen(false);
     setIsEditDialogOpen(true);
   }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPromemoria || !formData.titolo || !formData.data || !formData.data_scadenza) {
+    if (!selectedPromemoria || !formData.titolo || !formData.data_inserimento || !formData.data_scadenza) {
       toast({
         title: "Errore",
         description: "Compila tutti i campi obbligatori",
@@ -297,7 +296,7 @@ export default function PromemoriaPage() {
       await promemoriaService.updatePromemoria(selectedPromemoria.id, {
         titolo: formData.titolo,
         descrizione: formData.descrizione,
-        data_inserimento: format(formData.data, "yyyy-MM-dd"),
+        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
         giorni_scadenza: formData.giorni_scadenza,
         data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
         priorita: formData.priorita,
