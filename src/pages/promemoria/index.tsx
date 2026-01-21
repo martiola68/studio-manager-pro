@@ -425,19 +425,8 @@ export default function PromemoriaPage() {
                   <Badge 
                     variant={
                       p.working_progress === "Completato" ? "default" :
-                      p.working_progress === "Conclusa" ? "default" :
                       p.working_progress === "In lavorazione" ? "secondary" :
-                      p.working_progress === "Richiesta confronto" ? "secondary" :
-                      p.working_progress === "Annullata" ? "destructive" :
                       "outline"
-                    }
-                    className={
-                      p.working_progress === "Completato" ? "bg-green-500 hover:bg-green-600" :
-                      p.working_progress === "Conclusa" ? "bg-green-500 hover:bg-green-600" :
-                      p.working_progress === "In lavorazione" ? "bg-yellow-500 hover:bg-yellow-600" :
-                      p.working_progress === "Richiesta confronto" ? "bg-blue-500 hover:bg-blue-600" :
-                      p.working_progress === "Annullata" ? "" :
-                      ""
                     }
                   >
                     {p.working_progress}
