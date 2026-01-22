@@ -185,8 +185,11 @@ ${emailBody}
 Email generata automaticamente dal sistema Studio Manager Pro
 Data: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })}`;
 
-    // Crea link mailto
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Estrai email operatori per campo "to"
+    const operatorEmails = operators.map(op => op.operatorEmail).join(",");
+
+    // Crea link mailto con destinatari
+    const mailtoLink = `mailto:${operatorEmails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
     // Apri client email
     window.location.href = mailtoLink;
