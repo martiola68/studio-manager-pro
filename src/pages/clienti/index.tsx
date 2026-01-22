@@ -479,7 +479,7 @@ export default function ClientiPage() {
           supabase.from("tbscadiva").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -490,7 +490,7 @@ export default function ClientiPage() {
           supabase.from("tbscadcu").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -501,7 +501,7 @@ export default function ClientiPage() {
           supabase.from("tbscadbilanci").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -512,7 +512,7 @@ export default function ClientiPage() {
           supabase.from("tbscadfiscali").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -523,7 +523,7 @@ export default function ClientiPage() {
           supabase.from("tbscadlipe").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -536,7 +536,7 @@ export default function ClientiPage() {
             id: cliente.id,
             utente_payroll_id: cliente.utente_payroll_id,
             professionista_payroll_id: cliente.professionista_payroll_id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -547,7 +547,7 @@ export default function ClientiPage() {
           supabase.from("tbscadestero").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -558,7 +558,7 @@ export default function ClientiPage() {
           supabase.from("tbscadccgg").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
@@ -569,20 +569,39 @@ export default function ClientiPage() {
           supabase.from("tbscadproforma").upsert({
             ...baseData,
             id: cliente.id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 
       // IMU
       if (cliente.flag_imu) {
         scadenzariAttivi.push("IMU");
-        inserimenti.push(
+        
+        const professionista = utenti.find(u => u.id === cliente.utente_professionista_id);
+        const operatore = utenti.find(u => u.id === cliente.utente_operatore_id);
+        
+        const promises = [
           supabase.from("tbscadimu").upsert({
-            ...baseData,
             id: cliente.id,
-            studio_id: (cliente as any).studio_id
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
-        );
+            nominativo: cliente.ragione_sociale,
+            professionista: professionista ? `${professionista.nome} ${professionista.cognome}` : null,
+            operatore: operatore ? `${operatore.nome} ${operatore.cognome}` : null,
+            acconto_imu: false,
+            acconto_dovuto: false,
+            acconto_comunicato: false,
+            data_com_acconto: null,
+            saldo_imu: false,
+            saldo_dovuto: false,
+            saldo_comunicato: false,
+            data_com_saldo: null,
+            dichiarazione_imu: false,
+            data_scad_dichiarazione: null,
+            dichiarazione_presentata: false,
+            data_presentazione: null,
+            note: null,
+            conferma_riga: false
+          }, { onConflict: "id" }).then()
+        ];
       }
 
       // Antiriciclaggio - NOTA: questa tabella ha una struttura diversa
@@ -593,7 +612,7 @@ export default function ClientiPage() {
             id: cliente.id,
             nominativo: cliente.ragione_sociale,
             utente_operatore_id: cliente.utente_operatore_id,
-          }, { onConflict: "id", ignoreDuplicates: true }).then()
+          }, { onConflict: "id" }).then()
         );
       }
 

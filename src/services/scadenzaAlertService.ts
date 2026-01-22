@@ -144,7 +144,6 @@ export const scadenzaAlertService = {
   ): Promise<Omit<ScadenzaAlert, "urgenza">[]> {
     try {
       // 1. Cerca se ci sono scadenze IMU nel periodo in tbtipi_scadenze
-      // Cerchiamo per nome che contiene "IMU" o tipo_scadenza = 'imu'
       const { data: tipiScadenze, error: tipiError } = await supabase
         .from("tbtipi_scadenze")
         .select("*")
@@ -165,40 +164,38 @@ export const scadenzaAlertService = {
           .select(`
             id, 
             nominativo, 
-            utente_operatore_id,
-            tbutenti:utente_operatore_id(nome, cognome),
+            operatore,
+            professionista,
             acconto_imu, acconto_dovuto, acconto_comunicato,
             saldo_imu, saldo_dovuto, saldo_comunicato,
-            dichiarazione_imu, dichiarazione_presentazione
+            dichiarazione_imu, dichiarazione_presentata,
+            tbclienti!inner(utente_operatore_id)
           `);
 
-        // Filtro operatore se non partner
+        // Filtro operatore se non partner (tramite relazione tbclienti)
         if (!isPartner) {
-          query = query.eq("utente_operatore_id", userId);
+          query = query.eq("tbclienti.utente_operatore_id", userId);
         }
 
         // Logica specifica per tipo di scadenza IMU
         const nomeScadenza = tipoScadenza.nome.toLowerCase();
         
         if (nomeScadenza.includes("acconto")) {
-          // Alert per Acconto: Mostra se Acconto è attivo, dovuto E non comunicato
           query = query
             .eq("acconto_imu", true)
             .eq("acconto_dovuto", true)
             .eq("acconto_comunicato", false);
         } else if (nomeScadenza.includes("saldo")) {
-          // Alert per Saldo: Mostra se Saldo è attivo, dovuto E non comunicato
           query = query
             .eq("saldo_imu", true)
             .eq("saldo_dovuto", true)
             .eq("saldo_comunicato", false);
         } else if (nomeScadenza.includes("dichiarazione")) {
-          // Alert per Dichiarazione: Mostra se Dichiarazione è SI E non presentata
           query = query
-            .eq("dichiarazione_imu", "SI")
-            .eq("dichiarazione_presentazione", false);
+            .eq("dichiarazione_imu", true)
+            .eq("dichiarazione_presentata", false);
         } else {
-          continue; // Tipo IMU non riconosciuto, salta
+          continue; 
         }
 
         const { data: clienti, error } = await query;
@@ -206,12 +203,12 @@ export const scadenzaAlertService = {
         if (!error && clienti) {
           clienti.forEach((cliente: any) => {
             alerts.push({
-              id: `${cliente.id}_${tipoScadenza.id}`, // ID univoco combinato
+              id: `${cliente.id}_${tipoScadenza.id}`,
               tipo: "IMU",
               descrizione: tipoScadenza.nome,
               data_scadenza: tipoScadenza.data_scadenza,
-              cliente_nome: cliente.nominativo,
-              utente_assegnato: cliente.tbutenti ? `${cliente.tbutenti.nome} ${cliente.tbutenti.cognome}` : undefined,
+              cliente_nome: cliente.nominativo || "Cliente",
+              utente_assegnato: cliente.operatore || undefined,
               tabella_origine: "tbscadimu"
             });
           });
