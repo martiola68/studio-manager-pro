@@ -757,6 +757,16 @@ export default function ClientiPage() {
       scadenza_antiric_b: undefined,
       gestione_antiriciclaggio: false,
       note_antiriciclaggio: "",
+      flag_iva: true,
+      flag_cu: true,
+      flag_bilancio: true,
+      flag_fiscali: true,
+      flag_lipe: true,
+      flag_770: true,
+      flag_esterometro: true,
+      flag_ccgg: true,
+      flag_proforma: true,
+      flag_imu: true,
     });
     setScadenzari({
       iva: true,

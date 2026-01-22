@@ -292,6 +292,7 @@ export type Database = {
           indirizzo: string
           matricola_inps: string | null
           note: string | null
+          note_antiriciclaggio: string | null
           partita_iva: string
           pat_inail: string | null
           professionista_payroll_id: string | null
@@ -348,6 +349,7 @@ export type Database = {
           indirizzo: string
           matricola_inps?: string | null
           note?: string | null
+          note_antiriciclaggio?: string | null
           partita_iva: string
           pat_inail?: string | null
           professionista_payroll_id?: string | null
@@ -404,6 +406,7 @@ export type Database = {
           indirizzo?: string
           matricola_inps?: string | null
           note?: string | null
+          note_antiriciclaggio?: string | null
           partita_iva?: string
           pat_inail?: string | null
           professionista_payroll_id?: string | null
