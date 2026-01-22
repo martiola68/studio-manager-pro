@@ -148,6 +148,19 @@ export default function ClientiPage() {
   const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
+    iva: true,
+    cu: true,
+    bilancio: true,
+    fiscali: true,
+    lipe: true,
+    modello_770: true,
+    esterometro: true,
+    ccgg: true,
+    proforma: true,
+    imu: true,
+  });
+
   const [formData, setFormData] = useState({
     cod_cliente: "",
     ragione_sociale: "",
@@ -185,6 +198,8 @@ export default function ClientiPage() {
     scadenza_antiric: undefined as Date | undefined,
     data_ultima_verifica_b: undefined as Date | undefined,
     scadenza_antiric_b: undefined as Date | undefined,
+    gestione_antiriciclaggio: false,
+    note_antiriciclaggio: "",
         
         // Save flags
         flag_iva: scadenzari.iva,
@@ -197,19 +212,6 @@ export default function ClientiPage() {
         flag_ccgg: scadenzari.ccgg,
         flag_proforma: scadenzari.proforma,
         flag_imu: scadenzari.imu,
-  });
-
-  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
-    iva: true,
-    cu: true,
-    bilancio: true,
-    fiscali: true,
-    lipe: true,
-    modello_770: true,
-    esterometro: true,
-    ccgg: true,
-    proforma: true,
-    imu: true,
   });
 
   const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
@@ -412,6 +414,8 @@ export default function ClientiPage() {
         scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
         data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
         scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
+        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
+        note_antiriciclaggio: formData.note_antiriciclaggio,
         
         // Save flags
         flag_iva: scadenzari.iva,
@@ -691,6 +695,8 @@ export default function ClientiPage() {
       scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
       data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
       scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
+      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
+      note_antiriciclaggio: cliente.note_antiriciclaggio || "",
     });
     
     // Load existing flags
@@ -749,6 +755,8 @@ export default function ClientiPage() {
       scadenza_antiric: undefined,
       data_ultima_verifica_b: undefined,
       scadenza_antiric_b: undefined,
+      gestione_antiriciclaggio: false,
+      note_antiriciclaggio: "",
     });
     setScadenzari({
       iva: true,
@@ -1855,12 +1863,30 @@ export default function ClientiPage() {
             </TabsContent>
 
             <TabsContent value="antiriciclaggio" className="space-y-6 pt-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <Label className="flex items-center gap-2 font-medium text-blue-900 cursor-pointer">
+                  <Input
+                    type="checkbox"
+                    checked={formData.gestione_antiriciclaggio}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      gestione_antiriciclaggio: e.target.checked 
+                    })}
+                    className="w-5 h-5"
+                  />
+                  Gestione Antiriciclaggio
+                </Label>
+                <p className="text-sm text-blue-700 mt-2 ml-7">
+                  Attiva questa opzione per abilitare la gestione e includere il cliente nello scadenzario Antiriciclaggio
+                </p>
+              </div>
+
               <h3 className="font-semibold text-lg mb-4">
                 Adeguata Verifica Clientela (Antiriciclaggio)
               </h3>
               
               <div className="space-y-6">
-                <Card className="bg-blue-50 dark:bg-blue-950/20">
+                <Card className={`bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-blue-600" />
@@ -1875,8 +1901,9 @@ export default function ClientiPage() {
                         onValueChange={(value) =>
                           setFormData({ ...formData, tipo_prestazione_a: value })
                         }
+                        disabled={!formData.gestione_antiriciclaggio}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
                           <SelectValue placeholder="Seleziona tipo prestazione A" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1904,8 +1931,9 @@ export default function ClientiPage() {
                                 | "Molto significativo"
                             )
                           }
+                          disabled={!formData.gestione_antiriciclaggio}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
                             <SelectValue placeholder="Seleziona rischio A" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1926,6 +1954,8 @@ export default function ClientiPage() {
                             handleGgVerChange("A", value);
                           }}
                           placeholder="36, 12 o 6"
+                          disabled={!formData.gestione_antiriciclaggio}
+                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
                         />
                       </div>
                     </div>
@@ -1940,7 +1970,8 @@ export default function ClientiPage() {
                             const dateValue = e.target.value ? new Date(e.target.value) : undefined;
                             handleVerificaDateChange("A", dateValue);
                           }}
-                          className="w-full"
+                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
+                          disabled={!formData.gestione_antiriciclaggio}
                         />
                       </div>
 
@@ -1950,14 +1981,14 @@ export default function ClientiPage() {
                           type="date"
                           value={formData.scadenza_antiric ? formData.scadenza_antiric.toISOString().split('T')[0] : ""}
                           disabled
-                          className="w-full bg-muted"
+                          className="w-full bg-muted cursor-not-allowed"
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-green-50 dark:bg-green-950/20">
+                <Card className={`bg-green-50 dark:bg-green-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-green-600" />
@@ -1972,8 +2003,9 @@ export default function ClientiPage() {
                         onValueChange={(value) =>
                           setFormData({ ...formData, tipo_prestazione_b: value })
                         }
+                        disabled={!formData.gestione_antiriciclaggio}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
                           <SelectValue placeholder="Seleziona tipo prestazione B" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2001,8 +2033,9 @@ export default function ClientiPage() {
                                 | "Molto significativo"
                             )
                           }
+                          disabled={!formData.gestione_antiriciclaggio}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
                             <SelectValue placeholder="Seleziona rischio B" />
                           </SelectTrigger>
                           <SelectContent>
@@ -2023,6 +2056,8 @@ export default function ClientiPage() {
                             handleGgVerChange("B", value);
                           }}
                           placeholder="36, 12 o 6"
+                          disabled={!formData.gestione_antiriciclaggio}
+                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
                         />
                       </div>
                     </div>
@@ -2037,7 +2072,8 @@ export default function ClientiPage() {
                             const dateValue = e.target.value ? new Date(e.target.value) : undefined;
                             handleVerificaDateChange("B", dateValue);
                           }}
-                          className="w-full"
+                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
+                          disabled={!formData.gestione_antiriciclaggio}
                         />
                       </div>
 
@@ -2047,9 +2083,22 @@ export default function ClientiPage() {
                           type="date"
                           value={formData.scadenza_antiric_b ? formData.scadenza_antiric_b.toISOString().split('T')[0] : ""}
                           disabled
-                          className="w-full bg-muted"
+                          className="w-full bg-muted cursor-not-allowed"
                         />
                       </div>
+                    </div>
+
+                    <div className={`mt-4 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
+                      <Label htmlFor="note_antiriciclaggio">Note Antiriciclaggio</Label>
+                      <Textarea
+                        id="note_antiriciclaggio"
+                        value={formData.note_antiriciclaggio}
+                        onChange={(e) => setFormData({ ...formData, note_antiriciclaggio: e.target.value })}
+                        placeholder="Note aggiuntive per la pratica antiriciclaggio..."
+                        rows={4}
+                        disabled={!formData.gestione_antiriciclaggio}
+                        className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
+                      />
                     </div>
                   </CardContent>
                 </Card>
