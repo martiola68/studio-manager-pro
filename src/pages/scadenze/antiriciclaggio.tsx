@@ -1,502 +1,397 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileSpreadsheet, Download, RefreshCw, MailWarning } from "lucide-react";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertCircle, Mail, Calendar, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
+import type { Database } from "@/integrations/supabase/types";
 
-interface Cliente {
-  id: string;
-  cod_cliente: string;
-  ragione_sociale: string;
-  tipo_prestazione_a: string | null;
-  rischio_ver_a: string | null;
-  data_ultima_verifica_antiric: string | null;
-  scadenza_antiric: string | null;
-  giorni_scad_ver_a: number | null;
-  tipo_prestazione_b: string | null;
-  rischio_ver_b: string | null;
-  data_ultima_verifica_b: string | null;
-  scadenza_antiric_b: string | null;
-  giorni_scad_ver_b: number | null;
-  note_antiriciclaggio: string | null;
-  utente_operatore_id: string | null;
-  utente_operatore?: {
-    nome: string;
-    cognome: string;
-    email: string;
-  } | null;
+type Cliente = Database["public"]["Tables"]["clienti"]["Row"];
+type Utente = Database["public"]["Tables"]["utenti"]["Row"];
+
+interface ClienteWithDetails extends Cliente {
+  utente_operatore?: Utente | null;
+  urgentDeadlines: Array<{
+    tipo: string;
+    giorni: number;
+  }>;
 }
 
-export default function ScadenzeAntiriciclaggio() {
-  const [scadenze, setScadenze] = useState<Cliente[]>([]);
-  const [filteredScadenze, setFilteredScadenze] = useState<Cliente[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sendingEmail, setSendingEmail] = useState(false);
+export default function Antiriciclaggio() {
   const { toast } = useToast();
-
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-  const getScadenzaColor = (giorni: number | null | undefined) => {
-    if (giorni === null || giorni === undefined) return "";
-    if (giorni < 15) return "bg-red-500 text-white font-bold animate-pulse";
-    if (giorni < 30) return "bg-orange-500 text-white";
-    return "";
-  };
-
-  const calculateDays = (scadenza?: string | null) => {
-    if (!scadenza) return null;
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
-    const target = new Date(scadenza);
-    target.setHours(0, 0, 0, 0);
-    const diffTime = target.getTime() - oggi.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
+  const [clienti, setClienti] = useState<ClienteWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    loadScadenze();
+    fetchClientiConScadenzeUrgenti();
   }, []);
 
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredScadenze(scadenze);
-    } else {
-      const term = searchTerm.toLowerCase();
-      const filtered = scadenze.filter(
-        (c) =>
-          c.ragione_sociale?.toLowerCase().includes(term) ||
-          c.cod_cliente?.toLowerCase().includes(term)
-      );
-      setFilteredScadenze(filtered);
-    }
-  }, [searchTerm, scadenze]);
-
-  useEffect(() => {
-    checkAndNotifyUrgent();
-  }, [filteredScadenze]);
-
-  const checkAndNotifyUrgent = () => {
-    const urgent = filteredScadenze.filter(c => {
-      const giorni_a = calculateDays(c.scadenza_antiric);
-      const giorni_b = calculateDays(c.scadenza_antiric_b);
-      return (giorni_a !== null && giorni_a < 15) || (giorni_b !== null && giorni_b < 15);
-    });
-
-    if (urgent.length > 0) {
-      toast({
-        title: "⚠️ Scadenze Urgenti Rilevate",
-        description: `Ci sono ${urgent.length} clienti con scadenze inferiori a 15 giorni.`,
-        variant: "destructive",
-        duration: 5000
-      });
-    }
-  };
-
-  const sendUrgentEmailAutomatically = async () => {
-    const urgent = filteredScadenze.filter(c => {
-      const giorni_a = calculateDays(c.scadenza_antiric);
-      const giorni_b = calculateDays(c.scadenza_antiric_b);
-      return (giorni_a !== null && giorni_a < 15) || (giorni_b !== null && giorni_b < 15);
-    });
-
-    if (urgent.length === 0) {
-      toast({
-        title: "Nessuna scadenza urgente",
-        description: "Non ci sono clienti con scadenze inferiori a 15 giorni.",
-        variant: "default"
-      });
-      return;
-    }
-
-    const clientsByOperator = urgent.reduce((acc, cliente) => {
-      const operatorEmail = cliente.utente_operatore?.email;
-      const operatorName = cliente.utente_operatore 
-        ? `${cliente.utente_operatore.nome} ${cliente.utente_operatore.cognome}`
-        : "Non assegnato";
-      
-      if (!operatorEmail) return acc;
-
-      if (!acc[operatorEmail]) {
-        acc[operatorEmail] = {
-          operatorName: operatorName,
-          operatorEmail: operatorEmail,
-          clients: []
-        };
-      }
-
-      const urgentDeadlines: Array<{ tipo: string; giorni: number }> = [];
-      const giorni_a = calculateDays(cliente.scadenza_antiric);
-      const giorni_b = calculateDays(cliente.scadenza_antiric_b);
-
-      if (giorni_a !== null && giorni_a < 15) {
-        urgentDeadlines.push({ tipo: "A", giorni: giorni_a });
-      }
-      if (giorni_b !== null && giorni_b < 15) {
-        urgentDeadlines.push({ tipo: "B", giorni: giorni_b });
-      }
-
-      acc[operatorEmail].clients.push({
-        ragione_sociale: cliente.ragione_sociale,
-        urgentDeadlines
-      });
-
-      return acc;
-    }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; urgentDeadlines: Array<{ tipo: string; giorni: number }> }> }>);
-
-    const alerts = Object.values(clientsByOperator);
-    
-    if (alerts.length === 0) {
-      toast({
-        title: "Nessun operatore assegnato",
-        description: "I clienti urgenti non hanno operatori fiscali assegnati.",
-        variant: "default"
-      });
-      return;
-    }
-
-    setSendingEmail(true);
-
-    try {
-      const response = await fetch("/api/send-email-alert", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ alerts }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.details || result.error || "Errore invio email");
-      }
-
-      toast({
-        title: "✓ Email inviate con successo",
-        description: `${result.sentCount} email inviate a ${alerts.length} operatore/i per ${urgent.length} cliente/i urgenti.`,
-        variant: "default",
-        duration: 6000
-      });
-    } catch (error) {
-      console.error("Error sending emails:", error);
-      toast({
-        title: "Errore invio email",
-        description: error instanceof Error ? error.message : "Errore sconosciuto. Verifica configurazione SMTP in .env.local",
-        variant: "destructive",
-        duration: 8000
-      });
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  const loadScadenze = async () => {
+  async function fetchClientiConScadenzeUrgenti() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select(
-          `
-          id,
-          cod_cliente,
-          ragione_sociale,
-          tipo_prestazione_a,
-          rischio_ver_a,
-          data_ultima_verifica_antiric,
-          scadenza_antiric,
-          giorni_scad_ver_a,
-          tipo_prestazione_b,
-          rischio_ver_b,
-          data_ultima_verifica_b,
-          scadenza_antiric_b,
-          giorni_scad_ver_b,
-          note_antiriciclaggio,
-          utente_operatore_id,
-          tbutenti!tbclienti_utente_operatore_id_fkey (
-            nome,
-            cognome,
-            email
-          )
-        `
-        )
-        .eq("gestione_antiriciclaggio", true)
-        .order("ragione_sociale", { ascending: true });
 
-      if (error) throw error;
+      const { data: clientiData, error: clientiError } = await supabase
+        .from("clienti")
+        .select(`
+          *,
+          utente_operatore:utenti!clienti_utente_operatore_id_fkey(*)
+        `)
+        .order("ragione_sociale");
 
-      const clientiWithCalculatedDays = (data || []).map(c => ({
-        ...c,
-        utente_operatore: c.tbutenti,
-        giorni_scad_ver_a: calculateDays(c.scadenza_antiric),
-        giorni_scad_ver_b: calculateDays(c.scadenza_antiric_b)
-      }));
+      if (clientiError) throw clientiError;
 
-      setScadenze(clientiWithCalculatedDays);
-      setFilteredScadenze(clientiWithCalculatedDays);
+      const oggi = new Date();
+      const clientiConScadenzeUrgenti: ClienteWithDetails[] = [];
+
+      for (const cliente of clientiData || []) {
+        const urgentDeadlines: Array<{ tipo: string; giorni: number }> = [];
+
+        // Scadenza A
+        if (cliente.data_scadenza_a) {
+          const dataScadenzaA = new Date(cliente.data_scadenza_a);
+          const giorniRimanentiA = Math.ceil((dataScadenzaA.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
+          if (giorniRimanentiA >= 0 && giorniRimanentiA < 15) {
+            urgentDeadlines.push({ tipo: "A", giorni: giorniRimanentiA });
+          }
+        }
+
+        // Scadenza B
+        if (cliente.data_scadenza_b) {
+          const dataScadenzaB = new Date(cliente.data_scadenza_b);
+          const giorniRimanentiB = Math.ceil((dataScadenzaB.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
+          if (giorniRimanentiB >= 0 && giorniRimanentiB < 15) {
+            urgentDeadlines.push({ tipo: "B", giorni: giorniRimanentiB });
+          }
+        }
+
+        if (urgentDeadlines.length > 0) {
+          clientiConScadenzeUrgenti.push({
+            ...cliente,
+            urgentDeadlines,
+          });
+        }
+      }
+
+      setClienti(clientiConScadenzeUrgenti);
     } catch (error) {
-      console.error("Error loading scadenze:", error);
+      console.error("Errore caricamento clienti:", error);
       toast({
         title: "Errore",
-        description: "Errore nel caricamento delle scadenze antiriciclaggio",
-        variant: "destructive"
+        description: "Impossibile caricare i clienti con scadenze urgenti",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const exportExcel = () => {
-    const dataToExport = filteredScadenze.map((s) => ({
-      Cliente: s.ragione_sociale,
-      "Utente Fiscale": s.utente_operatore 
-        ? `${s.utente_operatore.nome} ${s.utente_operatore.cognome}`
-        : "",
-      "Prestazione A": s.tipo_prestazione_a || "",
-      "Rischio A": s.rischio_ver_a || "",
-      "Data Verifica A": s.data_ultima_verifica_antiric ? format(new Date(s.data_ultima_verifica_antiric), "dd/MM/yyyy") : "",
-      "Scadenza A": s.scadenza_antiric ? format(new Date(s.scadenza_antiric), "dd/MM/yyyy") : "",
-      "Giorni A": s.giorni_scad_ver_a ?? "",
-      "Prestazione B": s.tipo_prestazione_b || "",
-      "Rischio B": s.rischio_ver_b || "",
-      "Data Verifica B": s.data_ultima_verifica_b ? format(new Date(s.data_ultima_verifica_b), "dd/MM/yyyy") : "",
-      "Scadenza B": s.scadenza_antiric_b ? format(new Date(s.scadenza_antiric_b), "dd/MM/yyyy") : "",
-      "Giorni B": s.giorni_scad_ver_b ?? "",
-      Note: s.note_antiriciclaggio || ""
-    }));
+  function sendUrgentEmailViaMailto() {
+    try {
+      setSending(true);
 
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Scadenze Antiriciclaggio");
-    XLSX.writeFile(wb, `Scadenze_Antiriciclaggio_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      // Raggruppa clienti per operatore
+      const clientiPerOperatore = new Map<string, ClienteWithDetails[]>();
 
-    toast({
-      title: "Export completato",
-      description: "File Excel scaricato con successo",
-      variant: "default"
-    });
-  };
+      for (const cliente of clienti) {
+        const operatore = cliente.utente_operatore;
+        if (!operatore || !operatore.email) continue;
 
-  const urgentCount = filteredScadenze.filter(c => {
-    const giorni_a = calculateDays(c.scadenza_antiric);
-    const giorni_b = calculateDays(c.scadenza_antiric_b);
-    return (giorni_a !== null && giorni_a < 15) || (giorni_b !== null && giorni_b < 15);
-  }).length;
+        const key = operatore.email;
+        if (!clientiPerOperatore.has(key)) {
+          clientiPerOperatore.set(key, []);
+        }
+        clientiPerOperatore.get(key)!.push(cliente);
+      }
+
+      if (clientiPerOperatore.size === 0) {
+        toast({
+          title: "Nessun operatore assegnato",
+          description: "I clienti urgenti non hanno operatori fiscali assegnati.",
+          variant: "destructive",
+        });
+        setSending(false);
+        return;
+      }
+
+      // Crea mailto per ogni operatore
+      let emailsSent = 0;
+      const operatoriEmails: string[] = [];
+
+      for (const [operatoreEmail, clientiOperatore] of clientiPerOperatore.entries()) {
+        const operatore = clientiOperatore[0].utente_operatore!;
+        operatoriEmails.push(operatoreEmail);
+
+        const clientsList = clientiOperatore
+          .map((c) => {
+            const deadlines = c.urgentDeadlines
+              .map((d) => `Scad. ${d.tipo}: ${d.giorni}gg`)
+              .join(" • ");
+            return `- ${c.ragione_sociale}: ${deadlines}`;
+          })
+          .join("\n");
+
+        const subject = `⚠️ SCADENZE ANTIRICICLAGGIO URGENTI - ${clientiOperatore.length} Cliente/i`;
+
+        const body = `Gentile ${operatore.nome} ${operatore.cognome},
+
+Sono state rilevate scadenze antiriciclaggio urgenti (< 15 giorni) per i seguenti tuoi clienti:
+
+${clientsList}
+
+Ti invitiamo a verificare e completare gli adempimenti entro le scadenze indicate.
+
+---
+Email generata automaticamente dal sistema Studio Manager Pro
+Data: ${new Date().toLocaleDateString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })} - ${new Date().toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`;
+
+        const mailtoLink = `mailto:${operatoreEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        // Apri mailto
+        window.open(mailtoLink, "_blank");
+        emailsSent++;
+      }
+
+      toast({
+        title: "✓ Client email aperti",
+        description: `${emailsSent} finestre email aperte per ${clienti.length} cliente/i urgenti. Destinatari: ${operatoriEmails.join(", ")}`,
+      });
+    } catch (error) {
+      console.error("Errore invio alert:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aprire client email",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const clientiUrgentissimi = clienti.filter((c) =>
+    c.urgentDeadlines.some((d) => d.giorni <= 7)
+  );
+
+  const clientiUrgenti = clienti.filter(
+    (c) =>
+      c.urgentDeadlines.some((d) => d.giorni > 7 && d.giorni < 15) &&
+      !clientiUrgentissimi.includes(c)
+  );
 
   return (
-    <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+      <div className="container mx-auto p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              Scadenzario Antiriciclaggio
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Scadenze Antiriciclaggio
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Gestione scadenze verifiche periodiche antiriciclaggio
+              Monitoraggio scadenze urgenti (&lt; 15 giorni)
             </p>
           </div>
-          <div className="flex gap-2">
-            {urgentCount > 0 && (
-              <Button
-                onClick={sendUrgentEmailAutomatically}
-                disabled={sendingEmail}
-                variant="destructive"
-                className="gap-2"
-              >
-                <MailWarning className="h-4 w-4" />
-                {sendingEmail ? "Invio..." : `Invia Alert (${urgentCount})`}
-              </Button>
-            )}
-            <Button onClick={loadScadenze} variant="outline" className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Aggiorna
-            </Button>
-            <Button onClick={exportExcel} variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Esporta Excel
-            </Button>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <Search className="h-5 w-5 text-gray-400" />
-          <Input
-            placeholder="Cerca per ragione sociale, codice cliente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-          {searchTerm && (
-            <Button variant="ghost" size="sm" onClick={() => setSearchTerm("")}>
-              Cancella
+          {clienti.length > 0 && (
+            <Button
+              onClick={sendUrgentEmailViaMailto}
+              disabled={sending || loading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {sending ? "Apertura..." : `Invia Alert (${clienti.length})`}
             </Button>
           )}
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Cliente</TableHead>
-                  <TableHead>Utente Fiscale</TableHead>
-                  <TableHead>Prestazione A</TableHead>
-                  <TableHead>Rischio A</TableHead>
-                  <TableHead>Data Ver. A</TableHead>
-                  <TableHead>Scadenza A</TableHead>
-                  <TableHead>Giorni Scad. A</TableHead>
-                  <TableHead>Prestazione B</TableHead>
-                  <TableHead>Rischio B</TableHead>
-                  <TableHead>Data Ver. B</TableHead>
-                  <TableHead>Scadenza B</TableHead>
-                  <TableHead>Giorni Scad. B</TableHead>
-                  <TableHead>Note</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
-                      Caricamento...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredScadenze.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
-                      Nessun cliente con gestione antiriciclaggio attiva
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredScadenze.map((cliente) => {
-                    const giorni_a = calculateDays(cliente.scadenza_antiric);
-                    const giorni_b = calculateDays(cliente.scadenza_antiric_b);
-                    
-                    return (
-                      <TableRow key={cliente.id}>
-                        <TableCell className="font-medium">
-                          {cliente.ragione_sociale}
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                          {cliente.utente_operatore 
-                            ? `${cliente.utente_operatore.nome} ${cliente.utente_operatore.cognome}`
-                            : "-"}
-                        </TableCell>
+        {/* Cards statistiche */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-red-200 dark:border-red-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Urgentissimi (≤7gg)
+              </CardTitle>
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">
+                {clientiUrgentissimi.length}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Clienti con scadenze immediate
+              </p>
+            </CardContent>
+          </Card>
 
-                        {/* Blocco A */}
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-semibold">
-                          {cliente.tipo_prestazione_a || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.rischio_ver_a && (
-                            <Badge variant="outline">{cliente.rischio_ver_a}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.data_ultima_verifica_antiric
-                            ? format(
-                                new Date(cliente.data_ultima_verifica_antiric),
-                                "dd/MM/yyyy",
-                                { locale: it }
-                              )
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.scadenza_antiric ? (
-                            <div
-                              className={
-                                giorni_a !== null && giorni_a < 15
-                                  ? "text-red-600 font-bold"
-                                  : giorni_a !== null && giorni_a < 30
-                                  ? "text-orange-600 font-semibold"
-                                  : ""
-                              }
-                            >
-                              {format(new Date(cliente.scadenza_antiric), "dd/MM/yyyy", {
-                                locale: it
-                              })}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {giorni_a !== null && (
-                            <div
-                              className={`px-2 py-1 rounded text-center font-semibold ${getScadenzaColor(
-                                giorni_a
-                              )}`}
-                            >
-                              {giorni_a} gg
-                            </div>
-                          )}
-                        </TableCell>
+          <Card className="border-orange-200 dark:border-orange-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Urgenti (8-14gg)
+              </CardTitle>
+              <Calendar className="w-5 h-5 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">
+                {clientiUrgenti.length}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Clienti da monitorare
+              </p>
+            </CardContent>
+          </Card>
 
-                        {/* Blocco B */}
-                        <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-semibold">
-                          {cliente.tipo_prestazione_b || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.rischio_ver_b && (
-                            <Badge variant="outline">{cliente.rischio_ver_b}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.data_ultima_verifica_b
-                            ? format(
-                                new Date(cliente.data_ultima_verifica_b),
-                                "dd/MM/yyyy",
-                                { locale: it }
-                              )
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {cliente.scadenza_antiric_b ? (
-                            <div
-                              className={
-                                giorni_b !== null && giorni_b < 15
-                                  ? "text-red-600 font-bold"
-                                  : giorni_b !== null && giorni_b < 30
-                                  ? "text-orange-600 font-semibold"
-                                  : ""
-                              }
-                            >
-                              {format(new Date(cliente.scadenza_antiric_b), "dd/MM/yyyy", {
-                                locale: it
-                              })}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {giorni_b !== null && (
-                            <div
-                              className={`px-2 py-1 rounded text-center font-semibold ${getScadenzaColor(
-                                giorni_b
-                              )}`}
-                            >
-                              {giorni_b} gg
-                            </div>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="max-w-xs truncate text-sm text-gray-600 dark:text-gray-400">
-                          {cliente.note_antiriciclaggio || "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <Card className="border-blue-200 dark:border-blue-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                Totale Urgenze
+              </CardTitle>
+              <Users className="w-5 h-5 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">
+                {clienti.length}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Clienti con scadenze &lt; 15gg
+              </p>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Tabella clienti urgenti */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              Clienti con Scadenze Urgenti
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">
+                Caricamento...
+              </div>
+            ) : clienti.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                ✓ Nessuna scadenza urgente rilevata
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Operatore Fiscale</TableHead>
+                      <TableHead>Scadenza A</TableHead>
+                      <TableHead>Scadenza B</TableHead>
+                      <TableHead>Urgenza</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clienti.map((cliente) => {
+                      const scadenzaA = cliente.urgentDeadlines.find(
+                        (d) => d.tipo === "A"
+                      );
+                      const scadenzaB = cliente.urgentDeadlines.find(
+                        (d) => d.tipo === "B"
+                      );
+                      const giorniMin = Math.min(
+                        ...(cliente.urgentDeadlines.map((d) => d.giorni))
+                      );
+
+                      return (
+                        <TableRow key={cliente.id}>
+                          <TableCell className="font-medium">
+                            {cliente.ragione_sociale}
+                          </TableCell>
+                          <TableCell>
+                            {cliente.utente_operatore ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {cliente.utente_operatore.nome}{" "}
+                                  {cliente.utente_operatore.cognome}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {cliente.utente_operatore.email}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 italic">
+                                Non assegnato
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {scadenzaA ? (
+                              <Badge
+                                variant={
+                                  scadenzaA.giorni <= 7
+                                    ? "destructive"
+                                    : "default"
+                                }
+                                className={
+                                  scadenzaA.giorni <= 7
+                                    ? "bg-red-600"
+                                    : "bg-orange-600"
+                                }
+                              >
+                                {scadenzaA.giorni} giorni
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {scadenzaB ? (
+                              <Badge
+                                variant={
+                                  scadenzaB.giorni <= 7
+                                    ? "destructive"
+                                    : "default"
+                                }
+                                className={
+                                  scadenzaB.giorni <= 7
+                                    ? "bg-red-600"
+                                    : "bg-orange-600"
+                                }
+                              >
+                                {scadenzaB.giorni} giorni
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                giorniMin <= 7 ? "destructive" : "default"
+                              }
+                              className={
+                                giorniMin <= 7
+                                  ? "bg-red-600"
+                                  : "bg-orange-600"
+                              }
+                            >
+                              {giorniMin <= 7 ? "URGENTISSIMO" : "URGENTE"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
