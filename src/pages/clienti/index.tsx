@@ -216,37 +216,36 @@ export default function ClientiPage() {
     value: string,
     field: "rischio_ver_a" | "rischio_ver_b"
   ) => {
-    // Calcola giorni in base al rischio
-    let days = 0;
+    // Calcola mesi in base al rischio
+    let months = 0;
     // Cast value to match specific string literal type
     const riskValue = value as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
 
     switch (riskValue) {
       case "Non significativo":
-        days = 365 * 5; // 5 anni
+        months = 60; // 5 anni
         break;
       case "Poco significativo":
-        days = 365 * 3; // 3 anni
+        months = 36; // 3 anni
         break;
       case "Abbastanza significativo":
-        days = 365 * 2; // 2 anni
+        months = 24; // 2 anni
         break;
       case "Molto significativo":
-        days = 365; // 1 anno
+        months = 12; // 1 anno
         break;
       default:
-        days = 0;
+        months = 0;
     }
 
     const today = new Date();
-    const scadenza = new Date(today);
-    scadenza.setDate(today.getDate() + days);
+    const scadenza = addMonths(today, months);
 
     if (field === "rischio_ver_a") {
       setFormData((prev) => ({
         ...prev,
         rischio_ver_a: riskValue,
-        gg_ver_a: days,
+        gg_ver_a: months,
         data_ultima_verifica_antiric: today,
         scadenza_antiric: scadenza,
         giorni_scad_ver_a: calcolaGiorniScadenza(scadenza),
@@ -255,7 +254,7 @@ export default function ClientiPage() {
       setFormData((prev) => ({
         ...prev,
         rischio_ver_b: riskValue,
-        gg_ver_b: days,
+        gg_ver_b: months,
         data_ultima_verifica_b: today,
         scadenza_antiric_b: scadenza,
         giorni_scad_ver_b: calcolaGiorniScadenza(scadenza),

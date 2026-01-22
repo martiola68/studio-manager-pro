@@ -25,12 +25,12 @@ interface Cliente {
   ragione_sociale: string;
   codice_fiscale?: string;
   partita_iva?: string;
-  tipo_prestazione_ver_a?: string;
+  tipo_prestazione_a?: string;
   rischio_ver_a?: string;
   data_ultima_verifica_antiric?: string;
   scadenza_antiric?: string;
   giorni_scad_ver_a?: number | null;
-  tipo_prestazione_ver_b?: string;
+  tipo_prestazione_b?: string;
   rischio_ver_b?: string;
   data_ultima_verifica_b?: string;
   scadenza_antiric_b?: string;
@@ -63,7 +63,7 @@ export default function AntiriciclaggioPage() {
       const { data, error } = await supabase
         .from("tbclienti")
         .select(
-          "id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva, tipo_prestazione_ver_a, rischio_ver_a, data_ultima_verifica_antiric, scadenza_antiric, giorni_scad_ver_a, tipo_prestazione_ver_b, rischio_ver_b, data_ultima_verifica_b, scadenza_antiric_b, giorni_scad_ver_b, note_antiriciclaggio"
+          "id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva, tipo_prestazione_a, rischio_ver_a, data_ultima_verifica_antiric, scadenza_antiric, giorni_scad_ver_a, tipo_prestazione_b, rischio_ver_b, data_ultima_verifica_b, scadenza_antiric_b, giorni_scad_ver_b, note_antiriciclaggio"
         )
         .eq("gestione_antiriciclaggio", true)
         .order("ragione_sociale", { ascending: true });
@@ -325,7 +325,7 @@ export default function AntiriciclaggioPage() {
                     
                     {/* Blocco A */}
                     <TableCell className="text-sm text-muted-foreground">
-                      {row.tipo_prestazione_ver_a || "-"}
+                      {row.tipo_prestazione_a || "-"}
                     </TableCell>
                     <TableCell>
                       {getRiskBadge(row.rischio_ver_a)}
@@ -348,7 +348,7 @@ export default function AntiriciclaggioPage() {
 
                     {/* Blocco B */}
                     <TableCell className="text-sm text-muted-foreground">
-                      {row.tipo_prestazione_ver_b || "-"}
+                      {row.tipo_prestazione_b || "-"}
                     </TableCell>
                     <TableCell>
                       {getRiskBadge(row.rischio_ver_b)}
