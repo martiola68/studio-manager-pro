@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
-import { emailService } from "@/services/emailService";
 
 interface EmailAlertRequest {
   urgentClients: Array<{
@@ -25,21 +24,10 @@ export default async function handler(
       return res.status(401).json({ error: "Non autenticato" });
     }
 
-    // Verify user session
+    // Verify user session and get email directly from Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return res.status(401).json({ error: "Non autenticato" });
-    }
-
-    // Get user email
-    const { data: profile, error: profileError } = await supabase
-      .from("tbpersonale")
-      .select("email")
-      .eq("id_user", user.id)
-      .single();
-
-    if (profileError || !profile?.email) {
-      return res.status(400).json({ error: "Email utente non trovata" });
+    if (authError || !user || !user.email) {
+      return res.status(401).json({ error: "Non autenticato o email non disponibile" });
     }
 
     // Parse request body
@@ -77,18 +65,36 @@ ${rows}
 
     const emailText = `Scadenze Antiriciclaggio Urgenti\n\nAttenzione, rilevate scadenze urgenti (< 15 giorni):\n\n${rows}\n\n---\nEmail generata automaticamente dal sistema Studio Manager Pro`;
 
-    // Send email
-    await emailService.sendEmail({
-      to: profile.email,
-      subject: emailSubject,
-      html: emailHtml,
-      text: emailText,
+    // Send email using Resend API (same as emailService)
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY non configurata");
+    }
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${resendApiKey}`
+      },
+      body: JSON.stringify({
+        from: "Studio Manager Pro <noreply@studiomanagerpro.com>",
+        to: [user.email],
+        subject: emailSubject,
+        html: emailHtml,
+        text: emailText
+      })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Errore Resend: ${JSON.stringify(errorData)}`);
+    }
 
     return res.status(200).json({ 
       success: true, 
       message: "Email inviata con successo",
-      recipients: [profile.email]
+      recipients: [user.email]
     });
   } catch (error) {
     console.error("Error sending email alert:", error);
