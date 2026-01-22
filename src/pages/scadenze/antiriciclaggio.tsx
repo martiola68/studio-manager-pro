@@ -419,9 +419,11 @@ Data: ${new Date().toLocaleDateString("it-IT", {
                       <TableHead>Ragione Sociale</TableHead>
                       <TableHead>Operatore Fiscale</TableHead>
                       <TableHead>Scadenza A</TableHead>
+                      <TableHead>Tipo Prest. A</TableHead>
                       <TableHead>Giorni Rim. A</TableHead>
                       <TableHead>Urgenza A</TableHead>
                       <TableHead>Scadenza B</TableHead>
+                      <TableHead>Tipo Prest. B</TableHead>
                       <TableHead>Giorni Rim. B</TableHead>
                       <TableHead>Urgenza B</TableHead>
                     </TableRow>
@@ -465,6 +467,9 @@ Data: ${new Date().toLocaleDateString("it-IT", {
                               : "-"}
                           </TableCell>
                           <TableCell>
+                            {cliente.tipo_prestazione_a || "-"}
+                          </TableCell>
+                          <TableCell>
                             {giorniA !== null ? (
                               <span
                                 className={
@@ -490,6 +495,9 @@ Data: ${new Date().toLocaleDateString("it-IT", {
                                   cliente.scadenza_antiric_b
                                 ).toLocaleDateString("it-IT")
                               : "-"}
+                          </TableCell>
+                          <TableCell>
+                            {cliente.tipo_prestazione_b || "-"}
                           </TableCell>
                           <TableCell>
                             {giorniB !== null ? (
