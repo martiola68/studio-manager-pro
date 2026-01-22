@@ -14,19 +14,19 @@ interface Cliente {
   id: string;
   cod_cliente: string;
   ragione_sociale: string;
-  codice_fiscale?: string;
-  partita_iva?: string;
-  tipo_prestazione_a?: string;
-  rischio_ver_a?: string;
-  data_ultima_verifica_antiric?: string;
-  scadenza_antiric?: string;
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+  tipo_prestazione_a?: string | null;
+  rischio_ver_a?: string | null;
+  data_ultima_verifica_antiric?: string | null;
+  scadenza_antiric?: string | null;
   giorni_scad_ver_a?: number | null;
-  tipo_prestazione_b?: string;
-  rischio_ver_b?: string;
-  data_ultima_verifica_b?: string;
-  scadenza_antiric_b?: string;
+  tipo_prestazione_b?: string | null;
+  rischio_ver_b?: string | null;
+  data_ultima_verifica_b?: string | null;
+  scadenza_antiric_b?: string | null;
   giorni_scad_ver_b?: number | null;
-  note_antiriciclaggio?: string;
+  note_antiriciclaggio?: string | null;
 }
 
 export default function ScadenzeAntiriciclaggio() {
@@ -45,7 +45,7 @@ export default function ScadenzeAntiriciclaggio() {
     return "";
   };
 
-  const calculateDays = (scadenza?: string) => {
+  const calculateDays = (scadenza?: string | null) => {
     if (!scadenza) return null;
     const oggi = new Date();
     oggi.setHours(0, 0, 0, 0);
