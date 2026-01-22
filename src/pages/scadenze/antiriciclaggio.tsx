@@ -98,7 +98,7 @@ export default function ScadenzeAntiriciclaggio() {
     }
   };
 
-  const sendUrgentEmail = async () => {
+  const sendUrgentEmailViaMailto = () => {
     const urgent = filteredScadenze.filter(c => {
       const giorni_a = calculateDays(c.scadenza_antiric);
       const giorni_b = calculateDays(c.scadenza_antiric_b);
@@ -114,73 +114,89 @@ export default function ScadenzeAntiriciclaggio() {
       return;
     }
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast({
-          title: "Errore",
-          description: "Sessione non valida. Effettua nuovamente il login.",
-          variant: "destructive"
-        });
-        return;
+    // Raggruppa clienti per operatore
+    const clientsByOperator = urgent.reduce((acc, cliente) => {
+      const operatorEmail = cliente.utente_operatore?.email;
+      const operatorName = cliente.utente_operatore 
+        ? `${cliente.utente_operatore.nome} ${cliente.utente_operatore.cognome}`
+        : "Non assegnato";
+      
+      if (!operatorEmail) return acc;
+
+      if (!acc[operatorEmail]) {
+        acc[operatorEmail] = {
+          operatorName: operatorName,
+          operatorEmail: operatorEmail,
+          clients: []
+        };
       }
 
-      // Raggruppa clienti per operatore
-      const clientsByOperator = urgent.reduce((acc, cliente) => {
-        const operatorEmail = cliente.utente_operatore?.email;
-        if (!operatorEmail) return acc;
+      const giorni_a = calculateDays(cliente.scadenza_antiric);
+      const giorni_b = calculateDays(cliente.scadenza_antiric_b);
 
-        if (!acc[operatorEmail]) {
-          acc[operatorEmail] = {
-            operatorName: `${cliente.utente_operatore?.nome || ""} ${cliente.utente_operatore?.cognome || ""}`.trim(),
-            operatorEmail: operatorEmail,
-            clients: []
-          };
-        }
+      const scadenze: string[] = [];
+      if (giorni_a !== null && giorni_a < 15) {
+        scadenze.push(`Scad. A: ${giorni_a}gg`);
+      }
+      if (giorni_b !== null && giorni_b < 15) {
+        scadenze.push(`Scad. B: ${giorni_b}gg`);
+      }
 
-        const giorni_a = calculateDays(cliente.scadenza_antiric);
-        const giorni_b = calculateDays(cliente.scadenza_antiric_b);
-
-        acc[operatorEmail].clients.push({
-          ragione_sociale: cliente.ragione_sociale,
-          giorni_a: giorni_a !== null && giorni_a < 15 ? giorni_a : null,
-          giorni_b: giorni_b !== null && giorni_b < 15 ? giorni_b : null
-        });
-
-        return acc;
-      }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; giorni_a: number | null; giorni_b: number | null }> }>);
-
-      // Invia email per ogni operatore
-      const operators = Object.values(clientsByOperator);
-      
-      const response = await fetch("/api/send-email-alert", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ operators })
+      acc[operatorEmail].clients.push({
+        ragione_sociale: cliente.ragione_sociale,
+        scadenze: scadenze.join(" • ")
       });
 
-      const result = await response.json();
+      return acc;
+    }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; scadenze: string }> }>);
 
-      if (!response.ok) {
-        throw new Error(result.error || "Errore nell'invio dell'email");
-      }
-
+    // Costruisci email per ogni operatore
+    const operators = Object.values(clientsByOperator);
+    
+    if (operators.length === 0) {
       toast({
-        title: "✅ Email inviate",
-        description: `Report inviato a ${operators.length} operatore/i con ${urgent.length} cliente/i urgente/i`,
+        title: "Nessun operatore assegnato",
+        description: "I clienti urgenti non hanno operatori fiscali assegnati.",
         variant: "default"
       });
-    } catch (error) {
-      console.error("Error sending email:", error);
-      toast({
-        title: "Errore invio email",
-        description: error instanceof Error ? error.message : "Errore sconosciuto",
-        variant: "destructive"
-      });
+      return;
     }
+
+    // Crea email body con tutti gli operatori e i loro clienti
+    const emailBody = operators.map(operator => {
+      const clientsList = operator.clients
+        .map(c => `- ${c.ragione_sociale}: ${c.scadenze}`)
+        .join("\n");
+
+      return `Operatore: ${operator.operatorName} (${operator.operatorEmail})
+Clienti urgenti: ${operator.clients.length}
+
+${clientsList}`;
+    }).join("\n\n---\n\n");
+
+    const subject = `⚠️ REPORT URGENTE SCADENZE ANTIRICICLAGGIO (${urgent.length})`;
+    const body = `Scadenze Antiriciclaggio Urgenti
+
+Attenzione, rilevate scadenze urgenti (< 15 giorni):
+
+${emailBody}
+
+---
+Email generata automaticamente dal sistema Studio Manager Pro
+Data: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })}`;
+
+    // Crea link mailto
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    // Apri client email
+    window.location.href = mailtoLink;
+
+    // Conferma
+    toast({
+      title: "Client email aperto",
+      description: `Report preparato per ${urgent.length} cliente/i (${operators.length} operatore/i). Completa l'invio dal tuo client email.`,
+      variant: "default"
+    });
   };
 
   const loadScadenze = async () => {
@@ -290,7 +306,7 @@ export default function ScadenzeAntiriciclaggio() {
           <div className="flex gap-2">
             {urgentCount > 0 && (
               <Button
-                onClick={sendUrgentEmail}
+                onClick={sendUrgentEmailViaMailto}
                 variant="destructive"
                 className="gap-2"
               >
