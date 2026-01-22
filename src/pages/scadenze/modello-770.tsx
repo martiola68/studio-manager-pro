@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2, RefreshCw } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -29,11 +29,10 @@ export default function Scadenze770Page() {
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSettore, setFilterSettore] = useState("__all__");
-  const [selectedAnno, setSelectedAnno] = useState<number>(new Date().getFullYear());
 
   useEffect(() => {
     checkAuthAndLoad();
-  }, [selectedAnno]);
+  }, []);
 
   const checkAuthAndLoad = async () => {
     try {
@@ -71,17 +70,12 @@ export default function Scadenze770Page() {
   };
 
   const loadScadenze = async (): Promise<Scadenza770[]> => {
-    const startDate = new Date(selectedAnno, 0, 1);
-    const endDate = new Date(selectedAnno, 11, 31, 23, 59, 59);
-
     const { data, error } = await supabase
       .from("tbscad770")
       .select(`
         *,
         cliente:tbclienti!id(settore)
       `)
-      .gte("created_at", startDate.toISOString())
-      .lte("created_at", endDate.toISOString())
       .order("nominativo", { ascending: true });
     
     if (error) throw error;
@@ -174,74 +168,6 @@ export default function Scadenze770Page() {
     }
   };
 
-  const handleSyncClienti = async () => {
-    try {
-      setLoading(true);
-
-      const { data: clienti, error: clientiError } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .eq("flag_770", true);
-
-      if (clientiError) throw clientiError;
-
-      if (!clienti || clienti.length === 0) {
-        toast({
-          title: "Info",
-          description: "Nessun cliente con flag 770 attivo",
-          variant: "default"
-        });
-        return;
-      }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Utente non autenticato");
-
-      const { data: utenteData, error: utenteError } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", user.id)
-        .single();
-
-      if (utenteError) throw utenteError;
-
-      let inserted = 0;
-      for (const cliente of clienti) {
-        const record = {
-          id: cliente.id,
-          nominativo: cliente.ragione_sociale,
-          utente_professionista_id: cliente.utente_professionista_id,
-          utente_operatore_id: cliente.utente_operatore_id,
-          utente_payroll_id: null,
-          professionista_payroll_id: cliente.professionista_payroll_id,
-          tipo_invio: null,
-        };
-
-        const { error } = await supabase
-          .from("tbscad770")
-          .upsert(record, { onConflict: "id", ignoreDuplicates: true });
-
-        if (!error) inserted++;
-      }
-
-      toast({
-        title: "Successo",
-        description: `${inserted} clienti sincronizzati con successo`
-      });
-
-      await loadData();
-    } catch (error) {
-      console.error("Errore sincronizzazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile sincronizzare i clienti",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filteredScadenze = scadenze.filter(s => {
     const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
     const settore = s.cliente?.settore || "";
@@ -274,30 +200,6 @@ export default function Scadenze770Page() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
           <p className="text-gray-500 mt-1">Gestione Modello 770</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label>Anno:</Label>
-            <Select
-              value={selectedAnno.toString()}
-              onValueChange={(value) => setSelectedAnno(parseInt(value))}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleSyncClienti}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Sincronizza Clienti
-          </Button>
         </div>
       </div>
 
@@ -392,7 +294,7 @@ export default function Scadenze770Page() {
                               "utente_professionista_id",
                               value === "__none__" ? null : value
                             )}
-                            disabled={isConfermata}
+                            disabled={true}
                           >
                             <SelectTrigger className="w-full text-xs">
                               <SelectValue placeholder="Seleziona..." />
@@ -415,7 +317,7 @@ export default function Scadenze770Page() {
                               "utente_operatore_id",
                               value === "__none__" ? null : value
                             )}
-                            disabled={isConfermata}
+                            disabled={true}
                           >
                             <SelectTrigger className="w-full text-xs">
                               <SelectValue placeholder="Seleziona..." />
@@ -438,7 +340,7 @@ export default function Scadenze770Page() {
                               "professionista_payroll_id",
                               value === "__none__" ? null : value
                             )}
-                            disabled={isConfermata}
+                            disabled={true}
                           >
                             <SelectTrigger className="w-full text-xs">
                               <SelectValue placeholder="Seleziona..." />
@@ -461,7 +363,7 @@ export default function Scadenze770Page() {
                               "utente_payroll_id",
                               value === "__none__" ? null : value
                             )}
-                            disabled={isConfermata}
+                            disabled={true}
                           >
                             <SelectTrigger className="w-full text-xs">
                               <SelectValue placeholder="Seleziona..." />

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2, Plus } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
@@ -33,13 +33,6 @@ export default function ScadenzeImuPage() {
     confermate: 0,
     nonConfermate: 0
   });
-
-  const handleDeclarationClick = () => {
-    toast({
-      title: "Funzionalità in arrivo",
-      description: "La gestione delle dichiarazioni IMU sarà disponibile presto.",
-    });
-  };
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -95,6 +88,7 @@ export default function ScadenzeImuPage() {
       .order("nominativo", { ascending: true });
     
     if (error) throw error;
+    
     return data || [];
   };
 
@@ -217,14 +211,6 @@ export default function ScadenzeImuPage() {
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario IMU</h1>
           <p className="text-gray-500 mt-1">Gestione dichiarazioni e versamenti IMU</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleDeclarationClick}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nuova Dichiarazione
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">

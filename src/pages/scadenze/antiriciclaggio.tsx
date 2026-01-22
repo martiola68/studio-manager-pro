@@ -539,6 +539,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                           value={formatDateForInput(scadenza.data_ultima_verifica)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica", e.target.value)}
                           className="w-40 text-xs mx-auto"
+                          disabled={true}
                         />
                       </TableCell>
                       <TableCell className="text-center bg-blue-50/50">
@@ -547,6 +548,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                           value={formatDateForInput(scadenza.data_scadenza)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_scadenza", e.target.value)}
                           className="w-40 text-xs mx-auto"
+                          disabled={true}
                         />
                       </TableCell>
                       <TableCell className="text-center bg-blue-50/50">
@@ -582,6 +584,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                           value={formatDateForInput(scadenza.data_ultima_verifica_b)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica_b", e.target.value)}
                           className="w-40 text-xs mx-auto"
+                          disabled={true}
                         />
                       </TableCell>
                       <TableCell className="text-center bg-green-50/50">
@@ -590,6 +593,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                           value={formatDateForInput(scadenza.scadenza_antiric_b)}
                           onChange={(e) => handleUpdateField(scadenza.id, "scadenza_antiric_b", e.target.value)}
                           className="w-40 text-xs mx-auto"
+                          disabled={true}
                         />
                       </TableCell>
                       <TableCell className="text-center bg-green-50/50">
