@@ -8,8 +8,8 @@ import { AlertCircle, Mail, Calendar, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type Cliente = Database["public"]["Tables"]["clienti"]["Row"];
-type Utente = Database["public"]["Tables"]["utenti"]["Row"];
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 interface ClienteWithDetails extends Cliente {
   utente_operatore?: Utente | null;
@@ -34,10 +34,10 @@ export default function Antiriciclaggio() {
       setLoading(true);
 
       const { data: clientiData, error: clientiError } = await supabase
-        .from("clienti")
+        .from("tbclienti")
         .select(`
           *,
-          utente_operatore:utenti!clienti_utente_operatore_id_fkey(*)
+          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey(*)
         `)
         .order("ragione_sociale");
 
@@ -49,18 +49,18 @@ export default function Antiriciclaggio() {
       for (const cliente of clientiData || []) {
         const urgentDeadlines: Array<{ tipo: string; giorni: number }> = [];
 
-        // Scadenza A
-        if (cliente.data_scadenza_a) {
-          const dataScadenzaA = new Date(cliente.data_scadenza_a);
+        // Scadenza A (scadenza_antiric)
+        if (cliente.scadenza_antiric) {
+          const dataScadenzaA = new Date(cliente.scadenza_antiric);
           const giorniRimanentiA = Math.ceil((dataScadenzaA.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
           if (giorniRimanentiA >= 0 && giorniRimanentiA < 15) {
             urgentDeadlines.push({ tipo: "A", giorni: giorniRimanentiA });
           }
         }
 
-        // Scadenza B
-        if (cliente.data_scadenza_b) {
-          const dataScadenzaB = new Date(cliente.data_scadenza_b);
+        // Scadenza B (scadenza_antiric_b)
+        if (cliente.scadenza_antiric_b) {
+          const dataScadenzaB = new Date(cliente.scadenza_antiric_b);
           const giorniRimanentiB = Math.ceil((dataScadenzaB.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
           if (giorniRimanentiB >= 0 && giorniRimanentiB < 15) {
             urgentDeadlines.push({ tipo: "B", giorni: giorniRimanentiB });
