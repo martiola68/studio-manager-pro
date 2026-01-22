@@ -38,6 +38,7 @@ export default function ScadenzeAntiriciclaggio() {
   const [filteredScadenze, setFilteredScadenze] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
   const { toast } = useToast();
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -98,7 +99,7 @@ export default function ScadenzeAntiriciclaggio() {
     }
   };
 
-  const sendUrgentEmailViaMailto = () => {
+  const sendUrgentEmailAutomatically = async () => {
     const urgent = filteredScadenze.filter(c => {
       const giorni_a = calculateDays(c.scadenza_antiric);
       const giorni_b = calculateDays(c.scadenza_antiric_b);
@@ -114,7 +115,6 @@ export default function ScadenzeAntiriciclaggio() {
       return;
     }
 
-    // Raggruppa clienti per operatore
     const clientsByOperator = urgent.reduce((acc, cliente) => {
       const operatorEmail = cliente.utente_operatore?.email;
       const operatorName = cliente.utente_operatore 
@@ -131,29 +131,28 @@ export default function ScadenzeAntiriciclaggio() {
         };
       }
 
+      const urgentDeadlines: Array<{ tipo: string; giorni: number }> = [];
       const giorni_a = calculateDays(cliente.scadenza_antiric);
       const giorni_b = calculateDays(cliente.scadenza_antiric_b);
 
-      const scadenze: string[] = [];
       if (giorni_a !== null && giorni_a < 15) {
-        scadenze.push(`Scad. A: ${giorni_a}gg`);
+        urgentDeadlines.push({ tipo: "A", giorni: giorni_a });
       }
       if (giorni_b !== null && giorni_b < 15) {
-        scadenze.push(`Scad. B: ${giorni_b}gg`);
+        urgentDeadlines.push({ tipo: "B", giorni: giorni_b });
       }
 
       acc[operatorEmail].clients.push({
         ragione_sociale: cliente.ragione_sociale,
-        scadenze: scadenze.join(" • ")
+        urgentDeadlines
       });
 
       return acc;
-    }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; scadenze: string }> }>);
+    }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; urgentDeadlines: Array<{ tipo: string; giorni: number }> }> }>);
 
-    // Costruisci email per ogni operatore
-    const operators = Object.values(clientsByOperator);
+    const alerts = Object.values(clientsByOperator);
     
-    if (operators.length === 0) {
+    if (alerts.length === 0) {
       toast({
         title: "Nessun operatore assegnato",
         description: "I clienti urgenti non hanno operatori fiscali assegnati.",
@@ -162,44 +161,40 @@ export default function ScadenzeAntiriciclaggio() {
       return;
     }
 
-    // Crea email body con tutti gli operatori e i loro clienti
-    const emailBody = operators.map(operator => {
-      const clientsList = operator.clients
-        .map(c => `- ${c.ragione_sociale}: ${c.scadenze}`)
-        .join("\n");
+    setSendingEmail(true);
 
-      return `Operatore: ${operator.operatorName} (${operator.operatorEmail})
-Clienti urgenti: ${operator.clients.length}
+    try {
+      const response = await fetch("/api/send-email-alert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ alerts }),
+      });
 
-${clientsList}`;
-    }).join("\n\n---\n\n");
+      const result = await response.json();
 
-    const subject = `⚠️ REPORT URGENTE SCADENZE ANTIRICICLAGGIO (${urgent.length})`;
-    const body = `Scadenze Antiriciclaggio Urgenti
+      if (!response.ok) {
+        throw new Error(result.details || result.error || "Errore invio email");
+      }
 
-Attenzione, rilevate scadenze urgenti (< 15 giorni):
-
-${emailBody}
-
----
-Email generata automaticamente dal sistema Studio Manager Pro
-Data: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })}`;
-
-    // Estrai email operatori per campo "to"
-    const operatorEmails = operators.map(op => op.operatorEmail).join(",");
-
-    // Crea link mailto con destinatari
-    const mailtoLink = `mailto:${operatorEmails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    // Apri client email
-    window.location.href = mailtoLink;
-
-    // Conferma
-    toast({
-      title: "Client email aperto",
-      description: `Report preparato per ${urgent.length} cliente/i (${operators.length} operatore/i). Completa l'invio dal tuo client email.`,
-      variant: "default"
-    });
+      toast({
+        title: "✓ Email inviate con successo",
+        description: `${result.sentCount} email inviate a ${alerts.length} operatore/i per ${urgent.length} cliente/i urgenti.`,
+        variant: "default",
+        duration: 6000
+      });
+    } catch (error) {
+      console.error("Error sending emails:", error);
+      toast({
+        title: "Errore invio email",
+        description: error instanceof Error ? error.message : "Errore sconosciuto. Verifica configurazione SMTP in .env.local",
+        variant: "destructive",
+        duration: 8000
+      });
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const loadScadenze = async () => {
@@ -309,12 +304,13 @@ Data: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })}`;
           <div className="flex gap-2">
             {urgentCount > 0 && (
               <Button
-                onClick={sendUrgentEmailViaMailto}
+                onClick={sendUrgentEmailAutomatically}
+                disabled={sendingEmail}
                 variant="destructive"
                 className="gap-2"
               >
                 <MailWarning className="h-4 w-4" />
-                Invia Alert ({urgentCount})
+                {sendingEmail ? "Invio..." : `Invia Alert (${urgentCount})`}
               </Button>
             )}
             <Button onClick={loadScadenze} variant="outline" className="gap-2">
