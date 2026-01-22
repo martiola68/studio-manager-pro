@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
-import { emailService } from "@/services/emailService";
 
 interface Cliente {
   id: string;
@@ -123,27 +122,45 @@ export default function AntiriciclaggioPage() {
 
     setSendingEmail(true);
     try {
-      // Construct email body
-      const rows = urgent.map(c => 
-        `- ${c.ragione_sociale}: Scad. A: ${c.giorni_scad_ver_a ?? '-'}gg, Scad. B: ${c.giorni_scad_ver_b ?? '-'}gg`
-      ).join('\n');
+      // Get current user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sessione non valida");
+      }
 
-      await emailService.sendEmail({
-        to: "operatore@studio.it", // In a real app, retrieve current user email
-        subject: `⚠️ REPORT URGENTE SCADENZE ANTIRICICLAGGIO (${urgent.length})`,
-        html: `<p>Attenzione, rilevate scadenze urgenti (< 15 giorni):</p><pre>${rows}</pre>`,
-        text: `Attenzione, rilevate scadenze urgenti (< 15 giorni):\n${rows}`
+      // Prepare urgent clients data
+      const urgentClients = urgent.map(c => ({
+        ragione_sociale: c.ragione_sociale,
+        giorni_a: c.giorni_scad_ver_a,
+        giorni_b: c.giorni_scad_ver_b
+      }));
+
+      // Call Next.js API route
+      const response = await fetch("/api/send-email-alert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ urgentClients })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Errore invio email");
+      }
+
+      const result = await response.json();
+      
       toast({
         title: "Email inviata",
-        description: "Report scadenze urgenti inviato all'operatore.",
+        description: `Report scadenze urgenti inviato a ${result.recipients?.join(", ") || "operatore"}.`,
       });
     } catch (error) {
       console.error("Errore invio email:", error);
       toast({
         title: "Errore invio email",
-        description: "Impossibile inviare il report.",
+        description: error instanceof Error ? error.message : "Impossibile inviare il report.",
         variant: "destructive"
       });
     } finally {
