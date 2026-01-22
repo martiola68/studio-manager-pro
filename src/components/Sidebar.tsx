@@ -149,14 +149,19 @@ export function Sidebar({
       ]
     },
     {
-      label: "Cassetti Fiscali",
-      icon: <FileText className="h-5 w-5" />,
-      href: "/cassetti-fiscali"
-    },
-    {
       label: "Comunicazioni",
       icon: <Mail className="h-5 w-5" />,
       href: "/comunicazioni"
+    },
+    {
+      label: "Accesso Portali",
+      icon: <Key className="h-5 w-5" />,
+      href: "/accesso-portali"
+    },
+    {
+      label: "Cassetti Fiscali",
+      icon: <FolderOpen className="h-5 w-5" />,
+      href: "/cassetti-fiscali"
     },
     {
       label: "Impostazioni",
