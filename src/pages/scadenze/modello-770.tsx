@@ -1,109 +1,65 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Search, Trash2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Save, RefreshCw, Edit, Trash2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Database } from "@/lib/supabase/types";
 
-type Scadenza770 = {
-  id: string;
-  nominativo: string;
-  utente_professionista_id?: string | null;
-  utente_operatore_id?: string | null;
-  utente_payroll_id?: string | null;
-  professionista_payroll_id?: string | null;
-  tipo_invio?: string | null;
-  modelli_770?: string | null;
-  mod_compilato?: boolean | null;
-  mod_definitivo?: boolean | null;
-  mod_inviato?: boolean | null;
-  ricevuta?: boolean | null;
-  conferma_riga?: boolean | null;
-  data_invio?: string | null;
-  note?: string | null;
-  created_at?: string | null;
-  tipo_scadenza_id?: string | null;
-  // Campi da JOIN
+type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
   cliente?: {
     settore?: string | null;
   } | null;
 };
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-type Utente = {
-  id: string;
-  nome: string;
-  cognome: string;
-};
+const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"];
 
-export default function Modello770Page() {
+export default function Scadenze770Page() {
+  const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [scadenze, setScadenze] = useState<Scadenza770[]>([]);
-  const [filteredScadenze, setFilteredScadenze] = useState<Scadenza770[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSettore, setFilterSettore] = useState("__all__");
   const [selectedAnno, setSelectedAnno] = useState<number>(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState("fiscale");
-  const [editingScadenza, setEditingScadenza] = useState<Scadenza770 | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadData();
-    loadUtenti();
+    checkAuthAndLoad();
   }, [selectedAnno]);
 
-  useEffect(() => {
-    filterData();
-  }, [scadenze, searchTerm, activeTab]);
-
-  const loadUtenti = async () => {
+  const checkAuthAndLoad = async () => {
     try {
-      const { data, error } = await supabase
-        .from("tbutenti")
-        .select("id, nome, cognome")
-        .eq("attivo", true)
-        .order("cognome");
-
-      if (error) throw error;
-      setUtenti(data || []);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      await loadData();
     } catch (error) {
-      console.error("Errore caricamento utenti:", error);
+      console.error("Errore:", error);
+      router.push("/login");
     }
   };
 
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      // NOTA: Poiché manca il campo 'anno' in tbscad770, filtriamo lato client o tramite join se necessario.
-      // Per ora carichiamo tutto e filtriamo in base a data_invio o assumiamo che i record siano dell'anno corrente
-      // In futuro si dovrebbe usare tipo_scadenza_id per filtrare l'anno corretto
-      
-      const { data, error } = await supabase
-        .from("tbscad770")
-        .select(`
-          *,
-          cliente:id (
-            settore
-          )
-        `)
-        .order("nominativo");
-
-      if (error) throw error;
-      
-      // Filtriamo per anno (simulato, in realtà dovremmo usare una logica migliore se il campo anno manca)
-      // Per ora mostriamo tutto
-      setScadenze(data || []);
+      const [scadenzeData, utentiData] = await Promise.all([
+        loadScadenze(),
+        loadUtenti()
+      ]);
+      setScadenze(scadenzeData);
+      setUtenti(utentiData);
     } catch (error) {
-      console.error("Errore caricamento 770:", error);
+      console.error("Errore caricamento:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
@@ -114,147 +70,86 @@ export default function Modello770Page() {
     }
   };
 
-  const filterData = () => {
-    let filtered = scadenze;
+  const loadScadenze = async (): Promise<Scadenza770[]> => {
+    const startDate = new Date(selectedAnno, 0, 1);
+    const endDate = new Date(selectedAnno, 11, 31, 23, 59, 59);
 
-    // Filtro per Tab (Settore)
-    // Usiamo il settore del cliente recuperato tramite JOIN
-    if (activeTab === "fiscale") {
-      filtered = filtered.filter(s => {
-        const settore = s.cliente?.settore;
-        return settore === "Fiscale" || settore === "Fiscale & Lavoro" || !settore;
-      });
-    } else {
-      filtered = filtered.filter(s => {
-        const settore = s.cliente?.settore;
-        return settore === "Lavoro" || settore === "Fiscale & Lavoro";
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(s => 
-        s.nominativo?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredScadenze(filtered);
+    const { data, error } = await supabase
+      .from("tbscad770")
+      .select(`
+        *,
+        cliente:tbclienti!id(settore)
+      `)
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString())
+      .order("nominativo", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
   };
 
-  const handleSyncClienti = async () => {
+  const loadUtenti = async (): Promise<Utente[]> => {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  };
+
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
-      setLoading(true);
+      const updates: any = {};
+      updates[field] = !currentValue;
       
-      const { data: clienti, error: clientiError } = await supabase
-        .from("tbclienti")
-        .select("id, ragione_sociale, settore, professionista_payroll_id, utente_payroll_id, utente_professionista_id, utente_operatore_id")
-        .eq("flag_770", true)
-        .eq("attivo", true);
-
-      if (clientiError) throw clientiError;
-
-      if (!clienti || clienti.length === 0) {
-        toast({
-          title: "Nessun cliente trovato",
-          description: "Nessun cliente attivo ha il flag 770 abilitato.",
-        });
-        return;
-      }
-
-      let insertedCount = 0;
-
-      for (const cliente of clienti) {
-        const exists = scadenze.some(s => s.id === cliente.id);
-        
-        if (!exists) {
-          const { error: insertError } = await supabase
-            .from("tbscad770")
-            .insert({
-              id: cliente.id,
-              nominativo: cliente.ragione_sociale,
-              utente_professionista_id: cliente.utente_professionista_id,
-              utente_operatore_id: cliente.utente_operatore_id,
-              utente_payroll_id: cliente.utente_payroll_id,
-              professionista_payroll_id: cliente.professionista_payroll_id
-            });
-
-          if (insertError) {
-            console.error(`Errore inserimento per ${cliente.ragione_sociale}:`, insertError);
-          } else {
-            insertedCount++;
-          }
-        }
-      }
-
-      if (insertedCount > 0) {
-        toast({
-          title: "Sincronizzazione completata",
-          description: `Inseriti ${insertedCount} nuovi clienti nello scadenzario.`,
-        });
-        await loadData();
-      } else {
-        toast({
-          title: "Sincronizzazione completata",
-          description: "Tutti i clienti con flag 770 sono già presenti nello scadenzario.",
-        });
-      }
-
-    } catch (error) {
-      console.error("Errore sincronizzazione:", error);
-      toast({
-        title: "Errore",
-        description: "Errore durante la sincronizzazione clienti",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!editingScadenza) return;
-
-    try {
       const { error } = await supabase
         .from("tbscad770")
-        .update({
-          nominativo: editingScadenza.nominativo,
-          utente_professionista_id: editingScadenza.utente_professionista_id,
-          utente_operatore_id: editingScadenza.utente_operatore_id,
-          utente_payroll_id: editingScadenza.utente_payroll_id,
-          professionista_payroll_id: editingScadenza.professionista_payroll_id,
-          tipo_invio: editingScadenza.tipo_invio,
-          modelli_770: editingScadenza.modelli_770,
-          mod_compilato: editingScadenza.mod_compilato,
-          mod_definitivo: editingScadenza.mod_definitivo,
-          mod_inviato: editingScadenza.mod_inviato,
-          ricevuta: editingScadenza.ricevuta,
-          conferma_riga: editingScadenza.conferma_riga,
-          data_invio: editingScadenza.data_invio,
-          note: editingScadenza.note
-        })
-        .eq("id", editingScadenza.id);
+        .update(updates)
+        .eq("id", scadenzaId);
 
       if (error) throw error;
 
+      await loadData();
       toast({
         title: "Successo",
-        description: "Scadenza aggiornata con successo"
+        description: "Campo aggiornato"
       });
-
-      setDialogOpen(false);
-      await loadData();
     } catch (error) {
-      console.error("Errore salvataggio:", error);
+      console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile salvare le modifiche",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+    try {
+      const updates: any = {};
+      updates[field] = value || null;
+      
+      const { error } = await supabase
+        .from("tbscad770")
+        .update(updates)
+        .eq("id", scadenzaId);
+
+      if (error) throw error;
+
+      await loadData();
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questa scadenza?")) return;
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
       const { error } = await supabase
@@ -266,461 +161,436 @@ export default function Modello770Page() {
 
       toast({
         title: "Successo",
-        description: "Scadenza eliminata con successo"
+        description: "Record eliminato"
       });
-
       await loadData();
     } catch (error) {
       console.error("Errore eliminazione:", error);
       toast({
         title: "Errore",
-        description: "Impossibile eliminare la scadenza",
+        description: "Impossibile eliminare il record",
         variant: "destructive"
       });
     }
   };
 
-  const openEditDialog = (scadenza: Scadenza770) => {
-    setEditingScadenza({ ...scadenza });
-    setDialogOpen(true);
+  const handleSyncClienti = async () => {
+    try {
+      setLoading(true);
+
+      const { data: clienti, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select("*")
+        .eq("flag_770", true);
+
+      if (clientiError) throw clientiError;
+
+      if (!clienti || clienti.length === 0) {
+        toast({
+          title: "Info",
+          description: "Nessun cliente con flag 770 attivo",
+          variant: "default"
+        });
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Utente non autenticato");
+
+      const { data: utenteData, error: utenteError } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", user.id)
+        .single();
+
+      if (utenteError) throw utenteError;
+
+      let inserted = 0;
+      for (const cliente of clienti) {
+        const record = {
+          id: cliente.id,
+          nominativo: cliente.ragione_sociale,
+          utente_professionista_id: cliente.utente_professionista_id,
+          utente_operatore_id: cliente.utente_operatore_id,
+          utente_payroll_id: cliente.utente_operatore_payroll_id,
+          professionista_payroll_id: cliente.utente_professionista_payroll_id,
+        };
+
+        const { error } = await supabase
+          .from("tbscad770")
+          .upsert(record, { onConflict: "id", ignoreDuplicates: true });
+
+        if (!error) inserted++;
+      }
+
+      toast({
+        title: "Successo",
+        description: `${inserted} clienti sincronizzati con successo`
+      });
+
+      await loadData();
+    } catch (error) {
+      console.error("Errore sincronizzazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile sincronizzare i clienti",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getUtenteNome = (utenteId?: string) => {
+  const filteredScadenze = scadenze.filter(s => {
+    const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
+    const settore = s.cliente?.settore || "";
+    const matchSettore = filterSettore === "__all__" || 
+      (filterSettore === "Fiscale" && (settore === "Fiscale" || settore === "Fiscale & Lavoro")) ||
+      (filterSettore === "Lavoro" && (settore === "Lavoro" || settore === "Fiscale & Lavoro"));
+    return matchSearch && matchSettore;
+  });
+
+  const getUtenteNome = (utenteId: string | null | undefined): string => {
     if (!utenteId) return "-";
     const utente = utenti.find(u => u.id === utenteId);
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
-          <p className="text-gray-500">Gestione Modello 770</p>
+          <p className="text-gray-500 mt-1">Gestione Modello 770</p>
         </div>
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center gap-2 bg-white p-2 rounded-md border">
-            <span className="text-sm font-medium">Anno:</span>
-            <Select 
-              value={selectedAnno.toString()} 
-              onValueChange={(val) => setSelectedAnno(parseInt(val))}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Label>Anno:</Label>
+            <Select
+              value={selectedAnno.toString()}
+              onValueChange={(value) => setSelectedAnno(parseInt(value))}
             >
-              <SelectTrigger className="w-24 h-8">
+              <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2026">2026</SelectItem>
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          
-          <Button onClick={handleSyncClienti} disabled={loading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button onClick={handleSyncClienti}>
+            <RefreshCw className="h-4 w-4 mr-2" />
             Sincronizza Clienti
           </Button>
         </div>
       </div>
 
       <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Cerca cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cerca Nominativo</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Settore</Label>
+              <Select value={filterSettore} onValueChange={setFilterSettore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  <SelectItem value="Fiscale">Fiscale</SelectItem>
+                  <SelectItem value="Lavoro">Lavoro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="fiscale">770 Rep Fiscale</TabsTrigger>
-          <TabsTrigger value="lavoro">770 Rep Lavoro</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="fiscale">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reparto Fiscale (Settore: Fiscale, Fiscale & Lavoro)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                <TableRow>
+                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                  <TableHead className="min-w-[120px]">Settore</TableHead>
+                  <TableHead className="min-w-[150px]">Prof. Fiscale</TableHead>
+                  <TableHead className="min-w-[150px]">Oper. Fiscale</TableHead>
+                  <TableHead className="min-w-[150px]">Prof. Payroll</TableHead>
+                  <TableHead className="min-w-[150px]">Oper. Payroll</TableHead>
+                  <TableHead className="min-w-[150px]">Tipo Invio</TableHead>
+                  <TableHead className="min-w-[150px]">Modelli 770</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Compilato</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Definitivo</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Inviato</TableHead>
+                  <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
+                  <TableHead className="min-w-[200px]">Note</TableHead>
+                  <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
+                  <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredScadenze.length === 0 ? (
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Settore</TableHead>
-                    <TableHead>Professionista</TableHead>
-                    <TableHead>Operatore</TableHead>
-                    <TableHead>Inviato</TableHead>
-                    <TableHead>Azioni</TableHead>
+                    <TableCell colSpan={16} className="text-center py-8 text-gray-500">
+                      Nessuna scadenza trovata
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredScadenze.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nessuna scadenza trovata
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredScadenze.map((scadenza) => (
-                      <TableRow key={scadenza.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openEditDialog(scadenza)}>
-                        <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
-                        <TableCell>{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
-                        <TableCell>{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
-                        <TableCell>
-                          {scadenza.mod_inviato ? (
-                            <span className="text-green-600 font-bold">✓</span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                ) : (
+                  filteredScadenze.map((scadenza) => {
+                    const isRicevuta = scadenza.ricevuta || false;
+                    const isConfermata = scadenza.conferma_riga || false;
+                    
+                    return (
+                      <TableRow 
+                        key={scadenza.id}
+                        className={isRicevuta ? "bg-green-50" : "bg-white hover:bg-gray-50"}
+                      >
+                        <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                          {scadenza.nominativo}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {scadenza.cliente?.settore || "-"}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditDialog(scadenza);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(scadenza.id);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
+                          <Select
+                            value={scadenza.utente_professionista_id || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "utente_professionista_id",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={scadenza.utente_operatore_id || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "utente_operatore_id",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={scadenza.professionista_payroll_id || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "professionista_payroll_id",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={scadenza.utente_payroll_id || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "utente_payroll_id",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={scadenza.tipo_invio || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "tipo_invio",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {TIPO_INVIO_OPTIONS.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="text"
+                            value={scadenza.modelli_770 || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "modelli_770", e.target.value)}
+                            className="w-full text-xs"
+                            disabled={isConfermata}
+                            placeholder="Es: 770 Semplificato"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_compilato || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_compilato", scadenza.mod_compilato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_definitivo || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_inviato || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Input
+                            type="date"
+                            value={scadenza.data_invio || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                            className="w-36 text-xs"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={isRicevuta}
+                            onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Textarea
+                            value={scadenza.note || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "note", e.target.value)}
+                            className="min-h-[60px] text-xs"
+                            disabled={isConfermata}
+                            placeholder="Note..."
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant={isConfermata ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                            className="w-full"
+                          >
+                            {isConfermata ? "✓ Chiusa" : "○ Aperta"}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(scadenza.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="lavoro">
-          <Card>
-            <CardHeader>
-              <CardTitle>Reparto Lavoro (Settore: Lavoro, Fiscale & Lavoro)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Settore</TableHead>
-                    <TableHead>Professionista Payroll</TableHead>
-                    <TableHead>Operatore Payroll</TableHead>
-                    <TableHead>Inviato</TableHead>
-                    <TableHead>Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredScadenze.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        Nessuna scadenza trovata
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredScadenze.map((scadenza) => (
-                      <TableRow key={scadenza.id} className="cursor-pointer hover:bg-gray-50" onClick={() => openEditDialog(scadenza)}>
-                        <TableCell className="font-medium">{scadenza.nominativo}</TableCell>
-                        <TableCell>{scadenza.cliente?.settore || "-"}</TableCell>
-                        <TableCell>{getUtenteNome(scadenza.professionista_payroll_id)}</TableCell>
-                        <TableCell>{getUtenteNome(scadenza.utente_payroll_id)}</TableCell>
-                        <TableCell>
-                          {scadenza.mod_inviato ? (
-                            <span className="text-green-600 font-bold">✓</span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditDialog(scadenza);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(scadenza.id);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Modifica Scadenza 770</DialogTitle>
-          </DialogHeader>
-          
-          {editingScadenza && (
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nominativo</Label>
-                  <Input
-                    value={editingScadenza.nominativo}
-                    onChange={(e) => setEditingScadenza({ ...editingScadenza, nominativo: e.target.value })}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Settore (dal Cliente)</Label>
-                  <Input
-                    value={editingScadenza.cliente?.settore || "N/D"}
-                    disabled
-                    className="bg-gray-100"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-4">Reparto Fiscale</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Professionista Fiscale</Label>
-                    <Select
-                      value={editingScadenza.utente_professionista_id || ""}
-                      onValueChange={(val) => setEditingScadenza({ ...editingScadenza, utente_professionista_id: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona professionista" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Operatore Fiscale</Label>
-                    <Select
-                      value={editingScadenza.utente_operatore_id || ""}
-                      onValueChange={(val) => setEditingScadenza({ ...editingScadenza, utente_operatore_id: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona operatore" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-4">Reparto Lavoro (Payroll)</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Professionista Payroll</Label>
-                    <Select
-                      value={editingScadenza.professionista_payroll_id || ""}
-                      onValueChange={(val) => setEditingScadenza({ ...editingScadenza, professionista_payroll_id: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona professionista payroll" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Operatore Payroll</Label>
-                    <Select
-                      value={editingScadenza.utente_payroll_id || ""}
-                      onValueChange={(val) => setEditingScadenza({ ...editingScadenza, utente_payroll_id: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona operatore payroll" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {utenti.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.nome} {u.cognome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-4">Dettagli Invio</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tipo Invio</Label>
-                    <Select
-                      value={editingScadenza.tipo_invio || ""}
-                      onValueChange={(val) => setEditingScadenza({ ...editingScadenza, tipo_invio: val })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona tipo invio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Ordinario">Ordinario</SelectItem>
-                        <SelectItem value="Correttivo">Correttivo</SelectItem>
-                        <SelectItem value="Integrativo">Integrativo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Modelli 770</Label>
-                    <Input
-                      value={editingScadenza.modelli_770 || ""}
-                      onChange={(e) => setEditingScadenza({ ...editingScadenza, modelli_770: e.target.value })}
-                      placeholder="Es: 770 Semplificato, 770 Ordinario"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-4">Stato e Date</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingScadenza.mod_compilato || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_compilato: checked as boolean })}
-                    />
-                    <Label>Compilato</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingScadenza.mod_definitivo || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_definitivo: checked as boolean })}
-                    />
-                    <Label>Definitivo</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingScadenza.mod_inviato || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, mod_inviato: checked as boolean })}
-                    />
-                    <Label>Inviato</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editingScadenza.ricevuta || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, ricevuta: checked as boolean })}
-                    />
-                    <Label>Ricevuta</Label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data Invio</Label>
-                    <Input
-                      type="date"
-                      value={editingScadenza.data_invio || ""}
-                      onChange={(e) => setEditingScadenza({ ...editingScadenza, data_invio: e.target.value })}
-                    />
-                  </div>
-                  
-                   <div className="flex items-center space-x-2 mt-8">
-                    <Checkbox
-                      checked={editingScadenza.conferma_riga || false}
-                      onCheckedChange={(checked) => setEditingScadenza({ ...editingScadenza, conferma_riga: checked as boolean })}
-                    />
-                    <Label className="font-bold">Conferma Riga (Completato)</Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Note</Label>
-                <Textarea
-                  value={editingScadenza.note || ""}
-                  onChange={(e) => setEditingScadenza({ ...editingScadenza, note: e.target.value })}
-                  rows={4}
-                  placeholder="Inserisci eventuali note..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Annulla
-                </Button>
-                <Button onClick={handleSave}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Salva
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

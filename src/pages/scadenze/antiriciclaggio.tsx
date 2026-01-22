@@ -50,6 +50,13 @@ export default function ScadenzeAntiriciclaggioPage() {
     ok: 0
   });
 
+  // Helper per formattare la data per l'input type="date" (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString) return "";
+    // Se è già solo data YYYY-MM-DD va bene, altrimenti prendi la prima parte
+    return dateString.split('T')[0];
+  };
+
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -529,7 +536,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableCell className="text-center bg-blue-50/50">
                         <Input
                           type="date"
-                          value={scadenza.data_ultima_verifica || ""}
+                          value={formatDateForInput(scadenza.data_ultima_verifica)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica", e.target.value)}
                           className="w-40 text-xs mx-auto"
                         />
@@ -537,7 +544,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableCell className="text-center bg-blue-50/50">
                         <Input
                           type="date"
-                          value={scadenza.data_scadenza || ""}
+                          value={formatDateForInput(scadenza.data_scadenza)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_scadenza", e.target.value)}
                           className="w-40 text-xs mx-auto"
                         />
@@ -572,7 +579,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableCell className="text-center bg-green-50/50">
                         <Input
                           type="date"
-                          value={scadenza.data_ultima_verifica_b || ""}
+                          value={formatDateForInput(scadenza.data_ultima_verifica_b)}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica_b", e.target.value)}
                           className="w-40 text-xs mx-auto"
                         />
@@ -580,7 +587,7 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableCell className="text-center bg-green-50/50">
                         <Input
                           type="date"
-                          value={scadenza.scadenza_antiric_b || ""}
+                          value={formatDateForInput(scadenza.scadenza_antiric_b)}
                           onChange={(e) => handleUpdateField(scadenza.id, "scadenza_antiric_b", e.target.value)}
                           className="w-40 text-xs mx-auto"
                         />
