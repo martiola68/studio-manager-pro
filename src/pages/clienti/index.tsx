@@ -148,6 +148,8 @@ export default function ClientiPage() {
   const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  // Defined BEFORE formData to avoid initialization errors if needed, 
+  // though we removed dependency in useState to fix TS errors.
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
     cu: true,
@@ -200,18 +202,6 @@ export default function ClientiPage() {
     scadenza_antiric_b: undefined as Date | undefined,
     gestione_antiriciclaggio: false,
     note_antiriciclaggio: "",
-        
-        // Save flags
-        flag_iva: scadenzari.iva,
-        flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_fiscali: scadenzari.fiscali,
-        flag_lipe: scadenzari.lipe,
-        flag_770: scadenzari.modello_770,
-        flag_esterometro: scadenzari.esterometro,
-        flag_ccgg: scadenzari.ccgg,
-        flag_proforma: scadenzari.proforma,
-        flag_imu: scadenzari.imu,
   });
 
   const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
@@ -221,26 +211,51 @@ export default function ClientiPage() {
   });
 
   const handleRiskChange = (
-    blocco: "A" | "B",
-    rischio: "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo"
+    value: string,
+    field: "rischio_ver_a" | "rischio_ver_b"
   ) => {
-    const mesi = RISK_TO_MONTHS[rischio];
-    if (blocco === "A") {
-      setFormData(prev => {
-        const updated = { ...prev, rischio_ver_a: rischio, gg_ver_a: mesi };
-        if (updated.data_ultima_verifica_antiric && mesi) {
-          updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, mesi);
-        }
-        return updated;
-      });
+    // Calcola giorni in base al rischio
+    let days = 0;
+    // Cast value to match specific string literal type
+    const riskValue = value as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
+
+    switch (riskValue) {
+      case "Non significativo":
+        days = 365 * 5; // 5 anni
+        break;
+      case "Poco significativo":
+        days = 365 * 3; // 3 anni
+        break;
+      case "Abbastanza significativo":
+        days = 365 * 2; // 2 anni
+        break;
+      case "Molto significativo":
+        days = 365; // 1 anno
+        break;
+      default:
+        days = 0;
+    }
+
+    const today = new Date();
+    const scadenza = new Date(today);
+    scadenza.setDate(today.getDate() + days);
+
+    if (field === "rischio_ver_a") {
+      setFormData((prev) => ({
+        ...prev,
+        rischio_ver_a: riskValue,
+        gg_ver_a: days,
+        data_ultima_verifica_antiric: today,
+        scadenza_antiric: scadenza,
+      }));
     } else {
-      setFormData(prev => {
-        const updated = { ...prev, rischio_ver_b: rischio, gg_ver_b: mesi };
-        if (updated.data_ultima_verifica_b && mesi) {
-          updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, mesi);
-        }
-        return updated;
-      });
+      setFormData((prev) => ({
+        ...prev,
+        rischio_ver_b: riskValue,
+        gg_ver_b: days,
+        data_ultima_verifica_b: today,
+        scadenza_antiric_b: scadenza,
+      }));
     }
   };
 
@@ -417,7 +432,7 @@ export default function ClientiPage() {
         gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
         note_antiriciclaggio: formData.note_antiriciclaggio,
         
-        // Save flags
+        // Save flags from scadenzari state
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
         flag_bilancio: scadenzari.bilancio,
@@ -618,10 +633,12 @@ export default function ClientiPage() {
             conferma_riga: false
           }, { onConflict: "id" }).then()
         ];
+        
+        inserimenti.push(...promises);
       }
 
-      // Antiriciclaggio gestito direttamente su tbclienti
-      if (cliente.flag_fiscali) {
+      // Antiriciclaggio gestito direttamente su tbclienti tramite flag gestione_antiriciclaggio
+      if (cliente.gestione_antiriciclaggio) {
         scadenzariAttivi.push("Antiriciclaggio");
       }
 
@@ -757,16 +774,6 @@ export default function ClientiPage() {
       scadenza_antiric_b: undefined,
       gestione_antiriciclaggio: false,
       note_antiriciclaggio: "",
-      flag_iva: true,
-      flag_cu: true,
-      flag_bilancio: true,
-      flag_fiscali: true,
-      flag_lipe: true,
-      flag_770: true,
-      flag_esterometro: true,
-      flag_ccgg: true,
-      flag_proforma: true,
-      flag_imu: true,
     });
     setScadenzari({
       iva: true,
@@ -1896,7 +1903,7 @@ export default function ClientiPage() {
               </h3>
               
               <div className="space-y-6">
-                <Card className={`bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
+                <Card className={`bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-blue-600" />
@@ -1933,12 +1940,8 @@ export default function ClientiPage() {
                           value={formData.rischio_ver_a || ""}
                           onValueChange={(value) =>
                             handleRiskChange(
-                              "A",
-                              value as
-                                | "Non significativo"
-                                | "Poco significativo"
-                                | "Abbastanza significativo"
-                                | "Molto significativo"
+                              value,
+                              "rischio_ver_a"
                             )
                           }
                           disabled={!formData.gestione_antiriciclaggio}
@@ -1998,7 +2001,7 @@ export default function ClientiPage() {
                   </CardContent>
                 </Card>
 
-                <Card className={`bg-green-50 dark:bg-green-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
+                <Card className={`bg-green-50 dark:bg-green-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-green-600" />
@@ -2035,12 +2038,8 @@ export default function ClientiPage() {
                           value={formData.rischio_ver_b || ""}
                           onValueChange={(value) =>
                             handleRiskChange(
-                              "B",
-                              value as
-                                | "Non significativo"
-                                | "Poco significativo"
-                                | "Abbastanza significativo"
-                                | "Molto significativo"
+                              value,
+                              "rischio_ver_b"
                             )
                           }
                           disabled={!formData.gestione_antiriciclaggio}
@@ -2098,7 +2097,7 @@ export default function ClientiPage() {
                       </div>
                     </div>
 
-                    <div className={`mt-4 ${!formData.gestione_antiriciclaggio ? "opacity-60 grayscale" : ""}`}>
+                    <div className={`mt-4 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
                       <Label htmlFor="note_antiriciclaggio">Note Antiriciclaggio</Label>
                       <Textarea
                         id="note_antiriciclaggio"
