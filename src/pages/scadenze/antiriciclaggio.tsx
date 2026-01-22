@@ -14,19 +14,23 @@ interface Cliente {
   id: string;
   cod_cliente: string;
   ragione_sociale: string;
-  codice_fiscale?: string | null;
-  partita_iva?: string | null;
-  tipo_prestazione_a?: string | null;
-  rischio_ver_a?: string | null;
-  data_ultima_verifica_antiric?: string | null;
-  scadenza_antiric?: string | null;
-  giorni_scad_ver_a?: number | null;
-  tipo_prestazione_b?: string | null;
-  rischio_ver_b?: string | null;
-  data_ultima_verifica_b?: string | null;
-  scadenza_antiric_b?: string | null;
-  giorni_scad_ver_b?: number | null;
-  note_antiriciclaggio?: string | null;
+  tipo_prestazione_a: string | null;
+  rischio_ver_a: string | null;
+  data_ultima_verifica_antiric: string | null;
+  scadenza_antiric: string | null;
+  giorni_scad_ver_a: number | null;
+  tipo_prestazione_b: string | null;
+  rischio_ver_b: string | null;
+  data_ultima_verifica_b: string | null;
+  scadenza_antiric_b: string | null;
+  giorni_scad_ver_b: number | null;
+  note_antiriciclaggio: string | null;
+  utente_operatore_id: string | null;
+  utente_operatore?: {
+    nome: string;
+    cognome: string;
+    email: string;
+  } | null;
 }
 
 export default function ScadenzeAntiriciclaggio() {
@@ -67,9 +71,7 @@ export default function ScadenzeAntiriciclaggio() {
       const filtered = scadenze.filter(
         (c) =>
           c.ragione_sociale?.toLowerCase().includes(term) ||
-          c.cod_cliente?.toLowerCase().includes(term) ||
-          c.codice_fiscale?.toLowerCase().includes(term) ||
-          c.partita_iva?.toLowerCase().includes(term)
+          c.cod_cliente?.toLowerCase().includes(term)
       );
       setFilteredScadenze(filtered);
     }
@@ -96,7 +98,7 @@ export default function ScadenzeAntiriciclaggio() {
     }
   };
 
-  const sendUrgentEmailViaMailto = () => {
+  const sendUrgentEmail = async () => {
     const urgent = filteredScadenze.filter(c => {
       const giorni_a = calculateDays(c.scadenza_antiric);
       const giorni_b = calculateDays(c.scadenza_antiric_b);
@@ -112,41 +114,73 @@ export default function ScadenzeAntiriciclaggio() {
       return;
     }
 
-    const rows = urgent
-      .map((c) => {
-        const parts = [`- ${c.ragione_sociale}:`];
-        const giorni_a = calculateDays(c.scadenza_antiric);
-        const giorni_b = calculateDays(c.scadenza_antiric_b);
-        
-        if (giorni_a !== null && giorni_a < 15) {
-          parts.push(`Scad. A: ${giorni_a}gg`);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Errore",
+          description: "Sessione non valida. Effettua nuovamente il login.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Raggruppa clienti per operatore
+      const clientsByOperator = urgent.reduce((acc, cliente) => {
+        const operatorEmail = cliente.utente_operatore?.email;
+        if (!operatorEmail) return acc;
+
+        if (!acc[operatorEmail]) {
+          acc[operatorEmail] = {
+            operatorName: `${cliente.utente_operatore?.nome || ""} ${cliente.utente_operatore?.cognome || ""}`.trim(),
+            operatorEmail: operatorEmail,
+            clients: []
+          };
         }
-        if (giorni_b !== null && giorni_b < 15) {
-          parts.push(`Scad. B: ${giorni_b}gg`);
-        }
-        return parts.join(" ");
-      })
-      .join("\n");
 
-    const subject = `⚠️ REPORT URGENTE SCADENZE ANTIRICICLAGGIO (${urgent.length})`;
-    const body = `Scadenze Antiriciclaggio Urgenti
+        const giorni_a = calculateDays(cliente.scadenza_antiric);
+        const giorni_b = calculateDays(cliente.scadenza_antiric_b);
 
-Attenzione, rilevate scadenze urgenti (< 15 giorni):
+        acc[operatorEmail].clients.push({
+          ragione_sociale: cliente.ragione_sociale,
+          giorni_a: giorni_a !== null && giorni_a < 15 ? giorni_a : null,
+          giorni_b: giorni_b !== null && giorni_b < 15 ? giorni_b : null
+        });
 
-${rows}
+        return acc;
+      }, {} as Record<string, { operatorName: string; operatorEmail: string; clients: Array<{ ragione_sociale: string; giorni_a: number | null; giorni_b: number | null }> }>);
 
----
-Email generata automaticamente dal sistema Studio Manager Pro`;
+      // Invia email per ogni operatore
+      const operators = Object.values(clientsByOperator);
+      
+      const response = await fetch("/api/send-email-alert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ operators })
+      });
 
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    window.location.href = mailtoLink;
+      const result = await response.json();
 
-    toast({
-      title: "Client email aperto",
-      description: `Report preparato per ${urgent.length} clienti. Completa l'invio dal tuo client email.`,
-      variant: "default"
-    });
+      if (!response.ok) {
+        throw new Error(result.error || "Errore nell'invio dell'email");
+      }
+
+      toast({
+        title: "✅ Email inviate",
+        description: `Report inviato a ${operators.length} operatore/i con ${urgent.length} cliente/i urgente/i`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast({
+        title: "Errore invio email",
+        description: error instanceof Error ? error.message : "Errore sconosciuto",
+        variant: "destructive"
+      });
+    }
   };
 
   const loadScadenze = async () => {
@@ -159,8 +193,6 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
           id,
           cod_cliente,
           ragione_sociale,
-          codice_fiscale,
-          partita_iva,
           tipo_prestazione_a,
           rischio_ver_a,
           data_ultima_verifica_antiric,
@@ -171,7 +203,13 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
           data_ultima_verifica_b,
           scadenza_antiric_b,
           giorni_scad_ver_b,
-          note_antiriciclaggio
+          note_antiriciclaggio,
+          utente_operatore_id,
+          tbutenti!tbclienti_utente_operatore_id_fkey (
+            nome,
+            cognome,
+            email
+          )
         `
         )
         .eq("gestione_antiriciclaggio", true)
@@ -181,6 +219,7 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
 
       const clientiWithCalculatedDays = (data || []).map(c => ({
         ...c,
+        utente_operatore: c.tbutenti,
         giorni_scad_ver_a: calculateDays(c.scadenza_antiric),
         giorni_scad_ver_b: calculateDays(c.scadenza_antiric_b)
       }));
@@ -202,8 +241,9 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
   const exportExcel = () => {
     const dataToExport = filteredScadenze.map((s) => ({
       Cliente: s.ragione_sociale,
-      "Codice Fiscale": s.codice_fiscale || "",
-      "Partita IVA": s.partita_iva || "",
+      "Utente Fiscale": s.utente_operatore 
+        ? `${s.utente_operatore.nome} ${s.utente_operatore.cognome}`
+        : "",
       "Prestazione A": s.tipo_prestazione_a || "",
       "Rischio A": s.rischio_ver_a || "",
       "Data Verifica A": s.data_ultima_verifica_antiric ? format(new Date(s.data_ultima_verifica_antiric), "dd/MM/yyyy") : "",
@@ -250,7 +290,7 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
           <div className="flex gap-2">
             {urgentCount > 0 && (
               <Button
-                onClick={sendUrgentEmailViaMailto}
+                onClick={sendUrgentEmail}
                 variant="destructive"
                 className="gap-2"
               >
@@ -272,7 +312,7 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
         <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
           <Search className="h-5 w-5 text-gray-400" />
           <Input
-            placeholder="Cerca per ragione sociale, codice fiscale, partita IVA..."
+            placeholder="Cerca per ragione sociale, codice cliente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1"
@@ -290,7 +330,7 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">Cliente</TableHead>
-                  <TableHead>CF/P.IVA</TableHead>
+                  <TableHead>Utente Fiscale</TableHead>
                   <TableHead>Prestazione A</TableHead>
                   <TableHead>Rischio A</TableHead>
                   <TableHead>Data Ver. A</TableHead>
@@ -328,14 +368,9 @@ Email generata automaticamente dal sistema Studio Manager Pro`;
                           {cliente.ragione_sociale}
                         </TableCell>
                         <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                          <div className="space-y-1">
-                            {cliente.codice_fiscale && (
-                              <div>CF: {cliente.codice_fiscale}</div>
-                            )}
-                            {cliente.partita_iva && (
-                              <div>P.IVA: {cliente.partita_iva}</div>
-                            )}
-                          </div>
+                          {cliente.utente_operatore 
+                            ? `${cliente.utente_operatore.nome} ${cliente.utente_operatore.cognome}`
+                            : "-"}
                         </TableCell>
 
                         {/* Blocco A */}
