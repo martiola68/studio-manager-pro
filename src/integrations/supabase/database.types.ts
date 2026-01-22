@@ -285,6 +285,7 @@ export type Database = {
           flag_mail_newsletter: boolean | null
           flag_mail_scadenze: boolean | null
           flag_proforma: boolean | null
+          gestione_antiriciclaggio: boolean | null
           gg_ver_a: number | null
           gg_ver_b: number | null
           id: string
@@ -340,6 +341,7 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gestione_antiriciclaggio?: boolean | null
           gg_ver_a?: number | null
           gg_ver_b?: number | null
           id?: string
@@ -395,6 +397,7 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gestione_antiriciclaggio?: boolean | null
           gg_ver_a?: number | null
           gg_ver_b?: number | null
           id?: string
@@ -1065,76 +1068,6 @@ export type Database = {
           {
             foreignKeyName: "tbscad770_utente_professionista_id_fkey"
             columns: ["utente_professionista_id"]
-            isOneToOne: false
-            referencedRelation: "tbutenti"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tbscadantiric: {
-        Row: {
-          created_at: string | null
-          data_scadenza: string | null
-          data_ultima_verifica: string | null
-          data_ultima_verifica_b: string | null
-          id: string
-          nominativo: string
-          note: string | null
-          scadenza_antiric_b: string | null
-          tipo_prestazione_a: string | null
-          tipo_prestazione_b: string | null
-          tipo_scadenza_id: string | null
-          updated_at: string | null
-          utente_operatore_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          data_scadenza?: string | null
-          data_ultima_verifica?: string | null
-          data_ultima_verifica_b?: string | null
-          id: string
-          nominativo: string
-          note?: string | null
-          scadenza_antiric_b?: string | null
-          tipo_prestazione_a?: string | null
-          tipo_prestazione_b?: string | null
-          tipo_scadenza_id?: string | null
-          updated_at?: string | null
-          utente_operatore_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          data_scadenza?: string | null
-          data_ultima_verifica?: string | null
-          data_ultima_verifica_b?: string | null
-          id?: string
-          nominativo?: string
-          note?: string | null
-          scadenza_antiric_b?: string | null
-          tipo_prestazione_a?: string | null
-          tipo_prestazione_b?: string | null
-          tipo_scadenza_id?: string | null
-          updated_at?: string | null
-          utente_operatore_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tbscadantiric_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "tbclienti"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tbscadantiric_tipo_scadenza_id_fkey"
-            columns: ["tipo_scadenza_id"]
-            isOneToOne: false
-            referencedRelation: "tbtipi_scadenze"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tbscadantiric_utente_operatore_id_fkey"
-            columns: ["utente_operatore_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
             referencedColumns: ["id"]

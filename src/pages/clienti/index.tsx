@@ -604,16 +604,9 @@ export default function ClientiPage() {
         ];
       }
 
-      // Antiriciclaggio - NOTA: questa tabella ha una struttura diversa
+      // Antiriciclaggio gestito direttamente su tbclienti
       if (cliente.flag_fiscali) {
         scadenzariAttivi.push("Antiriciclaggio");
-        inserimenti.push(
-          supabase.from("tbscadantiric").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            utente_operatore_id: cliente.utente_operatore_id,
-          }, { onConflict: "id" }).then()
-        );
       }
 
       if (scadenzariAttivi.length === 0) {
