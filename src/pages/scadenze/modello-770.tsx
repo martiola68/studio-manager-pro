@@ -212,8 +212,9 @@ export default function Scadenze770Page() {
           nominativo: cliente.ragione_sociale,
           utente_professionista_id: cliente.utente_professionista_id,
           utente_operatore_id: cliente.utente_operatore_id,
-          utente_payroll_id: cliente.utente_operatore_payroll_id,
-          professionista_payroll_id: cliente.utente_professionista_payroll_id,
+          utente_payroll_id: null,
+          professionista_payroll_id: cliente.professionista_payroll_id,
+          tipo_invio: null,
         };
 
         const { error } = await supabase
