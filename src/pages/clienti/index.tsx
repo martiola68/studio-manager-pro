@@ -185,6 +185,18 @@ export default function ClientiPage() {
     scadenza_antiric: undefined as Date | undefined,
     data_ultima_verifica_b: undefined as Date | undefined,
     scadenza_antiric_b: undefined as Date | undefined,
+        
+        // Save flags
+        flag_iva: scadenzari.iva,
+        flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilancio,
+        flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
+        flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
+        flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
+        flag_imu: scadenzari.imu,
   });
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
