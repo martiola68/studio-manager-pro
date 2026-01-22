@@ -1,9 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/router";
-import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
-import TopNavBar from "@/components/TopNavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,25 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, ExternalLink, Eye, EyeOff, Key } from "lucide-react";
 import { credenzialiAccessoService } from "@/services/credenzialiAccessoService";
+import type { Database } from "@/integrations/supabase/types";
 
-type CredenzialeAccesso = {
-  id: string;
-  portale: string;
-  indirizzo_url: string | null;
-  login_utente: string | null;
-  login_pw: string | null;
-  login_pin: string | null;
-  note: string | null;
-  studio_id: string | null;
-  created_by: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
+type CredenzialeAccesso = Database["public"]["Tables"]["tbcredenziali_accesso"]["Row"];
 
 export default function AccessoPortaliPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [credenziali, setCredenziali] = useState<CredenzialeAccesso[]>([]);
   const [filteredCredenziali, setFilteredCredenziali] = useState<CredenzialeAccesso[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,10 +94,11 @@ export default function AccessoPortaliPage() {
       return;
     }
 
+    const term = searchTerm.toLowerCase();
     const filtered = credenziali.filter((cred) =>
-      cred.portale.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cred.indirizzo_url && cred.indirizzo_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (cred.login_utente && cred.login_utente.toLowerCase().includes(searchTerm.toLowerCase()))
+      cred.portale.toLowerCase().includes(term) ||
+      (cred.indirizzo_url && cred.indirizzo_url.toLowerCase().includes(term)) ||
+      (cred.login_utente && cred.login_utente.toLowerCase().includes(term))
     );
     setFilteredCredenziali(filtered);
   };
@@ -160,6 +146,15 @@ export default function AccessoPortaliPage() {
       toast({
         title: "Errore",
         description: "Il nome del portale è obbligatorio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!studioId) {
+      toast({
+        title: "Errore",
+        description: "Studio non identificato",
         variant: "destructive",
       });
       return;
@@ -226,7 +221,12 @@ export default function AccessoPortaliPage() {
       return;
     }
 
-    window.open(credenziale.indirizzo_url, "_blank", "noopener,noreferrer");
+    let url = credenziale.indirizzo_url || "";
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const toggleShowPassword = (id: string) => {
@@ -234,182 +234,174 @@ export default function AccessoPortaliPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        <TopNavBar />
-
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <Key className="w-8 h-8 text-blue-600" />
-                  Accesso Portali
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  Gestione credenziali di accesso ai portali esterni
-                </p>
-              </div>
-              <Button onClick={() => handleOpenDialog()} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nuova Credenziale
-              </Button>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-gray-400" />
-                <Input
-                  placeholder="Cerca per portale, URL o username..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[200px]">Portale</TableHead>
-                    <TableHead className="w-[250px]">URL</TableHead>
-                    <TableHead className="w-[150px]">Username</TableHead>
-                    <TableHead className="w-[150px]">Password</TableHead>
-                    <TableHead className="w-[100px]">PIN</TableHead>
-                    <TableHead>Note</TableHead>
-                    <TableHead className="text-right w-[200px]">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        Caricamento in corso...
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredCredenziali.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        {searchTerm ? "Nessuna credenziale trovata" : "Nessuna credenziale inserita"}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCredenziali.map((cred) => (
-                      <TableRow key={cred.id}>
-                        <TableCell className="font-medium">{cred.portale}</TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {cred.indirizzo_url ? (
-                            <a
-                              href={cred.indirizzo_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center gap-1"
-                            >
-                              {cred.indirizzo_url.substring(0, 40)}
-                              {cred.indirizzo_url.length > 40 ? "..." : ""}
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">{cred.login_utente || "-"}</TableCell>
-                        <TableCell className="text-sm">
-                          {cred.login_pw ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono">
-                                {showPassword[cred.id] ? cred.login_pw : "••••••••"}
-                              </span>
-                              <button
-                                onClick={() => toggleShowPassword(cred.id)}
-                                className="text-gray-400 hover:text-gray-600"
-                              >
-                                {showPassword[cred.id] ? (
-                                  <EyeOff className="w-4 h-4" />
-                                ) : (
-                                  <Eye className="w-4 h-4" />
-                                )}
-                              </button>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">{cred.login_pin || "-"}</TableCell>
-                        <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
-                          {cred.note || "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {cred.indirizzo_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleLogin(cred)}
-                                className="gap-1"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                                Login
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenDialog(cred)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(cred.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                💡 <strong>Suggerimento:</strong> Usa il pulsante "Login" per aprire direttamente il portale in una nuova scheda del browser.
-              </p>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Key className="w-8 h-8 text-blue-600" />
+            Accesso Portali
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Gestione credenziali di accesso ai portali esterni
+          </p>
         </div>
-      </main>
+        <Button onClick={() => handleOpenDialog()} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nuova Credenziale
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex items-center gap-2">
+          <Search className="w-5 h-5 text-gray-400" />
+          <Input
+            placeholder="Cerca per portale, URL o username..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-400"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Portale</TableHead>
+              <TableHead className="w-[250px]">URL</TableHead>
+              <TableHead className="w-[150px]">Username</TableHead>
+              <TableHead className="w-[150px]">Password</TableHead>
+              <TableHead className="w-[100px]">PIN</TableHead>
+              <TableHead>Note</TableHead>
+              <TableHead className="text-right w-[200px]">Azioni</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  Caricamento in corso...
+                </TableCell>
+              </TableRow>
+            ) : filteredCredenziali.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  {searchTerm ? "Nessuna credenziale trovata" : "Nessuna credenziale inserita"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCredenziali.map((cred) => (
+                <TableRow key={cred.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                        {cred.portale.substring(0, 2).toUpperCase()}
+                      </div>
+                      {cred.portale}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {cred.indirizzo_url ? (
+                      <a
+                        href={cred.indirizzo_url.startsWith("http") ? cred.indirizzo_url : `https://${cred.indirizzo_url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {cred.indirizzo_url.replace(/^https?:\/\//, "").substring(0, 30)}
+                        {cred.indirizzo_url.length > 30 ? "..." : ""}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm">{cred.login_utente || "-"}</TableCell>
+                  <TableCell className="text-sm">
+                    {cred.login_pw ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">
+                          {showPassword[cred.id] ? cred.login_pw : "••••••••"}
+                        </span>
+                        <button
+                          onClick={() => toggleShowPassword(cred.id)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword[cred.id] ? (
+                            <EyeOff className="w-3 h-3" />
+                          ) : (
+                            <Eye className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm font-mono text-xs">{cred.login_pin || "-"}</TableCell>
+                  <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
+                    {cred.note || "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {cred.indirizzo_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleLogin(cred)}
+                          className="gap-1 h-8 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Login
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleOpenDialog(cred)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Pencil className="w-4 h-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(cred.id)}
+                        className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingCredenziale ? "Modifica Credenziale" : "Nuova Credenziale"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="portale">Nome Portale *</Label>
               <Input
                 id="portale"
                 value={formData.portale}
                 onChange={(e) => setFormData({ ...formData, portale: e.target.value })}
-                placeholder="Es: Agenzia delle Entrate, INPS, ecc."
+                placeholder="Es: Agenzia delle Entrate"
               />
             </div>
 
             <div>
-              <Label htmlFor="indirizzo_url">URL Portale</Label>
+              <Label htmlFor="indirizzo_url">URL Login</Label>
               <Input
                 id="indirizzo_url"
                 type="url"
@@ -426,7 +418,7 @@ export default function AccessoPortaliPage() {
                   id="login_utente"
                   value={formData.login_utente}
                   onChange={(e) => setFormData({ ...formData, login_utente: e.target.value })}
-                  placeholder="Username di accesso"
+                  placeholder="Username"
                 />
               </div>
 
@@ -443,12 +435,12 @@ export default function AccessoPortaliPage() {
             </div>
 
             <div>
-              <Label htmlFor="login_pin">PIN</Label>
+              <Label htmlFor="login_pin">PIN (Opzionale)</Label>
               <Input
                 id="login_pin"
                 value={formData.login_pin}
                 onChange={(e) => setFormData({ ...formData, login_pin: e.target.value })}
-                placeholder="PIN (se richiesto)"
+                placeholder="Es: 123456"
               />
             </div>
 
@@ -469,7 +461,7 @@ export default function AccessoPortaliPage() {
               Annulla
             </Button>
             <Button onClick={handleSave}>
-              {editingCredenziale ? "Aggiorna" : "Crea"}
+              {editingCredenziale ? "Salva Modifiche" : "Crea Credenziale"}
             </Button>
           </DialogFooter>
         </DialogContent>
