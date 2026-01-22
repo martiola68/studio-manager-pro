@@ -288,6 +288,8 @@ export type Database = {
           gestione_antiriciclaggio: boolean | null
           gg_ver_a: number | null
           gg_ver_b: number | null
+          giorni_scad_ver_a: number | null
+          giorni_scad_ver_b: number | null
           id: string
           indirizzo: string
           matricola_inps: string | null
@@ -345,6 +347,8 @@ export type Database = {
           gestione_antiriciclaggio?: boolean | null
           gg_ver_a?: number | null
           gg_ver_b?: number | null
+          giorni_scad_ver_a?: number | null
+          giorni_scad_ver_b?: number | null
           id?: string
           indirizzo: string
           matricola_inps?: string | null
@@ -402,6 +406,8 @@ export type Database = {
           gestione_antiriciclaggio?: boolean | null
           gg_ver_a?: number | null
           gg_ver_b?: number | null
+          giorni_scad_ver_a?: number | null
+          giorni_scad_ver_b?: number | null
           id?: string
           indirizzo?: string
           matricola_inps?: string | null

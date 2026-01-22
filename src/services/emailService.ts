@@ -16,6 +16,37 @@ export interface EventEmailData {
   clienteNome?: string;
 }
 
+export interface EmailData {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Tenta di invocare una funzione generica per l'invio email
+    // Se non esiste, fallirà gracefully
+    const { data: result, error } = await supabase.functions.invoke("send-email", {
+      body: data
+    });
+
+    if (error) {
+      console.warn("Edge function 'send-email' not found or error:", error);
+      // Fallback o log
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, ...result };
+  } catch (error) {
+    console.error("Error sending generic email:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    };
+  }
+}
+
 export async function sendEventNotification(data: EventEmailData): Promise<{
   success: boolean;
   sent: number;
@@ -87,3 +118,9 @@ export async function triggerEventReminders(): Promise<{
     };
   }
 }
+
+export const emailService = {
+  sendEventNotification,
+  triggerEventReminders,
+  sendEmail
+};

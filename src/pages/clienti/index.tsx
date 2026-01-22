@@ -202,6 +202,8 @@ export default function ClientiPage() {
     scadenza_antiric_b: undefined as Date | undefined,
     gestione_antiriciclaggio: false,
     note_antiriciclaggio: "",
+    giorni_scad_ver_a: null as number | null,
+    giorni_scad_ver_b: null as number | null,
   });
 
   const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
@@ -247,6 +249,7 @@ export default function ClientiPage() {
         gg_ver_a: days,
         data_ultima_verifica_antiric: today,
         scadenza_antiric: scadenza,
+        giorni_scad_ver_a: calcolaGiorniScadenza(scadenza),
       }));
     } else {
       setFormData((prev) => ({
@@ -255,6 +258,7 @@ export default function ClientiPage() {
         gg_ver_b: days,
         data_ultima_verifica_b: today,
         scadenza_antiric_b: scadenza,
+        giorni_scad_ver_b: calcolaGiorniScadenza(scadenza),
       }));
     }
   };
@@ -265,6 +269,7 @@ export default function ClientiPage() {
         const updated = { ...prev, gg_ver_a: value };
         if (updated.data_ultima_verifica_antiric && value) {
           updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, value);
+          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
         }
         return updated;
       });
@@ -273,6 +278,7 @@ export default function ClientiPage() {
         const updated = { ...prev, gg_ver_b: value };
         if (updated.data_ultima_verifica_b && value) {
           updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, value);
+          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
         }
         return updated;
       });
@@ -285,6 +291,7 @@ export default function ClientiPage() {
         const updated = { ...prev, data_ultima_verifica_antiric: date };
         if (date && prev.gg_ver_a) {
           updated.scadenza_antiric = addMonths(date, prev.gg_ver_a);
+          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
         }
         return updated;
       });
@@ -293,6 +300,7 @@ export default function ClientiPage() {
         const updated = { ...prev, data_ultima_verifica_b: date };
         if (date && prev.gg_ver_b) {
           updated.scadenza_antiric_b = addMonths(date, prev.gg_ver_b);
+          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
         }
         return updated;
       });
@@ -300,6 +308,24 @@ export default function ClientiPage() {
   };
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const calcolaGiorniScadenza = (scadenza: Date | undefined): number | null => {
+    if (!scadenza) return null;
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const scadenzaDate = new Date(scadenza);
+    scadenzaDate.setHours(0, 0, 0, 0);
+    const diffTime = scadenzaDate.getTime() - oggi.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getBadgeColor = (giorni: number | null): string => {
+    if (giorni === null) return "bg-gray-200 text-gray-700";
+    if (giorni < 15) return "bg-red-600 text-white";
+    if (giorni < 30) return "bg-orange-500 text-white";
+    return "bg-green-600 text-white";
+  };
 
   useEffect(() => {
     loadData();
@@ -431,6 +457,8 @@ export default function ClientiPage() {
         scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
         gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
         note_antiriciclaggio: formData.note_antiriciclaggio,
+        giorni_scad_ver_a: formData.giorni_scad_ver_a,
+        giorni_scad_ver_b: formData.giorni_scad_ver_b,
         
         // Save flags from scadenzari state
         flag_iva: scadenzari.iva,
@@ -714,6 +742,8 @@ export default function ClientiPage() {
       scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
       gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
       note_antiriciclaggio: cliente.note_antiriciclaggio || "",
+      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
+      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
     });
     
     // Load existing flags
@@ -774,6 +804,8 @@ export default function ClientiPage() {
       scadenza_antiric_b: undefined,
       gestione_antiriciclaggio: false,
       note_antiriciclaggio: "",
+      giorni_scad_ver_a: null,
+      giorni_scad_ver_b: null,
     });
     setScadenzari({
       iva: true,
@@ -1645,32 +1677,6 @@ export default function ClientiPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="cassetto_fiscale_id">Titolare Cassetto Fiscale</Label>
-                  <Select
-                    value={formData.cassetto_fiscale_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona cassetto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {cassettiFiscali.map((cassetto) => (
-                        <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.nominativo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="altri_dati" className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
                   <Label>Matricola INPS</Label>
                   <div className="relative">
                     <Input
@@ -1997,6 +2003,23 @@ export default function ClientiPage() {
                           className="w-full bg-muted cursor-not-allowed"
                         />
                       </div>
+
+                      <div>
+                        <Label>Giorni Scad. Ver A</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={formData.giorni_scad_ver_a !== null ? `${formData.giorni_scad_ver_a} giorni` : "N/A"}
+                            disabled
+                            className="w-full bg-muted cursor-not-allowed"
+                          />
+                          {formData.giorni_scad_ver_a !== null && (
+                            <Badge className={getBadgeColor(formData.giorni_scad_ver_a)}>
+                              {formData.giorni_scad_ver_a < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_a < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -2095,19 +2118,23 @@ export default function ClientiPage() {
                           className="w-full bg-muted cursor-not-allowed"
                         />
                       </div>
-                    </div>
 
-                    <div className={`mt-4 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
-                      <Label htmlFor="note_antiriciclaggio">Note Antiriciclaggio</Label>
-                      <Textarea
-                        id="note_antiriciclaggio"
-                        value={formData.note_antiriciclaggio}
-                        onChange={(e) => setFormData({ ...formData, note_antiriciclaggio: e.target.value })}
-                        placeholder="Note aggiuntive per la pratica antiriciclaggio..."
-                        rows={4}
-                        disabled={!formData.gestione_antiriciclaggio}
-                        className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
-                      />
+                      <div>
+                        <Label>Giorni Scad. Ver B</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={formData.giorni_scad_ver_b !== null ? `${formData.giorni_scad_ver_b} giorni` : "N/A"}
+                            disabled
+                            className="w-full bg-muted cursor-not-allowed"
+                          />
+                          {formData.giorni_scad_ver_b !== null && (
+                            <Badge className={getBadgeColor(formData.giorni_scad_ver_b)}>
+                              {formData.giorni_scad_ver_b < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_b < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
