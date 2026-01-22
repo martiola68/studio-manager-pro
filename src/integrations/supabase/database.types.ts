@@ -674,7 +674,6 @@ export type Database = {
           login_utente: string | null
           note: string | null
           portale: string
-          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -687,7 +686,6 @@ export type Database = {
           login_utente?: string | null
           note?: string | null
           portale: string
-          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -700,25 +698,9 @@ export type Database = {
           login_utente?: string | null
           note?: string | null
           portale?: string
-          studio_id?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "tbcredenziali_accesso_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "tbutenti"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tbcredenziali_accesso_studio_id_fkey"
-            columns: ["studio_id"]
-            isOneToOne: false
-            referencedRelation: "tbstudio"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tbmessaggi: {
         Row: {

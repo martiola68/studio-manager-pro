@@ -23,7 +23,6 @@ export default function AccessoPortaliPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCredenziale, setEditingCredenziale] = useState<CredenzialeAccesso | null>(null);
   const [loading, setLoading] = useState(true);
-  const [studioId, setStudioId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
 
@@ -41,10 +40,10 @@ export default function AccessoPortaliPage() {
   }, []);
 
   useEffect(() => {
-    if (studioId) {
+    if (userId) {
       fetchCredenziali();
     }
-  }, [studioId]);
+  }, [userId]);
 
   useEffect(() => {
     filterCredenziali();
@@ -56,25 +55,13 @@ export default function AccessoPortaliPage() {
       router.push("/login");
       return;
     }
-
-    const { data: utente } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", session.user.id)
-      .single();
-
-    if (utente) {
-      setStudioId(utente.studio_id);
-      setUserId(session.user.id);
-    }
+    setUserId(session.user.id);
   };
 
   const fetchCredenziali = async () => {
-    if (!studioId) return;
-
     try {
       setLoading(true);
-      const data = await credenzialiAccessoService.getAll(studioId);
+      const data = await credenzialiAccessoService.getAll();
       setCredenziali(data);
     } catch (error) {
       console.error("Errore nel caricamento delle credenziali:", error);
@@ -151,15 +138,6 @@ export default function AccessoPortaliPage() {
       return;
     }
 
-    if (!studioId) {
-      toast({
-        title: "Errore",
-        description: "Studio non identificato",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       if (editingCredenziale) {
         await credenzialiAccessoService.update(editingCredenziale.id, formData);
@@ -170,7 +148,6 @@ export default function AccessoPortaliPage() {
       } else {
         await credenzialiAccessoService.create({
           ...formData,
-          studio_id: studioId,
           created_by: userId,
         });
         toast({
