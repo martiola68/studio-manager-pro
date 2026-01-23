@@ -29,6 +29,7 @@ export default function MessaggiPage() {
   const [isPartner, setIsPartner] = useState(false);
   const [conversazioni, setConversazioni] = useState<any[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
+  const [selectedCreatorId, setSelectedCreatorId] = useState<string | null>(null);
   const [messaggi, setMessaggi] = useState<any[]>([]);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [newChatType, setNewChatType] = useState<"diretta" | "gruppo">("diretta");
@@ -215,8 +216,8 @@ export default function MessaggiPage() {
         throw new Error("Impossibile creare la conversazione");
       }
 
-      setSelectedConvId(conv.id);
       await loadConversazioni(authUserId);
+      handleSelectConversation(conv.id);
       
       toast({
         title: "✅ Chat creata",
@@ -261,7 +262,7 @@ export default function MessaggiPage() {
         setGroupTitle("");
         setSelectedMembers([]);
         await loadConversazioni(authUserId);
-        setSelectedConvId(conv.id);
+        handleSelectConversation(conv.id);
         
         toast({
           title: "Gruppo creato",
@@ -284,6 +285,16 @@ export default function MessaggiPage() {
     );
   };
 
+  const handleSelectConversation = (convId: string | null) => {
+    setSelectedConvId(convId);
+    if (convId) {
+      const conv = conversazioni.find(c => c.id === convId);
+      setSelectedCreatorId(conv?.creato_da || null);
+    } else {
+      setSelectedCreatorId(null);
+    }
+  };
+
   const handleDeleteConversazione = async (conversazioneId: string) => {
     if (!authUserId) return;
 
@@ -302,6 +313,7 @@ export default function MessaggiPage() {
       // Se la conversazione eliminata era quella selezionata, deseleziona
       if (selectedConvId === conversazioneId) {
         setSelectedConvId(null);
+        setSelectedCreatorId(null);
       }
       
       // Ricarica la lista
@@ -351,7 +363,7 @@ export default function MessaggiPage() {
           <ChatSidebar
             conversazioni={conversazioni}
             selectedId={selectedConvId}
-            onSelect={setSelectedConvId}
+            onSelect={handleSelectConversation}
             currentUserEmail={user?.email}
             onNewChat={() => setIsNewChatOpen(true)}
             onDeleteConversazione={handleDeleteConversazione}
@@ -368,9 +380,12 @@ export default function MessaggiPage() {
               messaggi={messaggi}
               currentUserId={authUserId!}
               partnerName={getPartnerName()}
-              creatorId={conversazioni.find(c => c.id === selectedConvId)?.creato_da || ""}
+              creatorId={selectedCreatorId || ""}
               onSendMessage={handleSendMessage}
-              onBack={() => setSelectedConvId(null)}
+              onBack={() => {
+                setSelectedConvId(null);
+                setSelectedCreatorId(null);
+              }}
               onDeleteChat={() => handleDeleteConversazione(selectedConvId)}
             />
           ) : (
