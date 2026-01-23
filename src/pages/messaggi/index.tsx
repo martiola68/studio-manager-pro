@@ -3,12 +3,10 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatArea } from "@/components/chat/ChatArea";
-import { AlertScadenze } from "@/components/AlertScadenze";
 import { authService } from "@/services/authService";
 import { messaggioService } from "@/services/messaggioService";
 import { utenteService } from "@/services/utenteService";
 import { studioService } from "@/services/studioService";
-import { scadenzaAlertService } from "@/services/scadenzaAlertService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +35,6 @@ export default function MessaggiPage() {
   const [utentiStudio, setUtentiStudio] = useState<any[]>([]);
   const [groupTitle, setGroupTitle] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [scadenzeAlert, setScadenzeAlert] = useState<any[]>([]);
   
   const subscriptionRef = useRef<any>(null);
   const alertIntervalRef = useRef<any>(null);
@@ -57,22 +54,6 @@ export default function MessaggiPage() {
       }
     };
   }, [selectedConvId]);
-
-  useEffect(() => {
-    if (authUserId && studioId) {
-      loadScadenzeAlert();
-      
-      alertIntervalRef.current = setInterval(() => {
-        loadScadenzeAlert();
-      }, 30 * 60 * 1000);
-
-      return () => {
-        if (alertIntervalRef.current) {
-          clearInterval(alertIntervalRef.current);
-        }
-      };
-    }
-  }, [authUserId, studioId, isPartner]);
 
   const checkAuth = async () => {
     try {
@@ -128,35 +109,6 @@ export default function MessaggiPage() {
     
     await messaggioService.segnaComeLetto(convId, authUserId);
     loadConversazioni(authUserId);
-  };
-
-  const loadScadenzeAlert = async () => {
-    if (!authUserId || !studioId) return;
-
-    try {
-      const scadenze = await scadenzaAlertService.getScadenzeInArrivo(
-        authUserId,
-        isPartner,
-        studioId
-      );
-
-      const scadenzeNonDismissate = scadenze.filter(
-        s => !scadenzaAlertService.isDismissed(s.id)
-      );
-
-      setScadenzeAlert(scadenzeNonDismissate);
-
-      const critiche = scadenzeNonDismissate.filter(s => s.urgenza === "critica");
-      if (critiche.length > 0) {
-        toast({
-          title: "⚠️ Scadenze Critiche!",
-          description: `${critiche.length} scadenza${critiche.length > 1 ? "e" : ""} in scadenza OGGI!`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error loading scadenze alert:", error);
-    }
   };
 
   const subscribeToChat = (convId: string) => {
@@ -332,29 +284,6 @@ export default function MessaggiPage() {
     );
   };
 
-  const handleDismissAlert = (scadenzaId: string) => {
-    scadenzaAlertService.dismissAlert(scadenzaId);
-    setScadenzeAlert((prev) => prev.filter(s => s.id !== scadenzaId));
-  };
-
-  const handleViewScadenzaDetails = (scadenzaId: string, tipo: string) => {
-    const tipoUrlMap: Record<string, string> = {
-      "IVA": "/scadenze/iva",
-      "CCGG": "/scadenze/ccgg",
-      "CU": "/scadenze/cu",
-      "Fiscale": "/scadenze/fiscali",
-      "Bilancio": "/scadenze/bilanci",
-      "770": "/scadenze/770",
-      "LIPE": "/scadenze/lipe",
-      "Esterometro": "/scadenze/esterometro",
-      "Proforma": "/scadenze/proforma",
-      "IMU": "/scadenze/imu",
-    };
-
-    const url = tipoUrlMap[tipo] || "/scadenze/iva";
-    router.push(url);
-  };
-
   const handleDeleteConversazione = async (conversazioneId: string) => {
     if (!authUserId) return;
 
@@ -462,17 +391,6 @@ export default function MessaggiPage() {
               <p className="text-center px-4">Seleziona una conversazione per iniziare</p>
             </div>
           )}
-        </div>
-
-        <div className="hidden xl:block w-80 border-l bg-background overflow-y-auto flex-shrink-0">
-          <div className="p-4">
-            <AlertScadenze
-              scadenze={scadenzeAlert}
-              isPartner={isPartner}
-              onDismiss={handleDismissAlert}
-              onViewDetails={handleViewScadenzaDetails}
-            />
-          </div>
         </div>
       </div>
 
