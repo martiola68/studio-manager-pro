@@ -32,7 +32,7 @@ interface ChatSidebarProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   currentUserEmail?: string;
-  currentUserId?: string;
+  currentUserId?: string | null;
   onNewChat: () => void;
   onDeleteConversazione: (conversazioneId: string) => void;
   className?: string;
@@ -148,7 +148,7 @@ export function ChatSidebar({
                       <span className="font-semibold truncate text-sm flex items-center gap-1 flex-1 min-w-0">
                         <span className={cn(
                           "truncate",
-                          currentUserId === conv.creato_da ? "text-black dark:text-white" : "text-red-600"
+                          currentUserId && currentUserId !== conv.creato_da ? "text-red-600" : "text-black dark:text-white"
                         )}>
                           {displayInfo.nome}
                         </span>
