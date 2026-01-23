@@ -1164,11 +1164,11 @@ export default function ClientiPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => document.getElementById("csv-upload")?.click()}
+              onClick={() => document.getElementById("file-upload")?.click()}
               className="gap-2"
             >
-              <Upload className="h-4 w-4" />
-              Importa CSV
+              <FileSpreadsheet className="h-4 w-4" />
+              Importa Excel
             </Button>
             <Button onClick={handleAddNew} className="gap-2">
               <Plus className="h-4 w-4" />
