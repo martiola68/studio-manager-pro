@@ -649,7 +649,7 @@ export default function PromemoriaPage() {
                 value={formData.titolo}
                 onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                 required
-                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
               />
             </div>
             <div>
@@ -657,7 +657,7 @@ export default function PromemoriaPage() {
               <Textarea 
                 value={formData.descrizione}
                 onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
-                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
               />
             </div>
 
@@ -668,7 +668,7 @@ export default function PromemoriaPage() {
                   type="date"
                   value={format(formData.data_inserimento, "yyyy-MM-dd")}
                   onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
-                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                  disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
                 />
               </div>
               <div>
@@ -678,7 +678,7 @@ export default function PromemoriaPage() {
                   min="0" 
                   value={formData.giorni_scadenza}
                   onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
-                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                  disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
                 />
               </div>
             </div>
@@ -699,7 +699,7 @@ export default function PromemoriaPage() {
                 <Select 
                   value={formData.destinatario_id || "none"} 
                   onValueChange={handleDestinatarioChange}
-                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                  disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
                 >
                   <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
                   <SelectContent>
@@ -722,7 +722,7 @@ export default function PromemoriaPage() {
                 <Select 
                   value={formData.priorita} 
                   onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}
-                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                  disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -755,7 +755,7 @@ export default function PromemoriaPage() {
               <Select 
                 value={formData.tipo_promemoria_id} 
                 onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}
-                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
               >
                 <SelectTrigger><SelectValue placeholder="Seleziona tipo..." /></SelectTrigger>
                 <SelectContent>
@@ -771,7 +771,7 @@ export default function PromemoriaPage() {
               <div className="space-y-2 mt-2">
                 {selectedPromemoria?.allegati && (selectedPromemoria.allegati as unknown as Allegato[]).map((a, idx) => {
                   const isDeleted = attachmentsToDelete.includes(a.url);
-                  const isRecipientOnly = currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id;
+                  const isRecipientOnly = !!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id);
                   return (
                     <div key={idx} className={`flex justify-between items-center p-2 rounded border ${isDeleted ? 'bg-red-50 opacity-50' : 'bg-white'}`}>
                       <div className="flex items-center gap-2 overflow-hidden">
