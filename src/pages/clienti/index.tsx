@@ -2245,7 +2245,7 @@ export default function ClientiPage() {
 
       <input
         type="file"
-        accept=".csv,.xlsx,.xls"
+        accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         onChange={handleImportCSV}
         className="hidden"
         id="csv-upload"
