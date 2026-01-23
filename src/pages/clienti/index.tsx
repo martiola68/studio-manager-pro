@@ -48,6 +48,7 @@ import { utenteService } from "@/services/utenteService";
 import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
+import * as XLSX from "xlsx";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -1007,23 +1008,54 @@ export default function ClientiPage() {
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const lines = text.split("\n");
+      let rows: any[] = [];
+
+      // Verifica se è un file Excel o CSV
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Gestione file Excel
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Converti array di array in formato utilizzabile
+        rows = jsonData.slice(0).map((row: any) => {
+          if (Array.isArray(row)) {
+            return row;
+          }
+          return [];
+        });
+      } else {
+        // Gestione file CSV
+        const text = await file.text();
+        const lines = text.split("\n");
+        rows = lines.map(line => line.split(";").map(v => v.trim()));
+      }
 
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
-      for (let i = 0; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-
-        const values = lines[i].split(";").map(v => v.trim());
+      for (let i = 0; i < rows.length; i++) {
+        const values = rows[i];
         
-        const ragioneSociale = values[0] || "";
-        const email = values[6] || "";
+        if (!values || values.length === 0 || !values[0]) continue;
 
-        if (!ragioneSociale || !email) {
-          errors.push(`Riga ${i + 1}: Ragione sociale o email mancanti`);
+        // Mappatura colonne: 
+        // Colonna 0: Ragione Sociale
+        // Colonna 6: Email
+        const ragioneSociale = (values[0] || "").toString().trim();
+        const email = (values[6] || "").toString().trim();
+
+        if (!ragioneSociale) {
+          errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
+          errorCount++;
+          continue;
+        }
+
+        if (!email) {
+          errors.push(`Riga ${i + 1}: Email mancante`);
           errorCount++;
           continue;
         }
@@ -1046,7 +1078,7 @@ export default function ClientiPage() {
           provincia: "",
           tipo_cliente: "PERSONA_GIURIDICA",
           attivo: true,
-          note: `Importato da CSV il ${new Date().toLocaleDateString()}`,
+          note: `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
         try {
@@ -1073,10 +1105,10 @@ export default function ClientiPage() {
       
       event.target.value = "";
     } catch (error) {
-      console.error("Errore importazione CSV:", error);
+      console.error("Errore importazione file:", error);
       toast({
         title: "Errore",
-        description: "Impossibile importare il file CSV. Verifica il formato del file.",
+        description: `Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.`,
         variant: "destructive",
       });
     }
@@ -2213,7 +2245,7 @@ export default function ClientiPage() {
 
       <input
         type="file"
-        accept=".csv"
+        accept=".csv,.xlsx,.xls"
         onChange={handleImportCSV}
         className="hidden"
         id="csv-upload"
