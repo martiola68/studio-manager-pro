@@ -1675,211 +1675,63 @@ export default function ClientiPage() {
                   </Select>
                 </div>
 
-                <div className="md:col-span-2">
-                  <Label>Matricola INPS</Label>
-                  <div className="relative">
-                    <Input
-                      value={formData.matricola_inps}
-                      onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
-                      onFocus={() => setShowMatricolaDropdown(true)}
-                      placeholder="Digita valore..."
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full"
-                      onClick={() => setShowMatricolaDropdown(!showMatricolaDropdown)}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    
-                    {showMatricolaDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
-                        {formData.matricola_inps && !matricoleInps.some(m => m.valore === formData.matricola_inps) && (
-                          <div
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
-                            onClick={() => handleRequestNewRiferimento("matricola_inps", formData.matricola_inps)}
-                          >
-                            <span className="text-sm text-blue-600">+ Crea: {formData.matricola_inps}</span>
-                          </div>
-                        )}
-                        
-                        {getFilteredSuggestions("matricola_inps", formData.matricola_inps).map((item) => (
-                          <div
-                            key={item.id}
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
-                          >
-                            <span
-                              onClick={() => {
-                                setFormData({ ...formData, matricola_inps: item.valore });
-                                setShowMatricolaDropdown(false);
-                              }}
-                              className="flex-1"
-                            >
-                              {item.valore}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRiferimentoValore(item.id, "matricola_inps");
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        {getFilteredSuggestions("matricola_inps", formData.matricola_inps).length === 0 && !formData.matricola_inps && (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            Nessun valore salvato. Digita per creare.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 <div>
-                  <Label>Pat INAIL</Label>
-                  <div className="relative">
-                    <Input
-                      value={formData.pat_inail}
-                      onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
-                      onFocus={() => setShowPatDropdown(true)}
-                      placeholder="Digita valore..."
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full"
-                      onClick={() => setShowPatDropdown(!showPatDropdown)}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    
-                    {showPatDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
-                        {formData.pat_inail && !patInail.some(p => p.valore === formData.pat_inail) && (
-                          <div
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
-                            onClick={() => handleRequestNewRiferimento("pat_inail", formData.pat_inail)}
-                          >
-                            <span className="text-sm text-blue-600">+ Crea: {formData.pat_inail}</span>
-                          </div>
-                        )}
-                        
-                        {getFilteredSuggestions("pat_inail", formData.pat_inail).map((item) => (
-                          <div
-                            key={item.id}
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
-                          >
-                            <span
-                              onClick={() => {
-                                setFormData({ ...formData, pat_inail: item.valore });
-                                setShowPatDropdown(false);
-                              }}
-                              className="flex-1"
-                            >
-                              {item.valore}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRiferimentoValore(item.id, "pat_inail");
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        {getFilteredSuggestions("pat_inail", formData.pat_inail).length === 0 && !formData.pat_inail && (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            Nessun valore salvato. Digita per creare.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
+                  <Select
+                    value={formData.cassetto_fiscale_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona cassetto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {cassettiFiscali.map((cassetto) => (
+                        <SelectItem key={cassetto.id} value={cassetto.id}>
+                          {cassetto.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="altri_dati" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
+                  <Textarea
+                    id="matricola_inps"
+                    value={formData.matricola_inps}
+                    onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+                    placeholder="Inserisci matricola INPS..."
+                    rows={2}
+                  />
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label>Codice Ditta CE</Label>
-                  <div className="relative">
-                    <Input
-                      value={formData.codice_ditta_ce}
-                      onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
-                      onFocus={() => setShowCodiceDropdown(true)}
-                      placeholder="Digita valore..."
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full"
-                      onClick={() => setShowCodiceDropdown(!showCodiceDropdown)}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    
-                    {showCodiceDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-auto">
-                        {formData.codice_ditta_ce && !codiciDittaCe.some(c => c.valore === formData.codice_ditta_ce) && (
-                          <div
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer border-b"
-                            onClick={() => handleRequestNewRiferimento("codice_ditta_ce", formData.codice_ditta_ce)}
-                          >
-                            <span className="text-sm text-blue-600">+ Crea: {formData.codice_ditta_ce}</span>
-                          </div>
-                        )}
-                        
-                        {getFilteredSuggestions("codice_ditta_ce", formData.codice_ditta_ce).map((item) => (
-                          <div
-                            key={item.id}
-                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center"
-                          >
-                            <span
-                              onClick={() => {
-                                setFormData({ ...formData, codice_ditta_ce: item.valore });
-                                setShowCodiceDropdown(false);
-                              }}
-                              className="flex-1"
-                            >
-                              {item.valore}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRiferimentoValore(item.id, "codice_ditta_ce");
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        
-                        {getFilteredSuggestions("codice_ditta_ce", formData.codice_ditta_ce).length === 0 && !formData.codice_ditta_ce && (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            Nessun valore salvato. Digita per creare.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <Label htmlFor="pat_inail">Pat INAIL</Label>
+                  <Textarea
+                    id="pat_inail"
+                    value={formData.pat_inail}
+                    onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+                    placeholder="Inserisci Pat INAIL..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+                  <Textarea
+                    id="codice_ditta_ce"
+                    value={formData.codice_ditta_ce}
+                    onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+                    placeholder="Inserisci codice ditta CE..."
+                    rows={2}
+                  />
                 </div>
               </div>
             </TabsContent>
