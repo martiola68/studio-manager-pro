@@ -18,10 +18,10 @@ export const promemoriaService = {
       .from("tbpromemoria")
       .select(`
         *,
-        operatore:tbutenti!operatore_id (
+        operatore:tbutenti!tbpromemoria_operatore_id_fkey (
           id, nome, cognome, settore, responsabile
         ),
-        destinatario:tbutenti!destinatario_id (
+        destinatario:tbutenti!tbpromemoria_destinatario_id_fkey (
           id, nome, cognome, settore, responsabile
         )
       `)
