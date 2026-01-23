@@ -368,8 +368,10 @@ export default function MessaggiPage() {
               messaggi={messaggi}
               currentUserId={authUserId!}
               partnerName={getPartnerName()}
+              creatorId={conversazioni.find(c => c.id === selectedConvId)?.creato_da || ""}
               onSendMessage={handleSendMessage}
               onBack={() => setSelectedConvId(null)}
+              onDeleteChat={() => handleDeleteConversazione(selectedConvId)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4 py-12">
