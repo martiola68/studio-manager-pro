@@ -1,4 +1,5 @@
-cod_cliente,ragione_sociale,partita_iva,codice_fiscale,indirizzo,cap,citta,provincia,email,note,attivo,tipo_cliente,flag_iva,flag_cu,flag_bilancio,flag_fiscali,flag_lipe,flag_770,flag_esterometro,flag_ccgg,flag_proforma,flag_mail_attivo,flag_mail_scadenze,flag_mail_newsletter,utente_operatore_id,utente_professionista_id,contatto1_id,contatto2_id,tipo_prestazione_id,scadenza_antiric
-CL001,Rossi & Associati SRL,12345678901,12345678901,Via Roma 123,00100,Roma,RM,info@rossiassociati.it,Cliente storico - priorità alta,true,Esterno,true,true,true,true,true,true,false,true,false,true,true,true,,,,,2025-12-31
-CL002,Bianchi Commerciale SPA,98765432109,98765432109,Corso Vittorio Emanuele 45,20100,Milano,MI,contabilita@bianchicom.it,,true,Esterno,true,true,true,true,false,false,false,true,false,true,true,false,,,,,2026-06-30
-CL003,Verdi Consulting,11223344556,VRDGNN70A01H501Z,Piazza Garibaldi 7,50100,Firenze,FI,giovanni.verdi@consulting.it,Professionista individuale,true,Interno,true,false,false,true,false,false,false,false,true,true,false,false,,,,,
+cognome,nome,cellulare,telefono,altro_telefono,email,pec,email_secondaria,email_altro,contatto_principale,note
+Rossi,Mario,3331234567,0612345678,0698765432,mario.rossi@email.it,mario.rossi@pec.it,m.rossi@secondaria.it,rossi.mario@altro.com,Direttore Generale,Contatto preferenziale per comunicazioni urgenti
+Bianchi SRL,,3409876543,0287654321,,info@bianchisrl.it,bianchisrl@pec.it,amministrazione@bianchisrl.it,,,Azienda cliente storico - riferimento ufficio amministrativo
+Verdi,Laura,3357891234,,,laura.verdi@gmail.com,,laura.v@work.it,,,Libera professionista - disponibile solo via email
+De Luca,Giuseppe,3401122334,0639988776,0639988777,g.deluca@studio.it,giuseppe.deluca@pec.it,,,Responsabile Contabilità,Preferisce comunicazioni via PEC per questioni formali
