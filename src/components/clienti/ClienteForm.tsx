@@ -24,13 +24,10 @@ export function ClienteForm({ clienteToEdit, onSuccess, onCancel }: ClienteFormP
     codice_fiscale: "",
     partita_iva: "",
     email: "",
-    telefono: "",
     indirizzo: "",
     citta: "",
     cap: "",
     provincia: "",
-    pec: "",
-    codice_univoco: "",
     attivo: true
   });
 
@@ -41,13 +38,10 @@ export function ClienteForm({ clienteToEdit, onSuccess, onCancel }: ClienteFormP
         codice_fiscale: clienteToEdit.codice_fiscale || "",
         partita_iva: clienteToEdit.partita_iva || "",
         email: clienteToEdit.email || "",
-        telefono: clienteToEdit.telefono || "",
         indirizzo: clienteToEdit.indirizzo || "",
         citta: clienteToEdit.citta || "",
         cap: clienteToEdit.cap || "",
         provincia: clienteToEdit.provincia || "",
-        pec: clienteToEdit.pec || "",
-        codice_univoco: clienteToEdit.codice_univoco || "",
         attivo: clienteToEdit.attivo
       });
     }
@@ -146,28 +140,6 @@ export function ClienteForm({ clienteToEdit, onSuccess, onCancel }: ClienteFormP
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="telefono">Telefono</Label>
-          <Input
-            id="telefono"
-            name="telefono"
-            value={formData.telefono || ""}
-            onChange={handleChange}
-            placeholder="+39 333 1234567"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="pec">PEC</Label>
-          <Input
-            id="pec"
-            name="pec"
-            value={formData.pec || ""}
-            onChange={handleChange}
-            placeholder="pec@pec.it"
-          />
-        </div>
-
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="indirizzo">Indirizzo</Label>
           <Input
@@ -212,17 +184,6 @@ export function ClienteForm({ clienteToEdit, onSuccess, onCancel }: ClienteFormP
               maxLength={2}
             />
           </div>
-        </div>
-        
-        <div className="space-y-2">
-            <Label htmlFor="codice_univoco">Codice Univoco</Label>
-            <Input
-              id="codice_univoco"
-              name="codice_univoco"
-              value={formData.codice_univoco || ""}
-              onChange={handleChange}
-              placeholder="XXXXXX"
-            />
         </div>
       </div>
 

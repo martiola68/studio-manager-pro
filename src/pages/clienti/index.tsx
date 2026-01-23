@@ -155,9 +155,6 @@ export default function ClientiPage() {
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
                             <span className="text-base text-gray-900">{cliente.ragione_sociale}</span>
-                            {cliente.referente && (
-                              <span className="text-xs text-gray-500 mt-0.5">Ref: {cliente.referente}</span>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
@@ -166,12 +163,6 @@ export default function ClientiPage() {
                               <div className="flex items-center gap-2">
                                 <Mail className="h-3 w-3" />
                                 <span className="truncate max-w-[180px]" title={cliente.email}>{cliente.email}</span>
-                              </div>
-                            )}
-                            {cliente.telefono && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3 w-3" />
-                                <span>{cliente.telefono}</span>
                               </div>
                             )}
                           </div>
