@@ -397,6 +397,7 @@ export default function PromemoriaPage() {
             <TableHead>Titolo</TableHead>
             <TableHead>Descrizione</TableHead>
             <TableHead>Data Scadenza</TableHead>
+            <TableHead>Operatore</TableHead>
             <TableHead>Destinatario</TableHead>
             <TableHead>Stato</TableHead>
             <TableHead>Settore</TableHead>
@@ -425,6 +426,7 @@ export default function PromemoriaPage() {
                 <TableCell className="font-medium">{p.titolo}</TableCell>
                 <TableCell>{p.descrizione}</TableCell>
                 <TableCell>{p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy") : "-"}</TableCell>
+                <TableCell>{utenti.find(u => u.id === p.operatore_id)?.nome || "-"}</TableCell>
                 <TableCell>{utenti.find(u => u.id === p.destinatario_id)?.nome || "-"}</TableCell>
                 <TableCell>
                   <Badge 
