@@ -749,7 +749,7 @@ export default function ContattiPage() {
         ) : (
           filteredContatti.map((contatto) => (
             <Card key={contatto.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+              <CardContent className="p-3">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg md:text-xl">
@@ -760,7 +760,7 @@ export default function ContattiPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                       <div>
-                        <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+                        <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
                           {contatto.cognome} {contatto.nome}
                         </h3>
                         {contatto.contatto_principale && (
