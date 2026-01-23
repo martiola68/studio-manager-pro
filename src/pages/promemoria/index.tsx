@@ -649,6 +649,7 @@ export default function PromemoriaPage() {
                 value={formData.titolo}
                 onChange={e => setFormData(prev => ({...prev, titolo: e.target.value}))}
                 required
+                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
               />
             </div>
             <div>
@@ -656,6 +657,7 @@ export default function PromemoriaPage() {
               <Textarea 
                 value={formData.descrizione}
                 onChange={e => setFormData(prev => ({...prev, descrizione: e.target.value}))}
+                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
               />
             </div>
 
@@ -666,6 +668,7 @@ export default function PromemoriaPage() {
                   type="date"
                   value={format(formData.data_inserimento, "yyyy-MM-dd")}
                   onChange={e => setFormData(prev => ({...prev, data_inserimento: new Date(e.target.value)}))}
+                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
                 />
               </div>
               <div>
@@ -674,7 +677,8 @@ export default function PromemoriaPage() {
                   type="number" 
                   min="0" 
                   value={formData.giorni_scadenza}
-                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))} 
+                  onChange={e => setFormData(prev => ({...prev, giorni_scadenza: parseInt(e.target.value) || 0}))}
+                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
                 />
               </div>
             </div>
@@ -692,7 +696,11 @@ export default function PromemoriaPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Destinatario</Label>
-                <Select value={formData.destinatario_id || "none"} onValueChange={handleDestinatarioChange}>
+                <Select 
+                  value={formData.destinatario_id || "none"} 
+                  onValueChange={handleDestinatarioChange}
+                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                >
                   <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nessuno</SelectItem>
@@ -711,7 +719,11 @@ export default function PromemoriaPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Priorità</Label>
-                <Select value={formData.priorita} onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}>
+                <Select 
+                  value={formData.priorita} 
+                  onValueChange={v => setFormData(prev => ({...prev, priorita: v}))}
+                  disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Bassa">Bassa</SelectItem>
@@ -740,7 +752,11 @@ export default function PromemoriaPage() {
 
             <div>
               <Label>Tipo Promemoria</Label>
-              <Select value={formData.tipo_promemoria_id} onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}>
+              <Select 
+                value={formData.tipo_promemoria_id} 
+                onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}
+                disabled={currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id}
+              >
                 <SelectTrigger><SelectValue placeholder="Seleziona tipo..." /></SelectTrigger>
                 <SelectContent>
                   {tipiPromemoria.map(t => (
@@ -755,6 +771,7 @@ export default function PromemoriaPage() {
               <div className="space-y-2 mt-2">
                 {selectedPromemoria?.allegati && (selectedPromemoria.allegati as unknown as Allegato[]).map((a, idx) => {
                   const isDeleted = attachmentsToDelete.includes(a.url);
+                  const isRecipientOnly = currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id;
                   return (
                     <div key={idx} className={`flex justify-between items-center p-2 rounded border ${isDeleted ? 'bg-red-50 opacity-50' : 'bg-white'}`}>
                       <div className="flex items-center gap-2 overflow-hidden">
@@ -767,14 +784,18 @@ export default function PromemoriaPage() {
                             <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenAllegato(a)}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => markAttachmentForDeletion(a.url)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            {!isRecipientOnly && (
+                              <Button type="button" variant="ghost" size="sm" onClick={() => markAttachmentForDeletion(a.url)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
                           </>
                         ) : (
-                          <Button type="button" variant="ghost" size="sm" onClick={() => undoAttachmentDeletion(a.url)}>
-                            Ripristina
-                          </Button>
+                          !isRecipientOnly && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => undoAttachmentDeletion(a.url)}>
+                              Ripristina
+                            </Button>
+                          )
                         )}
                       </div>
                     </div>
@@ -786,22 +807,24 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
-            <div>
-              <Label>Aggiungi Nuovi Allegati</Label>
-              <div className="border border-dashed rounded-md p-4 bg-gray-50 mt-1">
-                <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
-                <div className="space-y-2">
-                  {filesToUpload.map((file, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
-                      <span className="truncate">{file.name}</span>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
+            {!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id) && (
+              <div>
+                <Label>Aggiungi Nuovi Allegati</Label>
+                <div className="border border-dashed rounded-md p-4 bg-gray-50 mt-1">
+                  <Input type="file" multiple onChange={handleFileSelect} className="cursor-pointer mb-2" />
+                  <div className="space-y-2">
+                    {filesToUpload.map((file, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-sm bg-white p-2 rounded border">
+                        <span className="truncate">{file.name}</span>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removeFileToUpload(idx)}>
+                          <X className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Annulla</Button>
