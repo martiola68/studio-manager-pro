@@ -1042,11 +1042,21 @@ export default function ClientiPage() {
         
         if (!values || values.length === 0 || !values[0]) continue;
 
-        // Mappatura colonne: 
-        // Colonna 0: Ragione Sociale
-        // Colonna 6: Email
+        // Mappatura colonne completa per Excel/CSV
+        // 0: Ragione Sociale, 1: P.IVA, 2: CF, 3: Indirizzo, 4: CAP, 5: Città, 6: Provincia, 7: Email
+        // 8: Tipo Cliente, 9: Tipologia, 10: Settore, 11: Note
         const ragioneSociale = (values[0] || "").toString().trim();
-        const email = (values[6] || "").toString().trim();
+        const piva = (values[1] || "").toString().trim();
+        const cf = (values[2] || "").toString().trim();
+        const indirizzo = (values[3] || "").toString().trim();
+        const cap = (values[4] || "").toString().trim();
+        const citta = (values[5] || "").toString().trim();
+        const provincia = (values[6] || "").toString().trim();
+        const email = (values[7] || "").toString().trim();
+        const tipoCliente = (values[8] || "PERSONA_GIURIDICA").toString().trim();
+        const tipologiaCliente = (values[9] || "").toString().trim();
+        const settore = (values[10] || "").toString().trim();
+        const note = (values[11] || "").toString().trim();
 
         if (!ragioneSociale) {
           errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
@@ -1069,16 +1079,18 @@ export default function ClientiPage() {
         const clienteData = {
           cod_cliente: `IMP-${Date.now()}-${i}`,
           ragione_sociale: ragioneSociale,
+          partita_iva: piva || ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
+          codice_fiscale: cf || "",
+          indirizzo: indirizzo || "",
+          cap: cap || "",
+          citta: citta || "",
+          provincia: provincia || "",
           email: email,
-          partita_iva: ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
-          codice_fiscale: "",
-          indirizzo: "",
-          cap: "",
-          citta: "",
-          provincia: "",
-          tipo_cliente: "PERSONA_GIURIDICA",
+          tipo_cliente: tipoCliente === "PERSONA_FISICA" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
+          tipologia_cliente: tipologiaCliente === "CL interno" || tipologiaCliente === "CL esterno" ? tipologiaCliente : null,
+          settore: settore === "Fiscale" || settore === "Lavoro" || settore === "Fiscale & Lavoro" ? settore : null,
           attivo: true,
-          note: `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
+          note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
         try {
