@@ -309,27 +309,40 @@ export default function PromemoriaPage() {
       setLoading(true);
       setIsUploading(true);
 
-      await promemoriaService.updatePromemoria(selectedPromemoria.id, {
-        titolo: formData.titolo,
-        descrizione: formData.descrizione,
-        data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
-        giorni_scadenza: formData.giorni_scadenza,
-        data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
-        priorita: formData.priorita,
-        working_progress: formData.working_progress,
-        destinatario_id: formData.destinatario_id || null,
-        settore: formData.settore || undefined,
-        tipo_promemoria_id: formData.tipo_promemoria_id || null
-      });
+      // Determina se l'utente corrente è solo destinatario (non operatore)
+      const isRecipientOnly = !!(currentUser && selectedPromemoria && 
+        currentUser.id === selectedPromemoria.destinatario_id && 
+        currentUser.id !== selectedPromemoria.operatore_id);
 
-      // Elimina allegati
-      for (const url of attachmentsToDelete) {
-        await promemoriaService.deleteAllegato(selectedPromemoria.id, url);
-      }
+      if (isRecipientOnly) {
+        // Il destinatario può aggiornare SOLO lo stato
+        await promemoriaService.updatePromemoria(selectedPromemoria.id, {
+          working_progress: formData.working_progress
+        });
+      } else {
+        // L'operatore può aggiornare tutti i campi
+        await promemoriaService.updatePromemoria(selectedPromemoria.id, {
+          titolo: formData.titolo,
+          descrizione: formData.descrizione,
+          data_inserimento: format(formData.data_inserimento, "yyyy-MM-dd"),
+          giorni_scadenza: formData.giorni_scadenza,
+          data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
+          priorita: formData.priorita,
+          working_progress: formData.working_progress,
+          destinatario_id: formData.destinatario_id || null,
+          settore: formData.settore || undefined,
+          tipo_promemoria_id: formData.tipo_promemoria_id || null
+        });
 
-      // Upload nuovi
-      for (const file of filesToUpload) {
-        await promemoriaService.uploadAllegato(selectedPromemoria.id, file);
+        // Elimina allegati
+        for (const url of attachmentsToDelete) {
+          await promemoriaService.deleteAllegato(selectedPromemoria.id, url);
+        }
+
+        // Upload nuovi
+        for (const file of filesToUpload) {
+          await promemoriaService.uploadAllegato(selectedPromemoria.id, file);
+        }
       }
 
       toast({ title: "Successo", description: "Promemoria aggiornato" });
@@ -339,6 +352,7 @@ export default function PromemoriaPage() {
       checkUserAndLoad();
     } catch (error) {
       console.error(error);
+      console.error("ERRORE COMPLETO:", JSON.stringify(error, null, 2));
       toast({ title: "Errore", description: "Impossibile aggiornare", variant: "destructive" });
     } finally {
       setLoading(false);
