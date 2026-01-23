@@ -2,29 +2,24 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { contattoService } from "@/services/contattoService";
-import { clienteService } from "@/services/clienteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Building2 } from "lucide-react";
+import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-// Importo i tipi dalla cartella integrations che è quella aggiornata
 import type { Database } from "@/integrations/supabase/types";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 
 export default function ContattiPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
-  const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [letterFilter, setLetterFilter] = useState<string>("");
@@ -36,12 +31,16 @@ export default function ContattiPage() {
   const [previewData, setPreviewData] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    nome: "",
     cognome: "",
-    email: "",
+    nome: "",
     cell: "",
     tel: "",
-    cliente_id: "",
+    altro_telefono: "",
+    email: "",
+    pec: "",
+    email_secondaria: "",
+    email_altro: "",
+    contatto_principale: "",
     note: ""
   });
 
@@ -62,7 +61,7 @@ export default function ContattiPage() {
         router.push("/login");
         return;
       }
-      await Promise.all([loadContatti(), loadClienti()]);
+      await loadContatti();
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
@@ -83,15 +82,6 @@ export default function ContattiPage() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadClienti = async () => {
-    try {
-      const data = await clienteService.getClienti();
-      setClienti(data);
-    } catch (error) {
-      console.error("Errore caricamento clienti:", error);
     }
   };
 
@@ -122,12 +112,16 @@ export default function ContattiPage() {
 
     try {
       const dataToSave = {
-        nome: formData.nome,
         cognome: formData.cognome,
-        email: formData.email || null,
+        nome: formData.nome || null,
         cell: formData.cell || null,
         tel: formData.tel || null,
-        cliente_id: formData.cliente_id && formData.cliente_id !== "nessuna" ? formData.cliente_id : null,
+        altro_telefono: formData.altro_telefono || null,
+        email: formData.email || null,
+        pec: formData.pec || null,
+        email_secondaria: formData.email_secondaria || null,
+        email_altro: formData.email_altro || null,
+        contatto_principale: formData.contatto_principale || null,
         note: formData.note || null
       };
 
@@ -161,12 +155,16 @@ export default function ContattiPage() {
   const handleEdit = (contatto: Contatto) => {
     setEditingContatto(contatto);
     setFormData({
-      nome: contatto.nome,
       cognome: contatto.cognome,
-      email: contatto.email || "",
+      nome: contatto.nome || "",
       cell: contatto.cell || "",
       tel: contatto.tel || "",
-      cliente_id: contatto.cliente_id || "",
+      altro_telefono: contatto.altro_telefono || "",
+      email: contatto.email || "",
+      pec: contatto.pec || "",
+      email_secondaria: contatto.email_secondaria || "",
+      email_altro: contatto.email_altro || "",
+      contatto_principale: contatto.contatto_principale || "",
       note: contatto.note || ""
     });
     setDialogOpen(true);
@@ -194,12 +192,16 @@ export default function ContattiPage() {
 
   const resetForm = () => {
     setFormData({
-      nome: "",
       cognome: "",
-      email: "",
+      nome: "",
       cell: "",
       tel: "",
-      cliente_id: "",
+      altro_telefono: "",
+      email: "",
+      pec: "",
+      email_secondaria: "",
+      email_altro: "",
+      contatto_principale: "",
       note: ""
     });
     setEditingContatto(null);
@@ -207,32 +209,44 @@ export default function ContattiPage() {
 
   const downloadTemplate = () => {
     const headers = [
-      "nome",
       "cognome",
-      "email",
+      "nome",
       "cell",
       "tel",
-      "cliente_id",
+      "altro_telefono",
+      "email",
+      "pec",
+      "email_secondaria",
+      "email_altro",
+      "contatto_principale",
       "note"
     ];
 
     const exampleRows = [
       [
-        "Mario",
         "Rossi",
-        "mario.rossi@email.it",
+        "Mario",
         "3331234567",
         "0612345678",
-        "",
+        "0687654321",
+        "mario.rossi@email.it",
+        "mario.rossi@pec.it",
+        "mario.rossi2@email.it",
+        "m.rossi@altro.it",
+        "Dott. Bianchi",
         "Contatto principale"
       ],
       [
-        "Laura",
-        "Bianchi",
-        "laura.bianchi@email.it",
+        "Studio Legale XYZ",
+        "",
         "3337654321",
         "",
         "",
+        "info@studioxyz.it",
+        "studioxyz@pec.it",
+        "",
+        "",
+        "Avv. Verdi",
         ""
       ]
     ];
@@ -310,11 +324,22 @@ export default function ContattiPage() {
   const validateContatto = (row: any): { valid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
-    if (!row.nome?.trim()) errors.push("Nome obbligatorio");
-    if (!row.cognome?.trim()) errors.push("Cognome obbligatorio");
+    if (!row.cognome?.trim()) errors.push("Cognome/Denominazione obbligatorio");
     
     if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
       errors.push("Email non valida");
+    }
+
+    if (row.pec && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.pec)) {
+      errors.push("PEC non valida");
+    }
+
+    if (row.email_secondaria && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email_secondaria)) {
+      errors.push("Email secondaria non valida");
+    }
+
+    if (row.email_altro && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email_altro)) {
+      errors.push("Email altro non valida");
     }
 
     if (row.cell && !/^\d{9,13}$/.test(row.cell.replace(/\s/g, ""))) {
@@ -323,6 +348,10 @@ export default function ContattiPage() {
 
     if (row.tel && !/^\d{9,13}$/.test(row.tel.replace(/\s/g, ""))) {
       errors.push("Telefono non valido");
+    }
+
+    if (row.altro_telefono && !/^\d{9,13}$/.test(row.altro_telefono.replace(/\s/g, ""))) {
+      errors.push("Altro telefono non valido");
     }
 
     return {
@@ -358,12 +387,16 @@ export default function ContattiPage() {
 
         try {
           const contattoData = {
-            nome: row.nome.trim(),
             cognome: row.cognome.trim(),
-            email: row.email?.trim() || null,
+            nome: row.nome?.trim() || null,
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
-            cliente_id: row.cliente_id?.trim() || null,
+            altro_telefono: row.altro_telefono?.trim() || null,
+            email: row.email?.trim() || null,
+            pec: row.pec?.trim() || null,
+            email_secondaria: row.email_secondaria?.trim() || null,
+            email_altro: row.email_altro?.trim() || null,
+            contatto_principale: row.contatto_principale?.trim() || null,
             note: row.note?.trim() || null
           };
 
@@ -407,12 +440,6 @@ export default function ContattiPage() {
     return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
   };
 
-  const getClienteNome = (clienteId: string | null): string => {
-    if (!clienteId) return "";
-    const cliente = clienti.find(c => c.id === clienteId);
-    return cliente ? cliente.ragione_sociale : "";
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -426,7 +453,6 @@ export default function ContattiPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
-      {/* Header Mobile Responsive */}
       <div className="mb-6 md:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -554,7 +580,7 @@ export default function ContattiPage() {
                   Nuovo Contatto
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
                 <DialogHeader>
                   <DialogTitle>
                     {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
@@ -566,16 +592,7 @@ export default function ContattiPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nome">Nome *</Label>
-                      <Input
-                        id="nome"
-                        value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cognome">Cognome *</Label>
+                      <Label htmlFor="cognome">Cognome/Denominazione *</Label>
                       <Input
                         id="cognome"
                         value={formData.cognome}
@@ -583,16 +600,14 @@ export default function ContattiPage() {
                         required
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="nome">Nome</Label>
+                      <Input
+                        id="nome"
+                        value={formData.nome}
+                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -617,23 +632,64 @@ export default function ContattiPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="cliente_id">Società (Opzionale)</Label>
-                    <Select
-                      value={formData.cliente_id || "nessuna"}
-                      onValueChange={(value) => setFormData({ ...formData, cliente_id: value === "nessuna" ? "" : value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona una società" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="nessuna">Nessuna società</SelectItem>
-                        {clienti.map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.ragione_sociale}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="altro_telefono">Altro Telefono</Label>
+                    <Input
+                      id="altro_telefono"
+                      type="tel"
+                      value={formData.altro_telefono}
+                      onChange={(e) => setFormData({ ...formData, altro_telefono: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pec">PEC</Label>
+                      <Input
+                        id="pec"
+                        type="email"
+                        value={formData.pec}
+                        onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email_secondaria">Email Secondaria</Label>
+                      <Input
+                        id="email_secondaria"
+                        type="email"
+                        value={formData.email_secondaria}
+                        onChange={(e) => setFormData({ ...formData, email_secondaria: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email_altro">Email Altro</Label>
+                      <Input
+                        id="email_altro"
+                        type="email"
+                        value={formData.email_altro}
+                        onChange={(e) => setFormData({ ...formData, email_altro: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="contatto_principale">Contatto Principale</Label>
+                    <Input
+                      id="contatto_principale"
+                      value={formData.contatto_principale}
+                      onChange={(e) => setFormData({ ...formData, contatto_principale: e.target.value })}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -666,7 +722,6 @@ export default function ContattiPage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base md:text-lg">Ricerca e Filtri</CardTitle>
@@ -706,7 +761,6 @@ export default function ContattiPage() {
         </CardContent>
       </Card>
 
-      {/* Contact Cards List */}
       <div className="space-y-3">
         {filteredContatti.length === 0 ? (
           <Card>
@@ -723,31 +777,26 @@ export default function ContattiPage() {
             <Card key={contatto.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
-                  {/* Avatar */}
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg md:text-xl">
-                      {getInitials(contatto.nome, contatto.cognome)}
+                      {getInitials(contatto.nome || "", contatto.cognome)}
                     </div>
                   </div>
 
-                  {/* Main Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
                       <div>
                         <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
-                          {contatto.nome} {contatto.cognome}
+                          {contatto.cognome} {contatto.nome}
                         </h3>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {contatto.cliente_id && (
-                            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              {getClienteNome(contatto.cliente_id)}
-                            </Badge>
-                          )}
-                        </div>
+                        {contatto.contatto_principale && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 mt-1">
+                            <User className="h-3 w-3 mr-1" />
+                            {contatto.contatto_principale}
+                          </Badge>
+                        )}
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -770,22 +819,51 @@ export default function ContattiPage() {
                       </div>
                     </div>
 
-                    {/* Contact Info */}
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {contatto.email && (
                         <a 
                           href={`mailto:${contatto.email}`}
-                          className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-blue-600 transition-colors group"
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
                           <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
                           <span className="truncate">{contatto.email}</span>
+                        </a>
+                      )}
+
+                      {contatto.pec && (
+                        <a 
+                          href={`mailto:${contatto.pec}`}
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                        >
+                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                          <span className="truncate">PEC: {contatto.pec}</span>
+                        </a>
+                      )}
+
+                      {contatto.email_secondaria && (
+                        <a 
+                          href={`mailto:${contatto.email_secondaria}`}
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                        >
+                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                          <span className="truncate">Email 2: {contatto.email_secondaria}</span>
+                        </a>
+                      )}
+
+                      {contatto.email_altro && (
+                        <a 
+                          href={`mailto:${contatto.email_altro}`}
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                        >
+                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                          <span className="truncate">Email altro: {contatto.email_altro}</span>
                         </a>
                       )}
                       
                       {contatto.cell && (
                         <a 
                           href={`tel:${contatto.cell}`}
-                          className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-green-600 transition-colors group"
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
                         >
                           <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
                           <span>{contatto.cell}</span>
@@ -795,21 +873,31 @@ export default function ContattiPage() {
                       {contatto.tel && (
                         <a 
                           href={`tel:${contatto.tel}`}
-                          className="flex items-center gap-2 text-sm md:text-base text-gray-700 hover:text-green-600 transition-colors group"
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
                         >
                           <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
                           <span>{contatto.tel}</span>
                         </a>
                       )}
 
-                      {contatto.note && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            <span className="font-semibold">Note:</span> {contatto.note}
-                          </p>
-                        </div>
+                      {contatto.altro_telefono && (
+                        <a 
+                          href={`tel:${contatto.altro_telefono}`}
+                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
+                        >
+                          <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
+                          <span>Altro: {contatto.altro_telefono}</span>
+                        </a>
                       )}
                     </div>
+
+                    {contatto.note && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          <span className="font-semibold">Note:</span> {contatto.note}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>

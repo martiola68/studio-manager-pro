@@ -534,59 +534,63 @@ export type Database = {
       }
       tbcontatti: {
         Row: {
+          altro_telefono: string | null
           cell: string | null
-          cliente_id: string | null
           cognome: string
+          contatto_principale: string | null
           created_at: string | null
           email: string | null
+          email_altro: string | null
+          email_secondaria: string | null
           id: string
           nome: string
           note: string | null
           password: string | null
+          pec: string | null
           pin: string | null
           tel: string | null
           updated_at: string | null
           utente: string | null
         }
         Insert: {
+          altro_telefono?: string | null
           cell?: string | null
-          cliente_id?: string | null
           cognome: string
+          contatto_principale?: string | null
           created_at?: string | null
           email?: string | null
+          email_altro?: string | null
+          email_secondaria?: string | null
           id?: string
           nome: string
           note?: string | null
           password?: string | null
+          pec?: string | null
           pin?: string | null
           tel?: string | null
           updated_at?: string | null
           utente?: string | null
         }
         Update: {
+          altro_telefono?: string | null
           cell?: string | null
-          cliente_id?: string | null
           cognome?: string
+          contatto_principale?: string | null
           created_at?: string | null
           email?: string | null
+          email_altro?: string | null
+          email_secondaria?: string | null
           id?: string
           nome?: string
           note?: string | null
           password?: string | null
+          pec?: string | null
           pin?: string | null
           tel?: string | null
           updated_at?: string | null
           utente?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "tbcontatti_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "tbclienti"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tbconversazioni: {
         Row: {
