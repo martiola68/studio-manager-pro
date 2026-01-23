@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import * as XLSX from "xlsx";
 
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 
@@ -262,51 +263,81 @@ export default function ContattiPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.name.endsWith(".csv")) {
+      if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
         toast({
           title: "Formato non valido",
-          description: "Seleziona un file CSV",
+          description: "Seleziona un file Excel (.xlsx, .xls) o CSV",
           variant: "destructive"
         });
         return;
       }
       setCsvFile(file);
-      parseCSV(file);
+      parseFile(file);
     }
   };
 
-  const parseCSV = async (file: File) => {
+  const parseFile = async (file: File) => {
     try {
-      const text = await file.text();
-      const lines = text.split("\n").filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast({
-          title: "File vuoto",
-          description: "Il file CSV non contiene dati",
-          variant: "destructive"
+      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        // Gestione Excel
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (jsonData.length < 2) {
+          toast({
+            title: "File vuoto",
+            description: "Il file Excel non contiene dati",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const headers = ["cognome", "nome", "cell", "tel", "altro_telefono", "email", "pec", "email_secondaria", "email_altro", "contatto_principale", "note"];
+        const data = jsonData.slice(1).map((row: any[], index) => {
+          const rowData: any = { _lineNumber: index + 2 };
+          headers.forEach((header, i) => {
+            rowData[header] = row[i] ? String(row[i]).trim() : "";
+          });
+          return rowData;
         });
-        return;
+
+        setPreviewData(data);
+      } else {
+        // Gestione CSV
+        const text = await file.text();
+        const lines = text.split("\n").filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          toast({
+            title: "File vuoto",
+            description: "Il file CSV non contiene dati",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+        const data = lines.slice(1).map((line, index) => {
+          const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+          const row: any = { _lineNumber: index + 2 };
+          
+          headers.forEach((header, i) => {
+            row[header] = values[i] || "";
+          });
+          
+          return row;
+        });
+
+        setPreviewData(data);
       }
-
-      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
-      const data = lines.slice(1).map((line, index) => {
-        const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
-        const row: any = { _lineNumber: index + 2 };
-        
-        headers.forEach((header, i) => {
-          row[header] = values[i] || "";
-        });
-        
-        return row;
-      });
-
-      setPreviewData(data);
     } catch (error) {
-      console.error("Errore parsing CSV:", error);
+      console.error("Errore lettura file:", error);
       toast({
         title: "Errore",
-        description: "Impossibile leggere il file CSV",
+        description: "Impossibile leggere il file",
         variant: "destructive"
       });
     }
@@ -436,15 +467,15 @@ export default function ContattiPage() {
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importa CSV
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Importa Excel
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
                 <DialogHeader>
-                  <DialogTitle>Importazione Contatti da CSV</DialogTitle>
+                  <DialogTitle>Importazione Contatti da Excel/CSV</DialogTitle>
                   <DialogDescription>
-                    Carica un file CSV per importare più contatti contemporaneamente
+                    Carica un file Excel (.xlsx, .xls) o CSV per importare più contatti contemporaneamente
                   </DialogDescription>
                 </DialogHeader>
 
@@ -473,11 +504,11 @@ export default function ContattiPage() {
                   </Button>
 
                   <div className="space-y-2">
-                    <Label htmlFor="csv-file">Carica File CSV</Label>
+                    <Label htmlFor="csv-file">Carica File Excel/CSV</Label>
                     <Input
                       id="csv-file"
                       type="file"
-                      accept=".csv"
+                      accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                       onChange={handleFileChange}
                       className="cursor-pointer"
                     />
