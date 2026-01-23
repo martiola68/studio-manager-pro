@@ -31,6 +31,11 @@ export const contattoService = {
     // Rimuovi campi non validi se presenti (pulizia difensiva)
     const { ...validContatto } = contatto;
     
+    // Assicurati che il nome sia una stringa (anche vuota) se undefined/null, poiché è NOT NULL nel DB
+    if (validContatto.nome === undefined || validContatto.nome === null) {
+      validContatto.nome = ""; 
+    }
+    
     const { data, error } = await supabase
       .from("tbcontatti")
       .insert(validContatto)
@@ -49,7 +54,7 @@ export const contattoService = {
       .from("tbcontatti")
       .update(validUpdates)
       .eq("id", id)
-      .select("*") // Explicitly select all columns including updated_at
+      .select("*")
       .single();
 
     if (error) throw error;

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User } from "lucide-react";
+import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -30,6 +30,7 @@ export default function ContattiPage() {
   const [importing, setImporting] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
 
+  // Stato del form con i nuovi campi
   const [formData, setFormData] = useState({
     cognome: "",
     nome: "",
@@ -91,8 +92,8 @@ export default function ContattiPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(c =>
-        c.nome.toLowerCase().includes(query) ||
         c.cognome.toLowerCase().includes(query) ||
+        (c.nome || "").toLowerCase().includes(query) ||
         (c.email?.toLowerCase() || "").includes(query) ||
         (c.cell?.toLowerCase() || "").includes(query)
       );
@@ -111,9 +112,12 @@ export default function ContattiPage() {
     e.preventDefault();
 
     try {
+      // Preparazione dati per salvataggio
+      // Nome inviato come stringa vuota se mancante (richiesto dal DB)
+      // Altri campi opzionali come null se vuoti
       const dataToSave = {
         cognome: formData.cognome,
-        nome: formData.nome || null,
+        nome: formData.nome || "", 
         cell: formData.cell || null,
         tel: formData.tel || null,
         altro_telefono: formData.altro_telefono || null,
@@ -227,27 +231,14 @@ export default function ContattiPage() {
         "Rossi",
         "Mario",
         "3331234567",
-        "0612345678",
-        "0687654321",
+        "0212345678",
+        "0298765432",
         "mario.rossi@email.it",
         "mario.rossi@pec.it",
-        "mario.rossi2@email.it",
-        "m.rossi@altro.it",
+        "mario.privato@email.it",
+        "ufficio@email.it",
         "Dott. Bianchi",
-        "Contatto principale"
-      ],
-      [
-        "Studio Legale XYZ",
-        "",
-        "3337654321",
-        "",
-        "",
-        "info@studioxyz.it",
-        "studioxyz@pec.it",
-        "",
-        "",
-        "Avv. Verdi",
-        ""
+        "Contatto importante"
       ]
     ];
 
@@ -326,33 +317,13 @@ export default function ContattiPage() {
 
     if (!row.cognome?.trim()) errors.push("Cognome/Denominazione obbligatorio");
     
-    if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-      errors.push("Email non valida");
-    }
-
-    if (row.pec && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.pec)) {
-      errors.push("PEC non valida");
-    }
-
-    if (row.email_secondaria && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email_secondaria)) {
-      errors.push("Email secondaria non valida");
-    }
-
-    if (row.email_altro && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email_altro)) {
-      errors.push("Email altro non valida");
-    }
-
-    if (row.cell && !/^\d{9,13}$/.test(row.cell.replace(/\s/g, ""))) {
-      errors.push("Cellulare non valido");
-    }
-
-    if (row.tel && !/^\d{9,13}$/.test(row.tel.replace(/\s/g, ""))) {
-      errors.push("Telefono non valido");
-    }
-
-    if (row.altro_telefono && !/^\d{9,13}$/.test(row.altro_telefono.replace(/\s/g, ""))) {
-      errors.push("Altro telefono non valido");
-    }
+    // Validazioni di base per email
+    [row.email, row.pec, row.email_secondaria, row.email_altro].forEach((email, idx) => {
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        const fieldNames = ["Email", "PEC", "Email secondaria", "Email altro"];
+        errors.push(`${fieldNames[idx]} non valida`);
+      }
+    });
 
     return {
       valid: errors.length === 0,
@@ -388,7 +359,7 @@ export default function ContattiPage() {
         try {
           const contattoData = {
             cognome: row.cognome.trim(),
-            nome: row.nome?.trim() || null,
+            nome: row.nome?.trim() || "", // Importante: stringa vuota se manca
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
             altro_telefono: row.altro_telefono?.trim() || null,
@@ -437,7 +408,9 @@ export default function ContattiPage() {
   };
 
   const getInitials = (nome: string, cognome: string): string => {
-    return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase();
+    const n = nome || "";
+    const c = cognome || "";
+    return `${n.charAt(0)}${c.charAt(0)}`.toUpperCase();
   };
 
   if (loading) {
@@ -482,10 +455,9 @@ export default function ContattiPage() {
                       <div className="text-sm text-blue-900">
                         <p className="font-semibold mb-2">📋 Come funziona:</p>
                         <ol className="list-decimal list-inside space-y-1">
-                          <li>Scarica il template CSV cliccando il pulsante qui sotto</li>
-                          <li>Compila il file seguendo l'esempio fornito</li>
+                          <li>Scarica il template CSV aggiornato</li>
+                          <li>Compila il file seguendo l'esempio</li>
                           <li>Carica il file compilato</li>
-                          <li>Verifica l'anteprima e conferma l'importazione</li>
                         </ol>
                       </div>
                     </div>
@@ -513,55 +485,13 @@ export default function ContattiPage() {
 
                   {previewData.length > 0 && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">Anteprima Dati ({previewData.length} righe)</h3>
-                        <Badge variant="secondary">{csvFile?.name}</Badge>
-                      </div>
-
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-sm text-amber-900">
-                            <p className="font-semibold mb-1">⚠️ Attenzione:</p>
-                            <ul className="list-disc list-inside space-y-1">
-                              <li>Le righe con errori di validazione verranno saltate</li>
-                              <li>I contatti validi verranno importati</li>
-                              <li>Riceverai un report finale con successi ed errori</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
                       <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <Button
                           onClick={handleImport}
                           disabled={importing}
                           className="flex-1 bg-green-600 hover:bg-green-700"
                         >
-                          {importing ? (
-                            <>
-                              <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                              Importazione in corso...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Importa {previewData.length} Contatti
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setImportDialogOpen(false);
-                            setCsvFile(null);
-                            setPreviewData([]);
-                          }}
-                          disabled={importing}
-                          className="w-full sm:w-auto"
-                        >
-                          Annulla
+                          {importing ? "Importazione..." : `Importa ${previewData.length} Contatti`}
                         </Button>
                       </div>
                     </div>
@@ -586,10 +516,14 @@ export default function ContattiPage() {
                     {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
                   </DialogTitle>
                   <DialogDescription>
-                    Inserisci i dati del contatto
+                    Inserisci i dati del contatto. I campi contrassegnati con * sono obbligatori.
                   </DialogDescription>
                 </DialogHeader>
+                
+                {/* FORM TABELLARE - 2 COLONNE */}
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  
+                  {/* Riga 1: Cognome (1) e Nome (2) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cognome">Cognome/Denominazione *</Label>
@@ -598,18 +532,21 @@ export default function ContattiPage() {
                         value={formData.cognome}
                         onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
                         required
+                        placeholder="Es. Rossi o Nome Azienda"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nome">Nome</Label>
+                      <Label htmlFor="nome">Nome (facoltativo)</Label>
                       <Input
                         id="nome"
                         value={formData.nome}
                         onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                        placeholder="Es. Mario"
                       />
                     </div>
                   </div>
 
+                  {/* Riga 2: Cellulare (3) e Telefono (4) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cell">Cellulare</Label>
@@ -631,17 +568,17 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="altro_telefono">Altro Telefono</Label>
-                    <Input
-                      id="altro_telefono"
-                      type="tel"
-                      value={formData.altro_telefono}
-                      onChange={(e) => setFormData({ ...formData, altro_telefono: e.target.value })}
-                    />
-                  </div>
-
+                  {/* Riga 3: Altro telefono (5) e Email (6) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="altro_telefono">Altro Telefono</Label>
+                      <Input
+                        id="altro_telefono"
+                        type="tel"
+                        value={formData.altro_telefono}
+                        onChange={(e) => setFormData({ ...formData, altro_telefono: e.target.value })}
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -651,6 +588,10 @@ export default function ContattiPage() {
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
                     </div>
+                  </div>
+
+                  {/* Riga 4: PEC (7) e Email Secondaria (8) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="pec">PEC</Label>
                       <Input
@@ -660,9 +601,6 @@ export default function ContattiPage() {
                         onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email_secondaria">Email Secondaria</Label>
                       <Input
@@ -672,6 +610,10 @@ export default function ContattiPage() {
                         onChange={(e) => setFormData({ ...formData, email_secondaria: e.target.value })}
                       />
                     </div>
+                  </div>
+
+                  {/* Riga 5: Email Altro (9) e Contatto Principale (10) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email_altro">Email Altro</Label>
                       <Input
@@ -681,17 +623,18 @@ export default function ContattiPage() {
                         onChange={(e) => setFormData({ ...formData, email_altro: e.target.value })}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contatto_principale">Contatto Principale</Label>
+                      <Input
+                        id="contatto_principale"
+                        value={formData.contatto_principale}
+                        onChange={(e) => setFormData({ ...formData, contatto_principale: e.target.value })}
+                        placeholder="Es. Segretaria, Responsabile..."
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="contatto_principale">Contatto Principale</Label>
-                    <Input
-                      id="contatto_principale"
-                      value={formData.contatto_principale}
-                      onChange={(e) => setFormData({ ...formData, contatto_principale: e.target.value })}
-                    />
-                  </div>
-
+                  {/* Riga 6: Note (11) - Full width */}
                   <div className="space-y-2">
                     <Label htmlFor="note">Note</Label>
                     <Textarea
@@ -702,9 +645,9 @@ export default function ContattiPage() {
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                    <Button type="submit" className="flex-1">
-                      {editingContatto ? "Aggiorna" : "Crea"} Contatto
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-4">
+                    <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                      {editingContatto ? "Aggiorna" : "Salva"} Contatto
                     </Button>
                     <Button 
                       type="button" 
@@ -819,7 +762,7 @@ export default function ContattiPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                       {contatto.email && (
                         <a 
                           href={`mailto:${contatto.email}`}
@@ -835,7 +778,7 @@ export default function ContattiPage() {
                           href={`mailto:${contatto.pec}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
-                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
+                          <Mail className="h-4 w-4 flex-shrink-0 text-amber-500 group-hover:text-blue-600" />
                           <span className="truncate">PEC: {contatto.pec}</span>
                         </a>
                       )}
@@ -846,20 +789,10 @@ export default function ContattiPage() {
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
                           <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                          <span className="truncate">Email 2: {contatto.email_secondaria}</span>
+                          <span className="truncate">{contatto.email_secondaria}</span>
                         </a>
                       )}
 
-                      {contatto.email_altro && (
-                        <a 
-                          href={`mailto:${contatto.email_altro}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
-                        >
-                          <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                          <span className="truncate">Email altro: {contatto.email_altro}</span>
-                        </a>
-                      )}
-                      
                       {contatto.cell && (
                         <a 
                           href={`tel:${contatto.cell}`}
@@ -877,16 +810,6 @@ export default function ContattiPage() {
                         >
                           <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
                           <span>{contatto.tel}</span>
-                        </a>
-                      )}
-
-                      {contatto.altro_telefono && (
-                        <a 
-                          href={`tel:${contatto.altro_telefono}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
-                        >
-                          <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
-                          <span>Altro: {contatto.altro_telefono}</span>
                         </a>
                       )}
                     </div>
