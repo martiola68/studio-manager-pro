@@ -1,5 +1,5 @@
-cognome,nome,cellulare,telefono,altro_telefono,email,pec,email_secondaria,email_altro,contatto_principale,note
-Rossi,Mario,3331234567,0612345678,0698765432,mario.rossi@email.it,mario.rossi@pec.it,m.rossi@secondaria.it,rossi.mario@altro.com,Direttore Generale,Contatto preferenziale per comunicazioni urgenti
-Bianchi SRL,,3409876543,0287654321,,info@bianchisrl.it,bianchisrl@pec.it,amministrazione@bianchisrl.it,,,Azienda cliente storico - riferimento ufficio amministrativo
-Verdi,Laura,3357891234,,,laura.verdi@gmail.com,,laura.v@work.it,,,Libera professionista - disponibile solo via email
-De Luca,Giuseppe,3401122334,0639988776,0639988777,g.deluca@studio.it,giuseppe.deluca@pec.it,,,Responsabile Contabilità,Preferisce comunicazioni via PEC per questioni formali
+cognome,nome,cell,tel,altro_telefono,email,pec,email_secondaria,email_altro,contatto_principale,note
+"Rossi","Mario","3331234567","0612345678","0698765432","mario.rossi@email.it","mario.rossi@pec.it","m.rossi@secondaria.it","rossi.mario@altro.com","Direttore Generale","Contatto importante per progetti strategici"
+"Bianchi SRL","","3409876543","0287654321","","info@bianchisrl.it","bianchisrl@pec.it","amministrazione@bianchisrl.it","","","Azienda cliente - solo denominazione senza nome"
+"Verdi","Laura","3357891234","","","laura.verdi@gmail.com","","laura.v@work.it","","","Libera professionista - contatto email preferito"
+"De Luca","Giuseppe","3401122334","0639988776","0639988777","g.deluca@studio.it","giuseppe.deluca@pec.it","","","Responsabile Contabilità","Preferisce comunicazioni via PEC per questioni formali"
