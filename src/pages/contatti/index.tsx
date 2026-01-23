@@ -280,8 +280,8 @@ export default function ContattiPage() {
     try {
       if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
         // Gestione Excel
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: "array" });
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -296,7 +296,7 @@ export default function ContattiPage() {
         }
 
         const headers = ["cognome", "nome", "cell", "tel", "altro_telefono", "email", "pec", "email_secondaria", "email_altro", "contatto_principale", "note"];
-        const data = jsonData.slice(1).map((row: any[], index) => {
+        const excelRows = jsonData.slice(1).map((row: any[], index) => {
           const rowData: any = { _lineNumber: index + 2 };
           headers.forEach((header, i) => {
             rowData[header] = row[i] ? String(row[i]).trim() : "";
@@ -304,7 +304,7 @@ export default function ContattiPage() {
           return rowData;
         });
 
-        setPreviewData(data);
+        setPreviewData(excelRows);
       } else {
         // Gestione CSV
         const text = await file.text();
@@ -320,7 +320,7 @@ export default function ContattiPage() {
         }
 
         const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
-        const data = lines.slice(1).map((line, index) => {
+        const csvRows = lines.slice(1).map((line, index) => {
           const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
           const row: any = { _lineNumber: index + 2 };
           
@@ -331,7 +331,7 @@ export default function ContattiPage() {
           return row;
         });
 
-        setPreviewData(data);
+        setPreviewData(csvRows);
       }
     } catch (error) {
       console.error("Errore lettura file:", error);
