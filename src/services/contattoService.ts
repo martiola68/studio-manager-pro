@@ -27,17 +27,6 @@ export const contattoService = {
     return data;
   },
 
-  async getContattiByCliente(clienteId: string) {
-    const { data, error } = await supabase
-      .from("tbcontatti")
-      .select("*")
-      .eq("cliente_id", clienteId)
-      .order("cognome", { ascending: true });
-
-    if (error) throw error;
-    return data;
-  },
-
   async createContatto(contatto: ContattoInsert) {
     // Rimuovi campi non validi se presenti (pulizia difensiva)
     const { ...validContatto } = contatto;
