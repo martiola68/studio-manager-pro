@@ -365,6 +365,7 @@ export default function MessaggiPage() {
             selectedId={selectedConvId}
             onSelect={handleSelectConversation}
             currentUserEmail={user?.email}
+            currentUserId={authUserId}
             onNewChat={() => setIsNewChatOpen(true)}
             onDeleteConversazione={handleDeleteConversazione}
           />
