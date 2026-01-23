@@ -3,13 +3,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, User, Users } from "lucide-react";
+import { Search, Plus, User, Users, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Database } from "@/lib/supabase/types";
 
-// Definiamo i tipi manualmente basandoci su quelli del DB per gestire le relazioni
 type Conversazione = Database["public"]["Tables"]["tbconversazioni"]["Row"];
 type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 
@@ -34,6 +33,7 @@ interface ChatSidebarProps {
   onSelect: (id: string) => void;
   currentUserEmail?: string;
   onNewChat: () => void;
+  onDeleteConversazione: (conversazioneId: string) => void;
   className?: string;
 }
 
@@ -43,6 +43,7 @@ export function ChatSidebar({
   onSelect,
   currentUserEmail,
   onNewChat,
+  onDeleteConversazione,
   className,
 }: ChatSidebarProps) {
   const [search, setSearch] = useState("");

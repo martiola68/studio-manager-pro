@@ -355,6 +355,43 @@ export default function MessaggiPage() {
     router.push(url);
   };
 
+  const handleDeleteConversazione = async (conversazioneId: string) => {
+    if (!authUserId) return;
+
+    const conv = conversazioni.find(c => c.id === conversazioneId);
+    const nomeConv = conv?.tipo === "gruppo" 
+      ? conv.titolo 
+      : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)?.tbutenti?.nome || "questa conversazione";
+
+    if (!confirm(`Sei sicuro di voler eliminare "${nomeConv}"? Tutti i messaggi saranno eliminati permanentemente.`)) {
+      return;
+    }
+
+    try {
+      await messaggioService.eliminaConversazione(conversazioneId, authUserId);
+      
+      // Se la conversazione eliminata era quella selezionata, deseleziona
+      if (selectedConvId === conversazioneId) {
+        setSelectedConvId(null);
+      }
+      
+      // Ricarica la lista
+      await loadConversazioni(authUserId);
+      
+      toast({
+        title: "✅ Conversazione eliminata",
+        description: "La conversazione e tutti i messaggi sono stati eliminati.",
+      });
+    } catch (error: any) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        variant: "destructive",
+        title: "❌ Errore",
+        description: error.message || "Impossibile eliminare la conversazione. Solo il creatore può eliminarla.",
+      });
+    }
+  };
+
   const getPartnerName = () => {
     if (!selectedConvId || !user) return "";
     const conv = conversazioni.find((c) => c.id === selectedConvId);
@@ -388,6 +425,7 @@ export default function MessaggiPage() {
             onSelect={setSelectedConvId}
             currentUserEmail={user?.email}
             onNewChat={() => setIsNewChatOpen(true)}
+            onDeleteConversazione={handleDeleteConversazione}
           />
         </div>
 

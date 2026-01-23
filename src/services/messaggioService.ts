@@ -27,9 +27,15 @@ export const messaggioService = {
 
     if (error) throw error;
 
+    // Filtra SOLO le conversazioni dove l'utente è partecipante
+    const conversazioniUtente = (data || []).filter((conv) => {
+      const isPartecipante = conv.partecipanti?.some((p: any) => p.utente_id === userId);
+      return isPartecipante;
+    });
+
     // Per ogni conversazione, conta i messaggi non letti
     const conversazioniConNonLetti = await Promise.all(
-      (data || []).map(async (conv) => {
+      conversazioniUtente.map(async (conv) => {
         const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
         const ultimoLetto = partecipante?.ultimo_letto_at;
 
@@ -369,6 +375,67 @@ export const messaggioService = {
       return true;
     } catch (error) {
       console.error("Errore eliminazione messaggio:", error);
+      throw error;
+    }
+  },
+
+  async eliminaConversazione(conversazioneId: string, userId: string) {
+    try {
+      // Verifica che l'utente sia il creatore della conversazione
+      const { data: conversazione, error: checkError } = await supabase
+        .from("tbconversazioni")
+        .select("creato_da, tipo")
+        .eq("id", conversazioneId)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (conversazione.creato_da !== userId) {
+        throw new Error("Solo il creatore può eliminare questa conversazione");
+      }
+
+      // Elimina prima i partecipanti (foreign key constraint)
+      const { error: deleteParteciError } = await supabase
+        .from("tbconversazioni_utenti")
+        .delete()
+        .eq("conversazione_id", conversazioneId);
+
+      if (deleteParteciError) throw deleteParteciError;
+
+      // Elimina gli allegati dei messaggi
+      const { data: messaggi } = await supabase
+        .from("tbmessaggi")
+        .select("id")
+        .eq("conversazione_id", conversazioneId);
+
+      if (messaggi && messaggi.length > 0) {
+        const messaggiIds = messaggi.map(m => m.id);
+        
+        await supabase
+          .from("tbmessaggi_allegati")
+          .delete()
+          .in("messaggio_id", messaggiIds);
+      }
+
+      // Elimina i messaggi
+      const { error: deleteMessaggiError } = await supabase
+        .from("tbmessaggi")
+        .delete()
+        .eq("conversazione_id", conversazioneId);
+
+      if (deleteMessaggiError) throw deleteMessaggiError;
+
+      // Elimina la conversazione
+      const { error: deleteConvError } = await supabase
+        .from("tbconversazioni")
+        .delete()
+        .eq("id", conversazioneId);
+
+      if (deleteConvError) throw deleteConvError;
+
+      return true;
+    } catch (error) {
+      console.error("Errore eliminazione conversazione:", error);
       throw error;
     }
   },
