@@ -190,7 +190,7 @@ export function ClienteForm({ clienteToEdit, onSuccess, onCancel }: ClienteFormP
       <div className="flex items-center space-x-2 py-2">
         <Switch
           id="attivo"
-          checked={!!formData.attivo}
+          checked={formData.attivo ?? true}
           onCheckedChange={handleSwitchChange}
         />
         <Label htmlFor="attivo">Cliente Attivo</Label>
