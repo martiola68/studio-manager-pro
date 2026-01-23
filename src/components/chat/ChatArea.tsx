@@ -38,8 +38,10 @@ interface ChatAreaProps {
   messaggi: MessaggioConMittente[];
   currentUserId: string;
   partnerName: string;
+  creatorId: string;
   onSendMessage: (testo: string, files?: File[]) => Promise<void>;
   onBack: () => void;
+  onDeleteChat: () => void;
   className?: string;
 }
 
@@ -48,13 +50,16 @@ export function ChatArea({
   messaggi,
   currentUserId,
   partnerName,
+  creatorId,
   onSendMessage,
   onBack,
+  onDeleteChat,
   className,
 }: ChatAreaProps) {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [deleteChatDialogOpen, setDeleteChatDialogOpen] = useState(false);
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -195,6 +200,18 @@ export function ChatArea({
             Online
           </span>
         </div>
+
+        {currentUserId === creatorId && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="shrink-0 hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setDeleteChatDialogOpen(true)}
+            title="Elimina conversazione"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        )}
 
         <Button variant="ghost" size="icon" className="shrink-0">
           <MoreVertical className="h-5 w-5 text-muted-foreground" />
@@ -380,6 +397,30 @@ export function ChatArea({
               className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteChatDialogOpen} onOpenChange={setDeleteChatDialogOpen}>
+        <AlertDialogContent className="mx-4 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare l'intera conversazione con <strong>{partnerName}</strong>? 
+              Tutti i messaggi e gli allegati verranno eliminati permanentemente. Questa azione è irreversibile.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDeleteChatDialogOpen(false);
+                onDeleteChat();
+              }}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina Conversazione
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
