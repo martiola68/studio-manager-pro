@@ -545,12 +545,9 @@ export type Database = {
           id: string
           nome: string
           note: string | null
-          password: string | null
           pec: string | null
-          pin: string | null
           tel: string | null
           updated_at: string | null
-          utente: string | null
         }
         Insert: {
           altro_telefono?: string | null
@@ -564,12 +561,9 @@ export type Database = {
           id?: string
           nome: string
           note?: string | null
-          password?: string | null
           pec?: string | null
-          pin?: string | null
           tel?: string | null
           updated_at?: string | null
-          utente?: string | null
         }
         Update: {
           altro_telefono?: string | null
@@ -583,12 +577,9 @@ export type Database = {
           id?: string
           nome?: string
           note?: string | null
-          password?: string | null
           pec?: string | null
-          pin?: string | null
           tel?: string | null
           updated_at?: string | null
-          utente?: string | null
         }
         Relationships: []
       }

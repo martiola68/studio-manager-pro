@@ -1012,41 +1012,71 @@ export default function ClientiPage() {
 
       let successCount = 0;
       let errorCount = 0;
+      const errors: string[] = [];
 
-      for (let i = 1; i < lines.length; i++) {
+      for (let i = 0; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
 
-        const values = lines[i].split(",");
+        const values = lines[i].split(";").map(v => v.trim());
+        
+        const ragioneSociale = values[0] || "";
+        const email = values[6] || "";
+
+        if (!ragioneSociale || !email) {
+          errors.push(`Riga ${i + 1}: Ragione sociale o email mancanti`);
+          errorCount++;
+          continue;
+        }
+
+        if (!email.includes("@")) {
+          errors.push(`Riga ${i + 1}: Email non valida (${email})`);
+          errorCount++;
+          continue;
+        }
+
         const clienteData = {
           cod_cliente: `IMP-${Date.now()}-${i}`,
-          ragione_sociale: values[0]?.trim() || "",
-          partita_iva: values[1]?.trim() || "",
-          codice_fiscale: values[2]?.trim() || "",
-          email: values[3]?.trim() || "",
-          citta: values[4]?.trim() || "",
-          attivo: values[5]?.trim().toLowerCase() === "attivo",
+          ragione_sociale: ragioneSociale,
+          email: email,
+          partita_iva: ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
+          codice_fiscale: "",
+          indirizzo: "",
+          cap: "",
+          citta: "",
+          provincia: "",
+          tipo_cliente: "PERSONA_GIURIDICA",
+          attivo: true,
+          note: `Importato da CSV il ${new Date().toLocaleDateString()}`,
         };
 
         try {
           await clienteService.createCliente(clienteData as any);
           successCount++;
-        } catch (error) {
+        } catch (error: any) {
           errorCount++;
-          console.error(`Errore importazione riga ${i}:`, error);
+          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
+          console.error(`Errore importazione riga ${i + 1}:`, error);
         }
+      }
+
+      if (errors.length > 0) {
+        console.error("Errori importazione:", errors);
       }
 
       toast({
         title: "Importazione completata",
-        description: `${successCount} clienti importati, ${errorCount} errori`,
+        description: `✅ ${successCount} clienti importati\n❌ ${errorCount} errori`,
+        variant: errorCount > 0 ? "destructive" : "default",
       });
 
       loadData();
+      
+      event.target.value = "";
     } catch (error) {
       console.error("Errore importazione CSV:", error);
       toast({
         title: "Errore",
-        description: "Impossibile importare il file CSV",
+        description: "Impossibile importare il file CSV. Verifica il formato del file.",
         variant: "destructive",
       });
     }
