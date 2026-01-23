@@ -194,7 +194,12 @@ export function ChatArea({
         </Avatar>
         
         <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-sm md:text-base truncate">{partnerName}</h2>
+          <h2 className={cn(
+            "font-semibold text-sm md:text-base truncate",
+            currentUserId === creatorId ? "text-foreground" : "text-red-600"
+          )}>
+            {partnerName}
+          </h2>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
             Online
