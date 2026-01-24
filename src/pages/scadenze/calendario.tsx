@@ -180,6 +180,25 @@ export default function CalendarioScadenzePage() {
 
   const handleInviaAlert = async (tipoScadenza: ScadenzaConUrgenza) => {
     try {
+      // Verifica che l'utente corrente sia Responsabile o Amministratore
+      if (!currentUser) {
+        toast({
+          title: "Errore",
+          description: "Utente non trovato",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!currentUser.responsabile && currentUser.tipo_utente !== "amministratore") {
+        toast({
+          title: "Accesso negato",
+          description: "Solo Responsabili e Amministratori possono inviare alert",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const settore = tipoScadenza.settore || "Fiscale";
       
       let query = supabase
@@ -305,7 +324,7 @@ export default function CalendarioScadenzePage() {
             operatore_id: currentUser.id,
             destinatario_id: utente.id,
             settore: settore,
-            tipo_promemoria_id: null, // Verrà cercato "Scadenza adempimento" se esiste
+            tipo_promemoria_id: null,
           });
           promemoriaCreati++;
         } catch (err) {
