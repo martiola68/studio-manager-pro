@@ -96,7 +96,7 @@ const TIPO_PRESTAZIONE_OPTIONS: string[] = [
   "Attività di valutazione tecnica dell'iniziativa di impresa e di asseverazione dei business plan per l'accesso a finanziamenti pubblici",
   "Consulenza aziendale",
   "Consulenza contrattuale",
-  "Consulenza economico finanziaria",
+  "Consulenza economico-finanziaria",
   "Tenuta della contabilità",
   "Consulenza in materia di redazione bilancio",
   "Revisione legale dei conti",
@@ -1005,6 +1005,14 @@ export default function ClientiPage() {
     a.click();
   };
 
+  const isFieldEnabled = (field: "fiscale" | "payroll") => {
+    if (!formData.settore) return true;
+    if (formData.settore === "Fiscale & Lavoro") return true;
+    if (formData.settore === "Fiscale" && field === "fiscale") return true;
+    if (formData.settore === "Lavoro" && field === "payroll") return true;
+    return false;
+  };
+
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1128,12 +1136,28 @@ export default function ClientiPage() {
     }
   };
 
-  const isFieldEnabled = (field: "fiscale" | "payroll") => {
-    if (!formData.settore) return true;
-    if (formData.settore === "Fiscale & Lavoro") return true;
-    if (formData.settore === "Fiscale" && field === "fiscale") return true;
-    if (formData.settore === "Lavoro" && field === "payroll") return true;
-    return false;
+  const downloadTemplate = async () => {
+    try {
+      const template = await riferimentiValoriService.getTemplate();
+      const blob = new Blob([template], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "template_import.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({
+        title: "✅ Template scaricato",
+        description: "Template CSV aggiornato scaricato con successo",
+      });
+    } catch (error) {
+      console.error("Errore download template:", error);
+      toast({
+        title: "❌ Errore",
+        description: "Impossibile scaricare il template",
+        variant: "destructive",
+      });
+    }
   };
 
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
@@ -1183,6 +1207,67 @@ export default function ClientiPage() {
                   Importa Excel
                 </Button>
               </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+                <DialogHeader>
+                  <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-2">📋 Come funziona:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>Scarica il template CSV aggiornato</li>
+                          <li>Compila il file seguendo l&apos;esempio</li>
+                          <li>Carica il file compilato</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={downloadTemplate}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Scarica Template CSV
+                  </Button>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="csv-file-clienti">Carica File Excel/CSV</Label>
+                    <Input
+                      id="csv-file-clienti"
+                      type="file"
+                      accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                      onChange={handleImportCSV}
+                      className="cursor-pointer"
+                    />
+                  </div>
+
+                  {previewData.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Anteprima: {previewData.length} clienti pronti per l&apos;importazione
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <Button
+                          onClick={() => {
+                            setPreviewData([]);
+                            setCsvFile(null);
+                          }}
+                          disabled={importing}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          {importing ? "Importazione..." : `Importa ${previewData.length} Clienti`}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
             </Dialog>
             <Button onClick={handleAddNew} className="gap-2">
               <Plus className="h-4 w-4" />
