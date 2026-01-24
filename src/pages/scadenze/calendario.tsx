@@ -314,17 +314,20 @@ export default function CalendarioScadenzePage() {
       for (const utente of utenti) {
         try {
           await promemoriaService.createPromemoria({
-            titolo: "AVVISO DI SCADENZA",
-            descrizione: tipoScadenza.nome,
-            data_inserimento: dataInserimento,
-            giorni_scadenza: giorniScadenza > 0 ? giorniScadenza : 0,
-            data_scadenza: dataScadenza,
-            priorita: "Alta",
+            tipo_promemoria_id: "059347f7-f02f-4d93-89ec-b3af410e5766",
+            titolo: tipoScadenza.nome,
+            descrizione: tipoScadenza.descrizione || `Scadenza: ${tipoScadenza.nome}`,
+            data_inserimento: new Date().toISOString().split("T")[0],
+            data_scadenza: tipoScadenza.data_scadenza,
+            giorni_scadenza: Math.ceil(
+              (new Date(tipoScadenza.data_scadenza).getTime() - new Date().getTime()) /
+                (1000 * 60 * 60 * 24)
+            ),
             stato: "Aperto",
-            operatore_id: currentUser.id,
+            priorita: "Alta",
+            operatore_id: currentUser?.id || "",
             destinatario_id: utente.id,
-            settore: settore,
-            tipo_promemoria_id: null,
+            settore: utente.settore || "Lavoro",
           });
           promemoriaCreati++;
         } catch (err) {
