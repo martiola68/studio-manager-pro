@@ -2105,7 +2105,9 @@ export type Database = {
           anno_invio: number
           created_at: string | null
           data_invio: string | null
+          email_inviata: boolean | null
           id: string
+          promemoria_inviato: boolean | null
           tipo_scadenza_id: string
           utente_invio_id: string | null
         }
@@ -2113,7 +2115,9 @@ export type Database = {
           anno_invio: number
           created_at?: string | null
           data_invio?: string | null
+          email_inviata?: boolean | null
           id?: string
+          promemoria_inviato?: boolean | null
           tipo_scadenza_id: string
           utente_invio_id?: string | null
         }
@@ -2121,7 +2125,9 @@ export type Database = {
           anno_invio?: number
           created_at?: string | null
           data_invio?: string | null
+          email_inviata?: boolean | null
           id?: string
+          promemoria_inviato?: boolean | null
           tipo_scadenza_id?: string
           utente_invio_id?: string | null
         }
