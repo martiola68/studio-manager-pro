@@ -4,3 +4,4 @@ Forcing new Vercel deployment with latest changes:
 - Fix: RLS policies for Responsabili role
 - Fix: Promemoria creation from scadenze
 - Database: Added email_inviata and promemoria_inviato columns
+- Force deploy timestamp: 2026-01-24 18:15:46 UTC
