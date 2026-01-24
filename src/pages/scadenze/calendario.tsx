@@ -23,10 +23,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus, Bell } from "lucide-react";
+import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus, Bell, ClipboardList } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
+import { promemoriaService } from "@/services/promemoriaService";
+import { utenteService } from "@/services/utenteService";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +62,7 @@ export default function CalendarioScadenzePage() {
   const [scadenze, setScadenze] = useState<ScadenzaConUrgenza[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("tutti");
   const [studioId, setStudioId] = useState<string>("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [alertsInviati, setAlertsInviati] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -72,6 +75,19 @@ export default function CalendarioScadenzePage() {
       if (!user) {
         router.push("/login");
         return;
+      }
+
+      // Carico i dati dell'utente corrente per verificare se è Responsabile/Amministratore
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("*")
+          .eq("email", session.user.email)
+          .single();
+        if (utente) {
+          setCurrentUser(utente);
+        }
       }
 
       const studio = await studioService.getStudio();
@@ -218,6 +234,100 @@ export default function CalendarioScadenzePage() {
     }
   };
 
+  const handleCreaPromemoria = async (tipoScadenza: ScadenzaConUrgenza) => {
+    try {
+      // Verifica che l'utente corrente sia Responsabile o Amministratore
+      if (!currentUser) {
+        toast({
+          title: "Errore",
+          description: "Utente non trovato",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!currentUser.responsabile && currentUser.tipo_utente !== "amministratore") {
+        toast({
+          title: "Accesso negato",
+          description: "Solo Responsabili e Amministratori possono creare promemoria per il team",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const settore = tipoScadenza.settore || "Fiscale";
+
+      // Recupera tutti gli utenti del settore
+      let query = supabase
+        .from("tbutenti")
+        .select("id, nome, cognome, email, settore")
+        .eq("attivo", true);
+
+      if (settore === "Fiscale & Lavoro") {
+        query = query.neq("email", "");
+      } else {
+        query = query.eq("settore", settore);
+      }
+
+      const { data: utenti, error: utentiError } = await query;
+
+      if (utentiError) throw utentiError;
+
+      if (!utenti || utenti.length === 0) {
+        toast({
+          title: "Nessun utente",
+          description: `Nessun utente attivo trovato per il settore ${settore}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log(`Creazione promemoria per ${utenti.length} utenti del settore ${settore}`);
+
+      // Crea un promemoria per ogni utente del settore
+      const dataInserimento = new Date().toISOString().split("T")[0];
+      const dataScadenza = tipoScadenza.data_scadenza;
+      const oggi = new Date();
+      const scadenza = new Date(dataScadenza);
+      const giorniScadenza = Math.ceil((scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
+
+      let promemoriaCreati = 0;
+      for (const utente of utenti) {
+        try {
+          await promemoriaService.createPromemoria({
+            titolo: getTipoLabel(tipoScadenza.tipo_scadenza),
+            descrizione: "Scadenza in corso",
+            data_inserimento: dataInserimento,
+            giorni_scadenza: giorniScadenza > 0 ? giorniScadenza : 0,
+            data_scadenza: dataScadenza,
+            priorita: "Alta",
+            stato: "Aperto",
+            operatore_id: currentUser.id,
+            destinatario_id: utente.id,
+            settore: settore,
+            tipo_promemoria_id: null, // Verrà cercato "Scadenza adempimento" se esiste
+          });
+          promemoriaCreati++;
+        } catch (err) {
+          console.error(`Errore creazione promemoria per ${utente.nome} ${utente.cognome}:`, err);
+        }
+      }
+
+      toast({
+        title: "Promemoria creati",
+        description: `${promemoriaCreati} promemoria creati con successo per il settore ${settore}`,
+      });
+
+    } catch (error) {
+      console.error("Errore creazione promemoria:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile creare i promemoria",
+        variant: "destructive",
+      });
+    }
+  };
+
   const scadenzeFiltrate = scadenze.filter((s) => {
     if (filtroTipo === "tutti") return true;
     return s.tipo_scadenza === filtroTipo;
@@ -295,12 +405,19 @@ export default function CalendarioScadenzePage() {
           </Badge>
           <Button
             variant="ghost"
-            size="icon"
+            className="p-2"
             onClick={() => handleInviaAlert(scadenza)}
-            className={alertsInviati[scadenza.id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
             title={alertsInviati[scadenza.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
           >
-            <Bell className="w-8 h-8" />
+            <Bell className={alertsInviati[scadenza.id] ? "w-8 h-8 text-green-600" : "w-8 h-8 text-red-600"} />
+          </Button>
+          <Button
+            variant="ghost"
+            className="p-2"
+            onClick={() => handleCreaPromemoria(scadenza)}
+            title="Crea promemoria per tutti gli utenti del settore"
+          >
+            <ClipboardList className="w-8 h-8 text-blue-600" />
           </Button>
         </div>
       </div>
