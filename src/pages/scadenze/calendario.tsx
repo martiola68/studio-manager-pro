@@ -23,10 +23,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus } from "lucide-react";
+import { Calendar, AlertTriangle, Clock, CheckCircle2, FileText, Plus, Bell } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
+import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,6 +60,7 @@ export default function CalendarioScadenzePage() {
   const [scadenze, setScadenze] = useState<ScadenzaConUrgenza[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("tutti");
   const [studioId, setStudioId] = useState<string>("");
+  const [alertsInviati, setAlertsInviati] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     checkAuth();
@@ -84,6 +86,7 @@ export default function CalendarioScadenzePage() {
 
       setStudioId(studio.id);
       await loadScadenze(studio.id);
+      await loadAlertsInviati();
     } catch (error) {
       console.error("Errore autenticazione:", error);
       router.push("/login");
@@ -134,6 +137,82 @@ export default function CalendarioScadenzePage() {
       toast({
         title: "Errore",
         description: "Impossibile caricare le scadenze",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadAlertsInviati = async () => {
+    try {
+      const annoCorrente = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from("tbtipi_scadenze_alert")
+        .select("tipo_scadenza_id, anno_invio")
+        .eq("anno_invio", annoCorrente);
+
+      if (error) throw error;
+
+      const alerts: Record<string, boolean> = {};
+      data?.forEach((alert) => {
+        alerts[alert.tipo_scadenza_id] = true;
+      });
+      setAlertsInviati(alerts);
+    } catch (error) {
+      console.error("Errore caricamento alerts:", error);
+    }
+  };
+
+  const handleInviaAlert = async (tipoScadenza: ScadenzaConUrgenza) => {
+    try {
+      const settore = tipoScadenza.settore || "Fiscale";
+      
+      let query = supabase
+        .from("tbutenti")
+        .select("email, nome, cognome");
+
+      if (settore === "Fiscale & Lavoro") {
+        query = query.neq("email", "");
+      } else {
+        query = query.eq("settore", settore);
+      }
+
+      const { data: utenti, error: utentiError } = await query;
+
+      if (utentiError) throw utentiError;
+
+      if (!utenti || utenti.length === 0) {
+        toast({
+          title: "Nessun utente",
+          description: `Nessun utente trovato per il settore ${settore}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log(`Invio alert a ${utenti.length} utenti del settore ${settore}`);
+      
+      const annoCorrente = new Date().getFullYear();
+      const { error: insertError } = await supabase
+        .from("tbtipi_scadenze_alert")
+        .insert({
+          tipo_scadenza_id: tipoScadenza.id,
+          anno_invio: annoCorrente,
+          data_invio: new Date().toISOString(),
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Alert inviato",
+        description: `Email di avvertimento inviata a ${utenti.length} utenti del settore ${settore}`,
+      });
+
+      await loadAlertsInviati();
+    } catch (error) {
+      console.error("Errore invio alert:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inviare l'alert",
         variant: "destructive",
       });
     }
@@ -210,10 +289,19 @@ export default function CalendarioScadenzePage() {
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="flex items-center gap-2">
           <Badge variant={getUrgenzaBadgeColor(scadenza.urgenza)}>
             {formatGiorniRimanenti(scadenza.giorniRimanenti)}
           </Badge>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleInviaAlert(scadenza)}
+            className={alertsInviati[scadenza.id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
+            title={alertsInviati[scadenza.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
+          >
+            <Bell className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>

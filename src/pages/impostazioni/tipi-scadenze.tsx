@@ -467,16 +467,6 @@ export default function TipiScadenzePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleInviaAlert(tipo)}
-                          className={alertsInviati[tipo.id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
-                          title={alertsInviati[tipo.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
-                        >
-                          <Bell className="w-4 h-4" />
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
                           onClick={() => handleOpenDialog(tipo)}
                           className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                         >
