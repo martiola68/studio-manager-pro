@@ -134,6 +134,9 @@ export default function ClientiPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
@@ -1005,6 +1008,42 @@ export default function ClientiPage() {
     a.click();
   };
 
+  const downloadTemplate = () => {
+    const headers = [
+      "denominazione", "nome", "cognome", "codice_fiscale", "partita_iva",
+      "email", "pec", "telefono", "cellulare", "indirizzo", "citta", "cap", "provincia"
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      "Mario Rossi Srl,Mario,Rossi,RSSMRA80A01H501U,12345678901,mario@email.it,mario@pec.it,06123456,3331234567,Via Roma 1,Roma,00100,RM"
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "template_clienti.csv";
+    link.click();
+  };
+
+  const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
+  const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
+
+  const getNomeTipoRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
+    const nomi = {
+      matricola_inps: "Matricola INPS",
+      pat_inail: "PAT INAIL",
+      codice_ditta_ce: "Codice Ditta CE"
+    };
+    return nomi[tipo];
+  };
+
+  const getFilteredSuggestions = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", searchValue: string) => {
+    const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
+    if (!searchValue) return lista;
+    return lista.filter(item => item.valore.toLowerCase().includes(searchValue.toLowerCase()));
+  };
+
   const isFieldEnabled = (field: "fiscale" | "payroll") => {
     if (!formData.settore) return true;
     if (formData.settore === "Fiscale & Lavoro") return true;
@@ -1136,48 +1175,6 @@ export default function ClientiPage() {
     }
   };
 
-  const downloadTemplate = async () => {
-    try {
-      const template = await riferimentiValoriService.getTemplate();
-      const blob = new Blob([template], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "template_import.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({
-        title: "✅ Template scaricato",
-        description: "Template CSV aggiornato scaricato con successo",
-      });
-    } catch (error) {
-      console.error("Errore download template:", error);
-      toast({
-        title: "❌ Errore",
-        description: "Impossibile scaricare il template",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
-  const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
-
-  const getNomeTipoRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
-    const nomi = {
-      matricola_inps: "Matricola INPS",
-      pat_inail: "PAT INAIL",
-      codice_ditta_ce: "Codice Ditta CE"
-    };
-    return nomi[tipo];
-  };
-
-  const getFilteredSuggestions = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", searchValue: string) => {
-    const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
-    if (!searchValue) return lista;
-    return lista.filter(item => item.valore.toLowerCase().includes(searchValue.toLowerCase()));
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -1242,7 +1239,13 @@ export default function ClientiPage() {
                       id="csv-file-clienti"
                       type="file"
                       accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                      onChange={handleImportCSV}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCsvFile(file);
+                          handleImportCSV(e);
+                        }
+                      }}
                       className="cursor-pointer"
                     />
                   </div>
