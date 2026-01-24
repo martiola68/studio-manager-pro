@@ -5,3 +5,4 @@ Forcing new Vercel deployment with latest changes:
 - Fix: Promemoria creation from scadenze
 - Database: Added email_inviata and promemoria_inviato columns
 - Force deploy timestamp: 2026-01-24 18:15:46 UTC
+- Webhook test: 2026-01-24 18:29:47 UTC - Verifying GitHub → Vercel connection
