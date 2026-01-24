@@ -314,8 +314,8 @@ export default function CalendarioScadenzePage() {
       for (const utente of utenti) {
         try {
           await promemoriaService.createPromemoria({
-            titolo: getTipoLabel(tipoScadenza.tipo_scadenza),
-            descrizione: "Scadenza in corso",
+            titolo: "AVVISO DI SCADENZA",
+            descrizione: tipoScadenza.nome,
             data_inserimento: dataInserimento,
             giorni_scadenza: giorniScadenza > 0 ? giorniScadenza : 0,
             data_scadenza: dataScadenza,
