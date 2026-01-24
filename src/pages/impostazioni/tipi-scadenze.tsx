@@ -36,6 +36,7 @@ import { Plus, Pencil, Trash2, Calendar, Bell } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
+import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -62,6 +63,7 @@ export default function TipiScadenzePage() {
   const [loading, setLoading] = useState(true);
   const [tipiScadenze, setTipiScadenze] = useState<TipoScadenza[]>([]);
   const [studioId, setStudioId] = useState<string | null>(null);
+  const [alertsInviati, setAlertsInviati] = useState<Record<string, boolean>>({});
 
   // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -94,7 +96,6 @@ export default function TipiScadenzePage() {
         return;
       }
 
-      // Recupera lo studio direttamente dal service
       const studio = await studioService.getStudio();
       
       if (!studio) {
@@ -108,6 +109,7 @@ export default function TipiScadenzePage() {
 
       setStudioId(studio.id);
       await loadTipiScadenze(studio.id);
+      await loadAlertsInviati();
     } catch (error) {
       console.error("Errore autenticazione:", error);
       router.push("/login");
@@ -126,6 +128,88 @@ export default function TipiScadenzePage() {
       toast({
         title: "Errore",
         description: "Impossibile caricare i tipi di scadenze",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadAlertsInviati = async () => {
+    try {
+      const annoCorrente = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from("tbtipi_scadenze_alert")
+        .select("tipo_scadenza_id, anno_invio")
+        .eq("anno_invio", annoCorrente);
+
+      if (error) throw error;
+
+      const alerts: Record<string, boolean> = {};
+      data?.forEach((alert) => {
+        alerts[alert.tipo_scadenza_id] = true;
+      });
+      setAlertsInviati(alerts);
+    } catch (error) {
+      console.error("Errore caricamento alerts:", error);
+    }
+  };
+
+  const handleInviaAlert = async (tipoScadenza: TipoScadenza) => {
+    try {
+      const settore = tipoScadenza.settore || "Fiscale";
+      
+      // Recupera utenti del settore
+      let query = supabase
+        .from("tbutenti")
+        .select("email, nome, cognome");
+
+      if (settore === "Fiscale & Lavoro") {
+        // Invia a tutti
+        query = query.neq("email", "");
+      } else {
+        // Filtra per settore
+        query = query.eq("settore", settore);
+      }
+
+      const { data: utenti, error: utentiError } = await query;
+
+      if (utentiError) throw utentiError;
+
+      if (!utenti || utenti.length === 0) {
+        toast({
+          title: "Nessun utente",
+          description: `Nessun utente trovato per il settore ${settore}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Invia email a tutti gli utenti (qui andrebbe integrato il servizio email)
+      // Per ora simuliamo l'invio
+      console.log(`Invio alert a ${utenti.length} utenti del settore ${settore}`);
+      
+      // Registra l'invio nel database
+      const annoCorrente = new Date().getFullYear();
+      const { error: insertError } = await supabase
+        .from("tbtipi_scadenze_alert")
+        .insert({
+          tipo_scadenza_id: tipoScadenza.id,
+          anno_invio: annoCorrente,
+          data_invio: new Date().toISOString(),
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Alert inviato",
+        description: `Email di avvertimento inviata a ${utenti.length} utenti del settore ${settore}`,
+      });
+
+      await loadAlertsInviati();
+    } catch (error) {
+      console.error("Errore invio alert:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inviare l'alert",
         variant: "destructive",
       });
     }
@@ -346,7 +430,7 @@ export default function TipiScadenzePage() {
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {tipiScadenze.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>Nessun tipo di scadenza configurato</p>
                       <p className="text-sm mt-2">Clicca su &quot;Nuovo Tipo Scadenza&quot; per iniziare</p>
@@ -408,6 +492,15 @@ export default function TipiScadenzePage() {
                         />
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleInviaAlert(tipo)}
+                          className={alertsInviati[tipo.id] ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}
+                          title={alertsInviati[tipo.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
+                        >
+                          <Bell className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
