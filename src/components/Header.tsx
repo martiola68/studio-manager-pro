@@ -40,10 +40,15 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session?.user) {
-        const utenti = await utenteService.getUtenti();
-        if (utenti.length > 0) {
-            setCurrentUser(utenti[0]);
+      if (session?.user?.email) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("*")
+          .eq("email", session.user.email)
+          .single();
+        
+        if (utente) {
+          setCurrentUser(utente);
         }
       }
 
