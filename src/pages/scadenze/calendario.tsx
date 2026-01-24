@@ -434,9 +434,9 @@ export default function CalendarioScadenzePage() {
             variant="ghost"
             className="p-2"
             onClick={() => handleCreaPromemoria(scadenza)}
-            title="Crea promemoria per tutti gli utenti del settore"
+            title={alertsInviati[scadenza.id] ? "Promemoria già creato quest'anno" : "Crea promemoria per tutti gli utenti del settore"}
           >
-            <ClipboardList className="w-8 h-8 text-blue-600" />
+            <ClipboardList className={alertsInviati[scadenza.id] ? "w-8 h-8 text-green-600" : "w-8 h-8 text-blue-600"} />
           </Button>
         </div>
       </div>
