@@ -118,6 +118,7 @@ export default function TipiScadenzePage() {
 
   const loadTipiScadenze = async (studioId: string) => {
     try {
+      setLoading(true);
       const data = await tipoScadenzaService.getAll(studioId);
       setTipiScadenze(data);
     } catch (error) {
