@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -132,6 +133,7 @@ export default function ClientiPage() {
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
@@ -1174,14 +1176,14 @@ export default function ClientiPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => document.getElementById("file-upload")?.click()}
-              className="gap-2"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Importa Excel
-            </Button>
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Importa Excel
+                </Button>
+              </DialogTrigger>
+            </Dialog>
             <Button onClick={handleAddNew} className="gap-2">
               <Plus className="h-4 w-4" />
               Nuovo Cliente
