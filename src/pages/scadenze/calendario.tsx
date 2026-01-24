@@ -300,7 +300,7 @@ export default function CalendarioScadenzePage() {
             className={alertsInviati[scadenza.id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
             title={alertsInviati[scadenza.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-8 h-8" />
           </Button>
         </div>
       </div>
