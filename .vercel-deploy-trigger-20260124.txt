@@ -1,0 +1,6 @@
+Deploy trigger: 2026-01-24 18:06 UTC
+Forcing new Vercel deployment with latest changes:
+- Fix: Independent alert icons (email vs promemoria)
+- Fix: RLS policies for Responsabili role
+- Fix: Promemoria creation from scadenze
+- Database: Added email_inviata and promemoria_inviato columns
