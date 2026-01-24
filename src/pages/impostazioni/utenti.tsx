@@ -103,7 +103,9 @@ export default function GestioneUtentiPage() {
         utenteService.getUtenti(),
         loadRuoli()
       ]);
-      setUtenti(utentiData);
+      // Ordina utenti per cognome alfabeticamente
+      const utentiOrdinati = utentiData.sort((a, b) => a.cognome.localeCompare(b.cognome));
+      setUtenti(utentiOrdinati);
       setRuoli(ruoliData);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
