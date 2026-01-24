@@ -79,6 +79,7 @@ export default function TipiScadenzePage() {
     giorni_preavviso_1: 7,
     giorni_preavviso_2: 15,
     attivo: true,
+    settore: "",
   });
 
   useEffect(() => {
@@ -305,6 +306,9 @@ export default function TipiScadenzePage() {
                     Nome Scadenza
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Settore
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Tipo
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -346,6 +350,11 @@ export default function TipiScadenzePage() {
                               {tipo.descrizione}
                             </div>
                           )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {tipo.settore}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -419,6 +428,18 @@ export default function TipiScadenzePage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="settore">Settore</Label>
+              <Input
+                id="settore"
+                value={formData.settore}
+                onChange={(e) =>
+                  setFormData({ ...formData, settore: e.target.value })
+                }
+                placeholder="es. Contabilità"
+              />
+            </div>
+
             <div className="grid gap-2">
               <Label htmlFor="nome">Nome Scadenza *</Label>
               <Input

@@ -1010,20 +1010,74 @@ export default function ClientiPage() {
 
   const downloadTemplate = () => {
     const headers = [
-      "denominazione", "nome", "cognome", "codice_fiscale", "partita_iva",
-      "email", "pec", "telefono", "cellulare", "indirizzo", "citta", "cap", "provincia"
+      "codice_cliente",
+      "tipo_cliente",
+      "tipologia_cliente",
+      "settore",
+      "ragione_sociale",
+      "partita_iva",
+      "codice_fiscale",
+      "indirizzo",
+      "cap",
+      "citta",
+      "provincia",
+      "email",
+      "attivo",
+      "note",
+      "utente_fiscale",
+      "professionista_fiscale",
+      "utente_payroll",
+      "professionista_payroll",
+      "contatto_1",
+      "contatto_2",
+      "tipo_prestazione",
+      "tipo_redditi",
+      "cassetto_fiscale_id"
+    ];
+
+    const exampleRows = [
+      [
+        "CL-001",
+        "Persona Giuridica",
+        "Interno",
+        "Fiscale",
+        "ESEMPIO SRL",
+        "01234567890",
+        "01234567890",
+        "Via Roma 1",
+        "00100",
+        "Roma",
+        "RM",
+        "info@esempio.it",
+        "true",
+        "Note di esempio",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Assistenza totale",
+        "SC - Società di Capitali",
+        ""
+      ]
     ];
 
     const csvContent = [
       headers.join(","),
-      "Mario Rossi Srl,Mario,Rossi,RSSMRA80A01H501U,12345678901,mario@email.it,mario@pec.it,06123456,3331234567,Via Roma 1,Roma,00100,RM"
+      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "template_clienti.csv";
+    link.download = "template_importazione_clienti.csv";
     link.click();
+
+    toast({
+      title: "Template scaricato",
+      description: "Compila il file CSV seguendo l'esempio fornito"
+    });
   };
 
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;

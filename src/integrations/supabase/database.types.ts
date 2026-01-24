@@ -2055,6 +2055,7 @@ export type Database = {
           id: string
           nome: string
           ricorrente: boolean | null
+          settore: string | null
           studio_id: string | null
           tipo_scadenza: string
           updated_at: string | null
@@ -2069,6 +2070,7 @@ export type Database = {
           id?: string
           nome: string
           ricorrente?: boolean | null
+          settore?: string | null
           studio_id?: string | null
           tipo_scadenza: string
           updated_at?: string | null
@@ -2083,6 +2085,7 @@ export type Database = {
           id?: string
           nome?: string
           ricorrente?: boolean | null
+          settore?: string | null
           studio_id?: string | null
           tipo_scadenza?: string
           updated_at?: string | null
