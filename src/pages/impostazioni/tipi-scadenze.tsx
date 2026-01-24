@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Calendar, Bell } from "lucide-react";
@@ -163,10 +164,8 @@ export default function TipiScadenzePage() {
         .select("email, nome, cognome");
 
       if (settore === "Fiscale & Lavoro") {
-        // Invia a tutti
         query = query.neq("email", "");
       } else {
-        // Filtra per settore
         query = query.eq("settore", settore);
       }
 
@@ -183,8 +182,6 @@ export default function TipiScadenzePage() {
         return;
       }
 
-      // Invia email a tutti gli utenti (qui andrebbe integrato il servizio email)
-      // Per ora simuliamo l'invio
       console.log(`Invio alert a ${utenti.length} utenti del settore ${settore}`);
       
       // Registra l'invio nel database
@@ -396,136 +393,115 @@ export default function TipiScadenzePage() {
           </Button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Settore
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Nome Scadenza
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Tipo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Data Scadenza
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Preavvisi
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Ricorrente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Stato
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Azioni
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {tipiScadenze.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nessun tipo di scadenza configurato</p>
-                      <p className="text-sm mt-2">Clicca su &quot;Nuovo Tipo Scadenza&quot; per iniziare</p>
-                    </td>
-                  </tr>
-                ) : (
-                  tipiScadenze.map((tipo) => (
-                    <tr key={tipo.id} className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <Badge variant="secondary" className={
-                          tipo.settore === "Fiscale" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" :
-                          tipo.settore === "Lavoro" ? "bg-green-100 text-green-800 hover:bg-green-200" :
-                          "bg-purple-100 text-purple-800 hover:bg-purple-200"
-                        }>
-                          {tipo.settore || "Fiscale"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {tipo.nome}
-                          </div>
-                          {tipo.descrizione && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {tipo.descrizione}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline">
+        {tipiScadenze.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50 text-gray-400" />
+              <p className="text-gray-500">Nessun tipo di scadenza configurato</p>
+              <p className="text-sm text-gray-400 mt-2">Clicca su &quot;Nuovo Tipo Scadenza&quot; per iniziare</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {tipiScadenze.map((tipo) => (
+              <Card key={tipo.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {tipo.nome}
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
                           {getTipoLabel(tipo.tipo_scadenza)}
                         </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-gray-900 dark:text-white">
-                            {new Date(tipo.data_scadenza).toLocaleDateString("it-IT")}
-                          </div>
-                          <Badge variant={getUrgencyColor(tipo.data_scadenza)} className="mt-1">
+                        <Badge 
+                          variant="secondary" 
+                          className={
+                            tipo.settore === "Fiscale" ? "bg-blue-100 text-blue-800" :
+                            tipo.settore === "Lavoro" ? "bg-green-100 text-green-800" :
+                            "bg-purple-100 text-purple-800"
+                          }
+                        >
+                          {tipo.settore || "Fiscale"}
+                        </Badge>
+                        {tipo.ricorrente && (
+                          <Badge variant="secondary" className="text-xs">
+                            Ricorrente
+                          </Badge>
+                        )}
+                      </div>
+
+                      {tipo.descrizione && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {tipo.descrizione}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>{new Date(tipo.data_scadenza).toLocaleDateString("it-IT")}</span>
+                          <Badge variant={getUrgencyColor(tipo.data_scadenza)}>
                             {getUrgencyText(tipo.data_scadenza)}
                           </Badge>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {tipo.giorni_preavviso_1} e {tipo.giorni_preavviso_2} giorni
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant={tipo.ricorrente ? "default" : "secondary"}>
-                          {tipo.ricorrente ? "Sì" : "No"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
+                        <div>
+                          Preavvisi: {tipo.giorni_preavviso_1} e {tipo.giorni_preavviso_2} giorni
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Stato</span>
                         <Switch
                           checked={tipo.attivo ?? true}
-                          onCheckedChange={(checked) =>
-                            handleToggleAttivo(tipo.id, checked)
-                          }
+                          onCheckedChange={(checked) => handleToggleAttivo(tipo.id, checked)}
                         />
-                      </td>
-                      <td className="px-6 py-4 text-right space-x-2">
+                      </div>
+
+                      <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
+
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleInviaAlert(tipo)}
-                          className={alertsInviati[tipo.id] ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}
+                          className={alertsInviati[tipo.id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
                           title={alertsInviati[tipo.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
                         >
                           <Bell className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleOpenDialog(tipo)}
+                          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => {
                             setDeletingId(tipo.id);
                             setIsDeleteDialogOpen(true);
                           }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
-                          <Trash2 className="w-4 h-4 text-red-500" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
+        )}
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
