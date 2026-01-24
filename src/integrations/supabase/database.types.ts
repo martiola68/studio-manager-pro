@@ -2100,6 +2100,48 @@ export type Database = {
           },
         ]
       }
+      tbtipi_scadenze_alert: {
+        Row: {
+          anno_invio: number
+          created_at: string | null
+          data_invio: string | null
+          id: string
+          tipo_scadenza_id: string
+          utente_invio_id: string | null
+        }
+        Insert: {
+          anno_invio: number
+          created_at?: string | null
+          data_invio?: string | null
+          id?: string
+          tipo_scadenza_id: string
+          utente_invio_id?: string | null
+        }
+        Update: {
+          anno_invio?: number
+          created_at?: string | null
+          data_invio?: string | null
+          id?: string
+          tipo_scadenza_id?: string
+          utente_invio_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbtipi_scadenze_alert_tipo_scadenza_id_fkey"
+            columns: ["tipo_scadenza_id"]
+            isOneToOne: false
+            referencedRelation: "tbtipi_scadenze"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbtipi_scadenze_alert_utente_invio_id_fkey"
+            columns: ["utente_invio_id"]
+            isOneToOne: false
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbtipopromemoria: {
         Row: {
           attivo: boolean | null

@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Bell } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
@@ -142,6 +142,7 @@ export default function TipiScadenzePage() {
         giorni_preavviso_1: tipo.giorni_preavviso_1 || 7,
         giorni_preavviso_2: tipo.giorni_preavviso_2 || 15,
         attivo: tipo.attivo ?? true,
+        settore: tipo.settore || "Fiscale",
       });
     } else {
       setEditingTipo(null);
@@ -154,6 +155,7 @@ export default function TipiScadenzePage() {
         giorni_preavviso_1: 7,
         giorni_preavviso_2: 15,
         attivo: true,
+        settore: "Fiscale",
       });
     }
     setIsDialogOpen(true);
@@ -168,15 +170,27 @@ export default function TipiScadenzePage() {
     if (!studioId) return;
 
     try {
+      const dataToSave = {
+        nome: formData.nome,
+        descrizione: formData.descrizione,
+        data_scadenza: formData.data_scadenza,
+        tipo_scadenza: formData.tipo_scadenza,
+        ricorrente: formData.ricorrente,
+        giorni_preavviso_1: formData.giorni_preavviso_1,
+        giorni_preavviso_2: formData.giorni_preavviso_2,
+        attivo: formData.attivo,
+        settore: formData.settore,
+      };
+
       if (editingTipo) {
-        await tipoScadenzaService.update(editingTipo.id, formData);
+        await tipoScadenzaService.update(editingTipo.id, dataToSave);
         toast({
           title: "Successo",
           description: "Tipo scadenza aggiornato",
         });
       } else {
         await tipoScadenzaService.create({
-          ...formData,
+          ...dataToSave,
           studio_id: studioId,
         });
         toast({
@@ -303,10 +317,10 @@ export default function TipiScadenzePage() {
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Nome Scadenza
+                    Settore
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Settore
+                    Nome Scadenza
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Tipo
@@ -339,7 +353,16 @@ export default function TipiScadenzePage() {
                   </tr>
                 ) : (
                   tipiScadenze.map((tipo) => (
-                    <tr key={tipo.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr key={tipo.id} className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <Badge variant="secondary" className={
+                          tipo.settore === "Fiscale" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" :
+                          tipo.settore === "Lavoro" ? "bg-green-100 text-green-800 hover:bg-green-200" :
+                          "bg-purple-100 text-purple-800 hover:bg-purple-200"
+                        }>
+                          {tipo.settore || "Fiscale"}
+                        </Badge>
+                      </td>
                       <td className="px-6 py-4">
                         <div>
                           <div className="font-medium text-gray-900 dark:text-white">
@@ -350,11 +373,6 @@ export default function TipiScadenzePage() {
                               {tipo.descrizione}
                             </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {tipo.settore}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -429,15 +447,20 @@ export default function TipiScadenzePage() {
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="settore">Settore</Label>
-              <Input
-                id="settore"
+              <Label htmlFor="settore">Settore *</Label>
+              <Select
                 value={formData.settore}
-                onChange={(e) =>
-                  setFormData({ ...formData, settore: e.target.value })
-                }
-                placeholder="es. Contabilità"
-              />
+                onValueChange={(value) => setFormData({ ...formData, settore: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona settore" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Fiscale">Fiscale</SelectItem>
+                  <SelectItem value="Lavoro">Lavoro</SelectItem>
+                  <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">
