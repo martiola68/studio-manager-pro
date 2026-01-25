@@ -291,7 +291,7 @@ export default function AgendaPage() {
     }
   };
 
-  // Delete Event Handler - FIX: Reset tutti gli stati per evitare blocchi
+  // Delete Event Handler - FIX DEFINITIVO: Aggiorna stato locale + chiudi tutto
   const handleDeleteEvento = async () => {
     if (!eventoToDelete) return;
 
@@ -303,14 +303,14 @@ export default function AgendaPage() {
 
       if (error) throw error;
 
+      // FIX: Aggiorna stato locale immediatamente rimuovendo l'evento eliminato
+      setEventi(prevEventi => prevEventi.filter(e => e.id !== eventoToDelete));
+      
       // FIX: Chiudi TUTTI i dialog e resetta TUTTI gli stati
       setDeleteDialogOpen(false);
       setDialogOpen(false);
       setEventoToDelete(null);
       setEditingEventoId(null);
-      
-      // Ricarica eventi
-      loadData();
       
       toast({
         title: "Evento eliminato",
