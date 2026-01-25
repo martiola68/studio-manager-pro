@@ -160,11 +160,15 @@ export function TopNavBar() {
       href: "/comunicazioni"
     },
     {
+      label: "Clienti",
+      icon: <Users className="h-4 w-4" />,
+      href: "/clienti"
+    },
+    {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
       adminOnly: true,
       children: [
-        { label: "Clienti", href: "/clienti", icon: <Users className="h-4 w-4" /> },
         { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
         { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
         { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
