@@ -1,0 +1,4 @@
+FORCE DEPLOY - Agenda Delete Fix
+Timestamp: 2026-01-25 18:01:00 UTC
+Commit: Final fix for event deletion blocking UI
+Changes: Fixed handleDeleteEvento to update local state immediately
