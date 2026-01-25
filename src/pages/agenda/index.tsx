@@ -40,6 +40,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type React from "react";
 
 // DEFINIZIONE TIPI CORRETTA
 type ClienteBase = Pick<Database["public"]["Tables"]["tbclienti"]["Row"], "id" | "ragione_sociale" | "codice_fiscale" | "partita_iva">;
@@ -329,6 +330,15 @@ export default function AgendaPage() {
     }
   };
 
+  // FIX: Nuovo handler per eliminazione diretta senza aprire dialog modifica
+  const handleDeleteEventoDirect = (eventoId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setEventoToDelete(eventoId);
+    setDeleteDialogOpen(true);
+  };
+
   // --- UTILITIES ---
 
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
@@ -526,11 +536,19 @@ export default function AgendaPage() {
                       <Tooltip delayDuration={300}>
                         <TooltipTrigger asChild>
                           <div 
-                            className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                            className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity group relative"
                             style={{ backgroundColor: color, borderLeftColor: "rgba(0,0,0,0.2)" }}
-                            onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}
                           >
-                            {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
+                            <span onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}>
+                              {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
+                            </span>
+                            <button
+                              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded px-1"
+                              onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
+                              title="Elimina"
+                            >
+                              ×
+                            </button>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent 
@@ -621,23 +639,34 @@ export default function AgendaPage() {
                               <Tooltip delayDuration={300}>
                                 <TooltipTrigger asChild>
                                   <div
-                                    className={`p-2 rounded border-l-2 ${colorClass} cursor-pointer hover:shadow-sm transition-shadow text-xs`}
-                                    onClick={() => handleEditEvento(evento)}
+                                    className={`p-2 rounded border-l-2 ${colorClass} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
                                   >
-                                    <div className="font-semibold text-gray-900">
-                                      👤 {utenteNome}
-                                    </div>
-                                    <div className="text-gray-600 truncate">
-                                      🏢 {clienteNome}
-                                    </div>
-                                    {evento.in_sede && evento.sala && (
-                                      <div className="text-green-700 font-medium mt-1">
-                                        📍 SALA {evento.sala}
+                                    <div 
+                                      onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}
+                                      className="pr-6"
+                                    >
+                                      <div className="font-semibold text-gray-900">
+                                        👤 {utenteNome}
                                       </div>
-                                    )}
-                                    <div className="text-gray-500 mt-1">
-                                      ⏰ {format(parseISO(evento.data_inizio), "HH:mm")}
+                                      <div className="text-gray-600 truncate">
+                                        🏢 {clienteNome}
+                                      </div>
+                                      {evento.in_sede && evento.sala && (
+                                        <div className="text-green-700 font-medium mt-1">
+                                          📍 SALA {evento.sala}
+                                        </div>
+                                      )}
+                                      <div className="text-gray-500 mt-1">
+                                        ⏰ {format(parseISO(evento.data_inizio), "HH:mm")}
+                                      </div>
                                     </div>
+                                    <button
+                                      className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                                      onClick={(e) => handleDeleteEventoDirect(evento.id, e)}
+                                      title="Elimina evento"
+                                    >
+                                      ×
+                                    </button>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent 
