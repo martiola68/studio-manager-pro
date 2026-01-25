@@ -1,0 +1,4 @@
+# Force Vercel deployment trigger
+# Timestamp: 2026-01-25 17:45:00 UTC
+# Reason: Deploy commit 752aa83 with agenda delete fix
+# This file triggers GitHub Actions webhook to Vercel
