@@ -982,24 +982,77 @@ export default function ClientiPage() {
     }
   };
 
-  const handleExportCSV = () => {
-    const headers = ["Ragione Sociale", "P.IVA", "Codice Fiscale", "Email", "Città", "Stato"];
-    const rows = filteredClienti.map((c) => [
-      c.ragione_sociale,
-      c.partita_iva,
-      c.codice_fiscale,
-      c.email,
-      c.citta,
-      c.attivo ? "Attivo" : "Inattivo",
+  const handleExport = () => {
+    if (clienti.length === 0) {
+      toast({
+        title: "Nessun dato da esportare",
+        description: "Non ci sono clienti da esportare.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Preparo i dati dei clienti per l'export
+    const exportData = clienti.map((cliente) => [
+      cliente.tipo_cliente || "",
+      cliente.tipologia_cliente || "",
+      cliente.settore || "",
+      cliente.ragione_sociale || "",
+      cliente.codice_cliente || "",
+      cliente.piva || "",
+      cliente.codice_fiscale || "",
+      cliente.email || "",
+      cliente.indirizzo || "",
+      cliente.cap || "",
+      cliente.citta || "",
+      cliente.provincia || "",
+      cliente.nazione || "",
+      cliente.stato || "",
+      cliente.note || "",
+      cliente.data_costituzione ? new Date(cliente.data_costituzione).toLocaleDateString("it-IT") : "",
+      cliente.forma_giuridica || "",
+      cliente.capitale_sociale || "",
+      cliente.codice_ateco || "",
+      cliente.cassetto_fiscale_id || "",
+      cliente.utente_operatore_id || "",
+      cliente.utente_responsabile_id || "",
     ]);
 
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "clienti.csv";
-    a.click();
+    // Headers
+    const headers = [
+      "Tipo Cliente",
+      "Tipologia Cliente",
+      "Settore",
+      "Ragione Sociale",
+      "Codice Cliente",
+      "P.IVA",
+      "Codice Fiscale",
+      "Email",
+      "Indirizzo",
+      "CAP",
+      "Città",
+      "Provincia",
+      "Nazione",
+      "Stato",
+      "Note",
+      "Data Costituzione",
+      "Forma Giuridica",
+      "Capitale Sociale",
+      "Codice ATECO",
+      "Cassetto Fiscale ID",
+      "Utente Operatore ID",
+      "Utente Responsabile ID",
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clienti");
+    XLSX.writeFile(wb, `clienti_export_${new Date().toISOString().split("T")[0]}.xlsx`);
+
+    toast({
+      title: "Export completato",
+      description: `${clienti.length} clienti esportati con successo`,
+    });
   };
 
   const downloadTemplate = () => {
