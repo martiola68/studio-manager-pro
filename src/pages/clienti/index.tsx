@@ -1168,9 +1168,9 @@ export default function ClientiPage() {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
           tipo_cliente: values[0],
           tipologia_cliente: values[1],
-          settore: ["Fiscale", "Lavoro", "Fiscale & Lavoro", ""].includes(values[2]) 
-            ? (values[2] as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro") 
-            : "",
+          settore: (values[2] && ["Fiscale", "Lavoro", "Fiscale & Lavoro"].includes(values[2])) 
+            ? values[2] 
+            : "" as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
