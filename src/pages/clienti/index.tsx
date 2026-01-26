@@ -137,7 +137,7 @@ export default function ClientiPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
@@ -431,9 +431,9 @@ export default function ClientiPage() {
 
       const dataToSave = {
         ...formData,
-        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-        tipo_cliente: convertToDatabase("tipo_cliente", formData.tipo_cliente),
-        tipologia_cliente: convertToDatabase("tipologia_cliente", formData.tipologia_cliente),
+        cod_cliente: formData.cod_cliente || `CLI${Date.now()}`,
+        tipo_cliente: formData.tipo_cliente,
+        tipologia_cliente: formData.tipologia_cliente,
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
@@ -453,25 +453,14 @@ export default function ClientiPage() {
         rischio_ver_b: formData.rischio_ver_b || null,
         gg_ver_a: formData.gg_ver_a || null,
         gg_ver_b: formData.gg_ver_b || null,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
-        scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
-        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
-        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
-        note_antiriciclaggio: formData.note_antiriciclaggio,
-        giorni_scad_ver_a: formData.giorni_scad_ver_a,
-        giorni_scad_ver_b: formData.giorni_scad_ver_b,
-        
-        flag_iva: scadenzari.iva,
-        flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_fiscali: scadenzari.fiscali,
-        flag_lipe: scadenzari.lipe,
-        flag_770: scadenzari.modello_770,
-        flag_esterometro: scadenzari.esterometro,
-        flag_ccgg: scadenzari.ccgg,
-        flag_proforma: scadenzari.proforma,
-        flag_imu: scadenzari.imu,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric ? new Date(formData.data_ultima_verifica_antiric) : null,
+        scadenza_antiric: formData.scadenza_antiric ? new Date(formData.scadenza_antiric) : null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b ? new Date(formData.data_ultima_verifica_b) : null,
+        scadenza_antiric_b: formData.scadenza_antiric_b ? new Date(formData.scadenza_antiric_b) : null,
+        gestione_antiriciclaggio: formData.gestione_antiriciclaggio || false,
+        note_antiriciclaggio: formData.note_antiriciclaggio || null,
+        giorni_scad_ver_a: formData.giorni_scad_ver_a || null,
+        giorni_scad_ver_b: formData.giorni_scad_ver_b || null,
       };
 
       if (editingCliente) {
@@ -693,8 +682,9 @@ export default function ClientiPage() {
     setEditingCliente(cliente);
     setFormData({
       cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: convertToDisplay("tipo_cliente", cliente.tipo_cliente || ""),
-      tipologia_cliente: convertToDisplay("tipologia_cliente", cliente.tipologia_cliente || ""),
+      tipo_cliente: cliente.tipo_cliente || "",
+      tipologia_cliente: cliente.tipologia_cliente || "",
+      settore: cliente.settore || "",
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -714,7 +704,6 @@ export default function ClientiPage() {
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
       matricola_inps: cliente.matricola_inps || "",
       pat_inail: cliente.pat_inail || "",
       codice_ditta_ce: cliente.codice_ditta_ce || "",
@@ -907,24 +896,20 @@ export default function ClientiPage() {
           variant: "default",
         });
 
-        try {
-          const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
-          
-          if (tipo === "matricola_inps") {
-            setMatricoleInps(updatedList);
-            setFormData({ ...formData, matricola_inps: valore });
-            setShowMatricolaDropdown(false);
-          } else if (tipo === "pat_inail") {
-            setPatInail(updatedList);
-            setFormData({ ...formData, pat_inail: valore });
-            setShowPatDropdown(false);
-          } else if (tipo === "codice_ditta_ce") {
-            setCodiciDittaCe(updatedList);
-            setFormData({ ...formData, codice_ditta_ce: valore });
-            setShowCodiceDropdown(false);
-          }
-        } catch (reloadError) {
-          console.error("Errore durante il ricaricamento della lista:", reloadError);
+        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+        
+        if (tipo === "matricola_inps") {
+          setMatricoleInps(updatedList);
+          setFormData({ ...formData, matricola_inps: valore });
+          setShowMatricolaDropdown(false);
+        } else if (tipo === "pat_inail") {
+          setPatInail(updatedList);
+          setFormData({ ...formData, pat_inail: valore });
+          setShowPatDropdown(false);
+        } else if (tipo === "codice_ditta_ce") {
+          setCodiciDittaCe(updatedList);
+          setFormData({ ...formData, codice_ditta_ce: valore });
+          setShowCodiceDropdown(false);
         }
       } else {
         toast({
@@ -1018,7 +1003,7 @@ export default function ClientiPage() {
 
     const exampleRows = [
       [
-        "Persona Giuridica",
+        "Amministrazione e liquidazione di aziende, patrimoni, singoli beni",
         "Interno",
         "Fiscale",
         "ESEMPIO SRL",
@@ -1111,7 +1096,7 @@ export default function ClientiPage() {
       }
 
       const rows = jsonData.slice(1);
-      let successCount = 0;
+      const successCount = 0;
       const errors: string[] = [];
 
       // Carica tutti gli utenti per il mapping
@@ -1135,8 +1120,10 @@ export default function ClientiPage() {
         // 2: Settore
         // 3: Ragione Sociale
         if (!values[0] || !values[1] || !values[2] || !values[3]) {
-          errors.push(
-            `Riga ${rowNum}: Campi obbligatori mancanti. Assicurati che Tipo Cliente, Tipologia, Settore e Ragione Sociale siano compilati.`
+          console.warn(
+            `Riga ${
+              i + 2
+            } saltata: mancano campi obbligatori. Tipo Cliente, Tipologia, Settore e Ragione Sociale sono campi obbligatori.`
           );
           continue;
         }
@@ -1150,10 +1137,6 @@ export default function ClientiPage() {
                 (u.nome && u.cognome && `${u.nome} ${u.cognome}`.toLowerCase() === searchLower)
             )?.id || null;
         };
-
-        // Conversione tipo_cliente e tipologia_cliente per il database
-        const tipoClienteDB = convertToDatabase("tipo_cliente", values[0]);
-        const tipologiaClienteDB = convertToDatabase("tipologia_cliente", values[1]);
 
         // Mapping degli utenti
         let utenteOperatoreId = null;
@@ -1185,8 +1168,8 @@ export default function ClientiPage() {
         // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
         const newCliente: any = {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-          tipo_cliente: tipoClienteDB,
-          tipologia_cliente: tipologiaClienteDB,
+          tipo_cliente: values[0],
+          tipologia_cliente: values[1],
           settore: values[2],
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
@@ -1209,8 +1192,31 @@ export default function ClientiPage() {
           cassetto_fiscale_id: values[21] || null,
         };
 
-        await clienteService.createCliente(newCliente);
-        successCount++;
+        console.log(`📋 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
+          tipo_cliente: values[0],
+          tipologia_cliente: values[1],
+          settore: values[2],
+          ragione_sociale: values[3],
+          full_data: newCliente
+        });
+
+        const { error: insertError } = await supabase
+          .from("tbclienti")
+          .insert(newCliente);
+
+        if (insertError) {
+          console.error(`❌ ERRORE RIGA ${i + 2}:`, {
+            errore: insertError.message,
+            codice: insertError.code,
+            dettaglio: insertError.details,
+            hint: insertError.hint,
+            dati_tentati: newCliente
+          });
+          errors.push(`Riga ${i + 2}: ${insertError.message}`);
+        } else {
+          console.log(`✅ RIGA ${i + 2} IMPORTATA CON SUCCESSO`);
+          imported++;
+        }
       }
 
       await loadData();
@@ -1239,30 +1245,6 @@ export default function ClientiPage() {
       setImporting(false);
       event.target.value = "";
     }
-  };
-
-  const convertToDatabase = (field: "tipo_cliente" | "tipologia_cliente", value: string): string => {
-    if (field === "tipo_cliente") {
-      if (value.toLowerCase().includes("fisica")) return "PERSONA_FISICA";
-      if (value.toLowerCase().includes("giuridica")) return "PERSONA_GIURIDICA";
-    }
-    if (field === "tipologia_cliente") {
-      if (value.toLowerCase() === "interno") return "CL interno";
-      if (value.toLowerCase() === "esterno") return "CL esterno";
-    }
-    return value;
-  };
-
-  const convertToDisplay = (field: "tipo_cliente" | "tipologia_cliente", value: string): string => {
-    if (field === "tipo_cliente") {
-      if (value === "PERSONA_FISICA") return "Persona Fisica";
-      if (value === "PERSONA_GIURIDICA") return "Persona Giuridica";
-    }
-    if (field === "tipologia_cliente") {
-      if (value === "CL interno") return "Interno";
-      if (value === "CL esterno") return "Esterno";
-    }
-    return value;
   };
 
   if (loading) {
