@@ -1158,6 +1158,14 @@ export default function ClientiPage() {
           tipoClienteDB = "PERSONA_GIURIDICA";
         }
 
+        // Conversione tipologia_cliente per il database
+        let tipologiaClienteDB = values[1];
+        if (values[1].toLowerCase() === "interno") {
+          tipologiaClienteDB = "INTERNO";
+        } else if (values[1].toLowerCase() === "esterno") {
+          tipologiaClienteDB = "ESTERNO";
+        }
+
         // Mapping degli utenti
         let utenteOperatoreId = null;
         let utenteProfessionistaId = null;
@@ -1189,7 +1197,7 @@ export default function ClientiPage() {
         const newCliente: any = {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
           tipo_cliente: tipoClienteDB,
-          tipologia_cliente: values[1].toUpperCase() === "INTERNO" ? "INTERNO" : values[1].toUpperCase() === "ESTERNO" ? "ESTERNO" : null,
+          tipologia_cliente: tipologiaClienteDB,
           settore: values[2],
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
