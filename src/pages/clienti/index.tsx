@@ -1003,7 +1003,16 @@ export default function ClientiPage() {
       "provincia",
       "email",
       "attivo",
-      "note"
+      "note",
+      "utente_fiscale",
+      "professionista_fiscale",
+      "utente_payroll",
+      "professionista_payroll",
+      "contatto_1",
+      "contatto_2",
+      "tipo_prestazione",
+      "tipo_redditi",
+      "cassetto_fiscale"
     ];
 
     const exampleRows = [
@@ -1020,7 +1029,16 @@ export default function ClientiPage() {
         "RM",
         "info@esempio.it",
         "VERO",
-        "Note di esempio"
+        "Note di esempio",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
       ]
     ];
 
@@ -1142,6 +1160,11 @@ export default function ClientiPage() {
             utente_professionista_id: utenteProfessionistaId,
             utente_payroll_id: utentePayrollId,
             professionista_payroll_id: professionistaPayrollId,
+            contatto1_id: values[17] || null,
+            contatto2_id: values[18] || null,
+            tipo_prestazione_id: values[19] || null,
+            tipo_redditi: values[20] || null,
+            cassetto_fiscale_id: values[21] || null,
           };
 
           await clienteService.createCliente(newCliente);
@@ -1232,6 +1255,15 @@ export default function ClientiPage() {
                           <li><strong>Email</strong> - Opzionale</li>
                           <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
                           <li><strong>Note</strong> - Opzionale</li>
+                          <li><strong>Utente Fiscale</strong> - Opzionale (nome completo o email)</li>
+                          <li><strong>Professionista Fiscale</strong> - Opzionale (nome completo o email)</li>
+                          <li><strong>Utente Payroll</strong> - Opzionale (nome completo o email)</li>
+                          <li><strong>Professionista Payroll</strong> - Opzionale (nome completo o email)</li>
+                          <li><strong>Contatto 1</strong> - Opzionale</li>
+                          <li><strong>Contatto 2</strong> - Opzionale</li>
+                          <li><strong>Tipo Prestazione</strong> - Opzionale</li>
+                          <li><strong>Tipo Redditi</strong> - Opzionale</li>
+                          <li><strong>Cassetto Fiscale</strong> - Opzionale</li>
                         </ol>
                       </div>
                     </div>
@@ -1752,6 +1784,116 @@ export default function ClientiPage() {
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="contatto1_id">Contatto 1</Label>
+                  <Select
+                    value={formData.contatto1_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona contatto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {contatti.map((contatto) => (
+                        <SelectItem key={contatto.id} value={contatto.id}>
+                          {contatto.nome} {contatto.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="contatto2_id">Contatto 2</Label>
+                  <Select
+                    value={formData.contatto2_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, contatto2_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona contatto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {contatti.map((contatto) => (
+                        <SelectItem key={contatto.id} value={contatto.id}>
+                          {contatto.nome} {contatto.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+                  <Select
+                    value={formData.tipo_prestazione_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo prestazione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {prestazioni.map((prestazione) => (
+                        <SelectItem key={prestazione.id} value={prestazione.id}>
+                          {prestazione.descrizione}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+                  <Select
+                    value={formData.tipo_redditi || "none"}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, tipo_redditi: value === "none" ? "" : value as "SC" | "SP" | "ENC" | "PF" | "730" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      <SelectItem value="SC">SC (Società di Capitali)</SelectItem>
+                      <SelectItem value="SP">SP (Società di Persone)</SelectItem>
+                      <SelectItem value="ENC">ENC (Ente non commerciale)</SelectItem>
+                      <SelectItem value="PF">PF (Persona Fisica)</SelectItem>
+                      <SelectItem value="730">730</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
+                  <Select
+                    value={formData.cassetto_fiscale_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona cassetto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {cassettiFiscali.map((cassetto) => (
+                        <SelectItem key={cassetto.id} value={cassetto.id}>
+                          {cassetto.descrizione}
                         </SelectItem>
                       ))}
                     </SelectContent>
