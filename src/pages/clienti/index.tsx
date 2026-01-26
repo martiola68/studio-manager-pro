@@ -1118,6 +1118,8 @@ export default function ClientiPage() {
         const email = (values[10] || "").toString().trim();
         const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
         const note = (values[12] || "").toString().trim();
+        const utenteFiscaleRaw = (values[13] || "").toString().trim();
+        const professionistaFiscaleRaw = (values[14] || "").toString().trim();
 
         if (!ragioneSociale) {
           errors.push(`Riga ${i + 2}: Ragione sociale obbligatoria`);
@@ -1179,6 +1181,30 @@ export default function ClientiPage() {
 
         const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
 
+        let utenteOperatoreId: string | null = null;
+        if (utenteFiscaleRaw) {
+          const utenteTrovato = utenti.find(u => {
+            const nomeCompleto = `${u.nome} ${u.cognome}`.toLowerCase();
+            return nomeCompleto === utenteFiscaleRaw.toLowerCase() || 
+                   u.email?.toLowerCase() === utenteFiscaleRaw.toLowerCase();
+          });
+          if (utenteTrovato) {
+            utenteOperatoreId = utenteTrovato.id;
+          }
+        }
+
+        let professionistaPayrollId: string | null = null;
+        if (professionistaFiscaleRaw) {
+          const professionistaTrovato = utenti.find(u => {
+            const nomeCompleto = `${u.nome} ${u.cognome}`.toLowerCase();
+            return nomeCompleto === professionistaFiscaleRaw.toLowerCase() || 
+                   u.email?.toLowerCase() === professionistaFiscaleRaw.toLowerCase();
+          });
+          if (professionistaTrovato) {
+            professionistaPayrollId = professionistaTrovato.id;
+          }
+        }
+
         const clienteData: any = {
           tipo_cliente: tipoCliente,
           tipologia_cliente: tipologia,
@@ -1195,6 +1221,8 @@ export default function ClientiPage() {
         if (provincia) clienteData.provincia = provincia;
         if (email) clienteData.email = email;
         if (note) clienteData.note = note;
+        if (utenteOperatoreId) clienteData.utente_operatore_id = utenteOperatoreId;
+        if (professionistaPayrollId) clienteData.utente_payroll_id = professionistaPayrollId;
 
         try {
           await clienteService.createCliente(clienteData);
