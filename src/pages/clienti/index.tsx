@@ -1150,6 +1150,14 @@ export default function ClientiPage() {
             )?.id || null;
         };
 
+        // Conversione tipo_cliente per il database
+        let tipoClienteDB = values[0];
+        if (tipoClienteDB.toLowerCase() === "persona fisica") {
+          tipoClienteDB = "PERSONA_FISICA";
+        } else if (tipoClienteDB.toLowerCase() === "persona giuridica") {
+          tipoClienteDB = "PERSONA_GIURIDICA";
+        }
+
         // Mapping degli utenti
         let utenteOperatoreId = null;
         let utenteProfessionistaId = null;
@@ -1180,8 +1188,8 @@ export default function ClientiPage() {
         // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
         const newCliente: any = {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-          tipo_cliente: values[0],
-          tipologia_cliente: values[1],
+          tipo_cliente: tipoClienteDB,
+          tipologia_cliente: values[1].toUpperCase() === "INTERNO" ? "INTERNO" : values[1].toUpperCase() === "ESTERNO" ? "ESTERNO" : null,
           settore: values[2],
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
