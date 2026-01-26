@@ -712,7 +712,7 @@ export default function ClientiPage() {
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
       scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
       data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
-      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
+      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b).toISOString() : undefined,
       gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
       note_antiriciclaggio: cliente.note_antiriciclaggio || "",
       giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
@@ -1199,7 +1199,7 @@ export default function ClientiPage() {
           data_ultima_verifica_antiric: values[31] ? new Date(values[31]).toISOString() : undefined,
           scadenza_antiric: values[32] ? new Date(values[32]).toISOString() : undefined,
           data_ultima_verifica_b: values[33] ? new Date(values[33]).toISOString() : undefined,
-          scadenza_antiric_b: values[34] ? new Date(values[34]) : undefined,
+          scadenza_antiric_b: values[34] ? new Date(values[34]).toISOString() : undefined,
           gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
         };
 
