@@ -1128,6 +1128,24 @@ export default function ClientiPage() {
           continue;
         }
 
+        if (!tipoClienteRaw) {
+          errors.push(`Riga ${i + 2}: Tipo cliente obbligatorio`);
+          errorCount++;
+          continue;
+        }
+
+        if (!tipologiaRaw) {
+          errors.push(`Riga ${i + 2}: Tipologia cliente obbligatoria`);
+          errorCount++;
+          continue;
+        }
+
+        if (!settoreRaw) {
+          errors.push(`Riga ${i + 2}: Settore obbligatorio`);
+          errorCount++;
+          continue;
+        }
+
         const tipoCliente = tipoClienteRaw.includes("fisica") 
           ? "PERSONA_FISICA" 
           : tipoClienteRaw.includes("giuridica") 
@@ -1141,6 +1159,12 @@ export default function ClientiPage() {
           tipologia = "CL esterno";
         }
 
+        if (!tipologia) {
+          errors.push(`Riga ${i + 2}: Tipologia non valida (deve essere Interno o Esterno)`);
+          errorCount++;
+          continue;
+        }
+
         let settore: "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | null = null;
         if (settoreRaw.toLowerCase().includes("fiscale") && settoreRaw.toLowerCase().includes("lavoro")) {
           settore = "Fiscale & Lavoro";
@@ -1150,27 +1174,48 @@ export default function ClientiPage() {
           settore = "Lavoro";
         }
 
+        if (!settore) {
+          errors.push(`Riga ${i + 2}: Settore non valido (deve essere Fiscale, Lavoro o Fiscale & Lavoro)`);
+          errorCount++;
+          continue;
+        }
+
         const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
 
-        const clienteData = {
-          cod_cliente: codCliente || `IMP-${Date.now()}-${i}`,
+        const clienteData: any = {
           tipo_cliente: tipoCliente,
           tipologia_cliente: tipologia,
           settore: settore,
           ragione_sociale: ragioneSociale,
-          partita_iva: piva || ragioneSociale.substring(0, 11).replace(/\s/g, ''),
-          codice_fiscale: cf || "",
-          indirizzo: indirizzo || "",
-          cap: cap || "",
-          citta: citta || "",
-          provincia: provincia || "",
-          email: email || `${ragioneSociale.toLowerCase().replace(/\s/g, '')}@cliente.it`,
           attivo: attivo,
-          note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
+        if (codCliente) clienteData.cod_cliente = codCliente;
+        if (piva) clienteData.partita_iva = piva;
+        if (cf) clienteData.codice_fiscale = cf;
+        if (indirizzo) clienteData.indirizzo = indirizzo;
+        if (cap) clienteData.cap = cap;
+        if (citta) clienteData.citta = citta;
+        if (provincia) clienteData.provincia = provincia;
+        if (email) clienteData.email = email;
+        if (note) clienteData.note = note;
+
         try {
-          await clienteService.createCliente(clienteData as any);
+          if (codCliente) {
+            const { data: existing } = await supabase
+              .from("tbclienti")
+              .select("id")
+              .eq("cod_cliente", codCliente)
+              .single();
+
+            if (existing) {
+              errors.push(`Riga ${i + 2}: Codice cliente ${codCliente} già esistente - saltato`);
+              errorCount++;
+              continue;
+            }
+          }
+
+          await clienteService.createCliente(clienteData);
           successCount++;
         } catch (error: any) {
           errorCount++;
@@ -1249,13 +1294,13 @@ export default function ClientiPage() {
                           <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
                           <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
                           <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
-                          <li><strong>Partita IVA</strong> - Opzionale (generata automaticamente se mancante)</li>
+                          <li><strong>Partita IVA</strong> - Opzionale</li>
                           <li><strong>Codice Fiscale</strong> - Opzionale</li>
                           <li><strong>Indirizzo</strong> - Opzionale</li>
                           <li><strong>CAP</strong> - Opzionale</li>
                           <li><strong>Città</strong> - Opzionale</li>
                           <li><strong>Provincia</strong> - Opzionale</li>
-                          <li><strong>Email</strong> - Opzionale (generata automaticamente se mancante)</li>
+                          <li><strong>Email</strong> - Opzionale</li>
                           <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
                           <li><strong>Note</strong> - Opzionale</li>
                         </ol>
