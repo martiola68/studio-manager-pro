@@ -103,12 +103,26 @@ export default function GestioneUtentiPage() {
         utenteService.getUtenti(),
         loadRuoli()
       ]);
-      // Ordina utenti per cognome alfabeticamente
-      const utentiOrdinati = utentiData.sort((a, b) => a.cognome.localeCompare(b.cognome));
-      setUtenti(utentiOrdinati);
+      
+      // Ordino per settore e poi per cognome
+      const sortedData = utentiData.sort((a: Utente, b: Utente) => {
+        // Prima ordino per settore
+        const settoreOrder: Record<string, number> = { 'Fiscale': 1, 'Lavoro': 2, 'Fiscale & lavoro': 3 };
+        const settoreA = a.settore ? (settoreOrder[a.settore] || 999) : 999;
+        const settoreB = b.settore ? (settoreOrder[b.settore] || 999) : 999;
+        
+        if (settoreA !== settoreB) {
+          return settoreA - settoreB;
+        }
+        
+        // Poi ordino per cognome
+        return (a.cognome || '').localeCompare(b.cognome || '');
+      });
+      
+      setUtenti(sortedData);
       setRuoli(ruoliData);
     } catch (error) {
-      console.error("Errore caricamento dati:", error);
+      console.error('Errore caricamento dati:', error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
