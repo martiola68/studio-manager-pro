@@ -437,12 +437,17 @@ export default function ClientiPage() {
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
-        utente_professionista_payroll_id:
-          formData.utente_professionista_payroll_id || null,
+        professionista_payroll_id:
+          formData.professionista_payroll_id || null,
         data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric
           ? formData.data_ultima_verifica_antiric instanceof Date
             ? formData.data_ultima_verifica_antiric.toISOString()
             : formData.data_ultima_verifica_antiric
+          : null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b
+          ? formData.data_ultima_verifica_b instanceof Date
+            ? formData.data_ultima_verifica_b.toISOString()
+            : formData.data_ultima_verifica_b
           : null,
       };
 
@@ -1154,7 +1159,7 @@ export default function ClientiPage() {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
           tipo_cliente: values[0],
           tipologia_cliente: values[1],
-          settore: values[2],
+          settore: values[2] as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
