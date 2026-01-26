@@ -69,6 +69,8 @@ export interface Cliente {
   Note?: string;
   Attivo: boolean;
   TipoCliente?: TipoCliente;
+  tipo_cliente?: string; // Persona fisica/Persona giuridica
+  tipologia_cliente?: string; // Interno/Esterno
   // Flag per servizi attivi
   Flag_Iva?: boolean;
   Flag_CU?: boolean;
