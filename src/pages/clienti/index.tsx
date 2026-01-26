@@ -1447,9 +1447,18 @@ export default function ClientiPage() {
                     <TableCell>{cliente.ragione_sociale}</TableCell>
                     <TableCell>{cliente.email || "-"}</TableCell>
                     <TableCell>{cliente.partita_iva || "-"}</TableCell>
-                    <TableCell>{cliente.cod_fiscale || "-"}</TableCell>
+                    <TableCell>{cliente.codice_fiscale || "-"}</TableCell>
                     <TableCell>{cliente.indirizzo || "-"}</TableCell>
-                    <TableCell>{cliente.utente_fiscale || "-"}</TableCell>
+                    <TableCell>
+                      {utenti.find(u => u.id === cliente.utente_operatore_id) 
+                        ? `${utenti.find(u => u.id === cliente.utente_operatore_id)?.nome} ${utenti.find(u => u.id === cliente.utente_operatore_id)?.cognome}`
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {utenti.find(u => u.id === cliente.utente_payroll_id)
+                        ? `${utenti.find(u => u.id === cliente.utente_payroll_id)?.nome} ${utenti.find(u => u.id === cliente.utente_payroll_id)?.cognome}`
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         cliente.attivo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
