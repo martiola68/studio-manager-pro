@@ -990,35 +990,56 @@ export default function ClientiPage() {
   const handleExport = () => {
     if (clienti.length === 0) {
       toast({
-        title: "Attenzione",
-        description: "Nessun cliente da esportare",
+        title: "Nessun cliente da esportare",
+        description: "Non ci sono clienti nel database",
         variant: "destructive",
       });
       return;
     }
 
-    const exportData = clienti.map((cliente) => ({
-      cod_cliente: cliente.cod_cliente,
-      tipo_cliente: cliente.tipo_cliente,
-      tipologia_cliente: cliente.tipologia_cliente,
-      settore: cliente.settore,
-      ragione_sociale: cliente.ragione_sociale,
-      codice_fiscale: cliente.codice_fiscale,
-      partita_iva: cliente.partita_iva,
-      indirizzo: cliente.indirizzo,
-      cap: cliente.cap,
-      citta: cliente.citta,
-      provincia: cliente.provincia,
-      email: cliente.email,
-      tipo_redditi: cliente.tipo_redditi,
-      matricola_inps: cliente.matricola_inps,
-      pat_inail: cliente.pat_inail,
-      codice_ditta_ce: cliente.codice_ditta_ce,
-      attivo: cliente.attivo,
-      note: cliente.note,
-    }));
+    const headers = [
+      "tipo_cliente (Obbligatorio: PERSONA FISICA / SOCIETA)",
+      "tipologia_cliente",
+      "settore",
+      "tipo_prestazione_a",
+      "tipo_prestazione_b",
+      "cod_cliente (Obbligatorio)",
+      "ragione_sociale (Obbligatorio)",
+      "indirizzo (Obbligatorio)",
+      "cap (Obbligatorio)",
+      "citta (Obbligatorio)",
+      "provincia (Obbligatorio)",
+      "email",
+      "partita_iva",
+      "codice_fiscale",
+      "tipo_redditi",
+      "attivo",
+      "note"
+    ];
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    const rows = clienti.map(cliente => {
+      return [
+        cliente.tipo_cliente || "",
+        cliente.tipologia_cliente || "",
+        cliente.settore || "",
+        cliente.tipo_prestazione_a || "",
+        cliente.tipo_prestazione_b || "",
+        cliente.cod_cliente || "",
+        cliente.ragione_sociale || "",
+        cliente.indirizzo || "",
+        cliente.cap || "",
+        cliente.citta || "",
+        cliente.provincia || "",
+        cliente.email || "",
+        cliente.partita_iva || "",
+        cliente.codice_fiscale || "",
+        cliente.tipo_redditi || "",
+        cliente.attivo ? "SI" : "NO",
+        cliente.note || ""
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Clienti");
     XLSX.writeFile(wb, "clienti_export.xlsx");
