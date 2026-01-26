@@ -1187,6 +1187,10 @@ export default function ClientiPage() {
           tipo_prestazione_id: values[19] || null,
           tipo_redditi: values[20] || null,
           cassetto_fiscale_id: values[21] || null,
+          gg_ver_a: values[29] ? parseInt(values[29]) : undefined,
+          gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
+          giorni_scad_ver_a: values[30] ? parseInt(values[30]) : null,
+          giorni_scad_ver_b: values[31] ? parseInt(values[31]) : null,
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
