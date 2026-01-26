@@ -1169,6 +1169,7 @@ export default function ClientiPage() {
           const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
 
           const newCliente = {
+            cod_cliente: `CLI${Date.now()}${Math.floor(Math.random() * 1000)}`, // Genera codice univoco
             tipo_cliente: tipoCliente,
             tipologia_cliente: tipologiaCliente,
             settore: settore,
