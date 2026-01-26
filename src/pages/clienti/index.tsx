@@ -1074,161 +1074,107 @@ export default function ClientiPage() {
     setImporting(true);
 
     try {
-      const text = await file.text();
-      const lines = text.split("\n").filter((line) => line.trim());
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: "",
+      });
 
-      if (lines.length === 0) {
+      if (jsonData.length <= 1) {
         toast({
           title: "File vuoto",
-          description: "Il file non contiene dati.",
+          description: "Il file non contiene dati da importare.",
           variant: "destructive",
         });
         return;
       }
 
+      const rows = jsonData.slice(1);
       let successCount = 0;
-      let errorCount = 0;
       const errors: string[] = [];
 
-      // Funzione per normalizzare i valori
-      const normalizeSettore = (value: string): string => {
-        const normalized = value.trim();
-        // Converti varianti comuni
-        if (normalized.toLowerCase().includes("fiscale") && normalized.toLowerCase().includes("lavoro")) {
-          return "Fiscale & Lavoro";
+      for (let i = 0; i < rows.length; i++) {
+        const values = rows[i];
+        const rowNum = i + 2;
+
+        if (!values[0] || !values[1] || !values[2] || !values[3]) {
+          errors.push(
+            `Riga ${rowNum}: Campi obbligatori mancanti (tipo_cliente, tipologia_cliente, settore, ragione_sociale)`
+          );
+          continue;
         }
-        if (normalized.toLowerCase() === "fiscale") return "Fiscale";
-        if (normalized.toLowerCase() === "lavoro") return "Lavoro";
-        return "Fiscale"; // Default
-      };
-
-      const normalizeTipoCliente = (value: string): string => {
-        const normalized = value.trim().toLowerCase();
-        if (normalized.includes("fisica") || normalized === "pf") return "Persona fisica";
-        if (normalized.includes("giuridica") || normalized === "pg") return "Persona giuridica";
-        return "Persona fisica"; // Default
-      };
-
-      const normalizeTipologiaCliente = (value: string): string => {
-        const normalized = value.trim().toLowerCase();
-        if (normalized === "interno" || normalized === "i") return "Interno";
-        if (normalized === "esterno" || normalized === "e") return "Esterno";
-        return "Interno"; // Default
-      };
-
-      const normalizeBoolean = (value: string): boolean => {
-        const normalized = value.trim().toLowerCase();
-        return normalized === "vero" || normalized === "true" || normalized === "1" || normalized === "si" || normalized === "sì";
-      };
-
-      // Funzione per pulire i caratteri speciali
-      const cleanText = (text: string): string => {
-        if (!text) return "";
-        // Rimuovi backslash e altri caratteri problematici
-        return text.replace(/\\/g, "").replace(/[\u0000-\u001F\u007F-\u009F]/g, "").trim();
-      };
-
-      // Funzione per trovare l'utente per nome o email
-      const findUserByNameOrEmail = (value: string): string | null => {
-        if (!value || value.trim() === "") return null;
-        const cleanValue = cleanText(value).toLowerCase();
-        
-        const user = utenti.find((u) => {
-          const fullName = `${u.nome} ${u.cognome}`.toLowerCase();
-          const email = u.email?.toLowerCase() || "";
-          return fullName === cleanValue || email === cleanValue;
-        });
-        
-        return user?.id || null;
-      };
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.trim()) continue;
 
         try {
-          const values = line.split(",").map((v) => cleanText(v.replace(/^"|"$/g, "")));
+          const findUserByNameOrEmail = (nameOrEmail: string) => {
+            if (!nameOrEmail) return null;
+            const search = nameOrEmail.trim().toLowerCase();
+            const user = utenti.find(
+              (u) =>
+                `${u.nome} ${u.cognome}`.toLowerCase() === search ||
+                u.email?.toLowerCase() === search
+            );
+            return user?.id || null;
+          };
 
-          // Validazione campi obbligatori
-          if (!values[0] || !values[1] || !values[2] || !values[3]) {
-            errors.push(`Riga ${i + 1}: Campi obbligatori mancanti (Tipo Cliente, Tipologia, Settore, Ragione Sociale)`);
-            errorCount++;
-            continue;
-          }
-
-          // Normalizza i valori
-          const tipoCliente = normalizeTipoCliente(values[0]);
-          const tipologiaCliente = normalizeTipologiaCliente(values[1]);
-          const settore = normalizeSettore(values[2]);
-          const ragioneSociale = cleanText(values[3]);
-
-          // Trova gli utenti
           const utenteOperatoreId = findUserByNameOrEmail(values[13] || "");
-          const utenteProfessionistaId = findUserByNameOrEmail(values[14] || "");
+          const professionistaFiscaleId = findUserByNameOrEmail(values[14] || "");
           const utentePayrollId = findUserByNameOrEmail(values[15] || "");
           const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
 
           const newCliente = {
-            cod_cliente: `CLI${Date.now()}${Math.floor(Math.random() * 1000)}`, // Genera codice univoco
-            tipo_cliente: tipoCliente,
-            tipologia_cliente: tipologiaCliente,
-            settore: settore,
-            ragione_sociale: ragioneSociale,
-            partita_iva: cleanText(values[4] || ""),
-            codice_fiscale: cleanText(values[5] || ""),
-            indirizzo: cleanText(values[6] || ""),
-            cap: cleanText(values[7] || ""),
-            citta: cleanText(values[8] || ""),
-            provincia: cleanText(values[9] || ""),
-            email: cleanText(values[10] || ""),
-            attivo: values[11] ? normalizeBoolean(values[11]) : true,
-            note: cleanText(values[12] || ""),
+            cod_cliente: `CLI${Date.now()}${Math.floor(Math.random() * 1000)}`,
+            tipo_cliente: values[0],
+            tipologia_cliente: values[1],
+            settore: values[2],
+            ragione_sociale: values[3],
+            partita_iva: values[4] || null,
+            codice_fiscale: values[5] || null,
+            indirizzo: values[6] || null,
+            cap: values[7] || null,
+            citta: values[8] || null,
+            provincia: values[9] || null,
+            email: values[10] || null,
+            attivo: values[11]?.toString().toLowerCase() === "vero" || values[11] === true,
+            note: values[12] || null,
             utente_operatore_id: utenteOperatoreId,
-            utente_professionista_id: utenteProfessionistaId,
+            utente_professionista_id: professionistaFiscaleId,
             utente_payroll_id: utentePayrollId,
             professionista_payroll_id: professionistaPayrollId,
+            contatto_1: values[17] || null,
+            contatto_2: values[18] || null,
+            tipo_prestazione: values[19] || null,
+            tipo_redditi: values[20] || null,
+            cassetto_fiscale_id: values[21] || null,
           };
 
           await clienteService.createCliente(newCliente);
           successCount++;
         } catch (error: any) {
-          console.error(`Errore riga ${i + 1}:`, error);
-          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
-          errorCount++;
+          errors.push(`Riga ${rowNum}: ${error.message || "Errore sconosciuto"}`);
         }
       }
 
-      // Ricarica i dati
       await loadData();
 
-      // Mostra risultati
-      if (successCount > 0) {
+      if (errors.length === 0) {
         toast({
           title: "Importazione completata",
-          description: `${successCount} clienti importati con successo${errorCount > 0 ? `, ${errorCount} errori` : ""}`,
+          description: `${successCount} clienti importati con successo!`,
         });
-      }
-
-      if (errors.length > 0 && errors.length <= 5) {
-        errors.forEach((err) => {
-          toast({
-            title: "Errore importazione",
-            description: err,
-            variant: "destructive",
-          });
-        });
-      } else if (errors.length > 5) {
+      } else {
         toast({
-          title: `${errorCount} errori durante l'importazione`,
-          description: "Controlla il formato del file e riprova. Primi errori: " + errors.slice(0, 2).join("; "),
+          title: "Importazione parziale",
+          description: `${successCount} clienti importati. ${errors.length} errori riscontrati.`,
           variant: "destructive",
         });
+        console.error("Errori importazione:", errors);
       }
     } catch (error: any) {
-      console.error("Errore lettura file:", error);
       toast({
-        title: "Errore",
-        description: "Impossibile leggere il file. Assicurati che sia un file Excel (.xlsx, .xls) o CSV valido.",
+        title: "Errore importazione",
+        description: error.message || "Errore durante l'importazione del file",
         variant: "destructive",
       });
     } finally {
@@ -1692,7 +1638,9 @@ export default function ClientiPage() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     placeholder="info@happy.it"
                   />
                 </div>
