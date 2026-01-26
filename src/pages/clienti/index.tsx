@@ -991,7 +991,6 @@ export default function ClientiPage() {
 
   const downloadTemplate = () => {
     const headers = [
-      "codice_cliente",
       "tipo_cliente",
       "tipologia_cliente",
       "settore",
@@ -1009,7 +1008,6 @@ export default function ClientiPage() {
 
     const exampleRows = [
       [
-        "CL-001",
         "Persona Giuridica",
         "Interno",
         "Fiscale",
@@ -1039,7 +1037,7 @@ export default function ClientiPage() {
 
     toast({
       title: "Template scaricato",
-      description: "Compila il file CSV seguendo l'esempio fornito"
+      description: "Compila il file CSV seguendo l'esempio fornito. Lascia vuoti i campi non obbligatori se non disponibili."
     });
   };
 
@@ -1107,20 +1105,19 @@ export default function ClientiPage() {
         
         if (!values || values.length === 0 || !values[0]) continue;
 
-        const codCliente = (values[0] || "").toString().trim();
-        const tipoClienteRaw = (values[1] || "").toString().trim().toLowerCase();
-        const tipologiaRaw = (values[2] || "").toString().trim().toLowerCase();
-        const settoreRaw = (values[3] || "").toString().trim();
-        const ragioneSociale = (values[4] || "").toString().trim();
-        const piva = (values[5] || "").toString().trim();
-        const cf = (values[6] || "").toString().trim();
-        const indirizzo = (values[7] || "").toString().trim();
-        const cap = (values[8] || "").toString().trim();
-        const citta = (values[9] || "").toString().trim();
-        const provincia = (values[10] || "").toString().trim();
-        const email = (values[11] || "").toString().trim();
-        const attivoRaw = (values[12] || "VERO").toString().trim().toUpperCase();
-        const note = (values[13] || "").toString().trim();
+        const tipoClienteRaw = (values[0] || "").toString().trim().toLowerCase();
+        const tipologiaRaw = (values[1] || "").toString().trim().toLowerCase();
+        const settoreRaw = (values[2] || "").toString().trim();
+        const ragioneSociale = (values[3] || "").toString().trim();
+        const piva = (values[4] || "").toString().trim();
+        const cf = (values[5] || "").toString().trim();
+        const indirizzo = (values[6] || "").toString().trim();
+        const cap = (values[7] || "").toString().trim();
+        const citta = (values[8] || "").toString().trim();
+        const provincia = (values[9] || "").toString().trim();
+        const email = (values[10] || "").toString().trim();
+        const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
+        const note = (values[12] || "").toString().trim();
 
         if (!ragioneSociale) {
           errors.push(`Riga ${i + 2}: Ragione sociale obbligatoria`);
@@ -1190,7 +1187,6 @@ export default function ClientiPage() {
           attivo: attivo,
         };
 
-        if (codCliente) clienteData.cod_cliente = codCliente;
         if (piva) clienteData.partita_iva = piva;
         if (cf) clienteData.codice_fiscale = cf;
         if (indirizzo) clienteData.indirizzo = indirizzo;
@@ -1201,20 +1197,6 @@ export default function ClientiPage() {
         if (note) clienteData.note = note;
 
         try {
-          if (codCliente) {
-            const { data: existing } = await supabase
-              .from("tbclienti")
-              .select("id")
-              .eq("cod_cliente", codCliente)
-              .single();
-
-            if (existing) {
-              errors.push(`Riga ${i + 2}: Codice cliente ${codCliente} già esistente - saltato`);
-              errorCount++;
-              continue;
-            }
-          }
-
           await clienteService.createCliente(clienteData);
           successCount++;
         } catch (error: any) {
@@ -1289,7 +1271,6 @@ export default function ClientiPage() {
                       <div className="text-sm text-blue-900">
                         <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
                         <ol className="list-decimal list-inside space-y-1 text-xs">
-                          <li><strong>Codice Cliente</strong> - Opzionale (es. CL-001)</li>
                           <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Persona giuridica)</li>
                           <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
                           <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
