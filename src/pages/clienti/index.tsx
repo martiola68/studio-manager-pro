@@ -1101,99 +1101,74 @@ export default function ClientiPage() {
       let successCount = 0;
       const errors: string[] = [];
 
+      // Carica tutti gli utenti per il mapping
+      const usersList = await utenteService.getUtenti();
+
       for (let i = 0; i < rows.length; i++) {
-        const values = rows[i];
+        const rawRow = rows[i] as any[];
+        if (!Array.isArray(rawRow)) continue;
+
         const rowNum = i + 2;
-
-        if (!values[0] || !values[1] || !values[2] || !values[3]) {
-          console.log(`🔍 DEBUG Riga ${rowNum}:`, {
-            tipo_cliente: values[0] || "❌ MANCANTE",
-            tipologia_cliente: values[1] || "❌ MANCANTE",
-            settore: values[2] || "❌ MANCANTE",
-            ragione_sociale: values[3] || "❌ MANCANTE"
-          });
-          
-          errors.push(
-            `Riga ${rowNum}: Campi obbligatori mancanti (tipo_cliente, tipologia_cliente, settore, ragione_sociale)`
-          );
-          continue;
-        }
-
-        const row = values.map((cell: any) => (cell ?? "").toString().trim());
-
-        if (!row[3]?.toString().trim()) {
-          errors.push(`Riga ${rowNum}: Ragione Sociale obbligatoria mancante`);
-          continue;
-        }
-
-        // Try to find users by name or email
-        const utenti = await getAllUtenti();
         
-        let utenteOperatoreId = null;
-        let utenteProfessionistaId = null;
-        let utentePayrollId = null;
-        let professionistaPayrollId = null;
-
-        if (row[13]) {
-          const utenteOp = utenti.find(
-            (u) =>
-              u.email?.toLowerCase() === row[13].toString().toLowerCase() ||
-              u.nome_completo?.toLowerCase() === row[13].toString().toLowerCase()
-          );
-          if (utenteOp) utenteOperatoreId = utenteOp.id;
+        // Normalizza i valori: stringa e trim per tutte le 22 colonne previste
+        const values: string[] = [];
+        for(let j=0; j<22; j++) {
+            values[j] = (rawRow[j] ?? "").toString().trim();
         }
 
-        if (row[14]) {
-          const utenteProf = utenti.find(
-            (u) =>
-              u.email?.toLowerCase() === row[14].toString().toLowerCase() ||
-              u.nome_completo?.toLowerCase() === row[14].toString().toLowerCase()
+        // VERIFICA CAMPI OBBLIGATORI (SOLO I 4 INDICATI)
+        // 0: Tipo Cliente
+        // 1: Tipologia Cliente
+        // 2: Settore
+        // 3: Ragione Sociale
+        if (!values[0] || !values[1] || !values[2] || !values[3]) {
+          errors.push(
+            `Riga ${rowNum}: Campi obbligatori mancanti. Assicurati che Tipo Cliente, Tipologia, Settore e Ragione Sociale siano compilati.`
           );
-          if (utenteProf) utenteProfessionistaId = utenteProf.id;
+          continue;
         }
 
-        if (row[15]) {
-          const utentePay = utenti.find(
-            (u) =>
-              u.email?.toLowerCase() === row[15].toString().toLowerCase() ||
-              u.nome_completo?.toLowerCase() === row[15].toString().toLowerCase()
-          );
-          if (utentePay) utentePayrollId = utentePay.id;
-        }
+        // Funzione helper per trovare utente da nome o email
+        const findUser = (search: string) => {
+            if (!search) return null;
+            const searchLower = search.toLowerCase();
+            return usersList.find(u => 
+                (u.email && u.email.toLowerCase() === searchLower) || 
+                (u.nome && u.cognome && `${u.nome} ${u.cognome}`.toLowerCase() === searchLower)
+            )?.id || null;
+        };
 
-        if (row[16]) {
-          const profPay = utenti.find(
-            (u) =>
-              u.email?.toLowerCase() === row[16].toString().toLowerCase() ||
-              u.nome_completo?.toLowerCase() === row[16].toString().toLowerCase()
-          );
-          if (profPay) professionistaPayrollId = profPay.id;
-        }
+        const utenteOperatoreId = findUser(values[13]);
+        const utenteProfessionistaId = findUser(values[14]);
+        const utentePayrollId = findUser(values[15]);
+        const professionistaPayrollId = findUser(values[16]);
 
-        const newCliente = {
+        // Costruzione oggetto cliente
+        // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
+        const newCliente: any = {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
           tipo_cliente: values[0],
           tipologia_cliente: values[1],
           settore: values[2],
           ragione_sociale: values[3],
-          partita_iva: row[4] || null,
-          codice_fiscale: row[5] || null,
-          indirizzo: row[6] || "",
-          cap: row[7] || "",
-          citta: row[8] || "",
-          provincia: row[9] || "",
-          email: row[10] || null,
-          attivo: row[11]?.toUpperCase() === "VERO" || row[11]?.toLowerCase() === "true",
-          note: row[12] || null,
+          partita_iva: values[4] || null,
+          codice_fiscale: values[5] || null,
+          indirizzo: values[6] || null,
+          cap: values[7] || null,
+          citta: values[8] || null,
+          provincia: values[9] || null,
+          email: values[10] || null,
+          attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "TRUE",
+          note: values[12] || null,
           utente_operatore_id: utenteOperatoreId,
           utente_professionista_id: utenteProfessionistaId,
           utente_payroll_id: utentePayrollId,
           professionista_payroll_id: professionistaPayrollId,
-          contatto1_id: row[17] || null,
-          contatto2_id: row[18] || null,
-          tipo_prestazione_id: row[19] || null,
-          tipo_redditi: row[20] || null,
-          cassetto_fiscale_id: row[21] || null,
+          contatto1_id: values[17] || null,
+          contatto2_id: values[18] || null,
+          tipo_prestazione_id: values[19] || null,
+          tipo_redditi: values[20] || null,
+          cassetto_fiscale_id: values[21] || null,
         };
 
         await clienteService.createCliente(newCliente);
@@ -1209,16 +1184,17 @@ export default function ClientiPage() {
         });
       } else {
         toast({
-          title: "Importazione parziale",
-          description: `${successCount} clienti importati. ${errors.length} errori riscontrati.`,
+          title: "Importazione con errori",
+          description: `${successCount} clienti importati. ${errors.length} righe scartate (vedi console per dettagli).`,
           variant: "destructive",
         });
         console.error("Errori importazione:", errors);
       }
     } catch (error: any) {
+      console.error("Errore critico importazione:", error);
       toast({
         title: "Errore importazione",
-        description: error.message || "Errore durante l'importazione del file",
+        description: error.message || "Si è verificato un errore durante l'elaborazione del file.",
         variant: "destructive",
       });
     } finally {
