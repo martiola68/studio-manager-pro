@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Trash2, Edit, Download, Upload } from "lucide-react";
-import { ClienteService } from "@/services/clienteService";
-import { Cliente } from "@/types";
+import { clienteService } from "@/services/clienteService";
+import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -32,6 +32,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
+
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 
 export default function ClientiPage() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -66,7 +68,7 @@ export default function ClientiPage() {
   const loadClienti = async () => {
     try {
       setLoading(true);
-      const data = await ClienteService.getAll();
+      const data = await clienteService.getClienti();
       setClienti(data);
     } catch (error) {
       toast({
@@ -83,13 +85,13 @@ export default function ClientiPage() {
     e.preventDefault();
     try {
       if (selectedCliente) {
-        await ClienteService.update(selectedCliente.id, formData);
+        await clienteService.updateCliente(selectedCliente.id, formData);
         toast({
           title: "Cliente aggiornato",
           description: "Il cliente è stato aggiornato con successo",
         });
       } else {
-        await ClienteService.create(formData);
+        await clienteService.createCliente(formData);
         toast({
           title: "Cliente creato",
           description: "Il cliente è stato creato con successo",
@@ -110,7 +112,7 @@ export default function ClientiPage() {
   const handleDelete = async () => {
     if (!clienteToDelete) return;
     try {
-      await ClienteService.delete(clienteToDelete);
+      await clienteService.deleteCliente(clienteToDelete);
       toast({
         title: "Cliente eliminato",
         description: "Il cliente è stato eliminato con successo",
@@ -177,19 +179,19 @@ export default function ClientiPage() {
     }
 
     const dataToExport = clienti.map((cliente) => ({
-      "Codice Cliente": cliente.cod_cliente || "",
-      "Ragione Sociale": cliente.ragione_sociale || "",
-      "Partita IVA": cliente.partita_iva || "",
-      "Codice Fiscale": cliente.codice_fiscale || "",
-      "Email": cliente.email || "",
-      "Indirizzo": cliente.indirizzo || "",
-      "Città": cliente.citta || "",
-      "CAP": cliente.cap || "",
-      "Provincia": cliente.provincia || "",
-      "Tipo Cliente": cliente.tipo_cliente || "",
-      "Tipologia Cliente": cliente.tipologia_cliente || "",
-      "Settore": cliente.settore || "",
-      "Attivo": cliente.attivo ? "Sì" : "No",
+      "cod_cliente": cliente.cod_cliente || "",
+      "ragione_sociale": cliente.ragione_sociale || "",
+      "partita_iva": cliente.partita_iva || "",
+      "codice_fiscale": cliente.codice_fiscale || "",
+      "email": cliente.email || "",
+      "indirizzo": cliente.indirizzo || "",
+      "citta": cliente.citta || "",
+      "cap": cliente.cap || "",
+      "provincia": cliente.provincia || "",
+      "tipo_cliente": cliente.tipo_cliente || "",
+      "tipologia_cliente": cliente.tipologia_cliente || "",
+      "settore": cliente.settore || "",
+      "attivo": cliente.attivo ? "Sì" : "No",
     }));
 
     const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -218,22 +220,22 @@ export default function ClientiPage() {
 
         for (const row of jsonData as any[]) {
           const clienteData = {
-            cod_cliente: row["Codice Cliente"] || "",
-            ragione_sociale: row["Ragione Sociale"] || "",
-            partita_iva: row["Partita IVA"] || "",
-            codice_fiscale: row["Codice Fiscale"] || "",
-            email: row["Email"] || "",
-            indirizzo: row["Indirizzo"] || "",
-            citta: row["Città"] || "",
-            cap: row["CAP"] || "",
-            provincia: row["Provincia"] || "",
-            tipo_cliente: row["Tipo Cliente"] || "",
-            tipologia_cliente: row["Tipologia Cliente"] || "",
-            settore: row["Settore"] || "",
-            attivo: row["Attivo"] === "Sì",
+            cod_cliente: row["cod_cliente"] || "",
+            ragione_sociale: row["ragione_sociale"] || "",
+            partita_iva: row["partita_iva"] || "",
+            codice_fiscale: row["codice_fiscale"] || "",
+            email: row["email"] || "",
+            indirizzo: row["indirizzo"] || "",
+            citta: row["citta"] || "",
+            cap: row["cap"] || "",
+            provincia: row["provincia"] || "",
+            tipo_cliente: row["tipo_cliente"] || "",
+            tipologia_cliente: row["tipologia_cliente"] || "",
+            settore: row["settore"] || "",
+            attivo: row["attivo"] === "Sì",
           };
 
-          await ClienteService.create(clienteData);
+          await clienteService.createCliente(clienteData);
         }
 
         toast({
