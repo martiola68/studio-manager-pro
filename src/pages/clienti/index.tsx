@@ -1118,8 +1118,22 @@ export default function ClientiPage() {
         const rowNum = i + 2;
 
         if (!values[0] || !values[1] || !values[2] || !values[3]) {
+          console.log(`🔍 DEBUG Riga ${rowNum}:`, {
+            tipo_cliente: values[0] || "❌ MANCANTE",
+            tipologia_cliente: values[1] || "❌ MANCANTE",
+            settore: values[2] || "❌ MANCANTE",
+            ragione_sociale: values[3] || "❌ MANCANTE"
+          });
+          
           errors.push(
             `Riga ${rowNum}: Campi obbligatori mancanti (tipo_cliente, tipologia_cliente, settore, ragione_sociale)`
+          );
+          continue;
+        }
+
+        if (!values[3] || values[3].toString().trim() === "") {
+          errors.push(
+            `Riga ${rowNum}: Ragione Sociale obbligatoria mancante`
           );
           continue;
         }
@@ -1143,10 +1157,10 @@ export default function ClientiPage() {
 
           const newCliente = {
             cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-            tipo_cliente: values[0] || "Persona fisica",
-            tipologia_cliente: values[1] || "Interno",
-            settore: values[2] || "Fiscale",
-            ragione_sociale: values[3] || "",
+            tipo_cliente: values[0]?.toString().trim() || "Persona fisica",
+            tipologia_cliente: values[1]?.toString().trim() || "Interno",
+            settore: values[2]?.toString().trim() || "Fiscale",
+            ragione_sociale: values[3]?.toString().trim() || "",
             partita_iva: values[4] || null,
             codice_fiscale: values[5] || null,
             indirizzo: values[6] || "",
