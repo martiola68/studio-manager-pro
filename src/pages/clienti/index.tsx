@@ -1071,141 +1071,163 @@ export default function ClientiPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setImporting(true);
+
     try {
-      setImporting(true);
       const text = await file.text();
-      const lines = text.split("\n").filter(line => line.trim());
-      
-      if (lines.length < 2) {
+      const lines = text.split("\n").filter((line) => line.trim());
+
+      if (lines.length === 0) {
         toast({
-          title: "Errore",
-          description: "Il file deve contenere almeno un'intestazione e una riga di dati.",
+          title: "File vuoto",
+          description: "Il file non contiene dati.",
           variant: "destructive",
         });
         return;
       }
 
-      const dataLines = lines.slice(1);
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
-      for (const line of dataLines) {
-        const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+      // Funzione per normalizzare i valori
+      const normalizeSettore = (value: string): string => {
+        const normalized = value.trim();
+        // Converti varianti comuni
+        if (normalized.toLowerCase().includes("fiscale") && normalized.toLowerCase().includes("lavoro")) {
+          return "Fiscale & Lavoro";
+        }
+        if (normalized.toLowerCase() === "fiscale") return "Fiscale";
+        if (normalized.toLowerCase() === "lavoro") return "Lavoro";
+        return "Fiscale"; // Default
+      };
+
+      const normalizeTipoCliente = (value: string): string => {
+        const normalized = value.trim().toLowerCase();
+        if (normalized.includes("fisica") || normalized === "pf") return "Persona fisica";
+        if (normalized.includes("giuridica") || normalized === "pg") return "Persona giuridica";
+        return "Persona fisica"; // Default
+      };
+
+      const normalizeTipologiaCliente = (value: string): string => {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "interno" || normalized === "i") return "Interno";
+        if (normalized === "esterno" || normalized === "e") return "Esterno";
+        return "Interno"; // Default
+      };
+
+      const normalizeBoolean = (value: string): boolean => {
+        const normalized = value.trim().toLowerCase();
+        return normalized === "vero" || normalized === "true" || normalized === "1" || normalized === "si" || normalized === "sì";
+      };
+
+      // Funzione per pulire i caratteri speciali
+      const cleanText = (text: string): string => {
+        if (!text) return "";
+        // Rimuovi backslash e altri caratteri problematici
+        return text.replace(/\\/g, "").replace(/[\u0000-\u001F\u007F-\u009F]/g, "").trim();
+      };
+
+      // Funzione per trovare l'utente per nome o email
+      const findUserByNameOrEmail = (value: string): string | null => {
+        if (!value || value.trim() === "") return null;
+        const cleanValue = cleanText(value).toLowerCase();
         
-        if (values.length < 4) {
-          errorCount++;
-          errors.push(`Riga con dati insufficienti: ${line.substring(0, 50)}...`);
-          continue;
-        }
-
-        const tipoCliente = values[0];
-        const tipologiaCliente = values[1];
-        const settore = values[2];
-        const ragioneSociale = values[3];
-        const partitaIva = values[4] || null;
-        const codiceFiscale = values[5] || null;
-        const indirizzo = values[6] || "Non specificato";
-        const cap = values[7] || "00000";
-        const citta = values[8] || "Non specificata";
-        const provincia = values[9] || "XX";
-        const email = values[10] || null;
-        const attivoStr = values[11] || "VERO";
-        const note = values[12] || null;
+        const user = utenti.find((u) => {
+          const fullName = `${u.nome} ${u.cognome}`.toLowerCase();
+          const email = u.email?.toLowerCase() || "";
+          return fullName === cleanValue || email === cleanValue;
+        });
         
-        // MAPPATURA CORRETTA COLONNE UTENTI
-        const utenteFiscale = values[13] || null;        // Colonna N -> Utente Fiscale
-        const professionistaFiscale = values[14] || null; // Colonna O -> Professionista Fiscale
-        const utentePayroll = values[15] || null;         // Colonna P -> Utente Payroll
-        const professionistaPayroll = values[16] || null; // Colonna Q -> Professionista Payroll
+        return user?.id || null;
+      };
 
-        const attivo = attivoStr.toUpperCase() === "VERO" || attivoStr === "1" || attivoStr.toLowerCase() === "true";
-
-        if (!tipoCliente || !tipologiaCliente || !settore || !ragioneSociale) {
-          errorCount++;
-          errors.push(`Campi obbligatori mancanti per: ${ragioneSociale || "cliente sconosciuto"}`);
-          continue;
-        }
-
-        let utenteOperatoreId: string | null = null;
-        let utenteProfessionistaId: string | null = null;
-        let utentePayrollId: string | null = null;
-        let professionistaPayrollId: string | null = null;
-
-        // Helper per trovare utente da nome o email
-        const findUtente = (valore: string) => {
-          return utenti.find(u => 
-            `${u.nome} ${u.cognome}`.toLowerCase() === valore.toLowerCase() ||
-            u.email.toLowerCase() === valore.toLowerCase()
-          );
-        };
-
-        if (utenteFiscale) {
-          const match = findUtente(utenteFiscale);
-          if (match) utenteOperatoreId = match.id;
-        }
-
-        if (professionistaFiscale) {
-          const match = findUtente(professionistaFiscale);
-          if (match) utenteProfessionistaId = match.id;
-        }
-
-        if (utentePayroll) {
-          const match = findUtente(utentePayroll);
-          if (match) utentePayrollId = match.id;
-        }
-
-        if (professionistaPayroll) {
-          const match = findUtente(professionistaPayroll);
-          if (match) professionistaPayrollId = match.id;
-        }
-
-        const codiceCliente = `CLI${String(Date.now()).slice(-8)}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
-
-        const nuovoCliente = {
-          cod_cliente: codiceCliente,
-          tipo_cliente: tipoCliente,
-          tipologia_cliente: tipologiaCliente,
-          settore,
-          ragione_sociale: ragioneSociale,
-          partita_iva: partitaIva,
-          codice_fiscale: codiceFiscale,
-          indirizzo,
-          cap,
-          citta,
-          provincia,
-          email,
-          note,
-          attivo,
-          utente_operatore_id: utenteOperatoreId,
-          utente_professionista_id: utenteProfessionistaId,
-          utente_payroll_id: utentePayrollId,
-          professionista_payroll_id: professionistaPayrollId,
-        };
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
 
         try {
-          await clienteService.createCliente(nuovoCliente);
+          const values = line.split(",").map((v) => cleanText(v.replace(/^"|"$/g, "")));
+
+          // Validazione campi obbligatori
+          if (!values[0] || !values[1] || !values[2] || !values[3]) {
+            errors.push(`Riga ${i + 1}: Campi obbligatori mancanti (Tipo Cliente, Tipologia, Settore, Ragione Sociale)`);
+            errorCount++;
+            continue;
+          }
+
+          // Normalizza i valori
+          const tipoCliente = normalizeTipoCliente(values[0]);
+          const tipologiaCliente = normalizeTipologiaCliente(values[1]);
+          const settore = normalizeSettore(values[2]);
+          const ragioneSociale = cleanText(values[3]);
+
+          // Trova gli utenti
+          const utenteOperatoreId = findUserByNameOrEmail(values[13] || "");
+          const utenteProfessionistaId = findUserByNameOrEmail(values[14] || "");
+          const utentePayrollId = findUserByNameOrEmail(values[15] || "");
+          const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
+
+          const newCliente = {
+            tipo_cliente: tipoCliente,
+            tipologia_cliente: tipologiaCliente,
+            settore: settore,
+            ragione_sociale: ragioneSociale,
+            partita_iva: cleanText(values[4] || ""),
+            codice_fiscale: cleanText(values[5] || ""),
+            indirizzo: cleanText(values[6] || ""),
+            cap: cleanText(values[7] || ""),
+            citta: cleanText(values[8] || ""),
+            provincia: cleanText(values[9] || ""),
+            email: cleanText(values[10] || ""),
+            attivo: values[11] ? normalizeBoolean(values[11]) : true,
+            note: cleanText(values[12] || ""),
+            utente_operatore_id: utenteOperatoreId,
+            utente_professionista_id: utenteProfessionistaId,
+            utente_payroll_id: utentePayrollId,
+            professionista_payroll_id: professionistaPayrollId,
+          };
+
+          await clienteService.createCliente(newCliente);
           successCount++;
-        } catch (err: any) {
+        } catch (error: any) {
+          console.error(`Errore riga ${i + 1}:`, error);
+          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
           errorCount++;
-          errors.push(`Errore per ${ragioneSociale}: ${err.message || "Errore sconosciuto"}`);
         }
       }
 
-      toast({
-        title: successCount > 0 ? "Importazione completata" : "Importazione fallita",
-        description: `✅ ${successCount} clienti importati con successo. ❌ ${errorCount} errori.${errors.length > 0 ? `\n\nPrimi errori:\n${errors.slice(0, 3).join("\n")}` : ""}`,
-        variant: errorCount > 0 ? "default" : "default",
-      });
+      // Ricarica i dati
+      await loadData();
 
+      // Mostra risultati
       if (successCount > 0) {
-        loadData();
+        toast({
+          title: "Importazione completata",
+          description: `${successCount} clienti importati con successo${errorCount > 0 ? `, ${errorCount} errori` : ""}`,
+        });
       }
-    } catch (error) {
-      console.error("Errore durante l'importazione:", error);
+
+      if (errors.length > 0 && errors.length <= 5) {
+        errors.forEach((err) => {
+          toast({
+            title: "Errore importazione",
+            description: err,
+            variant: "destructive",
+          });
+        });
+      } else if (errors.length > 5) {
+        toast({
+          title: `${errorCount} errori durante l'importazione`,
+          description: "Controlla il formato del file e riprova. Primi errori: " + errors.slice(0, 2).join("; "),
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Errore lettura file:", error);
       toast({
         title: "Errore",
-        description: "Errore durante l'importazione. Assicurati di caricare un file Excel (.xlsx, .xls) o CSV valido.",
+        description: "Impossibile leggere il file. Assicurati che sia un file Excel (.xlsx, .xls) o CSV valido.",
         variant: "destructive",
       });
     } finally {
