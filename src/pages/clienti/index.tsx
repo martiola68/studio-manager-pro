@@ -177,10 +177,6 @@ export default function ClientiPage() {
     citta: "",
     provincia: "",
     email: "",
-    tipo_cliente: "PERSONA_FISICA" as string,
-    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
-    attivo: true,
-    note: "",
     utente_operatore_id: "",
     utente_professionista_id: "",
     utente_payroll_id: "",
@@ -700,10 +696,6 @@ export default function ClientiPage() {
       citta: cliente.citta || "",
       provincia: cliente.provincia || "",
       email: cliente.email || "",
-      tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
-      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
-      attivo: cliente.attivo ?? true,
-      note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
       utente_professionista_id: cliente.utente_professionista_id || "",
       utente_payroll_id: cliente.utente_payroll_id || "",
@@ -761,10 +753,6 @@ export default function ClientiPage() {
       citta: "",
       provincia: "",
       email: "",
-      tipo_cliente: "PERSONA_FISICA",
-      tipologia_cliente: "",
-      attivo: true,
-      note: "",
       utente_operatore_id: "",
       utente_professionista_id: "",
       utente_payroll_id: "",
@@ -1131,61 +1119,85 @@ export default function ClientiPage() {
           continue;
         }
 
-        if (!values[3] || values[3].toString().trim() === "") {
-          errors.push(
-            `Riga ${rowNum}: Ragione Sociale obbligatoria mancante`
-          );
+        const row = values.map((cell: any) => (cell ?? "").toString().trim());
+
+        if (!row[3]?.toString().trim()) {
+          errors.push(`Riga ${rowNum}: Ragione Sociale obbligatoria mancante`);
           continue;
         }
 
-        try {
-          const findUserByNameOrEmail = (nameOrEmail: string) => {
-            if (!nameOrEmail) return null;
-            const search = nameOrEmail.trim().toLowerCase();
-            const user = utenti.find(
-              (u) =>
-                `${u.nome} ${u.cognome}`.toLowerCase() === search ||
-                u.email?.toLowerCase() === search
-            );
-            return user?.id || null;
-          };
+        // Try to find users by name or email
+        const utenti = await getAllUtenti();
+        
+        let utenteOperatoreId = null;
+        let utenteProfessionistaId = null;
+        let utentePayrollId = null;
+        let professionistaPayrollId = null;
 
-          const utenteOperatoreId = findUserByNameOrEmail(values[13] || "");
-          const utenteProfessionistaId = findUserByNameOrEmail(values[14] || "");
-          const utentePayrollId = findUserByNameOrEmail(values[15] || "");
-          const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
-
-          const newCliente = {
-            cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-            tipo_cliente: values[0]?.toString().trim() || "Persona fisica",
-            tipologia_cliente: values[1]?.toString().trim() || "Interno",
-            settore: values[2]?.toString().trim() || "Fiscale",
-            ragione_sociale: values[3]?.toString().trim() || "",
-            partita_iva: values[4] || null,
-            codice_fiscale: values[5] || null,
-            indirizzo: values[6] || "",
-            cap: values[7] || "",
-            citta: values[8] || "",
-            provincia: values[9] || "",
-            email: values[10] || null,
-            attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "true",
-            note: values[12] || null,
-            utente_operatore_id: utenteOperatoreId,
-            utente_professionista_id: utenteProfessionistaId,
-            utente_payroll_id: utentePayrollId,
-            professionista_payroll_id: professionistaPayrollId,
-            contatto1_id: values[17] || null,
-            contatto2_id: values[18] || null,
-            tipo_prestazione_id: values[19] || null,
-            tipo_redditi: values[20] || null,
-            cassetto_fiscale_id: values[21] || null,
-          };
-
-          await clienteService.createCliente(newCliente);
-          successCount++;
-        } catch (error: any) {
-          errors.push(`Riga ${rowNum}: ${error.message || "Errore sconosciuto"}`);
+        if (row[13]) {
+          const utenteOp = utenti.find(
+            (u) =>
+              u.email?.toLowerCase() === row[13].toString().toLowerCase() ||
+              u.nome_completo?.toLowerCase() === row[13].toString().toLowerCase()
+          );
+          if (utenteOp) utenteOperatoreId = utenteOp.id;
         }
+
+        if (row[14]) {
+          const utenteProf = utenti.find(
+            (u) =>
+              u.email?.toLowerCase() === row[14].toString().toLowerCase() ||
+              u.nome_completo?.toLowerCase() === row[14].toString().toLowerCase()
+          );
+          if (utenteProf) utenteProfessionistaId = utenteProf.id;
+        }
+
+        if (row[15]) {
+          const utentePay = utenti.find(
+            (u) =>
+              u.email?.toLowerCase() === row[15].toString().toLowerCase() ||
+              u.nome_completo?.toLowerCase() === row[15].toString().toLowerCase()
+          );
+          if (utentePay) utentePayrollId = utentePay.id;
+        }
+
+        if (row[16]) {
+          const profPay = utenti.find(
+            (u) =>
+              u.email?.toLowerCase() === row[16].toString().toLowerCase() ||
+              u.nome_completo?.toLowerCase() === row[16].toString().toLowerCase()
+          );
+          if (profPay) professionistaPayrollId = profPay.id;
+        }
+
+        const newCliente = {
+          cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
+          tipo_cliente: values[0],
+          tipologia_cliente: values[1],
+          settore: values[2],
+          ragione_sociale: values[3],
+          partita_iva: row[4] || null,
+          codice_fiscale: row[5] || null,
+          indirizzo: row[6] || "",
+          cap: row[7] || "",
+          citta: row[8] || "",
+          provincia: row[9] || "",
+          email: row[10] || null,
+          attivo: row[11]?.toUpperCase() === "VERO" || row[11]?.toLowerCase() === "true",
+          note: row[12] || null,
+          utente_operatore_id: utenteOperatoreId,
+          utente_professionista_id: utenteProfessionistaId,
+          utente_payroll_id: utentePayrollId,
+          professionista_payroll_id: professionistaPayrollId,
+          contatto1_id: row[17] || null,
+          contatto2_id: row[18] || null,
+          tipo_prestazione_id: row[19] || null,
+          tipo_redditi: row[20] || null,
+          cassetto_fiscale_id: row[21] || null,
+        };
+
+        await clienteService.createCliente(newCliente);
+        successCount++;
       }
 
       await loadData();
