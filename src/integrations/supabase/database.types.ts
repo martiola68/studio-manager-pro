@@ -264,14 +264,14 @@ export type Database = {
           citta: string
           cod_cliente: string
           codice_ditta_ce: string | null
-          codice_fiscale: string
+          codice_fiscale: string | null
           contatto1_id: string | null
           contatto2_id: string | null
           created_at: string | null
           data_creazione: string | null
           data_ultima_verifica_antiric: string | null
           data_ultima_verifica_b: string | null
-          email: string
+          email: string | null
           flag_770: boolean | null
           flag_bilancio: boolean | null
           flag_ccgg: boolean | null
@@ -295,7 +295,7 @@ export type Database = {
           matricola_inps: string | null
           note: string | null
           note_antiriciclaggio: string | null
-          partita_iva: string
+          partita_iva: string | null
           pat_inail: string | null
           professionista_payroll_id: string | null
           provincia: string
@@ -323,14 +323,14 @@ export type Database = {
           citta: string
           cod_cliente: string
           codice_ditta_ce?: string | null
-          codice_fiscale: string
+          codice_fiscale?: string | null
           contatto1_id?: string | null
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
           data_ultima_verifica_antiric?: string | null
           data_ultima_verifica_b?: string | null
-          email: string
+          email?: string | null
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
           flag_ccgg?: boolean | null
@@ -354,7 +354,7 @@ export type Database = {
           matricola_inps?: string | null
           note?: string | null
           note_antiriciclaggio?: string | null
-          partita_iva: string
+          partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
           provincia: string
@@ -382,14 +382,14 @@ export type Database = {
           citta?: string
           cod_cliente?: string
           codice_ditta_ce?: string | null
-          codice_fiscale?: string
+          codice_fiscale?: string | null
           contatto1_id?: string | null
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
           data_ultima_verifica_antiric?: string | null
           data_ultima_verifica_b?: string | null
-          email?: string
+          email?: string | null
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
           flag_ccgg?: boolean | null
@@ -413,7 +413,7 @@ export type Database = {
           matricola_inps?: string | null
           note?: string | null
           note_antiriciclaggio?: string | null
-          partita_iva?: string
+          partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
           provincia?: string

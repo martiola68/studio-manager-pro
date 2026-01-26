@@ -1443,8 +1443,7 @@ export default function ClientiPage() {
                     <TableCell className="font-mono text-sm">
                       {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                     </TableCell>
-                    <TableCell className="font-medium">{cliente.cod_cliente}</TableCell>
-                    <TableCell>{cliente.ragione_sociale}</TableCell>
+                    <TableCell className="font-medium">{cliente.ragione_sociale}</TableCell>
                     <TableCell>{cliente.email || "-"}</TableCell>
                     <TableCell>{cliente.partita_iva || "-"}</TableCell>
                     <TableCell>{cliente.codice_fiscale || "-"}</TableCell>
@@ -1465,6 +1464,36 @@ export default function ClientiPage() {
                       }`}>
                         {cliente.attivo ? "Attivo" : "Non Attivo"}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInsertIntoScadenzari(cliente)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        Inserisci
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(cliente)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(cliente.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
