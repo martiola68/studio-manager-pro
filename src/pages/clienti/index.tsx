@@ -437,12 +437,26 @@ export default function ClientiPage() {
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
-        utente_professionista_payroll_id:
-          formData.utente_professionista_payroll_id || null,
+        professionista_payroll_id: formData.professionista_payroll_id || null,
         data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric
           ? formData.data_ultima_verifica_antiric instanceof Date
             ? formData.data_ultima_verifica_antiric.toISOString()
             : formData.data_ultima_verifica_antiric
+          : null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b
+          ? formData.data_ultima_verifica_b instanceof Date
+            ? formData.data_ultima_verifica_b.toISOString()
+            : formData.data_ultima_verifica_b
+          : null,
+        scadenza_antiric: formData.scadenza_antiric
+          ? formData.scadenza_antiric instanceof Date
+            ? formData.scadenza_antiric.toISOString()
+            : formData.scadenza_antiric
+          : null,
+        scadenza_antiric_b: formData.scadenza_antiric_b
+          ? formData.scadenza_antiric_b instanceof Date
+            ? formData.scadenza_antiric_b.toISOString()
+            : formData.scadenza_antiric_b
           : null,
       };
 
@@ -697,8 +711,8 @@ export default function ClientiPage() {
       gg_ver_a: cliente.gg_ver_a || undefined,
       gg_ver_b: cliente.gg_ver_b || undefined,
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
-      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
       data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
+      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
       scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
       gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
       note_antiriciclaggio: cliente.note_antiriciclaggio || "",
@@ -1154,7 +1168,7 @@ export default function ClientiPage() {
           cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
           tipo_cliente: values[0],
           tipologia_cliente: values[1],
-          settore: values[2],
+          settore: values[2] as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
