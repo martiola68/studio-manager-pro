@@ -1188,15 +1188,12 @@ export default function ClientiPage() {
           rischio_ver_b: values[28] ? (values[28] as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") : null,
           gg_ver_a: values[29] ? parseInt(values[29]) : undefined,
           gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
-          data_ultima_verifica_antiric: values[31] ? new Date(values[31]) : undefined,
-          scadenza_antiric: values[32] ? new Date(values[32]) : undefined,
-          data_ultima_verifica_b: values[33] ? new Date(values[33]) : undefined,
-          scadenza_antiric_b: values[34] ? new Date(values[34]) : undefined,
+          data_ultima_verifica_antiric: values[31] ? new Date(values[31]).toISOString() : undefined,
+          data_ultima_verifica_b: values[33] ? new Date(values[33]).toISOString() : undefined,
           gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
           note_antiriciclaggio: values[36] || null,
-          giorni_scad_ver_a: values[37] ? parseInt(values[37]) : null,
-          giorni_scad_ver_b: values[38] ? parseInt(values[38]) : null,
-          scadenza_antiric: values[39] ? new Date(values[39]) : undefined,
+          giorni_scad_ver_a: values[30] ? parseInt(values[30]) : null,
+          giorni_scad_ver_b: values[31] ? parseInt(values[31]) : null,
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
@@ -1206,20 +1203,8 @@ export default function ClientiPage() {
           ragione_sociale: newCliente.ragione_sociale,
         });
 
-        // Converto Date a string ISO per il database
-        if (newCliente.scadenza_antiric instanceof Date) {
-          newCliente.scadenza_antiric = newCliente.scadenza_antiric.toISOString();
-        }
-
         if (editingCliente) {
-          const response = await clienteService.updateCliente(editingCliente.id, newCliente);
-          const updatedCliente: Cliente = {
-            ...editingCliente,
-            ...response.data[0],
-          };
-          setClienti(
-            clienti.map((c) => (c.id === updatedCliente.id ? updatedCliente : c))
-          );
+          await clienteService.updateCliente(editingCliente.id, newCliente);
         } else {
           await clienteService.createCliente(newCliente);
         }
