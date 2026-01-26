@@ -1424,14 +1424,17 @@ export default function ClientiPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cod. Cliente</TableHead>
+                  <TableHead className="w-[100px]">Codice</TableHead>
                   <TableHead>Ragione Sociale</TableHead>
-                  <TableHead>P.IVA</TableHead>
-                  <TableHead>Città</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-center">Scadenzari</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
+                  <TableHead>P.IVA</TableHead>
+                  <TableHead>CF</TableHead>
+                  <TableHead>Indirizzo</TableHead>
+                  <TableHead>Utente Fiscale</TableHead>
+                  <TableHead>Utente Payroll</TableHead>
+                  <TableHead className="w-[100px]">Stato</TableHead>
+                  <TableHead className="w-[120px]">Scadenzario</TableHead>
+                  <TableHead className="text-right w-[100px]">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1440,49 +1443,19 @@ export default function ClientiPage() {
                     <TableCell className="font-mono text-sm">
                       {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {cliente.ragione_sociale}
-                    </TableCell>
-                    <TableCell>{cliente.partita_iva}</TableCell>
-                    <TableCell>{cliente.citta}</TableCell>
-                    <TableCell>{cliente.email}</TableCell>
+                    <TableCell className="font-medium">{cliente.cod_cliente}</TableCell>
+                    <TableCell>{cliente.ragione_sociale}</TableCell>
+                    <TableCell>{cliente.email || "-"}</TableCell>
+                    <TableCell>{cliente.partita_iva || "-"}</TableCell>
+                    <TableCell>{cliente.cod_fiscale || "-"}</TableCell>
+                    <TableCell>{cliente.indirizzo || "-"}</TableCell>
+                    <TableCell>{cliente.utente_fiscale || "-"}</TableCell>
                     <TableCell>
-                      {cliente.attivo ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Attivo
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Inattivo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleInsertIntoScadenzari(cliente)}
-                        title="Inserisci negli Scadenzari"
-                      >
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(cliente)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(cliente.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        cliente.attivo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        {cliente.attivo ? "Attivo" : "Non Attivo"}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
