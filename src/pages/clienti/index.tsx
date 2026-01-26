@@ -672,7 +672,7 @@ export default function ClientiPage() {
       cod_cliente: cliente.cod_cliente || "",
       tipo_cliente: cliente.tipo_cliente || "",
       tipologia_cliente: cliente.tipologia_cliente || "",
-      settore: cliente.settore || "",
+      settore: (cliente.settore || "") as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -1064,7 +1064,7 @@ export default function ClientiPage() {
     if (!file) return;
 
     setImporting(true);
-    let imported = 0;
+    const imported = 0;
     const errors: string[] = [];
 
     try {
@@ -1181,30 +1181,22 @@ export default function ClientiPage() {
           cassetto_fiscale_id: values[21] || null,
         };
 
-        console.log(`📋 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
-          tipo_cliente: values[0],
-          tipologia_cliente: values[1],
-          settore: values[2],
-          ragione_sociale: values[3],
-          full_data: newCliente
+        console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
+          tipo_cliente: newCliente.tipo_cliente,
+          tipologia_cliente: newCliente.tipologia_cliente,
+          settore: newCliente.settore,
+          ragione_sociale: newCliente.ragione_sociale,
         });
 
-        const { error: insertError } = await supabase
-          .from("tbclienti")
-          .insert(newCliente);
+        // Converto Date a string ISO per il database
+        if (newCliente.scadenza_antiric instanceof Date) {
+          newCliente.scadenza_antiric = newCliente.scadenza_antiric.toISOString();
+        }
 
-        if (insertError) {
-          console.error(`❌ ERRORE RIGA ${i + 2}:`, {
-            errore: insertError.message,
-            codice: insertError.code,
-            dettaglio: insertError.details,
-            hint: insertError.hint,
-            dati_tentati: newCliente
-          });
-          errors.push(`Riga ${i + 2}: ${insertError.message}`);
+        if (editingCliente) {
+          await clienteService.updateCliente(editingCliente.ID_Cliente, newCliente);
         } else {
-          console.log(`✅ RIGA ${i + 2} IMPORTATA CON SUCCESSO`);
-          imported++;
+          await clienteService.createCliente(newCliente);
         }
       }
 
