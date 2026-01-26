@@ -483,6 +483,11 @@ export default function ClientiPage() {
             ? formData.scadenza_antiric.toISOString()
             : formData.scadenza_antiric
           : null,
+        scadenza_antiric_b: formData.scadenza_antiric_b
+          ? (formData.scadenza_antiric_b instanceof Date 
+              ? formData.scadenza_antiric_b.toISOString() 
+              : new Date(formData.scadenza_antiric_b).toISOString())
+          : null,
       };
 
       if (editingCliente) {
