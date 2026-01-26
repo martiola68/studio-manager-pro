@@ -1893,7 +1893,7 @@ export default function ClientiPage() {
                       <SelectItem value="none">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.descrizione}
+                          {cassetto.nominativo}
                         </SelectItem>
                       ))}
                     </SelectContent>
