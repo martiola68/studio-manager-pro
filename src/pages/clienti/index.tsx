@@ -1047,7 +1047,7 @@ export default function ClientiPage() {
   const getNomeTipoRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
     const nomi = {
       matricola_inps: "Matricola INPS",
-      pat_inail: "PAT INAIL",
+      pat_inail: "Pat INAIL",
       codice_ditta_ce: "Codice Ditta CE"
     };
     return nomi[tipo];
@@ -1072,189 +1072,145 @@ export default function ClientiPage() {
     if (!file) return;
 
     try {
-      let rows: any[] = [];
-
-      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        rows = jsonData.slice(1).map((row: any) => {
-          if (Array.isArray(row)) {
-            return row;
-          }
-          return [];
+      setImporting(true);
+      const text = await file.text();
+      const lines = text.split("\n").filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({
+          title: "Errore",
+          description: "Il file deve contenere almeno un'intestazione e una riga di dati.",
+          variant: "destructive",
         });
-      } else {
-        const text = await file.text();
-        const lines = text.split("\n");
-        rows = lines.slice(1).map(line => {
-          const delimiter = line.includes(";") ? ";" : ",";
-          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
-        });
+        return;
       }
 
+      const dataLines = lines.slice(1);
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
-      for (let i = 0; i < rows.length; i++) {
-        const values = rows[i];
+      for (const line of dataLines) {
+        const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
         
-        if (!values || values.length === 0 || !values[0]) continue;
-
-        const tipoClienteRaw = (values[0] || "").toString().trim().toLowerCase();
-        const tipologiaRaw = (values[1] || "").toString().trim().toLowerCase();
-        const settoreRaw = (values[2] || "").toString().trim();
-        const ragioneSociale = (values[3] || "").toString().trim();
-        const piva = (values[4] || "").toString().trim();
-        const cf = (values[5] || "").toString().trim();
-        const indirizzo = (values[6] || "").toString().trim();
-        const cap = (values[7] || "").toString().trim();
-        const citta = (values[8] || "").toString().trim();
-        const provincia = (values[9] || "").toString().trim();
-        const email = (values[10] || "").toString().trim();
-        const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
-        const note = (values[12] || "").toString().trim();
-        const utenteFiscaleRaw = (values[13] || "").toString().trim();
-        const professionistaFiscaleRaw = (values[14] || "").toString().trim();
-
-        if (!ragioneSociale) {
-          errors.push(`Riga ${i + 2}: Ragione sociale obbligatoria`);
+        if (values.length < 4) {
           errorCount++;
+          errors.push(`Riga con dati insufficienti: ${line.substring(0, 50)}...`);
           continue;
         }
 
-        if (!tipoClienteRaw) {
-          errors.push(`Riga ${i + 2}: Tipo cliente obbligatorio`);
+        const tipoCliente = values[0];
+        const tipologiaCliente = values[1];
+        const settore = values[2];
+        const ragioneSociale = values[3];
+        const partitaIva = values[4] || null;
+        const codiceFiscale = values[5] || null;
+        const indirizzo = values[6] || "Non specificato";
+        const cap = values[7] || "00000";
+        const citta = values[8] || "Non specificata";
+        const provincia = values[9] || "XX";
+        const email = values[10] || null;
+        const attivoStr = values[11] || "VERO";
+        const note = values[12] || null;
+        
+        // MAPPATURA CORRETTA COLONNE UTENTI
+        const utenteFiscale = values[13] || null;        // Colonna N -> Utente Fiscale
+        const professionistaFiscale = values[14] || null; // Colonna O -> Professionista Fiscale
+        const utentePayroll = values[15] || null;         // Colonna P -> Utente Payroll
+        const professionistaPayroll = values[16] || null; // Colonna Q -> Professionista Payroll
+
+        const attivo = attivoStr.toUpperCase() === "VERO" || attivoStr === "1" || attivoStr.toLowerCase() === "true";
+
+        if (!tipoCliente || !tipologiaCliente || !settore || !ragioneSociale) {
           errorCount++;
+          errors.push(`Campi obbligatori mancanti per: ${ragioneSociale || "cliente sconosciuto"}`);
           continue;
         }
-
-        if (!tipologiaRaw) {
-          errors.push(`Riga ${i + 2}: Tipologia cliente obbligatoria`);
-          errorCount++;
-          continue;
-        }
-
-        if (!settoreRaw) {
-          errors.push(`Riga ${i + 2}: Settore obbligatorio`);
-          errorCount++;
-          continue;
-        }
-
-        const tipoCliente = tipoClienteRaw.includes("fisica") 
-          ? "PERSONA_FISICA" 
-          : tipoClienteRaw.includes("giuridica") 
-          ? "PERSONA_GIURIDICA" 
-          : "PERSONA_GIURIDICA";
-
-        let tipologia: "CL interno" | "CL esterno" | null = null;
-        if (tipologiaRaw.includes("interno") || tipologiaRaw.includes("interna")) {
-          tipologia = "CL interno";
-        } else if (tipologiaRaw.includes("esterno") || tipologiaRaw.includes("esterna")) {
-          tipologia = "CL esterno";
-        }
-
-        if (!tipologia) {
-          errors.push(`Riga ${i + 2}: Tipologia non valida (deve essere Interno o Esterno)`);
-          errorCount++;
-          continue;
-        }
-
-        let settore: "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | null = null;
-        if (settoreRaw.toLowerCase().includes("fiscale") && settoreRaw.toLowerCase().includes("lavoro")) {
-          settore = "Fiscale & Lavoro";
-        } else if (settoreRaw.toLowerCase().includes("fiscale")) {
-          settore = "Fiscale";
-        } else if (settoreRaw.toLowerCase().includes("lavoro")) {
-          settore = "Lavoro";
-        }
-
-        if (!settore) {
-          errors.push(`Riga ${i + 2}: Settore non valido (deve essere Fiscale, Lavoro o Fiscale & Lavoro)`);
-          errorCount++;
-          continue;
-        }
-
-        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
 
         let utenteOperatoreId: string | null = null;
-        if (utenteFiscaleRaw) {
-          const utenteTrovato = utenti.find(u => {
-            const nomeCompleto = `${u.nome} ${u.cognome}`.toLowerCase();
-            return nomeCompleto === utenteFiscaleRaw.toLowerCase() || 
-                   u.email?.toLowerCase() === utenteFiscaleRaw.toLowerCase();
-          });
-          if (utenteTrovato) {
-            utenteOperatoreId = utenteTrovato.id;
-          }
-        }
-
+        let utenteProfessionistaId: string | null = null;
+        let utentePayrollId: string | null = null;
         let professionistaPayrollId: string | null = null;
-        if (professionistaFiscaleRaw) {
-          const professionistaTrovato = utenti.find(u => {
-            const nomeCompleto = `${u.nome} ${u.cognome}`.toLowerCase();
-            return nomeCompleto === professionistaFiscaleRaw.toLowerCase() || 
-                   u.email?.toLowerCase() === professionistaFiscaleRaw.toLowerCase();
-          });
-          if (professionistaTrovato) {
-            professionistaPayrollId = professionistaTrovato.id;
-          }
-        }
 
-        const clienteData: any = {
-          tipo_cliente: tipoCliente,
-          tipologia_cliente: tipologia,
-          settore: settore,
-          ragione_sociale: ragioneSociale,
-          attivo: attivo,
+        // Helper per trovare utente da nome o email
+        const findUtente = (valore: string) => {
+          return utenti.find(u => 
+            `${u.nome} ${u.cognome}`.toLowerCase() === valore.toLowerCase() ||
+            u.email.toLowerCase() === valore.toLowerCase()
+          );
         };
 
-        if (piva) clienteData.partita_iva = piva;
-        if (cf) clienteData.codice_fiscale = cf;
-        if (indirizzo) clienteData.indirizzo = indirizzo;
-        if (cap) clienteData.cap = cap;
-        if (citta) clienteData.citta = citta;
-        if (provincia) clienteData.provincia = provincia;
-        if (email) clienteData.email = email;
-        if (note) clienteData.note = note;
-        if (utenteOperatoreId) clienteData.utente_operatore_id = utenteOperatoreId;
-        if (professionistaPayrollId) clienteData.utente_payroll_id = professionistaPayrollId;
+        if (utenteFiscale) {
+          const match = findUtente(utenteFiscale);
+          if (match) utenteOperatoreId = match.id;
+        }
+
+        if (professionistaFiscale) {
+          const match = findUtente(professionistaFiscale);
+          if (match) utenteProfessionistaId = match.id;
+        }
+
+        if (utentePayroll) {
+          const match = findUtente(utentePayroll);
+          if (match) utentePayrollId = match.id;
+        }
+
+        if (professionistaPayroll) {
+          const match = findUtente(professionistaPayroll);
+          if (match) professionistaPayrollId = match.id;
+        }
+
+        const codiceCliente = `CLI${String(Date.now()).slice(-8)}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+
+        const nuovoCliente = {
+          cod_cliente: codiceCliente,
+          tipo_cliente: tipoCliente,
+          tipologia_cliente: tipologiaCliente,
+          settore,
+          ragione_sociale: ragioneSociale,
+          partita_iva: partitaIva,
+          codice_fiscale: codiceFiscale,
+          indirizzo,
+          cap,
+          citta,
+          provincia,
+          email,
+          note,
+          attivo,
+          utente_operatore_id: utenteOperatoreId,
+          utente_professionista_id: utenteProfessionistaId,
+          utente_payroll_id: utentePayrollId,
+          professionista_payroll_id: professionistaPayrollId,
+        };
 
         try {
-          await clienteService.createCliente(clienteData);
+          await clienteService.createCliente(nuovoCliente);
           successCount++;
-        } catch (error: any) {
+        } catch (err: any) {
           errorCount++;
-          const errorMsg = error.message || "Errore sconosciuto";
-          errors.push(`Riga ${i + 2}: ${errorMsg}`);
-          console.error(`Errore importazione riga ${i + 2}:`, error);
+          errors.push(`Errore per ${ragioneSociale}: ${err.message || "Errore sconosciuto"}`);
         }
       }
 
-      if (errors.length > 0 && errors.length <= 10) {
-        console.error("Primi 10 errori importazione:", errors.slice(0, 10));
-      }
-
       toast({
-        title: "Importazione completata",
-        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
-        variant: successCount > 0 ? "default" : "destructive",
+        title: successCount > 0 ? "Importazione completata" : "Importazione fallita",
+        description: `✅ ${successCount} clienti importati con successo. ❌ ${errorCount} errori.${errors.length > 0 ? `\n\nPrimi errori:\n${errors.slice(0, 3).join("\n")}` : ""}`,
+        variant: errorCount > 0 ? "default" : "default",
       });
 
-      loadData();
-      
-      event.target.value = "";
+      if (successCount > 0) {
+        loadData();
+      }
     } catch (error) {
-      console.error("Errore importazione file:", error);
+      console.error("Errore durante l'importazione:", error);
       toast({
         title: "Errore",
-        description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
+        description: "Errore durante l'importazione. Assicurati di caricare un file Excel (.xlsx, .xls) o CSV valido.",
         variant: "destructive",
       });
+    } finally {
+      setImporting(false);
+      event.target.value = "";
     }
   };
 
