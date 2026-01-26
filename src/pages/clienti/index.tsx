@@ -51,6 +51,32 @@ import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
 
+// Funzione per generare codice cliente univoco
+const generateCodiceCliente = async () => {
+  const { data, error } = await supabase
+    .from("tbclienti")
+    .select("cod_cliente")
+    .order("cod_cliente", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error("Errore generazione codice:", error);
+    return `CLI-${Date.now()}`;
+  }
+
+  if (data && data.length > 0) {
+    const lastCode = data[0].cod_cliente;
+    // Se il formato è CLI-XXXX provare a incrementare
+    const match = lastCode.match(/CLI-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1]) + 1;
+      return `CLI-${num.toString().padStart(3, '0')}`;
+    }
+  }
+  
+  return `CLI-${Date.now()}`;
+};
+
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -712,8 +738,8 @@ export default function ClientiPage() {
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
       scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
       data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
-      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b).toISOString() : undefined,
-      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
+      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
+      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio || false,
       note_antiriciclaggio: cliente.note_antiriciclaggio || "",
       giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
       giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
@@ -973,10 +999,10 @@ export default function ClientiPage() {
 
   const downloadTemplate = () => {
     const headers = [
-      "tipo_cliente",
-      "tipologia_cliente",
-      "settore",
-      "ragione_sociale",
+      "tipo_cliente (Obbligatorio: PERSONA FISICA / SOCIETA)",
+      "tipologia_cliente (Obbligatorio: Interno / Esterno)",
+      "settore (Obbligatorio: Fiscale / Lavoro / Fiscale & Lavoro)",
+      "ragione_sociale (Obbligatorio)",
       "partita_iva",
       "codice_fiscale",
       "indirizzo",
@@ -984,12 +1010,12 @@ export default function ClientiPage() {
       "citta",
       "provincia",
       "email",
-      "attivo",
+      "attivo (VERO/FALSO)",
       "note",
-      "utente_fiscale",
-      "professionista_fiscale",
-      "utente_payroll",
-      "professionista_payroll",
+      "utente_fiscale (email)",
+      "professionista_fiscale (email)",
+      "utente_payroll (email)",
+      "professionista_payroll (email)",
       "contatto_1",
       "contatto_2",
       "tipo_prestazione",
@@ -999,19 +1025,19 @@ export default function ClientiPage() {
 
     const exampleRows = [
       [
-        "Amministrazione e liquidazione di aziende, patrimoni, singoli beni",
+        "SOCIETA",
         "Interno",
         "Fiscale",
-        "ESEMPIO SRL",
+        "AZIENDA ESEMPIO SRL",
         "01234567890",
         "01234567890",
         "Via Roma 1",
         "00100",
         "Roma",
         "RM",
-        "info@esempio.it",
+        "info@azienda.it",
         "VERO",
-        "Note di esempio",
+        "Note test",
         "",
         "",
         "",
@@ -1117,13 +1143,25 @@ export default function ClientiPage() {
         // 2: Settore
         // 3: Ragione Sociale
         if (!values[0] || !values[1] || !values[2] || !values[3]) {
-          console.warn(
-            `Riga ${
-              i + 2
-            } saltata: mancano campi obbligatori. Tipo Cliente, Tipologia, Settore e Ragione Sociale sono campi obbligatori.`
-          );
+          errors.push(`Riga ${i + 1}: Campi obbligatori mancanti`);
           continue;
         }
+
+        // Normalizzazione Tipo Cliente
+        let tipoCliente = values[0].toUpperCase().trim();
+        if (tipoCliente.includes("FISICA") || tipoCliente === "PRIVATO") tipoCliente = "PERSONA FISICA";
+        else if (tipoCliente.includes("SOCIETA") || tipoCliente.includes("AZIENDA")) tipoCliente = "SOCIETA";
+
+        // Normalizzazione Tipologia Cliente
+        let tipologiaCliente = values[1].toUpperCase().trim();
+        if (tipologiaCliente === "CLIENTE" || tipologiaCliente === "FORNITORE" || tipologiaCliente === "ENTRAMBI") {
+           // valore ok
+        } else {
+           // default o tentativo di correzione
+           tipologiaCliente = "CLIENTE"; 
+        }
+
+        const codiceCliente = await generateCodiceCliente();
 
         // Funzione helper per trovare utente da nome o email
         const findUser = (search: string) => {
@@ -1136,47 +1174,46 @@ export default function ClientiPage() {
         };
 
         // Mapping degli utenti
-        let utenteOperatoreId = null;
-        let utenteProfessionistaId = null;
-        let utentePayrollId = null;
-        let professionistaPayrollId = null;
+        let utenteOperatoreId: string | null = null;
+        let utenteProfessionistaId: string | null = null;
+        let utentePayrollId: string | null = null;
+        let professionistaPayrollId: string | null = null;
 
-        // Cerca utente fiscale (colonna 14)
+        // Cerca utente fiscale (colonna 13 -> indice 13)
         if (values[13]) {
           utenteOperatoreId = findUser(values[13]);
         }
 
-        // Cerca professionista fiscale (colonna 15)
+        // Cerca professionista fiscale (colonna 14 -> indice 14)
         if (values[14]) {
           utenteProfessionistaId = findUser(values[14]);
         }
 
-        // Cerca utente payroll (colonna 16)
+        // Cerca utente payroll (colonna 15 -> indice 15)
         if (values[15]) {
           utentePayrollId = findUser(values[15]);
         }
 
-        // Cerca professionista payroll (colonna 17)
+        // Cerca professionista payroll (colonna 16 -> indice 16)
         if (values[16]) {
           professionistaPayrollId = findUser(values[16]);
         }
 
         // Costruzione oggetto cliente
-        // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
         const newCliente: any = {
-          cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-          tipo_cliente: values[0],
-          tipologia_cliente: values[1],
-          settore: values[2] as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
-          ragione_sociale: values[3],
+          cod_cliente: codiceCliente,
+          tipo_cliente: tipoCliente,
+          tipologia_cliente: tipologiaCliente,
+          settore: values[2] || "",
+          ragione_sociale: values[3] || "",
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
           indirizzo: values[6] || null,
-          cap: values[7] || null,
-          citta: values[8] || null,
+          cap: values[7] || "",
+          citta: values[8] || "",
           provincia: values[9] || null,
           email: values[10] || null,
-          attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "TRUE",
+          attivo: values[11] ? (String(values[11]).toUpperCase() === "VERO" || String(values[11]).toLowerCase() === "true") : true,
           note: values[12] || null,
           utente_operatore_id: utenteOperatoreId,
           utente_professionista_id: utenteProfessionistaId,
@@ -1187,15 +1224,7 @@ export default function ClientiPage() {
           tipo_prestazione_id: values[19] || null,
           tipo_redditi: values[20] || null,
           cassetto_fiscale_id: values[21] || null,
-          gg_ver_a: values[29] ? parseInt(values[29]) : undefined,
-          gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
-          giorni_scad_ver_a: values[30] ? parseInt(values[30]) : null,
-          giorni_scad_ver_b: values[31] ? parseInt(values[31]) : null,
-          data_ultima_verifica_antiric: values[31] ? new Date(values[31]).toISOString() : undefined,
-          scadenza_antiric: values[32] ? new Date(values[32]).toISOString() : undefined,
-          data_ultima_verifica_b: values[33] ? new Date(values[33]).toISOString() : undefined,
-          scadenza_antiric_b: values[34] ? new Date(values[34]).toISOString() : undefined,
-          gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
+          // Rimosso antiriciclaggio dal CSV come richiesto
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
