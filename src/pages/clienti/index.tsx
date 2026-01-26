@@ -154,8 +154,6 @@ export default function ClientiPage() {
   const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // Defined BEFORE formData to avoid initialization errors if needed, 
-  // though we removed dependency in useState to fix TS errors.
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
     cu: true,
@@ -222,23 +220,21 @@ export default function ClientiPage() {
     value: string,
     field: "rischio_ver_a" | "rischio_ver_b"
   ) => {
-    // Calcola mesi in base al rischio
     let months = 0;
-    // Cast value to match specific string literal type
     const riskValue = value as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
 
     switch (riskValue) {
       case "Non significativo":
-        months = 60; // 5 anni
+        months = 60;
         break;
       case "Poco significativo":
-        months = 36; // 3 anni
+        months = 36;
         break;
       case "Abbastanza significativo":
-        months = 24; // 2 anni
+        months = 24;
         break;
       case "Molto significativo":
-        months = 12; // 1 anno
+        months = 12;
         break;
       default:
         months = 0;
@@ -465,7 +461,6 @@ export default function ClientiPage() {
         giorni_scad_ver_a: formData.giorni_scad_ver_a,
         giorni_scad_ver_b: formData.giorni_scad_ver_b,
         
-        // Save flags from scadenzari state
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
         flag_bilancio: scadenzari.bilancio,
@@ -530,13 +525,11 @@ export default function ClientiPage() {
       const scadenzariAttivi: string[] = [];
       const inserimenti: any[] = [];
 
-      // Dati comuni per tutti gli scadenzari
       const baseData = {
         nominativo: cliente.ragione_sociale,
         utente_operatore_id: cliente.utente_operatore_id,
       };
 
-      // IVA
       if (cliente.flag_iva) {
         scadenzariAttivi.push("IVA");
         inserimenti.push(
@@ -547,7 +540,6 @@ export default function ClientiPage() {
         );
       }
 
-      // CU
       if (cliente.flag_cu) {
         scadenzariAttivi.push("CU");
         inserimenti.push(
@@ -558,7 +550,6 @@ export default function ClientiPage() {
         );
       }
 
-      // Bilanci
       if (cliente.flag_bilancio) {
         scadenzariAttivi.push("Bilanci");
         inserimenti.push(
@@ -569,7 +560,6 @@ export default function ClientiPage() {
         );
       }
 
-      // Fiscali
       if (cliente.flag_fiscali) {
         scadenzariAttivi.push("Fiscali");
         inserimenti.push(
@@ -580,7 +570,6 @@ export default function ClientiPage() {
         );
       }
 
-      // LIPE
       if (cliente.flag_lipe) {
         scadenzariAttivi.push("LIPE");
         inserimenti.push(
@@ -591,7 +580,6 @@ export default function ClientiPage() {
         );
       }
 
-      // 770 - USA tbscad770 con campi payroll
       if (cliente.flag_770) {
         scadenzariAttivi.push("770");
         inserimenti.push(
@@ -604,7 +592,6 @@ export default function ClientiPage() {
         );
       }
 
-      // Esterometro
       if (cliente.flag_esterometro) {
         scadenzariAttivi.push("Esterometro");
         inserimenti.push(
@@ -615,7 +602,6 @@ export default function ClientiPage() {
         );
       }
 
-      // CCGG
       if (cliente.flag_ccgg) {
         scadenzariAttivi.push("CCGG");
         inserimenti.push(
@@ -626,7 +612,6 @@ export default function ClientiPage() {
         );
       }
 
-      // Proforma
       if (cliente.flag_proforma) {
         scadenzariAttivi.push("Proforma");
         inserimenti.push(
@@ -637,7 +622,6 @@ export default function ClientiPage() {
         );
       }
 
-      // IMU
       if (cliente.flag_imu) {
         scadenzariAttivi.push("IMU");
         
@@ -670,7 +654,6 @@ export default function ClientiPage() {
         inserimenti.push(...promises);
       }
 
-      // Antiriciclaggio gestito direttamente su tbclienti tramite flag gestione_antiriciclaggio
       if (cliente.gestione_antiriciclaggio) {
         scadenzariAttivi.push("Antiriciclaggio");
       }
@@ -684,7 +667,6 @@ export default function ClientiPage() {
         return;
       }
 
-      // Esegui tutti gli inserimenti
       await Promise.all(inserimenti);
 
       toast({
@@ -751,7 +733,6 @@ export default function ClientiPage() {
       giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
     });
     
-    // Load existing flags
     setScadenzari({
       iva: cliente.flag_iva ?? false,
       cu: cliente.flag_cu ?? false,
