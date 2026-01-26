@@ -1124,7 +1124,7 @@ export default function ClientiPage() {
           const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
 
           const newCliente = {
-            cod_cliente: `CLI${Date.now()}${Math.floor(Math.random() * 1000)}`,
+            cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
             tipo_cliente: values[0],
             tipologia_cliente: values[1],
             settore: values[2],
@@ -1136,7 +1136,7 @@ export default function ClientiPage() {
             citta: values[8] || null,
             provincia: values[9] || null,
             email: values[10] || null,
-            attivo: values[11]?.toString().toLowerCase() === "vero" || values[11] === true,
+            attivo: values[11]?.toLowerCase() === "vero" || values[11]?.toLowerCase() === "true",
             note: values[12] || null,
             utente_operatore_id: utenteOperatoreId,
             utente_professionista_id: professionistaFiscaleId,
@@ -1757,115 +1757,6 @@ export default function ClientiPage() {
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="contatto1_id">Contatto 1</Label>
-                  <Select
-                    value={formData.contatto1_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona contatto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti.map((contatto) => (
-                        <SelectItem key={contatto.id} value={contatto.id}>
-                          {contatto.nome} {contatto.cognome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="contatto2_id">Contatto 2</Label>
-                  <Select
-                    value={formData.contatto2_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, contatto2_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona contatto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti.map((contatto) => (
-                        <SelectItem key={contatto.id} value={contatto.id}>
-                          {contatto.nome} {contatto.cognome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
-                  <Select
-                    value={formData.tipo_prestazione_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona prestazione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {prestazioni.map((prestazione) => (
-                        <SelectItem key={prestazione.id} value={prestazione.id}>
-                          {prestazione.descrizione}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
-                  <Select
-                    value={formData.tipo_redditi || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value as "SC" | "SP" | "ENC" | "PF" | "730" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SC">SC - Società di Capitali</SelectItem>
-                      <SelectItem value="SP">SP - Società di Persone</SelectItem>
-                      <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
-                      <SelectItem value="PF">PF - Persona Fisica</SelectItem>
-                      <SelectItem value="730">730 - Modello 730</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
-                  <Select
-                    value={formData.cassetto_fiscale_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona cassetto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {cassettiFiscali.map((cassetto) => (
-                        <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.username}
                         </SelectItem>
                       ))}
                     </SelectContent>
