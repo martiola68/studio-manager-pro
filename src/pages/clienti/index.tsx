@@ -171,6 +171,7 @@ export default function ClientiPage() {
     cod_cliente: "",
     tipo_cliente: "",
     tipologia_cliente: "",
+    settore: "" as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -190,7 +191,6 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
-    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
@@ -437,30 +437,13 @@ export default function ClientiPage() {
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
-        professionista_payroll_id: formData.professionista_payroll_id || null,
-        contatto1_id: formData.contatto1_id || null,
-        contatto2_id: formData.contatto2_id || null,
-        tipo_prestazione_id: formData.tipo_prestazione_id || null,
-        tipo_redditi: formData.tipo_redditi || null,
-        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        settore: formData.settore || null,
-        matricola_inps: formData.matricola_inps || null,
-        pat_inail: formData.pat_inail || null,
-        codice_ditta_ce: formData.codice_ditta_ce || null,
-        tipo_prestazione_a: formData.tipo_prestazione_a || null,
-        tipo_prestazione_b: formData.tipo_prestazione_b || null,
-        rischio_ver_a: formData.rischio_ver_a || null,
-        rischio_ver_b: formData.rischio_ver_b || null,
-        gg_ver_a: formData.gg_ver_a || null,
-        gg_ver_b: formData.gg_ver_b || null,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric ? new Date(formData.data_ultima_verifica_antiric) : null,
-        scadenza_antiric: formData.scadenza_antiric ? new Date(formData.scadenza_antiric) : null,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b ? new Date(formData.data_ultima_verifica_b) : null,
-        scadenza_antiric_b: formData.scadenza_antiric_b ? new Date(formData.scadenza_antiric_b) : null,
-        gestione_antiriciclaggio: formData.gestione_antiriciclaggio || false,
-        note_antiriciclaggio: formData.note_antiriciclaggio || null,
-        giorni_scad_ver_a: formData.giorni_scad_ver_a || null,
-        giorni_scad_ver_b: formData.giorni_scad_ver_b || null,
+        utente_professionista_payroll_id:
+          formData.utente_professionista_payroll_id || null,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric
+          ? formData.data_ultima_verifica_antiric instanceof Date
+            ? formData.data_ultima_verifica_antiric.toISOString()
+            : formData.data_ultima_verifica_antiric
+          : null,
       };
 
       if (editingCliente) {
@@ -745,6 +728,7 @@ export default function ClientiPage() {
       cod_cliente: "",
       tipo_cliente: "",
       tipologia_cliente: "",
+      settore: "",
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -764,7 +748,6 @@ export default function ClientiPage() {
       tipo_prestazione_id: "",
       tipo_redditi: "",
       cassetto_fiscale_id: "",
-      settore: "",
       matricola_inps: "",
       pat_inail: "",
       codice_ditta_ce: "",
@@ -1076,6 +1059,8 @@ export default function ClientiPage() {
     if (!file) return;
 
     setImporting(true);
+    let imported = 0;
+    const errors: string[] = [];
 
     try {
       const data = await file.arrayBuffer();
@@ -1097,7 +1082,6 @@ export default function ClientiPage() {
 
       const rows = jsonData.slice(1);
       const successCount = 0;
-      const errors: string[] = [];
 
       // Carica tutti gli utenti per il mapping
       const usersList = await utenteService.getUtenti();
