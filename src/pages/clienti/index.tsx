@@ -434,11 +434,14 @@ export default function ClientiPage() {
         cod_cliente: formData.cod_cliente || `CLI${Date.now()}`,
         tipo_cliente: formData.tipo_cliente,
         tipologia_cliente: formData.tipologia_cliente,
+        settore: formData.settore,
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
-        professionista_payroll_id:
-          formData.professionista_payroll_id || null,
+        professionista_payroll_id: formData.professionista_payroll_id || null,
+        contatto1_id: formData.contatto1_id || null,
+        contatto2_id: formData.contatto2_id || null,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
         data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric
           ? formData.data_ultima_verifica_antiric instanceof Date
             ? formData.data_ultima_verifica_antiric.toISOString()
@@ -448,6 +451,11 @@ export default function ClientiPage() {
           ? formData.data_ultima_verifica_b instanceof Date
             ? formData.data_ultima_verifica_b.toISOString()
             : formData.data_ultima_verifica_b
+          : null,
+        scadenza_antiric: formData.scadenza_antiric
+          ? formData.scadenza_antiric instanceof Date
+            ? formData.scadenza_antiric.toISOString()
+            : formData.scadenza_antiric
           : null,
       };
 
