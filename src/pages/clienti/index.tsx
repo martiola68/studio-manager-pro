@@ -169,6 +169,8 @@ export default function ClientiPage() {
 
   const [formData, setFormData] = useState({
     cod_cliente: "",
+    tipo_cliente: "",
+    tipologia_cliente: "",
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -177,6 +179,8 @@ export default function ClientiPage() {
     citta: "",
     provincia: "",
     email: "",
+    attivo: true,
+    note: "",
     utente_operatore_id: "",
     utente_professionista_id: "",
     utente_payroll_id: "",
@@ -688,6 +692,8 @@ export default function ClientiPage() {
     setEditingCliente(cliente);
     setFormData({
       cod_cliente: cliente.cod_cliente || "",
+      tipo_cliente: cliente.tipo_cliente || "",
+      tipologia_cliente: cliente.tipologia_cliente || "",
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -696,6 +702,8 @@ export default function ClientiPage() {
       citta: cliente.citta || "",
       provincia: cliente.provincia || "",
       email: cliente.email || "",
+      attivo: cliente.attivo ?? true,
+      note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
       utente_professionista_id: cliente.utente_professionista_id || "",
       utente_payroll_id: cliente.utente_payroll_id || "",
@@ -745,6 +753,8 @@ export default function ClientiPage() {
     setEditingCliente(null);
     setFormData({
       cod_cliente: "",
+      tipo_cliente: "",
+      tipologia_cliente: "",
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -753,6 +763,8 @@ export default function ClientiPage() {
       citta: "",
       provincia: "",
       email: "",
+      attivo: true,
+      note: "",
       utente_operatore_id: "",
       utente_professionista_id: "",
       utente_payroll_id: "",
