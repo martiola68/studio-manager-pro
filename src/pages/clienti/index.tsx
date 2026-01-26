@@ -763,6 +763,11 @@ export default function ClientiPage() {
       imu: cliente.flag_imu ?? false,
     });
     
+    setComunicazioni({
+      email_attiva: true,
+      ricevi_mailing_scadenze: true,
+      ricevi_newsletter: true,
+    });
     setIsDialogOpen(true);
   };
 
@@ -985,105 +990,38 @@ export default function ClientiPage() {
   const handleExport = () => {
     if (clienti.length === 0) {
       toast({
-        title: "Nessun cliente da esportare",
-        description: "Non ci sono clienti nel database",
+        title: "Attenzione",
+        description: "Nessun cliente da esportare",
+        variant: "destructive",
       });
       return;
     }
 
-    const headers = [
-      "Codice Cliente",
-      "Tipo Cliente",
-      "Tipologia Cliente",
-      "Settore",
-      "Ragione Sociale",
-      "Partita IVA",
-      "Codice Fiscale",
-      "Email",
-      "Indirizzo",
-      "CAP",
-      "Città",
-      "Provincia",
-      "Cassetto Fiscale",
-      "Contatto 1",
-      "Contatto 2",
-      "Tipo Prestazione",
-      "Tipo Redditi",
-      "Utente Professionista",
-      "Utente Operatore",
-      "Utente Payroll",
-      "Professionista Payroll",
-      "Attivo",
-      "Note",
-      "Matricola INPS",
-      "PAT INAIL",
-      "Codice Ditta CE",
-      "Flag IVA",
-      "Flag Bilancio",
-      "Flag Fiscali",
-      "Flag CU",
-      "Flag 770",
-      "Flag LIPE",
-      "Flag Esterometro",
-      "Flag CCGG",
-      "Flag IMU",
-      "Flag Proforma",
-      "Flag Mail Attivo",
-      "Flag Mail Scadenze",
-      "Flag Mail Newsletter"
-    ];
+    const exportData = clienti.map((cliente) => ({
+      cod_cliente: cliente.cod_cliente,
+      tipo_cliente: cliente.tipo_cliente,
+      tipologia_cliente: cliente.tipologia_cliente,
+      settore: cliente.settore,
+      ragione_sociale: cliente.ragione_sociale,
+      codice_fiscale: cliente.codice_fiscale,
+      partita_iva: cliente.partita_iva,
+      indirizzo: cliente.indirizzo,
+      cap: cliente.cap,
+      citta: cliente.citta,
+      provincia: cliente.provincia,
+      email: cliente.email,
+      tipo_redditi: cliente.tipo_redditi,
+      matricola_inps: cliente.matricola_inps,
+      pat_inail: cliente.pat_inail,
+      codice_ditta_ce: cliente.codice_ditta_ce,
+      attivo: cliente.attivo,
+      note: cliente.note,
+    }));
 
-    const data = clienti.map((cliente) => [
-      cliente.cod_cliente || "",
-      cliente.tipo_cliente || "",
-      cliente.tipologia_cliente || "",
-      cliente.settore || "",
-      cliente.ragione_sociale || "",
-      cliente.partita_iva || "",
-      cliente.codice_fiscale || "",
-      cliente.email || "",
-      cliente.indirizzo || "",
-      cliente.cap || "",
-      cliente.citta || "",
-      cliente.provincia || "",
-      cliente.cassetto_fiscale_id || "",
-      cliente.contatto1_id || "",
-      cliente.contatto2_id || "",
-      cliente.tipo_prestazione_id || "",
-      cliente.tipo_redditi || "",
-      cliente.utente_professionista_id || "",
-      cliente.utente_operatore_id || "",
-      cliente.utente_payroll_id || "",
-      cliente.professionista_payroll_id || "",
-      cliente.attivo ? "Sì" : "No",
-      cliente.note || "",
-      cliente.matricola_inps || "",
-      cliente.pat_inail || "",
-      cliente.codice_ditta_ce || "",
-      cliente.flag_iva ? "Sì" : "No",
-      cliente.flag_bilancio ? "Sì" : "No",
-      cliente.flag_fiscali ? "Sì" : "No",
-      cliente.flag_cu ? "Sì" : "No",
-      cliente.flag_770 ? "Sì" : "No",
-      cliente.flag_lipe ? "Sì" : "No",
-      cliente.flag_esterometro ? "Sì" : "No",
-      cliente.flag_ccgg ? "Sì" : "No",
-      cliente.flag_imu ? "Sì" : "No",
-      cliente.flag_proforma ? "Sì" : "No",
-      cliente.flag_mail_attivo ? "Sì" : "No",
-      cliente.flag_mail_scadenze ? "Sì" : "No",
-      cliente.flag_mail_newsletter ? "Sì" : "No"
-    ]);
-
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    
-    const colWidths = headers.map(() => ({ wch: 20 }));
-    ws["!cols"] = colWidths;
-
+    const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Clienti");
-
-    XLSX.writeFile(wb, `clienti_export_${new Date().toISOString().split("T")[0]}.xlsx`);
+    XLSX.writeFile(wb, "clienti_export.xlsx");
 
     toast({
       title: "Export completato",
