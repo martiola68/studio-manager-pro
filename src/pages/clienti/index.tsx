@@ -1187,20 +1187,6 @@ export default function ClientiPage() {
           tipo_prestazione_id: values[19] || null,
           tipo_redditi: values[20] || null,
           cassetto_fiscale_id: values[21] || null,
-          matricola_inps: values[22] || null,
-          pat_inail: values[23] || null,
-          codice_ditta_ce: values[24] || null,
-          tipo_prestazione_a: values[25] || null,
-          tipo_prestazione_b: values[26] || null,
-          rischio_ver_a: values[27] ? (values[27] as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") : null,
-          rischio_ver_b: values[28] ? (values[28] as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") : null,
-          gg_ver_a: values[29] ? parseInt(values[29]) : undefined,
-          gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
-          data_ultima_verifica_antiric: values[31] ? new Date(values[31]).toISOString() : undefined,
-          scadenza_antiric: values[32] ? new Date(values[32]).toISOString() : undefined,
-          data_ultima_verifica_b: values[33] ? new Date(values[33]).toISOString() : undefined,
-          scadenza_antiric_b: values[34] ? new Date(values[34]).toISOString() : undefined,
-          gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
@@ -1554,6 +1540,7 @@ export default function ClientiPage() {
                       setFormData({ ...formData, cod_cliente: e.target.value })
                     }
                     placeholder="Generato automaticamente se vuoto"
+                    disabled={true}
                   />
                 </div>
 
