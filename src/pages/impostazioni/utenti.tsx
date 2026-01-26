@@ -129,6 +129,39 @@ export default function GestioneUtentiPage() {
     return data || [];
   };
 
+  const loadUtenti = async () => {
+    try {
+      setLoading(true);
+      const data = await utenteService.getAll();
+      
+      // Ordino per settore e poi per cognome
+      const sortedData = data.sort((a, b) => {
+        // Prima ordino per settore
+        const settoreOrder = { 'Fiscale': 1, 'Lavoro': 2, 'Fiscale & Lavoro': 3 };
+        const settoreA = settoreOrder[a.settore as keyof typeof settoreOrder] || 999;
+        const settoreB = settoreOrder[b.settore as keyof typeof settoreOrder] || 999;
+        
+        if (settoreA !== settoreB) {
+          return settoreA - settoreB;
+        }
+        
+        // Poi ordino per cognome
+        return (a.cognome || '').localeCompare(b.cognome || '');
+      });
+      
+      setUtenti(sortedData);
+    } catch (error) {
+      console.error('Errore caricamento utenti:', error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare gli utenti",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGeneratePassword = () => {
     const newPassword = generateSecurePassword();
     setFormData({ ...formData, password: newPassword });
