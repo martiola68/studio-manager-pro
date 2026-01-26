@@ -1004,16 +1004,7 @@ export default function ClientiPage() {
       "provincia",
       "email",
       "attivo",
-      "note",
-      "utente_fiscale",
-      "professionista_fiscale",
-      "utente_payroll",
-      "professionista_payroll",
-      "contatto_1",
-      "contatto_2",
-      "tipo_prestazione",
-      "tipo_redditi",
-      "cassetto_fiscale_id"
+      "note"
     ];
 
     const exampleRows = [
@@ -1030,17 +1021,8 @@ export default function ClientiPage() {
         "Roma",
         "RM",
         "info@esempio.it",
-        "true",
-        "Note di esempio",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "Assistenza totale",
-        "SC - Società di Capitali",
-        ""
+        "VERO",
+        "Note di esempio"
       ]
     ];
 
@@ -1094,27 +1076,26 @@ export default function ClientiPage() {
     try {
       let rows: any[] = [];
 
-      // Verifica se è un file Excel o CSV
       if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        // Gestione file Excel
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        // Converti array di array in formato utilizzabile
-        rows = jsonData.slice(0).map((row: any) => {
+        rows = jsonData.slice(1).map((row: any) => {
           if (Array.isArray(row)) {
             return row;
           }
           return [];
         });
       } else {
-        // Gestione file CSV
         const text = await file.text();
         const lines = text.split("\n");
-        rows = lines.map(line => line.split(";").map(v => v.trim()));
+        rows = lines.slice(1).map(line => {
+          const delimiter = line.includes(";") ? ";" : ",";
+          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+        });
       }
 
       let successCount = 0;
@@ -1126,54 +1107,65 @@ export default function ClientiPage() {
         
         if (!values || values.length === 0 || !values[0]) continue;
 
-        // Mappatura colonne completa per Excel/CSV
-        // 0: Ragione Sociale, 1: P.IVA, 2: CF, 3: Indirizzo, 4: CAP, 5: Città, 6: Provincia, 7: Email
-        // 8: Tipo Cliente, 9: Tipologia, 10: Settore, 11: Note
-        const ragioneSociale = (values[0] || "").toString().trim();
-        const piva = (values[1] || "").toString().trim();
-        const cf = (values[2] || "").toString().trim();
-        const indirizzo = (values[3] || "").toString().trim();
-        const cap = (values[4] || "").toString().trim();
-        const citta = (values[5] || "").toString().trim();
-        const provincia = (values[6] || "").toString().trim();
-        const email = (values[7] || "").toString().trim();
-        const tipoCliente = (values[8] || "PERSONA_GIURIDICA").toString().trim();
-        const tipologiaCliente = (values[9] || "").toString().trim();
-        const settore = (values[10] || "").toString().trim();
-        const note = (values[11] || "").toString().trim();
+        const codCliente = (values[0] || "").toString().trim();
+        const tipoClienteRaw = (values[1] || "").toString().trim().toLowerCase();
+        const tipologiaRaw = (values[2] || "").toString().trim().toLowerCase();
+        const settoreRaw = (values[3] || "").toString().trim();
+        const ragioneSociale = (values[4] || "").toString().trim();
+        const piva = (values[5] || "").toString().trim();
+        const cf = (values[6] || "").toString().trim();
+        const indirizzo = (values[7] || "").toString().trim();
+        const cap = (values[8] || "").toString().trim();
+        const citta = (values[9] || "").toString().trim();
+        const provincia = (values[10] || "").toString().trim();
+        const email = (values[11] || "").toString().trim();
+        const attivoRaw = (values[12] || "VERO").toString().trim().toUpperCase();
+        const note = (values[13] || "").toString().trim();
 
         if (!ragioneSociale) {
-          errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
+          errors.push(`Riga ${i + 2}: Ragione sociale obbligatoria`);
           errorCount++;
           continue;
         }
 
-        if (!email) {
-          errors.push(`Riga ${i + 1}: Email mancante`);
-          errorCount++;
-          continue;
+        const tipoCliente = tipoClienteRaw.includes("fisica") 
+          ? "PERSONA_FISICA" 
+          : tipoClienteRaw.includes("giuridica") 
+          ? "PERSONA_GIURIDICA" 
+          : "PERSONA_GIURIDICA";
+
+        let tipologia: "CL interno" | "CL esterno" | null = null;
+        if (tipologiaRaw.includes("interno") || tipologiaRaw.includes("interna")) {
+          tipologia = "CL interno";
+        } else if (tipologiaRaw.includes("esterno") || tipologiaRaw.includes("esterna")) {
+          tipologia = "CL esterno";
         }
 
-        if (!email.includes("@")) {
-          errors.push(`Riga ${i + 1}: Email non valida (${email})`);
-          errorCount++;
-          continue;
+        let settore: "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | null = null;
+        if (settoreRaw.toLowerCase().includes("fiscale") && settoreRaw.toLowerCase().includes("lavoro")) {
+          settore = "Fiscale & Lavoro";
+        } else if (settoreRaw.toLowerCase().includes("fiscale")) {
+          settore = "Fiscale";
+        } else if (settoreRaw.toLowerCase().includes("lavoro")) {
+          settore = "Lavoro";
         }
+
+        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
 
         const clienteData = {
-          cod_cliente: `IMP-${Date.now()}-${i}`,
+          cod_cliente: codCliente || `IMP-${Date.now()}-${i}`,
+          tipo_cliente: tipoCliente,
+          tipologia_cliente: tipologia,
+          settore: settore,
           ragione_sociale: ragioneSociale,
-          partita_iva: piva || ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
+          partita_iva: piva || ragioneSociale.substring(0, 11).replace(/\s/g, ''),
           codice_fiscale: cf || "",
           indirizzo: indirizzo || "",
           cap: cap || "",
           citta: citta || "",
           provincia: provincia || "",
-          email: email,
-          tipo_cliente: tipoCliente === "PERSONA_FISICA" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
-          tipologia_cliente: tipologiaCliente === "CL interno" || tipologiaCliente === "CL esterno" ? tipologiaCliente : null,
-          settore: settore === "Fiscale" || settore === "Lavoro" || settore === "Fiscale & Lavoro" ? settore : null,
-          attivo: true,
+          email: email || `${ragioneSociale.toLowerCase().replace(/\s/g, '')}@cliente.it`,
+          attivo: attivo,
           note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
@@ -1182,19 +1174,20 @@ export default function ClientiPage() {
           successCount++;
         } catch (error: any) {
           errorCount++;
-          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
-          console.error(`Errore importazione riga ${i + 1}:`, error);
+          const errorMsg = error.message || "Errore sconosciuto";
+          errors.push(`Riga ${i + 2}: ${errorMsg}`);
+          console.error(`Errore importazione riga ${i + 2}:`, error);
         }
       }
 
-      if (errors.length > 0) {
-        console.error("Errori importazione:", errors);
+      if (errors.length > 0 && errors.length <= 10) {
+        console.error("Primi 10 errori importazione:", errors.slice(0, 10));
       }
 
       toast({
         title: "Importazione completata",
-        description: `✅ ${successCount} clienti importati\n❌ ${errorCount} errori`,
-        variant: errorCount > 0 ? "destructive" : "default",
+        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
+        variant: successCount > 0 ? "default" : "destructive",
       });
 
       loadData();
@@ -1204,7 +1197,7 @@ export default function ClientiPage() {
       console.error("Errore importazione file:", error);
       toast({
         title: "Errore",
-        description: `Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.`,
+        description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
         variant: "destructive",
       });
     }
@@ -1249,11 +1242,22 @@ export default function ClientiPage() {
                     <div className="flex items-start gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-900">
-                        <p className="font-semibold mb-2">📋 Come funziona:</p>
-                        <ol className="list-decimal list-inside space-y-1">
-                          <li>Scarica il template CSV aggiornato</li>
-                          <li>Compila il file seguendo l&apos;esempio</li>
-                          <li>Carica il file compilato</li>
+                        <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
+                        <ol className="list-decimal list-inside space-y-1 text-xs">
+                          <li><strong>Codice Cliente</strong> - Opzionale (es. CL-001)</li>
+                          <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Persona giuridica)</li>
+                          <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
+                          <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
+                          <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
+                          <li><strong>Partita IVA</strong> - Opzionale (generata automaticamente se mancante)</li>
+                          <li><strong>Codice Fiscale</strong> - Opzionale</li>
+                          <li><strong>Indirizzo</strong> - Opzionale</li>
+                          <li><strong>CAP</strong> - Opzionale</li>
+                          <li><strong>Città</strong> - Opzionale</li>
+                          <li><strong>Provincia</strong> - Opzionale</li>
+                          <li><strong>Email</strong> - Opzionale (generata automaticamente se mancante)</li>
+                          <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
+                          <li><strong>Note</strong> - Opzionale</li>
                         </ol>
                       </div>
                     </div>
@@ -1284,26 +1288,6 @@ export default function ClientiPage() {
                       className="cursor-pointer"
                     />
                   </div>
-
-                  {previewData.length > 0 && (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Anteprima: {previewData.length} clienti pronti per l&apos;importazione
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button
-                          onClick={() => {
-                            setPreviewData([]);
-                            setCsvFile(null);
-                          }}
-                          disabled={importing}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                          {importing ? "Importazione..." : `Importa ${previewData.length} Clienti`}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </DialogContent>
             </Dialog>
