@@ -1191,6 +1191,11 @@ export default function ClientiPage() {
           gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
           giorni_scad_ver_a: values[30] ? parseInt(values[30]) : null,
           giorni_scad_ver_b: values[31] ? parseInt(values[31]) : null,
+          data_ultima_verifica_antiric: values[31] ? new Date(values[31]).toISOString() : undefined,
+          scadenza_antiric: values[32] ? new Date(values[32]).toISOString() : undefined,
+          data_ultima_verifica_b: values[33] ? new Date(values[33]).toISOString() : undefined,
+          scadenza_antiric_b: values[34] ? new Date(values[34]).toISOString() : undefined,
+          gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
