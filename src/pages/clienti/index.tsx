@@ -1119,34 +1119,29 @@ export default function ClientiPage() {
           };
 
           const utenteOperatoreId = findUserByNameOrEmail(values[13] || "");
-          const professionistaFiscaleId = findUserByNameOrEmail(values[14] || "");
+          const utenteProfessionistaId = findUserByNameOrEmail(values[14] || "");
           const utentePayrollId = findUserByNameOrEmail(values[15] || "");
           const professionistaPayrollId = findUserByNameOrEmail(values[16] || "");
 
           const newCliente = {
-            cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substr(2, 5)}`,
-            tipo_cliente: values[0],
-            tipologia_cliente: values[1],
-            settore: values[2],
-            ragione_sociale: values[3],
+            cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
+            tipo_cliente: values[0] || "Persona fisica",
+            tipologia_cliente: values[1] || "Interno",
+            settore: values[2] || "Fiscale",
+            ragione_sociale: values[3] || "",
             partita_iva: values[4] || null,
             codice_fiscale: values[5] || null,
-            indirizzo: values[6] || null,
-            cap: values[7] || null,
-            citta: values[8] || null,
-            provincia: values[9] || null,
+            indirizzo: values[6] || "",
+            cap: values[7] || "",
+            citta: values[8] || "",
+            provincia: values[9] || "",
             email: values[10] || null,
-            attivo: values[11]?.toLowerCase() === "vero" || values[11]?.toLowerCase() === "true",
+            attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "true",
             note: values[12] || null,
             utente_operatore_id: utenteOperatoreId,
-            utente_professionista_id: professionistaFiscaleId,
+            utente_professionista_id: utenteProfessionistaId,
             utente_payroll_id: utentePayrollId,
             professionista_payroll_id: professionistaPayrollId,
-            contatto_1: values[17] || null,
-            contatto_2: values[18] || null,
-            tipo_prestazione: values[19] || null,
-            tipo_redditi: values[20] || null,
-            cassetto_fiscale_id: values[21] || null,
           };
 
           await clienteService.createCliente(newCliente);
