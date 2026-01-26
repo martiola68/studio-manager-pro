@@ -1150,10 +1150,31 @@ export default function ClientiPage() {
             )?.id || null;
         };
 
-        const utenteOperatoreId = findUser(values[13]);
-        const utenteProfessionistaId = findUser(values[14]);
-        const utentePayrollId = findUser(values[15]);
-        const professionistaPayrollId = findUser(values[16]);
+        // Mapping degli utenti
+        let utenteOperatoreId = null;
+        let utenteProfessionistaId = null;
+        let utentePayrollId = null;
+        let professionistaPayrollId = null;
+
+        // Cerca utente fiscale (colonna 14)
+        if (values[13]) {
+          utenteOperatoreId = findUser(values[13]);
+        }
+
+        // Cerca professionista fiscale (colonna 15)
+        if (values[14]) {
+          utenteProfessionistaId = findUser(values[14]);
+        }
+
+        // Cerca utente payroll (colonna 16)
+        if (values[15]) {
+          utentePayrollId = findUser(values[15]);
+        }
+
+        // Cerca professionista payroll (colonna 17)
+        if (values[16]) {
+          professionistaPayrollId = findUser(values[16]);
+        }
 
         // Costruzione oggetto cliente
         // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
