@@ -1179,6 +1179,24 @@ export default function ClientiPage() {
           tipo_prestazione_id: values[19] || null,
           tipo_redditi: values[20] || null,
           cassetto_fiscale_id: values[21] || null,
+          matricola_inps: values[22] || null,
+          pat_inail: values[23] || null,
+          codice_ditta_ce: values[24] || null,
+          tipo_prestazione_a: values[25] || null,
+          tipo_prestazione_b: values[26] || null,
+          rischio_ver_a: values[27] ? (values[27] as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") : null,
+          rischio_ver_b: values[28] ? (values[28] as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") : null,
+          gg_ver_a: values[29] ? parseInt(values[29]) : undefined,
+          gg_ver_b: values[30] ? parseInt(values[30]) : undefined,
+          data_ultima_verifica_antiric: values[31] ? new Date(values[31]) : undefined,
+          scadenza_antiric: values[32] ? new Date(values[32]) : undefined,
+          data_ultima_verifica_b: values[33] ? new Date(values[33]) : undefined,
+          scadenza_antiric_b: values[34] ? new Date(values[34]) : undefined,
+          gestione_antiriciclaggio: values[35] ? values[35].toUpperCase() === "VERO" : false,
+          note_antiriciclaggio: values[36] || null,
+          giorni_scad_ver_a: values[37] ? parseInt(values[37]) : null,
+          giorni_scad_ver_b: values[38] ? parseInt(values[38]) : null,
+          scadenza_antiric: values[39] ? new Date(values[39]) : undefined,
         };
 
         console.log(`🔍 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
@@ -1194,26 +1212,31 @@ export default function ClientiPage() {
         }
 
         if (editingCliente) {
-          await clienteService.updateCliente(editingCliente.ID_Cliente, newCliente);
+          const response = await clienteService.updateCliente(editingCliente.id, newCliente);
+          const updatedCliente: Cliente = {
+            ...editingCliente,
+            ...response.data[0],
+          };
+          setClienti(
+            clienti.map((c) => (c.id === updatedCliente.id ? updatedCliente : c))
+          );
         } else {
           await clienteService.createCliente(newCliente);
         }
-      }
 
-      await loadData();
-
-      if (errors.length === 0) {
-        toast({
-          title: "Importazione completata",
-          description: `${successCount} clienti importati con successo!`,
-        });
-      } else {
-        toast({
-          title: "Importazione con errori",
-          description: `${successCount} clienti importati. ${errors.length} righe scartate (vedi console per dettagli).`,
-          variant: "destructive",
-        });
-        console.error("Errori importazione:", errors);
+        if (errors.length === 0) {
+          toast({
+            title: "Importazione completata",
+            description: `${successCount} clienti importati con successo!`,
+          });
+        } else {
+          toast({
+            title: "Importazione con errori",
+            description: `${successCount} clienti importati. ${errors.length} righe scartate (vedi console per dettagli).`,
+            variant: "destructive",
+          });
+          console.error("Errori importazione:", errors);
+        }
       }
     } catch (error: any) {
       console.error("Errore critico importazione:", error);
@@ -1226,7 +1249,7 @@ export default function ClientiPage() {
       setImporting(false);
       event.target.value = "";
     }
-  };
+  }
 
   if (loading) {
     return (
