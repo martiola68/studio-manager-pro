@@ -992,30 +992,30 @@ export default function ClientiPage() {
       return;
     }
 
-    // Preparo i dati dei clienti per l'export
+    // Preparo i dati dei clienti per l'export (SOLO CAMPI REALMENTE ESISTENTI)
     const exportData = clienti.map((cliente) => [
       cliente.tipo_cliente || "",
       cliente.tipologia_cliente || "",
       cliente.settore || "",
       cliente.ragione_sociale || "",
-      cliente.codice_cliente || "",
-      cliente.piva || "",
+      cliente.cod_cliente || "",
+      cliente.partita_iva || "",
       cliente.codice_fiscale || "",
       cliente.email || "",
       cliente.indirizzo || "",
       cliente.cap || "",
       cliente.citta || "",
       cliente.provincia || "",
-      cliente.nazione || "",
-      cliente.stato || "",
       cliente.note || "",
-      cliente.data_costituzione ? new Date(cliente.data_costituzione).toLocaleDateString("it-IT") : "",
-      cliente.forma_giuridica || "",
-      cliente.capitale_sociale || "",
-      cliente.codice_ateco || "",
+      cliente.matricola_inps || "",
+      cliente.pat_inail || "",
+      cliente.codice_ditta_ce || "",
+      cliente.tipo_redditi || "",
       cliente.cassetto_fiscale_id || "",
       cliente.utente_operatore_id || "",
-      cliente.utente_responsabile_id || "",
+      cliente.utente_professionista_id || "",
+      cliente.utente_payroll_id || "",
+      cliente.attivo ? "Sì" : "No",
     ]);
 
     // Headers
@@ -1025,23 +1025,23 @@ export default function ClientiPage() {
       "Settore",
       "Ragione Sociale",
       "Codice Cliente",
-      "P.IVA",
+      "Partita IVA",
       "Codice Fiscale",
       "Email",
       "Indirizzo",
       "CAP",
       "Città",
       "Provincia",
-      "Nazione",
-      "Stato",
       "Note",
-      "Data Costituzione",
-      "Forma Giuridica",
-      "Capitale Sociale",
-      "Codice ATECO",
+      "Matricola INPS",
+      "PAT INAIL",
+      "Codice Ditta CE",
+      "Tipo Redditi",
       "Cassetto Fiscale ID",
       "Utente Operatore ID",
-      "Utente Responsabile ID",
+      "Utente Professionista ID",
+      "Utente Payroll ID",
+      "Attivo",
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...exportData]);
