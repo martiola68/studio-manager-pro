@@ -329,7 +329,7 @@ export default function ClientiPage() {
   };
 
   useEffect(() => {
-    loadData();
+    fetchClienti();
   }, []);
 
   useEffect(() => {
@@ -1152,18 +1152,18 @@ export default function ClientiPage() {
 
         // Conversione tipo_cliente per il database
         let tipoClienteDB = values[0];
-        if (tipoClienteDB.toLowerCase() === "persona fisica") {
+        if (values[0].toLowerCase().includes("fisica")) {
           tipoClienteDB = "PERSONA_FISICA";
-        } else if (tipoClienteDB.toLowerCase() === "persona giuridica") {
+        } else if (values[0].toLowerCase().includes("giuridica")) {
           tipoClienteDB = "PERSONA_GIURIDICA";
         }
 
         // Conversione tipologia_cliente per il database
         let tipologiaClienteDB = values[1];
         if (values[1].toLowerCase() === "interno") {
-          tipologiaClienteDB = "INTERNO";
+          tipologiaClienteDB = "CL interno";
         } else if (values[1].toLowerCase() === "esterno") {
-          tipologiaClienteDB = "ESTERNO";
+          tipologiaClienteDB = "CL esterno";
         }
 
         // Mapping degli utenti
