@@ -329,7 +329,7 @@ export default function ClientiPage() {
   };
 
   useEffect(() => {
-    fetchClienti();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -432,6 +432,8 @@ export default function ClientiPage() {
       const dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+        tipo_cliente: convertToDatabase("tipo_cliente", formData.tipo_cliente),
+        tipologia_cliente: convertToDatabase("tipologia_cliente", formData.tipologia_cliente),
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
@@ -442,7 +444,6 @@ export default function ClientiPage() {
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
         settore: formData.settore || null,
-        tipologia_cliente: formData.tipologia_cliente || null,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -692,8 +693,8 @@ export default function ClientiPage() {
     setEditingCliente(cliente);
     setFormData({
       cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: cliente.tipo_cliente || "",
-      tipologia_cliente: cliente.tipologia_cliente || "",
+      tipo_cliente: convertToDisplay("tipo_cliente", cliente.tipo_cliente || ""),
+      tipologia_cliente: convertToDisplay("tipologia_cliente", cliente.tipologia_cliente || ""),
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -1150,21 +1151,9 @@ export default function ClientiPage() {
             )?.id || null;
         };
 
-        // Conversione tipo_cliente per il database
-        let tipoClienteDB = values[0];
-        if (values[0].toLowerCase().includes("fisica")) {
-          tipoClienteDB = "PERSONA_FISICA";
-        } else if (values[0].toLowerCase().includes("giuridica")) {
-          tipoClienteDB = "PERSONA_GIURIDICA";
-        }
-
-        // Conversione tipologia_cliente per il database
-        let tipologiaClienteDB = values[1];
-        if (values[1].toLowerCase() === "interno") {
-          tipologiaClienteDB = "CL interno";
-        } else if (values[1].toLowerCase() === "esterno") {
-          tipologiaClienteDB = "CL esterno";
-        }
+        // Conversione tipo_cliente e tipologia_cliente per il database
+        const tipoClienteDB = convertToDatabase("tipo_cliente", values[0]);
+        const tipologiaClienteDB = convertToDatabase("tipologia_cliente", values[1]);
 
         // Mapping degli utenti
         let utenteOperatoreId = null;
@@ -1250,6 +1239,30 @@ export default function ClientiPage() {
       setImporting(false);
       event.target.value = "";
     }
+  };
+
+  const convertToDatabase = (field: "tipo_cliente" | "tipologia_cliente", value: string): string => {
+    if (field === "tipo_cliente") {
+      if (value.toLowerCase().includes("fisica")) return "PERSONA_FISICA";
+      if (value.toLowerCase().includes("giuridica")) return "PERSONA_GIURIDICA";
+    }
+    if (field === "tipologia_cliente") {
+      if (value.toLowerCase() === "interno") return "CL interno";
+      if (value.toLowerCase() === "esterno") return "CL esterno";
+    }
+    return value;
+  };
+
+  const convertToDisplay = (field: "tipo_cliente" | "tipologia_cliente", value: string): string => {
+    if (field === "tipo_cliente") {
+      if (value === "PERSONA_FISICA") return "Persona Fisica";
+      if (value === "PERSONA_GIURIDICA") return "Persona Giuridica";
+    }
+    if (field === "tipologia_cliente") {
+      if (value === "CL interno") return "Interno";
+      if (value === "CL esterno") return "Esterno";
+    }
+    return value;
   };
 
   if (loading) {
