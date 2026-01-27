@@ -1548,15 +1548,15 @@ export default function ClientiPage() {
             <TabsContent value="anagrafica" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
+                  <Label htmlFor="cod_cliente">Codice Cliente *</Label>
                   <Input
                     id="cod_cliente"
                     name="cod_cliente"
                     value={formData.cod_cliente}
-                    onChange={handleInputChange}
-                    placeholder="Generato automaticamente se vuoto"
+                    readOnly
                     disabled
-                    className="bg-gray-100"
+                    className="bg-gray-100 cursor-not-allowed opacity-70"
+                    placeholder="Generato automaticamente"
                   />
                 </div>
 
