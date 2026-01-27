@@ -1235,6 +1235,18 @@ export default function ClientiPage() {
     }
   };
 
+  const handleEditCliente = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setShowDialog(true);
+    
+    form.reset({
+        cod_cliente,
+        ...cliente,
+        settore: cliente.settore ?? undefined,
+        note: cliente.note || ''
+      });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
