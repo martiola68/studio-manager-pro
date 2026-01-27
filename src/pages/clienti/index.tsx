@@ -190,7 +190,7 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
-    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | undefined,
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
@@ -746,6 +746,11 @@ export default function ClientiPage() {
       imu: cliente.flag_imu ?? false,
     });
     
+    setComunicazioni({
+      email_attiva: true,
+      ricevi_mailing_scadenze: true,
+      ricevi_newsletter: true,
+    });
     setIsDialogOpen(true);
   };
 
@@ -1138,7 +1143,7 @@ export default function ClientiPage() {
         const clienteData = {
           tipo_cliente: values[0],
           tipologia_cliente: mappedTipologia,
-          settore: values[2],
+          settore: values[2] || undefined,
           ragione_sociale: ragioneSociale,
           partita_iva: values[4] || ragioneSociale.substring(0, 11),
           codice_fiscale: values[5] || "",
