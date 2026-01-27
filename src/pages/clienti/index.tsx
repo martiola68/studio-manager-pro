@@ -190,14 +190,14 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
-    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | null,
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
     tipo_prestazione_a: "",
     tipo_prestazione_b: "",
-    rischio_ver_a: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
-    rischio_ver_b: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
+    rischio_ver_a: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | null,
+    rischio_ver_b: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | null,
     gg_ver_a: undefined as number | undefined,
     gg_ver_b: undefined as number | undefined,
     data_ultima_verifica_antiric: undefined as Date | undefined,
@@ -746,6 +746,11 @@ export default function ClientiPage() {
       imu: cliente.flag_imu ?? false,
     });
     
+    setComunicazioni({
+      email_attiva: cliente.email_attiva ?? true,
+      ricevi_mailing_scadenze: cliente.ricevi_mailing_scadenze ?? true,
+      ricevi_newsletter: cliente.ricevi_newsletter ?? true,
+    });
     setIsDialogOpen(true);
   };
 
