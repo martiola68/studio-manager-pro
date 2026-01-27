@@ -434,6 +434,7 @@ export default function ClientiPage() {
         cod_cliente: formData.cod_cliente || `CLI${Date.now()}`,
         tipo_cliente: formData.tipo_cliente,
         tipologia_cliente: formData.tipologia_cliente,
+        cap: formData.cap || "",
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
@@ -1151,22 +1152,22 @@ export default function ClientiPage() {
             continue;
         }
 
-        const settoreValue = values[2]?.trim() || "";
-        const validSettori: Array<"" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro"> = ["", "Fiscale", "Lavoro", "Fiscale & Lavoro"];
-        const settore = validSettori.includes(settoreValue as any) 
-          ? (settoreValue as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro")
-          : "";
+        const settoreRaw = values[2]?.trim() || "";
+        let settore: "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro" = "";
+        if (settoreRaw === "Fiscale") settore = "Fiscale";
+        else if (settoreRaw === "Lavoro") settore = "Lavoro";
+        else if (settoreRaw === "Fiscale & Lavoro") settore = "Fiscale & Lavoro";
 
         const newCliente = {
           tipo_cliente: values[0] || "Persona Giuridica",
           tipologia_cliente: values[1] || "CL interno",
-          settore,
+          settore: settore,
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
           indirizzo: values[6] || null,
-          cap: values[7] || null,
-          citta: values[8] || null,
+          cap: values[7] || "",
+          citta: values[8] || "",
           provincia: values[9] || null,
           email: values[10] || null,
           attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toUpperCase() === "TRUE",
