@@ -418,6 +418,33 @@ export default function ClientiPage() {
     setFilteredClienti(filtered);
   };
 
+  const generateCodiceCliente = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tbclienti')
+        .select('cod_cliente')
+        .order('cod_cliente', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const lastCode = data[0].cod_cliente;
+        if (lastCode) {
+          const numMatch = lastCode.match(/(\d+)$/);
+          if (numMatch) {
+            const nextNum = parseInt(numMatch[1]) + 1;
+            return `CLI-${nextNum.toString().padStart(3, '0')}`;
+          }
+        }
+      }
+      return 'CLI-001';
+    } catch (error) {
+      console.error('Errore generazione codice:', error);
+      return `CLI-${Date.now().toString().slice(-6)}`;
+    }
+  };
+
   const handleSave = async () => {
     try {
       if (!formData.ragione_sociale || !formData.partita_iva || !formData.email) {
@@ -429,9 +456,14 @@ export default function ClientiPage() {
         return;
       }
 
+      let codiceCliente = formData.cod_cliente;
+      if (!editingCliente && !codiceCliente) {
+        codiceCliente = await generateCodiceCliente();
+      }
+
       const dataToSave = {
         ...formData,
-        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+        cod_cliente: codiceCliente,
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
@@ -1113,98 +1145,107 @@ export default function ClientiPage() {
       } else {
         // Gestione file CSV
         const text = await file.text();
+        
+        // Determina il separatore (virgola o punto e virgola)
+        const firstLine = text.split('\n')[0];
+        const separator = firstLine.includes(';') ? ';' : ',';
+        
         const lines = text.split("\n");
-        rows = lines.map(line => line.split(";").map(v => v.trim()));
+        rows = lines.map(line => line.split(separator).map(v => v.trim()));
       }
 
       let successCount = 0;
       let errorCount = 0;
       const errors: string[] = [];
 
-      for (let i = 0; i < rows.length; i++) {
+      // Salta header
+      for (let i = 1; i < rows.length; i++) {
         const values = rows[i];
         
         if (!values || values.length === 0 || !values[0]) continue;
 
-        // Mappatura colonne completa per Excel/CSV
-        // 0: Ragione Sociale, 1: P.IVA, 2: CF, 3: Indirizzo, 4: CAP, 5: Città, 6: Provincia, 7: Email
-        // 8: Tipo Cliente, 9: Tipologia, 10: Settore, 11: Note
-        const ragioneSociale = (values[0] || "").toString().trim();
-        const piva = (values[1] || "").toString().trim();
-        const cf = (values[2] || "").toString().trim();
-        const indirizzo = (values[3] || "").toString().trim();
-        const cap = (values[4] || "").toString().trim();
-        const citta = (values[5] || "").toString().trim();
-        const provincia = (values[6] || "").toString().trim();
-        const email = (values[7] || "").toString().trim();
-        const tipoCliente = (values[8] || "PERSONA_GIURIDICA").toString().trim();
-        const tipologiaCliente = (values[9] || "").toString().trim();
-        const settore = (values[10] || "").toString().trim();
-        const note = (values[11] || "").toString().trim();
+        // Mappatura colonne completa per Excel/CSV (22 colonne)
+        // 0: cod_cliente, 1: tipo_cliente, 2: tipologia_cliente, 3: settore, 4: ragione_sociale
+        // 5: partita_iva, 6: codice_fiscale, 7: indirizzo, 8: cap, 9: citta, 10: provincia
+        // 11: email, 12: attivo, 13: note, 14-21: altri campi
 
-        if (!ragioneSociale) {
+        // Gestione tollerante per tipologia cliente (case insensitive e prefissi)
+        let mappedTipologia = null;
+        if (values[2]) {
+          const rawTipologia = values[2].toString().trim().toLowerCase();
+          if (rawTipologia.includes("interno")) mappedTipologia = "CL interno";
+          else if (rawTipologia.includes("esterno")) mappedTipologia = "CL esterno";
+        }
+
+        // Gestione tollerante per settore
+        let mappedSettore = null;
+        if (values[3]) {
+          const rawSettore = values[3].toString().trim().toLowerCase();
+          if (rawSettore === "fiscale") mappedSettore = "Fiscale";
+          else if (rawSettore === "lavoro") mappedSettore = "Lavoro";
+          else if (rawSettore === "fiscale & lavoro" || rawSettore.includes("&")) mappedSettore = "Fiscale & Lavoro";
+        }
+
+        const clienteData = {
+          cod_cliente: values[0] || `IMP-${Date.now()}-${i}`,
+          tipo_cliente: values[1] === "Persona Fisica" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
+          tipologia_cliente: mappedTipologia,
+          settore: mappedSettore,
+          ragione_sociale: values[4],
+          partita_iva: values[5],
+          codice_fiscale: values[6],
+          indirizzo: values[7],
+          cap: values[8],
+          citta: values[9],
+          provincia: values[10],
+          email: values[11],
+          attivo: values[12]?.toString().toLowerCase() === "true" || values[12] === "1",
+          note: values[13] || `Importato da ${file.name}`,
+          
+          // Campi opzionali
+          tipo_prestazione_id: null,
+          tipo_redditi: null,
+          cassetto_fiscale_id: null
+        };
+
+        if (!clienteData.ragione_sociale) {
           errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
           errorCount++;
           continue;
         }
 
-        if (!email) {
-          errors.push(`Riga ${i + 1}: Email mancante`);
-          errorCount++;
-          continue;
-        }
-
-        if (!email.includes("@")) {
-          errors.push(`Riga ${i + 1}: Email non valida (${email})`);
-          errorCount++;
-          continue;
-        }
-
-        const clienteData = {
-          cod_cliente: `IMP-${Date.now()}-${i}`,
-          ragione_sociale: ragioneSociale,
-          partita_iva: piva || ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
-          codice_fiscale: cf || "",
-          indirizzo: indirizzo || "",
-          cap: cap || "",
-          citta: citta || "",
-          provincia: provincia || "",
-          email: email,
-          tipo_cliente: tipoCliente === "PERSONA_FISICA" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
-          tipologia_cliente: tipologiaCliente === "CL interno" || tipologiaCliente === "CL esterno" ? tipologiaCliente : null,
-          settore: settore === "Fiscale" || settore === "Lavoro" || settore === "Fiscale & Lavoro" ? settore : null,
-          attivo: true,
-          note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
-        };
-
         try {
-          await clienteService.createCliente(clienteData as any);
-          successCount++;
+          const { error } = await supabase.from('tbclienti').insert(clienteData);
+          if (error) {
+            errorCount++;
+            errors.push(`Riga ${i + 1}: Errore DB - ${error.message}`);
+            console.error(`Errore Supabase riga ${i + 1}:`, error);
+          } else {
+            successCount++;
+          }
         } catch (error: any) {
           errorCount++;
-          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
-          console.error(`Errore importazione riga ${i + 1}:`, error);
+          errors.push(`Riga ${i + 1}: Errore inatteso - ${error.message}`);
         }
       }
 
       if (errors.length > 0) {
-        console.error("Errori importazione:", errors);
+        console.error("Report errori importazione:", errors);
       }
 
       toast({
         title: "Importazione completata",
-        description: `✅ ${successCount} clienti importati\n❌ ${errorCount} errori`,
+        description: `✅ ${successCount} clienti importati\n❌ ${errorCount} errori (vedi console)`,
         variant: errorCount > 0 ? "destructive" : "default",
       });
 
       loadData();
-      
       event.target.value = "";
     } catch (error) {
-      console.error("Errore importazione file:", error);
+      console.error("Errore generale importazione:", error);
       toast({
-        title: "Errore",
-        description: `Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.`,
+        title: "Errore Importazione",
+        description: "Impossibile leggere il file. Verifica il formato.",
         variant: "destructive",
       });
     }
@@ -1284,26 +1325,6 @@ export default function ClientiPage() {
                       className="cursor-pointer"
                     />
                   </div>
-
-                  {previewData.length > 0 && (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Anteprima: {previewData.length} clienti pronti per l&apos;importazione
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button
-                          onClick={() => {
-                            setPreviewData([]);
-                            setCsvFile(null);
-                          }}
-                          disabled={importing}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                          {importing ? "Importazione..." : `Importa ${previewData.length} Clienti`}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -1502,16 +1523,16 @@ export default function ClientiPage() {
 
             <TabsContent value="anagrafica" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="md:col-span-1">
                   <Label htmlFor="cod_cliente">Codice Cliente</Label>
                   <Input
                     id="cod_cliente"
                     value={formData.cod_cliente}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cod_cliente: e.target.value })
-                    }
-                    placeholder="Generato automaticamente se vuoto"
+                    disabled
+                    placeholder="Generato automaticamente"
+                    className="bg-muted"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Generato automaticamente al salvataggio</p>
                 </div>
 
                 <div>
