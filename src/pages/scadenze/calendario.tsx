@@ -200,9 +200,10 @@ export default function CalendarioScadenzePage() {
 
       const settore = tipoScadenza.settore || "Fiscale";
 
-      toast({
-        title: "Invio in corso...",
-        description: "Sto inviando le email di alert agli utenti del settore",
+      console.log("🔔 Invio alert per scadenza:", {
+        nome: tipoScadenza.nome,
+        settore: settore,
+        responsabile: `${currentUser.nome} ${currentUser.cognome}`,
       });
 
       const { data: result, error: functionError } = await supabase.functions.invoke(
@@ -221,30 +222,39 @@ export default function CalendarioScadenzePage() {
         }
       );
 
-      if (functionError) throw functionError;
+      console.log("📬 Risposta Edge Function:", { result, error: functionError });
 
-      if (result?.success) {
-        const annoCorrente = new Date().getFullYear();
-        await supabase.from("tbtipi_scadenze_alert").insert({
-          tipo_scadenza_id: tipoScadenza.id,
-          anno_invio: annoCorrente,
-          data_invio: new Date().toISOString(),
-        });
-
-        toast({
-          title: "✅ Alert inviato con successo!",
-          description: `${result.sent} email inviate agli utenti del settore ${settore}`,
-        });
-
-        await loadAlertsInviati();
-      } else {
-        throw new Error(result?.message || "Errore sconosciuto");
+      if (functionError) {
+        console.error("❌ Errore Edge Function:", functionError);
+        throw functionError;
       }
-    } catch (error) {
-      console.error("Errore invio alert:", error);
+
+      if (!result) {
+        throw new Error("Nessuna risposta dalla Edge Function");
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || result.error || "Errore sconosciuto nell'invio");
+      }
+
+      const annoCorrente = new Date().getFullYear();
+      await supabase.from("tbtipi_scadenze_alert").insert({
+        tipo_scadenza_id: tipoScadenza.id,
+        anno_invio: annoCorrente,
+        data_invio: new Date().toISOString(),
+      });
+
       toast({
-        title: "Errore",
-        description: error instanceof Error ? error.message : "Impossibile inviare l'alert",
+        title: "✅ Alert inviato con successo!",
+        description: `${result.sent || 0} email inviate agli utenti del settore ${settore}`,
+      });
+
+      await loadAlertsInviati();
+    } catch (error) {
+      console.error("❌ Errore completo invio alert:", error);
+      toast({
+        title: "Errore invio alert",
+        description: error instanceof Error ? error.message : "Impossibile inviare l'alert. Controlla i logs della console.",
         variant: "destructive",
       });
     }
