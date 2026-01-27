@@ -1151,14 +1151,12 @@ export default function ClientiPage() {
             continue;
         }
 
-        const settoreValue = values[2] || "Fiscale";
-        const validSettori: Array<"" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro"> = ["", "Fiscale", "Lavoro", "Fiscale & Lavoro"];
-        const settoreValido = validSettori.includes(settoreValue as any) ? (settoreValue as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro") : "";
-
+        const settoreValue = values[2] || "";
+        
         const newCliente: any = {
           tipo_cliente: values[0] || "Persona Giuridica",
           tipologia_cliente: values[1] || "CL interno",
-          settore: settoreValido,
+          settore: settoreValue as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
