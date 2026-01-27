@@ -1152,17 +1152,17 @@ export default function ClientiPage() {
             continue;
         }
 
-        // Validazione settore con type guard
+        // Validazione e assegnazione diretta del settore
         const settoreRaw = values[2]?.trim() || "";
-        let settore: "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro" = "";
-        if (settoreRaw === "Fiscale") settore = "Fiscale";
-        else if (settoreRaw === "Lavoro") settore = "Lavoro";
-        else if (settoreRaw === "Fiscale & Lavoro") settore = "Fiscale & Lavoro";
+        const settoreValidato: "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro" = 
+          settoreRaw === "Fiscale" ? "Fiscale" :
+          settoreRaw === "Lavoro" ? "Lavoro" :
+          settoreRaw === "Fiscale & Lavoro" ? "Fiscale & Lavoro" : "";
 
         const newCliente = {
           tipo_cliente: values[0] || "Persona Giuridica",
           tipologia_cliente: values[1] || "CL interno",
-          settore: settore as any as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
+          settore: settoreValidato,
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
