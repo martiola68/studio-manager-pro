@@ -1731,19 +1731,19 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
                   <Select
-                    value={formData.cassetto_fiscale_id || "none"}
+                    value={formData.cassetto_fiscale_id || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona cassetto" />
+                      <SelectValue placeholder="Seleziona referente" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.username}
+                          {cassetto.nominativo} ({cassetto.username})
                         </SelectItem>
                       ))}
                     </SelectContent>
