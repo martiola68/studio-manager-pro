@@ -9,10 +9,7 @@ export const clienteService = {
   async getClienti() {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select(`
-        *,
-        tbcassetti_fiscali (*)
-      `)
+      .select("*")
       .order("ragione_sociale");
 
     if (error) throw error;
@@ -22,10 +19,7 @@ export const clienteService = {
   async getClienteById(id: string) {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select(`
-        *,
-        tbcassetti_fiscali (*)
-      `)
+      .select("*")
       .eq("id", id)
       .single();
 
@@ -57,7 +51,6 @@ export const clienteService = {
   },
 
   async deleteCliente(id: string) {
-    // Prima elimina le scadenze associate
     const deletePromises = [
       supabase.from("tbscadiva").delete().eq("id", id),
       supabase.from("tbscad770").delete().eq("id", id),
@@ -73,7 +66,6 @@ export const clienteService = {
 
     await Promise.all(deletePromises);
 
-    // Poi elimina il cliente
     const { error } = await supabase
       .from("tbclienti")
       .delete()
@@ -85,10 +77,7 @@ export const clienteService = {
   async searchClienti(query: string) {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select(`
-        *,
-        tbcassetti_fiscali (*)
-      `)
+      .select("*")
       .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
       .order("ragione_sociale");
 
@@ -99,10 +88,7 @@ export const clienteService = {
   async getClientiByUtente(utenteId: string) {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select(`
-        *,
-        tbcassetti_fiscali (*)
-      `)
+      .select("*")
       .or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`)
       .order("ragione_sociale");
 
@@ -113,10 +99,7 @@ export const clienteService = {
   async getClientiAttivi() {
     const { data, error } = await supabase
       .from("tbclienti")
-      .select(`
-        *,
-        tbcassetti_fiscali (*)
-      `)
+      .select("*")
       .eq("attivo", true)
       .order("ragione_sociale");
 

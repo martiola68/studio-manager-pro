@@ -479,11 +479,11 @@ export default function ClientiPage() {
       setIsDialogOpen(false);
       resetForm();
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore salvataggio cliente:", error);
       toast({
         title: "Errore",
-        description: "Impossibile salvare il cliente",
+        description: error.message || "Impossibile salvare il cliente",
         variant: "destructive",
       });
     }
