@@ -427,7 +427,7 @@ export default function ClientiPage() {
 
   const handleSave = async () => {
     try {
-      if (!formData.ragione_sociale || !formData.partita_iva || !formData.email) {
+      if (!formData.ragione_sociale || !formData.email) {
         toast({
           title: "Errore",
           description: "Compila tutti i campi obbligatori",
@@ -1363,7 +1363,8 @@ export default function ClientiPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, cod_cliente: e.target.value })
                     }
-                    placeholder="Generato automaticamente se vuoto"
+                    disabled
+                    placeholder="Generato automaticamente"
                   />
                 </div>
 

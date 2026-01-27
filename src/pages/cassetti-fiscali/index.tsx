@@ -150,9 +150,23 @@ export default function CassettiFiscaliPage() {
         await cassettiFiscaliService.create(values);
         toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
       }
+      
+      // Reset form e stato
+      form.reset({
+        nominativo: "",
+        username: "",
+        password1: "",
+        pw_attiva1: true,
+        password2: "",
+        pw_attiva2: false,
+        pin: "",
+        pw_iniziale: "",
+        note: "",
+      });
+      
       setDialogOpen(false);
       setEditingCassetto(null);
-      loadCassetti();
+      await loadCassetti();
     } catch (error) {
       console.error("Errore salvataggio:", error);
       toast({
@@ -196,10 +210,23 @@ export default function CassettiFiscaliPage() {
     }));
   };
 
-  const filteredCassetti = cassetti.filter(c => 
-    c.nominativo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (c.username && c.username.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCassetti = cassetti.filter((cassetto) => {
+    if (searchTerm === "") {
+      return true;
+    }
+    
+    // Se searchTerm è una singola lettera (A-Z), filtra per iniziale del nominativo
+    if (searchTerm.length === 1 && /^[A-Z]$/i.test(searchTerm)) {
+      return cassetto.nominativo?.toUpperCase().startsWith(searchTerm.toUpperCase());
+    }
+    
+    // Altrimenti ricerca normale su tutti i campi
+    return (
+      cassetto.nominativo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cassetto.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cassetto.pin?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
