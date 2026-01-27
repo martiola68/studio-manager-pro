@@ -473,8 +473,8 @@ export default function ClientiPage() {
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        settore: formData.settore,
-        tipologia_cliente: formData.tipologia_cliente,
+        settore: formData.settore as string,
+        tipologia_cliente: formData.tipologia_cliente as string,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -1200,8 +1200,8 @@ export default function ClientiPage() {
         const clienteData = {
           cod_cliente: values[0] || `IMP-${Date.now()}-${i}`,
           tipo_cliente: values[1] === "Persona Fisica" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
-          tipologia_cliente: mappedTipologia,
-          settore: mappedSettore,
+          tipologia_cliente: mappedTipologia as string,
+          settore: mappedSettore as string,
           ragione_sociale: values[4],
           partita_iva: values[5],
           codice_fiscale: values[6],
@@ -1488,7 +1488,7 @@ export default function ClientiPage() {
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-3">
                         <Button
                           variant="ghost"
                           size="icon"
