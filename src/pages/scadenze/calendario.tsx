@@ -180,7 +180,6 @@ export default function CalendarioScadenzePage() {
 
   const handleInviaAlert = async (tipoScadenza: ScadenzaConUrgenza) => {
     try {
-      // Verifica che l'utente corrente sia Responsabile o Amministratore
       if (!currentUser) {
         toast({
           title: "Errore",
@@ -200,54 +199,52 @@ export default function CalendarioScadenzePage() {
       }
 
       const settore = tipoScadenza.settore || "Fiscale";
-      
-      let query = supabase
-        .from("tbutenti")
-        .select("email, nome, cognome");
 
-      if (settore === "Fiscale & Lavoro") {
-        query = query.neq("email", "");
-      } else {
-        query = query.eq("settore", settore);
-      }
+      toast({
+        title: "Invio in corso...",
+        description: "Sto inviando le email di alert agli utenti del settore",
+      });
 
-      const { data: utenti, error: utentiError } = await query;
+      const { data: result, error: functionError } = await supabase.functions.invoke(
+        "send-scadenza-alert",
+        {
+          body: {
+            tipoScadenzaId: tipoScadenza.id,
+            settore: settore,
+            responsabileEmail: currentUser.email,
+            responsabileNome: `${currentUser.nome} ${currentUser.cognome}`,
+            scadenzaNome: tipoScadenza.nome,
+            scadenzaData: tipoScadenza.data_scadenza,
+            scadenzaDescrizione: tipoScadenza.descrizione,
+            giorniRimanenti: tipoScadenza.giorniRimanenti,
+          },
+        }
+      );
 
-      if (utentiError) throw utentiError;
+      if (functionError) throw functionError;
 
-      if (!utenti || utenti.length === 0) {
-        toast({
-          title: "Nessun utente",
-          description: `Nessun utente trovato per il settore ${settore}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log(`Invio alert a ${utenti.length} utenti del settore ${settore}`);
-      
-      const annoCorrente = new Date().getFullYear();
-      const { error: insertError } = await supabase
-        .from("tbtipi_scadenze_alert")
-        .insert({
+      if (result?.success) {
+        const annoCorrente = new Date().getFullYear();
+        await supabase.from("tbtipi_scadenze_alert").insert({
           tipo_scadenza_id: tipoScadenza.id,
           anno_invio: annoCorrente,
           data_invio: new Date().toISOString(),
         });
 
-      if (insertError) throw insertError;
+        toast({
+          title: "✅ Alert inviato con successo!",
+          description: `${result.sent} email inviate agli utenti del settore ${settore}`,
+        });
 
-      toast({
-        title: "Alert inviato",
-        description: `Email di avvertimento inviata a ${utenti.length} utenti del settore ${settore}`,
-      });
-
-      await loadAlertsInviati();
+        await loadAlertsInviati();
+      } else {
+        throw new Error(result?.message || "Errore sconosciuto");
+      }
     } catch (error) {
       console.error("Errore invio alert:", error);
       toast({
         title: "Errore",
-        description: "Impossibile inviare l'alert",
+        description: error instanceof Error ? error.message : "Impossibile inviare l'alert",
         variant: "destructive",
       });
     }
