@@ -1094,27 +1094,20 @@ export default function ClientiPage() {
     try {
       let rows: any[] = [];
 
-      // Verifica se è un file Excel o CSV
       if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        // Gestione file Excel
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        // Converti array di array in formato utilizzabile
-        rows = jsonData.slice(0).map((row: any) => {
-          if (Array.isArray(row)) {
-            return row;
-          }
-          return [];
-        });
+        rows = jsonData.slice(1);
       } else {
-        // Gestione file CSV
         const text = await file.text();
         const lines = text.split("\n");
-        rows = lines.map(line => line.split(";").map(v => v.trim()));
+        
+        // Rileva il separatore (virgola o punto e virgola)
+        const separator = lines[0]?.includes(";") ? ";" : ",";
+        rows = lines.slice(1).map(line => line.split(separator).map(v => v.trim()));
       }
 
       let successCount = 0;
@@ -1126,55 +1119,30 @@ export default function ClientiPage() {
         
         if (!values || values.length === 0 || !values[0]) continue;
 
-        // Mappatura colonne completa per Excel/CSV
-        // 0: Ragione Sociale, 1: P.IVA, 2: CF, 3: Indirizzo, 4: CAP, 5: Città, 6: Provincia, 7: Email
-        // 8: Tipo Cliente, 9: Tipologia, 10: Settore, 11: Note
-        const ragioneSociale = (values[0] || "").toString().trim();
-        const piva = (values[1] || "").toString().trim();
-        const cf = (values[2] || "").toString().trim();
-        const indirizzo = (values[3] || "").toString().trim();
-        const cap = (values[4] || "").toString().trim();
-        const citta = (values[5] || "").toString().trim();
-        const provincia = (values[6] || "").toString().trim();
-        const email = (values[7] || "").toString().trim();
-        const tipoCliente = (values[8] || "PERSONA_GIURIDICA").toString().trim();
-        const tipologiaCliente = (values[9] || "").toString().trim();
-        const settore = (values[10] || "").toString().trim();
-        const note = (values[11] || "").toString().trim();
+        const ragioneSociale = (values[3] || "").toString().trim();
+        const email = (values[10] || "").toString().trim();
 
         if (!ragioneSociale) {
-          errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
-          errorCount++;
-          continue;
-        }
-
-        if (!email) {
-          errors.push(`Riga ${i + 1}: Email mancante`);
-          errorCount++;
-          continue;
-        }
-
-        if (!email.includes("@")) {
-          errors.push(`Riga ${i + 1}: Email non valida (${email})`);
+          errors.push(`Riga ${i + 2}: Ragione sociale mancante`);
           errorCount++;
           continue;
         }
 
         const clienteData = {
           cod_cliente: `IMP-${Date.now()}-${i}`,
+          tipo_cliente: values[0] || "PERSONA_GIURIDICA",
+          tipologia_cliente: values[1] || null,
+          settore: values[2] || null,
           ragione_sociale: ragioneSociale,
-          partita_iva: piva || ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
-          codice_fiscale: cf || "",
-          indirizzo: indirizzo || "",
-          cap: cap || "",
-          citta: citta || "",
-          provincia: provincia || "",
-          email: email,
-          tipo_cliente: tipoCliente === "PERSONA_FISICA" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
-          tipologia_cliente: tipologiaCliente === "CL interno" || tipologiaCliente === "CL esterno" ? tipologiaCliente : null,
-          settore: settore === "Fiscale" || settore === "Lavoro" || settore === "Fiscale & Lavoro" ? settore : null,
-          attivo: true,
-          note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
+          partita_iva: values[4] || ragioneSociale.substring(0, 11),
+          codice_fiscale: values[5] || "",
+          indirizzo: values[6] || "",
+          cap: values[7] || "",
+          citta: values[8] || "",
+          provincia: values[9] || "",
+          email: email || `noemail${i}@temp.it`,
+          attivo: (values[11] || "VERO").toString().toUpperCase() === "VERO",
+          note: values[12] || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
         try {
@@ -1182,13 +1150,14 @@ export default function ClientiPage() {
           successCount++;
         } catch (error: any) {
           errorCount++;
-          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
-          console.error(`Errore importazione riga ${i + 1}:`, error);
+          const errorMsg = error.message || "Errore sconosciuto";
+          errors.push(`Riga ${i + 2} (${ragioneSociale}): ${errorMsg}`);
+          console.error(`Errore riga ${i + 2}:`, error);
         }
       }
 
       if (errors.length > 0) {
-        console.error("Errori importazione:", errors);
+        console.error("Errori importazione:", errors.slice(0, 10));
       }
 
       toast({
@@ -1198,13 +1167,12 @@ export default function ClientiPage() {
       });
 
       loadData();
-      
       event.target.value = "";
     } catch (error) {
       console.error("Errore importazione file:", error);
       toast({
         title: "Errore",
-        description: `Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.`,
+        description: `Impossibile importare il file.`,
         variant: "destructive",
       });
     }
