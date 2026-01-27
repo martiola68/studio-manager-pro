@@ -326,6 +326,12 @@ export default function ClientiPage() {
     return "bg-green-600 text-white";
   };
 
+  const getUtenteNome = (utenteId: string | null): string => {
+    if (!utenteId) return "-";
+    const utente = utenti.find(u => u.id === utenteId);
+    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -1224,9 +1230,8 @@ export default function ClientiPage() {
                 <TableRow>
                   <TableHead>Cod. Cliente</TableHead>
                   <TableHead>Ragione Sociale</TableHead>
-                  <TableHead>P.IVA</TableHead>
-                  <TableHead>Città</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Utente Fiscale</TableHead>
+                  <TableHead>Utente Payroll</TableHead>
                   <TableHead>Stato</TableHead>
                   <TableHead className="text-center">Scadenzari</TableHead>
                   <TableHead className="text-right">Azioni</TableHead>
@@ -1241,9 +1246,8 @@ export default function ClientiPage() {
                     <TableCell className="font-medium">
                       {cliente.ragione_sociale}
                     </TableCell>
-                    <TableCell>{cliente.partita_iva}</TableCell>
-                    <TableCell>{cliente.citta}</TableCell>
-                    <TableCell>{cliente.email}</TableCell>
+                    <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
+                    <TableCell>{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
                     <TableCell>
                       {cliente.attivo ? (
                         <Badge variant="default" className="bg-green-600">
