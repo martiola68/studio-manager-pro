@@ -137,7 +137,7 @@ export default function ClientiPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [importing, setImporting] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
@@ -169,9 +169,6 @@ export default function ClientiPage() {
 
   const [formData, setFormData] = useState({
     cod_cliente: "",
-    tipo_cliente: "",
-    tipologia_cliente: "",
-    settore: "" as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -180,6 +177,8 @@ export default function ClientiPage() {
     citta: "",
     provincia: "",
     email: "",
+    tipo_cliente: "PERSONA_FISICA" as string,
+    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
     attivo: true,
     note: "",
     utente_operatore_id: "",
@@ -191,6 +190,7 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
     cassetto_fiscale_id: "",
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
@@ -431,33 +431,46 @@ export default function ClientiPage() {
 
       const dataToSave = {
         ...formData,
-        cod_cliente: formData.cod_cliente || `CLI${Date.now()}`,
-        tipo_cliente: formData.tipo_cliente,
-        tipologia_cliente: formData.tipologia_cliente,
+        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
         professionista_payroll_id: formData.professionista_payroll_id || null,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric
-          ? formData.data_ultima_verifica_antiric instanceof Date
-            ? formData.data_ultima_verifica_antiric.toISOString()
-            : formData.data_ultima_verifica_antiric
-          : null,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b
-          ? formData.data_ultima_verifica_b instanceof Date
-            ? formData.data_ultima_verifica_b.toISOString()
-            : formData.data_ultima_verifica_b
-          : null,
-        scadenza_antiric: formData.scadenza_antiric
-          ? formData.scadenza_antiric instanceof Date
-            ? formData.scadenza_antiric.toISOString()
-            : formData.scadenza_antiric
-          : null,
-        scadenza_antiric_b: formData.scadenza_antiric_b
-          ? formData.scadenza_antiric_b instanceof Date
-            ? formData.scadenza_antiric_b.toISOString()
-            : formData.scadenza_antiric_b
-          : null,
+        contatto1_id: formData.contatto1_id || null,
+        contatto2_id: formData.contatto2_id || null,
+        tipo_prestazione_id: formData.tipo_prestazione_id || null,
+        tipo_redditi: formData.tipo_redditi || null,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+        settore: formData.settore || null,
+        tipologia_cliente: formData.tipologia_cliente || null,
+        matricola_inps: formData.matricola_inps || null,
+        pat_inail: formData.pat_inail || null,
+        codice_ditta_ce: formData.codice_ditta_ce || null,
+        tipo_prestazione_a: formData.tipo_prestazione_a || null,
+        tipo_prestazione_b: formData.tipo_prestazione_b || null,
+        rischio_ver_a: formData.rischio_ver_a || null,
+        rischio_ver_b: formData.rischio_ver_b || null,
+        gg_ver_a: formData.gg_ver_a || null,
+        gg_ver_b: formData.gg_ver_b || null,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
+        scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
+        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
+        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
+        note_antiriciclaggio: formData.note_antiriciclaggio,
+        giorni_scad_ver_a: formData.giorni_scad_ver_a,
+        giorni_scad_ver_b: formData.giorni_scad_ver_b,
+        
+        flag_iva: scadenzari.iva,
+        flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilancio,
+        flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
+        flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
+        flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
+        flag_imu: scadenzari.imu,
       };
 
       if (editingCliente) {
@@ -679,9 +692,6 @@ export default function ClientiPage() {
     setEditingCliente(cliente);
     setFormData({
       cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: cliente.tipo_cliente || "",
-      tipologia_cliente: cliente.tipologia_cliente || "",
-      settore: cliente.settore || "",
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
@@ -690,6 +700,8 @@ export default function ClientiPage() {
       citta: cliente.citta || "",
       provincia: cliente.provincia || "",
       email: cliente.email || "",
+      tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
+      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
       attivo: cliente.attivo ?? true,
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
@@ -701,6 +713,7 @@ export default function ClientiPage() {
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
+      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
       matricola_inps: cliente.matricola_inps || "",
       pat_inail: cliente.pat_inail || "",
       codice_ditta_ce: cliente.codice_ditta_ce || "",
@@ -711,8 +724,8 @@ export default function ClientiPage() {
       gg_ver_a: cliente.gg_ver_a || undefined,
       gg_ver_b: cliente.gg_ver_b || undefined,
       data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
-      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
       scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
+      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
       scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
       gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
       note_antiriciclaggio: cliente.note_antiriciclaggio || "",
@@ -740,9 +753,6 @@ export default function ClientiPage() {
     setEditingCliente(null);
     setFormData({
       cod_cliente: "",
-      tipo_cliente: "",
-      tipologia_cliente: "",
-      settore: "",
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -751,6 +761,8 @@ export default function ClientiPage() {
       citta: "",
       provincia: "",
       email: "",
+      tipo_cliente: "PERSONA_FISICA",
+      tipologia_cliente: "",
       attivo: true,
       note: "",
       utente_operatore_id: "",
@@ -762,6 +774,7 @@ export default function ClientiPage() {
       tipo_prestazione_id: "",
       tipo_redditi: "",
       cassetto_fiscale_id: "",
+      settore: "",
       matricola_inps: "",
       pat_inail: "",
       codice_ditta_ce: "",
@@ -893,20 +906,24 @@ export default function ClientiPage() {
           variant: "default",
         });
 
-        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
-        
-        if (tipo === "matricola_inps") {
-          setMatricoleInps(updatedList);
-          setFormData({ ...formData, matricola_inps: valore });
-          setShowMatricolaDropdown(false);
-        } else if (tipo === "pat_inail") {
-          setPatInail(updatedList);
-          setFormData({ ...formData, pat_inail: valore });
-          setShowPatDropdown(false);
-        } else if (tipo === "codice_ditta_ce") {
-          setCodiciDittaCe(updatedList);
-          setFormData({ ...formData, codice_ditta_ce: valore });
-          setShowCodiceDropdown(false);
+        try {
+          const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+          
+          if (tipo === "matricola_inps") {
+            setMatricoleInps(updatedList);
+            setFormData({ ...formData, matricola_inps: valore });
+            setShowMatricolaDropdown(false);
+          } else if (tipo === "pat_inail") {
+            setPatInail(updatedList);
+            setFormData({ ...formData, pat_inail: valore });
+            setShowPatDropdown(false);
+          } else if (tipo === "codice_ditta_ce") {
+            setCodiciDittaCe(updatedList);
+            setFormData({ ...formData, codice_ditta_ce: valore });
+            setShowCodiceDropdown(false);
+          }
+        } catch (reloadError) {
+          console.error("Errore durante il ricaricamento della lista:", reloadError);
         }
       } else {
         toast({
@@ -974,6 +991,7 @@ export default function ClientiPage() {
 
   const downloadTemplate = () => {
     const headers = [
+      "codice_cliente",
       "tipo_cliente",
       "tipologia_cliente",
       "settore",
@@ -995,12 +1013,13 @@ export default function ClientiPage() {
       "contatto_2",
       "tipo_prestazione",
       "tipo_redditi",
-      "cassetto_fiscale"
+      "cassetto_fiscale_id"
     ];
 
     const exampleRows = [
       [
-        "Amministrazione e liquidazione di aziende, patrimoni, singoli beni",
+        "CL-001",
+        "Persona Giuridica",
         "Interno",
         "Fiscale",
         "ESEMPIO SRL",
@@ -1011,7 +1030,7 @@ export default function ClientiPage() {
         "Roma",
         "RM",
         "info@esempio.it",
-        "VERO",
+        "true",
         "Note di esempio",
         "",
         "",
@@ -1019,8 +1038,8 @@ export default function ClientiPage() {
         "",
         "",
         "",
-        "",
-        "",
+        "Assistenza totale",
+        "SC - Società di Capitali",
         ""
       ]
     ];
@@ -1038,7 +1057,7 @@ export default function ClientiPage() {
 
     toast({
       title: "Template scaricato",
-      description: "Compila il file CSV seguendo l'esempio fornito. Lascia vuoti i campi non obbligatori se non disponibili."
+      description: "Compila il file CSV seguendo l'esempio fornito"
     });
   };
 
@@ -1048,7 +1067,7 @@ export default function ClientiPage() {
   const getNomeTipoRiferimento = (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
     const nomi = {
       matricola_inps: "Matricola INPS",
-      pat_inail: "Pat INAIL",
+      pat_inail: "PAT INAIL",
       codice_ditta_ce: "Codice Ditta CE"
     };
     return nomi[tipo];
@@ -1072,176 +1091,122 @@ export default function ClientiPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setImporting(true);
-    let imported = 0;
-    const errors: string[] = [];
-
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: "",
-      });
+      let rows: any[] = [];
 
-      if (jsonData.length <= 1) {
-        toast({
-          title: "File vuoto",
-          description: "Il file non contiene dati da importare.",
-          variant: "destructive",
+      // Verifica se è un file Excel o CSV
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Gestione file Excel
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Converti array di array in formato utilizzabile
+        rows = jsonData.slice(0).map((row: any) => {
+          if (Array.isArray(row)) {
+            return row;
+          }
+          return [];
         });
-        return;
+      } else {
+        // Gestione file CSV
+        const text = await file.text();
+        const lines = text.split("\n");
+        rows = lines.map(line => line.split(";").map(v => v.trim()));
       }
 
-      const rows = jsonData.slice(1);
-      const successCount = 0;
-
-      // Carica tutti gli utenti per il mapping
-      const usersList = await utenteService.getUtenti();
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
 
       for (let i = 0; i < rows.length; i++) {
-        const rawRow = rows[i] as any[];
-        if (!Array.isArray(rawRow)) continue;
-
-        const rowNum = i + 2;
+        const values = rows[i];
         
-        // Normalizza i valori: stringa e trim per tutte le 22 colonne previste
-        const values: string[] = [];
-        for(let j=0; j<22; j++) {
-            values[j] = (rawRow[j] ?? "").toString().trim();
-        }
+        if (!values || values.length === 0 || !values[0]) continue;
 
-        // VERIFICA CAMPI OBBLIGATORI (SOLO I 4 INDICATI)
-        // 0: Tipo Cliente
-        // 1: Tipologia Cliente
-        // 2: Settore
-        // 3: Ragione Sociale
-        if (!values[0] || !values[1] || !values[2] || !values[3]) {
-          console.warn(
-            `Riga ${
-              i + 2
-            } saltata: mancano campi obbligatori. Tipo Cliente, Tipologia, Settore e Ragione Sociale sono campi obbligatori.`
-          );
+        // Mappatura colonne completa per Excel/CSV
+        // 0: Ragione Sociale, 1: P.IVA, 2: CF, 3: Indirizzo, 4: CAP, 5: Città, 6: Provincia, 7: Email
+        // 8: Tipo Cliente, 9: Tipologia, 10: Settore, 11: Note
+        const ragioneSociale = (values[0] || "").toString().trim();
+        const piva = (values[1] || "").toString().trim();
+        const cf = (values[2] || "").toString().trim();
+        const indirizzo = (values[3] || "").toString().trim();
+        const cap = (values[4] || "").toString().trim();
+        const citta = (values[5] || "").toString().trim();
+        const provincia = (values[6] || "").toString().trim();
+        const email = (values[7] || "").toString().trim();
+        const tipoCliente = (values[8] || "PERSONA_GIURIDICA").toString().trim();
+        const tipologiaCliente = (values[9] || "").toString().trim();
+        const settore = (values[10] || "").toString().trim();
+        const note = (values[11] || "").toString().trim();
+
+        if (!ragioneSociale) {
+          errors.push(`Riga ${i + 1}: Ragione sociale mancante`);
+          errorCount++;
           continue;
         }
 
-        // Funzione helper per trovare utente da nome o email
-        const findUser = (search: string) => {
-            if (!search) return null;
-            const searchLower = search.toLowerCase();
-            return usersList.find(u => 
-                (u.email && u.email.toLowerCase() === searchLower) || 
-                (u.nome && u.cognome && `${u.nome} ${u.cognome}`.toLowerCase() === searchLower)
-            )?.id || null;
+        if (!email) {
+          errors.push(`Riga ${i + 1}: Email mancante`);
+          errorCount++;
+          continue;
+        }
+
+        if (!email.includes("@")) {
+          errors.push(`Riga ${i + 1}: Email non valida (${email})`);
+          errorCount++;
+          continue;
+        }
+
+        const clienteData = {
+          cod_cliente: `IMP-${Date.now()}-${i}`,
+          ragione_sociale: ragioneSociale,
+          partita_iva: piva || ragioneSociale.split(" ")[0] || `PIV${Date.now()}${i}`,
+          codice_fiscale: cf || "",
+          indirizzo: indirizzo || "",
+          cap: cap || "",
+          citta: citta || "",
+          provincia: provincia || "",
+          email: email,
+          tipo_cliente: tipoCliente === "PERSONA_FISICA" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
+          tipologia_cliente: tipologiaCliente === "CL interno" || tipologiaCliente === "CL esterno" ? tipologiaCliente : null,
+          settore: settore === "Fiscale" || settore === "Lavoro" || settore === "Fiscale & Lavoro" ? settore : null,
+          attivo: true,
+          note: note || `Importato da ${file.name} il ${new Date().toLocaleDateString()}`,
         };
 
-        // Mapping degli utenti
-        let utenteOperatoreId = null;
-        let utenteProfessionistaId = null;
-        let utentePayrollId = null;
-        let professionistaPayrollId = null;
-
-        // Cerca utente fiscale (colonna 14)
-        if (values[13]) {
-          utenteOperatoreId = findUser(values[13]);
-        }
-
-        // Cerca professionista fiscale (colonna 15)
-        if (values[14]) {
-          utenteProfessionistaId = findUser(values[14]);
-        }
-
-        // Cerca utente payroll (colonna 16)
-        if (values[15]) {
-          utentePayrollId = findUser(values[15]);
-        }
-
-        // Cerca professionista payroll (colonna 17)
-        if (values[16]) {
-          professionistaPayrollId = findUser(values[16]);
-        }
-
-        // Costruzione oggetto cliente
-        // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
-        const newCliente: any = {
-          cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-          tipo_cliente: values[0],
-          tipologia_cliente: values[1],
-          settore: values[2] as any,
-          ragione_sociale: values[3],
-          partita_iva: values[4] || null,
-          codice_fiscale: values[5] || null,
-          indirizzo: values[6] || null,
-          cap: values[7] || null,
-          citta: values[8] || null,
-          provincia: values[9] || null,
-          email: values[10] || null,
-          attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "TRUE",
-          note: values[12] || null,
-          utente_operatore_id: utenteOperatoreId,
-          utente_professionista_id: utenteProfessionistaId,
-          utente_payroll_id: utentePayrollId,
-          professionista_payroll_id: professionistaPayrollId,
-          contatto1_id: values[17] || null,
-          contatto2_id: values[18] || null,
-          tipo_prestazione_id: values[19] || null,
-          tipo_redditi: values[20] || null,
-          cassetto_fiscale_id: values[21] || null,
-        };
-
-        console.log(`📋 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
-          tipo_cliente: values[0],
-          tipologia_cliente: values[1],
-          settore: values[2],
-          ragione_sociale: values[3],
-          full_data: newCliente
-        });
-
-        const { error: insertError } = await supabase
-          .from("tbclienti")
-          .insert(newCliente);
-
-        if (insertError) {
-          console.error(`❌ ERRORE RIGA ${i + 2}:`, {
-            errore: insertError.message,
-            codice: insertError.code,
-            dettaglio: insertError.details,
-            hint: insertError.hint,
-            dati_tentati: newCliente
-          });
-          errors.push(`Riga ${i + 2}: ${insertError.message}`);
-        } else {
-          console.log(`✅ RIGA ${i + 2} IMPORTATA CON SUCCESSO`);
-          imported++;
+        try {
+          await clienteService.createCliente(clienteData as any);
+          successCount++;
+        } catch (error: any) {
+          errorCount++;
+          errors.push(`Riga ${i + 1}: ${error.message || "Errore sconosciuto"}`);
+          console.error(`Errore importazione riga ${i + 1}:`, error);
         }
       }
 
-      await loadData();
-
-      if (errors.length === 0) {
-        toast({
-          title: "Importazione completata",
-          description: `${successCount} clienti importati con successo!`,
-        });
-      } else {
-        toast({
-          title: "Importazione con errori",
-          description: `${successCount} clienti importati. ${errors.length} righe scartate (vedi console per dettagli).`,
-          variant: "destructive",
-        });
+      if (errors.length > 0) {
         console.error("Errori importazione:", errors);
       }
-    } catch (error: any) {
-      console.error("Errore critico importazione:", error);
+
       toast({
-        title: "Errore importazione",
-        description: error.message || "Si è verificato un errore durante l'elaborazione del file.",
+        title: "Importazione completata",
+        description: `✅ ${successCount} clienti importati\n❌ ${errorCount} errori`,
+        variant: errorCount > 0 ? "destructive" : "default",
+      });
+
+      loadData();
+      
+      event.target.value = "";
+    } catch (error) {
+      console.error("Errore importazione file:", error);
+      toast({
+        title: "Errore",
+        description: `Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.`,
         variant: "destructive",
       });
-    } finally {
-      setImporting(false);
-      event.target.value = "";
     }
   };
 
@@ -1284,30 +1249,11 @@ export default function ClientiPage() {
                     <div className="flex items-start gap-3">
                       <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-900">
-                        <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
-                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                          <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Persona giuridica)</li>
-                          <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
-                          <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
-                          <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
-                          <li><strong>Partita IVA</strong> - Opzionale</li>
-                          <li><strong>Codice Fiscale</strong> - Opzionale</li>
-                          <li><strong>Indirizzo</strong> - Opzionale</li>
-                          <li><strong>CAP</strong> - Opzionale</li>
-                          <li><strong>Città</strong> - Opzionale</li>
-                          <li><strong>Provincia</strong> - Opzionale</li>
-                          <li><strong>Email</strong> - Opzionale</li>
-                          <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
-                          <li><strong>Note</strong> - Opzionale</li>
-                          <li><strong>Utente Fiscale</strong> - Opzionale (nome completo o email)</li>
-                          <li><strong>Professionista Fiscale</strong> - Opzionale (nome completo o email)</li>
-                          <li><strong>Utente Payroll</strong> - Opzionale (nome completo o email)</li>
-                          <li><strong>Professionista Payroll</strong> - Opzionale (nome completo o email)</li>
-                          <li><strong>Contatto 1</strong> - Opzionale</li>
-                          <li><strong>Contatto 2</strong> - Opzionale</li>
-                          <li><strong>Tipo Prestazione</strong> - Opzionale</li>
-                          <li><strong>Tipo Redditi</strong> - Opzionale</li>
-                          <li><strong>Cassetto Fiscale</strong> - Opzionale</li>
+                        <p className="font-semibold mb-2">📋 Come funziona:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>Scarica il template CSV aggiornato</li>
+                          <li>Compila il file seguendo l&apos;esempio</li>
+                          <li>Carica il file compilato</li>
                         </ol>
                       </div>
                     </div>
@@ -1338,6 +1284,26 @@ export default function ClientiPage() {
                       className="cursor-pointer"
                     />
                   </div>
+
+                  {previewData.length > 0 && (
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Anteprima: {previewData.length} clienti pronti per l&apos;importazione
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <Button
+                          onClick={() => {
+                            setPreviewData([]);
+                            setCsvFile(null);
+                          }}
+                          disabled={importing}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          {importing ? "Importazione..." : `Importa ${previewData.length} Clienti`}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -1448,17 +1414,14 @@ export default function ClientiPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Codice</TableHead>
+                  <TableHead>Cod. Cliente</TableHead>
                   <TableHead>Ragione Sociale</TableHead>
-                  <TableHead>Email</TableHead>
                   <TableHead>P.IVA</TableHead>
-                  <TableHead>CF</TableHead>
-                  <TableHead>Indirizzo</TableHead>
-                  <TableHead>Utente Fiscale</TableHead>
-                  <TableHead>Utente Payroll</TableHead>
-                  <TableHead className="w-[100px]">Stato</TableHead>
-                  <TableHead className="w-[120px]">Scadenzario</TableHead>
-                  <TableHead className="text-right w-[100px]">Azioni</TableHead>
+                  <TableHead>Città</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Stato</TableHead>
+                  <TableHead className="text-center">Scadenzari</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1467,37 +1430,29 @@ export default function ClientiPage() {
                     <TableCell className="font-mono text-sm">
                       {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                     </TableCell>
-                    <TableCell className="font-medium">{cliente.ragione_sociale}</TableCell>
-                    <TableCell>{cliente.email || "-"}</TableCell>
-                    <TableCell>{cliente.partita_iva || "-"}</TableCell>
-                    <TableCell>{cliente.codice_fiscale || "-"}</TableCell>
-                    <TableCell>{cliente.indirizzo || "-"}</TableCell>
-                    <TableCell>
-                      {utenti.find(u => u.id === cliente.utente_operatore_id) 
-                        ? `${utenti.find(u => u.id === cliente.utente_operatore_id)?.nome} ${utenti.find(u => u.id === cliente.utente_operatore_id)?.cognome}`
-                        : "-"}
+                    <TableCell className="font-medium">
+                      {cliente.ragione_sociale}
                     </TableCell>
+                    <TableCell>{cliente.partita_iva}</TableCell>
+                    <TableCell>{cliente.citta}</TableCell>
+                    <TableCell>{cliente.email}</TableCell>
                     <TableCell>
-                      {utenti.find(u => u.id === cliente.utente_payroll_id)
-                        ? `${utenti.find(u => u.id === cliente.utente_payroll_id)?.nome} ${utenti.find(u => u.id === cliente.utente_payroll_id)?.cognome}`
-                        : "-"}
+                      {cliente.attivo ? (
+                        <Badge variant="default" className="bg-green-600">
+                          Attivo
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">Inattivo</Badge>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        cliente.attivo ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                      }`}>
-                        {cliente.attivo ? "Attivo" : "Non Attivo"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleInsertIntoScadenzari(cliente)}
-                        className="text-blue-600 hover:text-blue-800"
+                        title="Inserisci negli Scadenzari"
                       >
-                        <Calendar className="h-4 w-4 mr-1" />
-                        Inserisci
+                        <Calendar className="h-4 w-4" />
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
@@ -1513,7 +1468,7 @@ export default function ClientiPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(cliente.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1709,9 +1664,7 @@ export default function ClientiPage() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="info@happy.it"
                   />
                 </div>
@@ -1887,7 +1840,7 @@ export default function ClientiPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona tipo prestazione" />
+                      <SelectValue placeholder="Seleziona prestazione" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
@@ -1903,21 +1856,20 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
                   <Select
-                    value={formData.tipo_redditi || "none"}
+                    value={formData.tipo_redditi || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value === "none" ? "" : value as "SC" | "SP" | "ENC" | "PF" | "730" })
+                      setFormData({ ...formData, tipo_redditi: value as "SC" | "SP" | "ENC" | "PF" | "730" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      <SelectItem value="SC">SC (Società di Capitali)</SelectItem>
-                      <SelectItem value="SP">SP (Società di Persone)</SelectItem>
-                      <SelectItem value="ENC">ENC (Ente non commerciale)</SelectItem>
-                      <SelectItem value="PF">PF (Persona Fisica)</SelectItem>
-                      <SelectItem value="730">730</SelectItem>
+                      <SelectItem value="SC">SC - Società di Capitali</SelectItem>
+                      <SelectItem value="SP">SP - Società di Persone</SelectItem>
+                      <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
+                      <SelectItem value="PF">PF - Persona Fisica</SelectItem>
+                      <SelectItem value="730">730 - Modello 730</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1937,7 +1889,7 @@ export default function ClientiPage() {
                       <SelectItem value="none">Nessuno</SelectItem>
                       {cassettiFiscali.map((cassetto) => (
                         <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {cassetto.nominativo}
+                          {cassetto.username}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1948,7 +1900,7 @@ export default function ClientiPage() {
 
             <TabsContent value="altri_dati" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="md:col-span-2">
                   <Label htmlFor="matricola_inps">Matricola INPS</Label>
                   <Textarea
                     id="matricola_inps"
@@ -1959,7 +1911,7 @@ export default function ClientiPage() {
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <Label htmlFor="pat_inail">Pat INAIL</Label>
                   <Textarea
                     id="pat_inail"
@@ -1970,7 +1922,7 @@ export default function ClientiPage() {
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
                   <Textarea
                     id="codice_ditta_ce"
