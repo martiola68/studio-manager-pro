@@ -1156,7 +1156,7 @@ export default function ClientiPage() {
         const newCliente: any = {
           tipo_cliente: values[0] || "Persona Giuridica",
           tipologia_cliente: values[1] || "CL interno",
-          settore: settoreValue as any as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
+          settore: values[2] || "",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
