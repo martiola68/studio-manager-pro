@@ -108,6 +108,9 @@ export default function ClientiPage() {
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
+  const [selectedUtenteFiscale, setSelectedUtenteFiscale] = useState<string>("all");
+  const [selectedUtentePayroll, setSelectedUtentePayroll] = useState<string>("all");
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -338,7 +341,7 @@ export default function ClientiPage() {
 
   useEffect(() => {
     filterClienti();
-  }, [clienti, searchTerm, selectedLetter]);
+  }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
 
   useEffect(() => {
     if (formData.settore === "Fiscale") {
@@ -400,7 +403,8 @@ export default function ClientiPage() {
           c.ragione_sociale?.toLowerCase().includes(search) ||
           c.partita_iva?.toLowerCase().includes(search) ||
           c.codice_fiscale?.toLowerCase().includes(search) ||
-          c.email?.toLowerCase().includes(search)
+          c.email?.toLowerCase().includes(search) ||
+          c.cod_cliente?.toLowerCase().includes(search)
       );
     }
 
@@ -408,6 +412,14 @@ export default function ClientiPage() {
       filtered = filtered.filter((c) =>
         c.ragione_sociale?.toUpperCase().startsWith(selectedLetter)
       );
+    }
+
+    if (selectedUtenteFiscale !== "all") {
+      filtered = filtered.filter((c) => c.utente_operatore_id === selectedUtenteFiscale);
+    }
+
+    if (selectedUtentePayroll !== "all") {
+      filtered = filtered.filter((c) => c.utente_payroll_id === selectedUtentePayroll);
     }
 
     setFilteredClienti(filtered);
@@ -1172,14 +1184,44 @@ export default function ClientiPage() {
           <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-            <Input
-              placeholder="Cerca per ragione sociale, P.IVA o CF..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 text-base"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+              <Input
+                placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 text-base"
+              />
+            </div>
+            
+            <Select value={selectedUtenteFiscale} onValueChange={setSelectedUtenteFiscale}>
+              <SelectTrigger className="w-full md:w-[200px] h-12">
+                <SelectValue placeholder="Utente Fiscale" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti (Fiscale)</SelectItem>
+                {utenti.map((utente) => (
+                  <SelectItem key={utente.id} value={utente.id}>
+                    {utente.nome} {utente.cognome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedUtentePayroll} onValueChange={setSelectedUtentePayroll}>
+              <SelectTrigger className="w-full md:w-[200px] h-12">
+                <SelectValue placeholder="Utente Payroll" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutti (Payroll)</SelectItem>
+                {utenti.map((utente) => (
+                  <SelectItem key={utente.id} value={utente.id}>
+                    {utente.nome} {utente.cognome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-3">
@@ -1215,7 +1257,7 @@ export default function ClientiPage() {
               <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm || selectedLetter !== "Tutti"
+                {searchTerm || selectedLetter !== "Tutti" || selectedUtenteFiscale !== "all" || selectedUtentePayroll !== "all"
                   ? "Prova a modificare i filtri di ricerca"
                   : "Inizia aggiungendo il tuo primo cliente"}
               </p>
