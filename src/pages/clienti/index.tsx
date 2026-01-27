@@ -1154,10 +1154,10 @@ export default function ClientiPage() {
 
         // Validazione e assegnazione diretta del settore
         const settoreRaw = values[2]?.trim() || "";
-        const settoreValidato: "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro" = 
-          settoreRaw === "Fiscale" ? "Fiscale" :
-          settoreRaw === "Lavoro" ? "Lavoro" :
-          settoreRaw === "Fiscale & Lavoro" ? "Fiscale & Lavoro" : "";
+        const settoreValidato = 
+          settoreRaw === "Fiscale" ? "Fiscale" as const :
+          settoreRaw === "Lavoro" ? "Lavoro" as const :
+          settoreRaw === "Fiscale & Lavoro" ? "Fiscale & Lavoro" as const : "" as const;
 
         const newCliente = {
           tipo_cliente: values[0] || "Persona Giuridica",
