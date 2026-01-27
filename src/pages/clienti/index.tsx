@@ -178,7 +178,7 @@ export default function ClientiPage() {
     provincia: "",
     email: "",
     tipo_cliente: "PERSONA_FISICA" as string,
-    tipologia_cliente: null as "CL interno" | "CL esterno" | null,
+    tipologia_cliente: undefined as "CL interno" | "CL esterno" | undefined,
     attivo: true,
     note: "",
     utente_operatore_id: "",
@@ -188,9 +188,9 @@ export default function ClientiPage() {
     contatto1_id: "",
     contatto2_id: "",
     tipo_prestazione_id: "",
-    tipo_redditi: null as "SC" | "SP" | "ENC" | "PF" | "730" | null,
+    tipo_redditi: undefined as "SC" | "SP" | "ENC" | "PF" | "730" | undefined,
     cassetto_fiscale_id: "",
-    settore: null as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | undefined,
+    settore: undefined as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | undefined,
     matricola_inps: "",
     pat_inail: "",
     codice_ditta_ce: "",
@@ -473,8 +473,8 @@ export default function ClientiPage() {
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        settore: formData.settore || undefined,
-        tipologia_cliente: formData.tipologia_cliente || undefined,
+        settore: formData.settore,
+        tipologia_cliente: formData.tipologia_cliente,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -781,6 +781,17 @@ export default function ClientiPage() {
     setIsDialogOpen(true);
   };
 
+  const handleEditCliente = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setIsDialogOpen(true);
+    
+    form.reset({
+      ...cliente,
+      settore: cliente.settore ?? undefined,
+      tipologia_cliente: cliente.tipologia_cliente ?? undefined,
+    });
+  };
+
   const resetForm = () => {
     setEditingCliente(null);
     setFormData({
@@ -794,7 +805,7 @@ export default function ClientiPage() {
       provincia: "",
       email: "",
       tipo_cliente: "PERSONA_FISICA",
-      tipologia_cliente: null,
+      tipologia_cliente: undefined,
       attivo: true,
       note: "",
       utente_operatore_id: "",
@@ -804,9 +815,9 @@ export default function ClientiPage() {
       contatto1_id: "",
       contatto2_id: "",
       tipo_prestazione_id: "",
-      tipo_redditi: null,
+      tipo_redditi: undefined,
       cassetto_fiscale_id: "",
-      settore: null,
+      settore: undefined,
       matricola_inps: "",
       pat_inail: "",
       codice_ditta_ce: "",
@@ -1189,8 +1200,8 @@ export default function ClientiPage() {
         const clienteData = {
           cod_cliente: values[0] || `IMP-${Date.now()}-${i}`,
           tipo_cliente: values[1] === "Persona Fisica" ? "PERSONA_FISICA" : "PERSONA_GIURIDICA",
-          tipologia_cliente: mappedTipologia || undefined,
-          settore: mappedSettore || undefined,
+          tipologia_cliente: mappedTipologia,
+          settore: mappedSettore,
           ragione_sociale: values[4],
           partita_iva: values[5],
           codice_fiscale: values[6],
