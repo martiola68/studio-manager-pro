@@ -1128,11 +1128,17 @@ export default function ClientiPage() {
           continue;
         }
 
+        const tipologiaCliente = values[1]?.trim();
+        const mappedTipologia = tipologiaCliente?.toLowerCase().includes('interno') 
+          ? 'CL interno' 
+          : tipologiaCliente?.toLowerCase().includes('esterno')
+          ? 'CL esterno'
+          : tipologiaCliente;
+
         const clienteData = {
-          cod_cliente: `IMP-${Date.now()}-${i}`,
-          tipo_cliente: values[0] || "PERSONA_GIURIDICA",
-          tipologia_cliente: values[1] || null,
-          settore: values[2] || null,
+          tipo_cliente: values[0],
+          tipologia_cliente: mappedTipologia,
+          settore: values[2],
           ragione_sociale: ragioneSociale,
           partita_iva: values[4] || ragioneSociale.substring(0, 11),
           codice_fiscale: values[5] || "",

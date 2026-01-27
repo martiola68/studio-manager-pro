@@ -259,10 +259,10 @@ export type Database = {
       tbclienti: {
         Row: {
           attivo: boolean | null
-          cap: string
+          cap: string | null
           cassetto_fiscale_id: string | null
-          citta: string
-          cod_cliente: string
+          citta: string | null
+          cod_cliente: string | null
           codice_ditta_ce: string | null
           codice_fiscale: string | null
           contatto1_id: string | null
@@ -291,26 +291,26 @@ export type Database = {
           giorni_scad_ver_a: number | null
           giorni_scad_ver_b: number | null
           id: string
-          indirizzo: string
+          indirizzo: string | null
           matricola_inps: string | null
           note: string | null
           note_antiriciclaggio: string | null
           partita_iva: string | null
           pat_inail: string | null
           professionista_payroll_id: string | null
-          provincia: string
+          provincia: string | null
           ragione_sociale: string
           rischio_ver_a: string | null
           rischio_ver_b: string | null
           scadenza_antiric: string | null
           scadenza_antiric_b: string | null
-          settore: string | null
-          tipo_cliente: string | null
+          settore: string
+          tipo_cliente: string
           tipo_prestazione_a: string | null
           tipo_prestazione_b: string | null
           tipo_prestazione_id: string | null
           tipo_redditi: string | null
-          tipologia_cliente: string | null
+          tipologia_cliente: string
           updated_at: string | null
           utente_operatore_id: string | null
           utente_payroll_id: string | null
@@ -318,10 +318,10 @@ export type Database = {
         }
         Insert: {
           attivo?: boolean | null
-          cap: string
+          cap?: string | null
           cassetto_fiscale_id?: string | null
-          citta: string
-          cod_cliente: string
+          citta?: string | null
+          cod_cliente?: string | null
           codice_ditta_ce?: string | null
           codice_fiscale?: string | null
           contatto1_id?: string | null
@@ -350,26 +350,26 @@ export type Database = {
           giorni_scad_ver_a?: number | null
           giorni_scad_ver_b?: number | null
           id?: string
-          indirizzo: string
+          indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
           note_antiriciclaggio?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
-          provincia: string
+          provincia?: string | null
           ragione_sociale: string
           rischio_ver_a?: string | null
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
-          settore?: string | null
-          tipo_cliente?: string | null
+          settore: string
+          tipo_cliente: string
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
-          tipologia_cliente?: string | null
+          tipologia_cliente: string
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_payroll_id?: string | null
@@ -377,10 +377,10 @@ export type Database = {
         }
         Update: {
           attivo?: boolean | null
-          cap?: string
+          cap?: string | null
           cassetto_fiscale_id?: string | null
-          citta?: string
-          cod_cliente?: string
+          citta?: string | null
+          cod_cliente?: string | null
           codice_ditta_ce?: string | null
           codice_fiscale?: string | null
           contatto1_id?: string | null
@@ -409,26 +409,26 @@ export type Database = {
           giorni_scad_ver_a?: number | null
           giorni_scad_ver_b?: number | null
           id?: string
-          indirizzo?: string
+          indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
           note_antiriciclaggio?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
-          provincia?: string
+          provincia?: string | null
           ragione_sociale?: string
           rischio_ver_a?: string | null
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
-          settore?: string | null
-          tipo_cliente?: string | null
+          settore?: string
+          tipo_cliente?: string
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
-          tipologia_cliente?: string | null
+          tipologia_cliente?: string
           updated_at?: string | null
           utente_operatore_id?: string | null
           utente_payroll_id?: string | null
