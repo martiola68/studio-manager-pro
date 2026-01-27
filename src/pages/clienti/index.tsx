@@ -749,6 +749,20 @@ export default function ClientiPage() {
     setIsDialogOpen(true);
   };
 
+  const handleEditCliente = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setShowDialog(true);
+    if (cliente) {
+      const { settore, ...clienteRest } = cliente;
+      form.reset({
+        cod_cliente: cliente.cod_cliente || '',
+        ...clienteRest,
+        settore: settore ?? undefined,
+        note: cliente.note || ''
+      });
+    }
+  };
+
   const resetForm = () => {
     setEditingCliente(null);
     setFormData({
