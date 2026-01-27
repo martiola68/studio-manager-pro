@@ -434,7 +434,6 @@ export default function ClientiPage() {
         cod_cliente: formData.cod_cliente || `CLI${Date.now()}`,
         tipo_cliente: formData.tipo_cliente,
         tipologia_cliente: formData.tipologia_cliente,
-        cap: formData.cap || "",
         utente_operatore_id: formData.utente_operatore_id || null,
         utente_professionista_id: formData.utente_professionista_id || null,
         utente_payroll_id: formData.utente_payroll_id || null,
@@ -1007,7 +1006,7 @@ export default function ClientiPage() {
         "ESEMPIO SRL",
         "01234567890",
         "01234567890",
-        "Via Roma, 1",
+        "Via Roma 1",
         "00100",
         "Roma",
         "RM",
@@ -1095,137 +1094,157 @@ export default function ClientiPage() {
         return;
       }
 
-      // Helper per trovare ID utente
-      const findUser = (search: string) => {
-        if (!search) return null;
-        const searchLower = String(search).toLowerCase().trim();
-        return utenti.find(u => 
-          (u.email && u.email.toLowerCase() === searchLower) || 
-          (u.nome && u.cognome && `${u.nome} ${u.cognome}`.toLowerCase() === searchLower)
-        )?.id || null;
-      };
-
-      // Helper per trovare ID contatto
-      const findContatto = (search: string) => {
-        if (!search) return null;
-        const searchLower = String(search).toLowerCase().trim();
-        return contatti.find(c => 
-          (c.email && c.email.toLowerCase() === searchLower) || 
-          (`${c.nome} ${c.cognome}`.toLowerCase() === searchLower)
-        )?.id || null;
-      };
-
       const rows = jsonData.slice(1);
+      const successCount = 0;
+
+      // Carica tutti gli utenti per il mapping
+      const usersList = await utenteService.getUtenti();
 
       for (let i = 0; i < rows.length; i++) {
         const rawRow = rows[i] as any[];
-        if (!Array.isArray(rawRow) || rawRow.length === 0) continue;
+        if (!Array.isArray(rawRow)) continue;
 
-        const values = rawRow.map(v => (v === undefined || v === null) ? "" : String(v).trim());
-
-        // MAPPATURA COLONNE RICHIESTA:
-        // 0: Tipo Cliente (Persona fisica/Persona giuridica)
-        // 1: Tipologia Cliente (Interno/Esterno)
-        // 2: Settore (Fiscale/Lavoro/Fiscale & Lavoro)
-        // 3: Ragione Sociale
-        // 4: Partita IVA
-        // 5: Codice Fiscale
-        // 6: Indirizzo
-        // 7: CAP
-        // 8: Città
-        // 9: Provincia
-        // 10: Email
-        // 11: Attivo
-        // 12: Note
-        // 13: Utente Fiscale
-        // 14: Professionista Fiscale
-        // 15: Utente Payroll
-        // 16: Professionista Payroll
-        // 17: Contatto 1
-        // 18: Contatto 2
-        // 19: Tipo Prestazione
-        // 20: Tipo Redditi
-        // 21: Cassetto Fiscale
-
-        if (!values[3]) { // Ragione Sociale obbligatoria
-            console.warn(`Riga ${i + 2} saltata: Ragione Sociale mancante`);
-            continue;
+        const rowNum = i + 2;
+        
+        // Normalizza i valori: stringa e trim per tutte le 22 colonne previste
+        const values: string[] = [];
+        for(let j=0; j<22; j++) {
+            values[j] = (rawRow[j] ?? "").toString().trim();
         }
 
-        // Validazione e assegnazione diretta del settore
-        const settoreRaw = values[2]?.trim() || "";
-        const settoreValidato = 
-          settoreRaw === "Fiscale" ? "Fiscale" as const :
-          settoreRaw === "Lavoro" ? "Lavoro" as const :
-          settoreRaw === "Fiscale & Lavoro" ? "Fiscale & Lavoro" as const : "" as const;
+        // VERIFICA CAMPI OBBLIGATORI (SOLO I 4 INDICATI)
+        // 0: Tipo Cliente
+        // 1: Tipologia Cliente
+        // 2: Settore
+        // 3: Ragione Sociale
+        if (!values[0] || !values[1] || !values[2] || !values[3]) {
+          console.warn(
+            `Riga ${
+              i + 2
+            } saltata: mancano campi obbligatori. Tipo Cliente, Tipologia, Settore e Ragione Sociale sono campi obbligatori.`
+          );
+          continue;
+        }
 
-        const newCliente = {
-          tipo_cliente: values[0] || "Persona Giuridica",
-          tipologia_cliente: values[1] || "CL interno",
-          settore: settoreValidato,
+        // Funzione helper per trovare utente da nome o email
+        const findUser = (search: string) => {
+            if (!search) return null;
+            const searchLower = search.toLowerCase();
+            return usersList.find(u => 
+                (u.email && u.email.toLowerCase() === searchLower) || 
+                (u.nome && u.cognome && `${u.nome} ${u.cognome}`.toLowerCase() === searchLower)
+            )?.id || null;
+        };
+
+        // Mapping degli utenti
+        let utenteOperatoreId = null;
+        let utenteProfessionistaId = null;
+        let utentePayrollId = null;
+        let professionistaPayrollId = null;
+
+        // Cerca utente fiscale (colonna 14)
+        if (values[13]) {
+          utenteOperatoreId = findUser(values[13]);
+        }
+
+        // Cerca professionista fiscale (colonna 15)
+        if (values[14]) {
+          utenteProfessionistaId = findUser(values[14]);
+        }
+
+        // Cerca utente payroll (colonna 16)
+        if (values[15]) {
+          utentePayrollId = findUser(values[15]);
+        }
+
+        // Cerca professionista payroll (colonna 17)
+        if (values[16]) {
+          professionistaPayrollId = findUser(values[16]);
+        }
+
+        // Costruzione oggetto cliente
+        // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
+        const newCliente: any = {
+          cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
+          tipo_cliente: values[0],
+          tipologia_cliente: values[1],
+          settore: (values[2] && ["Fiscale", "Lavoro", "Fiscale & Lavoro"].includes(values[2])) 
+            ? values[2] 
+            : "" as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
-          indirizzo: values[6] || "",
-          cap: values[7] || "",
-          citta: values[8] || "",
-          provincia: values[9] || "",
+          indirizzo: values[6] || null,
+          cap: values[7] || null,
+          citta: values[8] || null,
+          provincia: values[9] || null,
           email: values[10] || null,
-          attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toUpperCase() === "TRUE",
+          attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "TRUE",
           note: values[12] || null,
-          utente_operatore_id: findUser(values[13]),
-          utente_professionista_id: findUser(values[14]),
-          utente_payroll_id: findUser(values[15]),
-          professionista_payroll_id: findUser(values[16]),
-          contatto1_id: findContatto(values[17]),
-          contatto2_id: findContatto(values[18]),
-          // Altri campi come Tipo Prestazione e Cassetto Fiscale richiederebbero lookup complessi
-          // o inserimento valori testuali se il DB lo permettesse. 
-          // Per ora lasciamo null se non matchano ID diretti o logiche specifiche.
-          cod_cliente: `CLI${Date.now() + i}`, // Generazione provvisoria se il DB non lo fa
+          utente_operatore_id: utenteOperatoreId,
+          utente_professionista_id: utenteProfessionistaId,
+          utente_payroll_id: utentePayrollId,
+          professionista_payroll_id: professionistaPayrollId,
+          contatto1_id: values[17] || null,
+          contatto2_id: values[18] || null,
+          tipo_prestazione_id: values[19] || null,
+          tipo_redditi: values[20] || null,
+          cassetto_fiscale_id: values[21] || null,
         };
 
-        const { error } = await supabase.from("tbclienti").insert(newCliente);
+        console.log(`📋 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
+          tipo_cliente: values[0],
+          tipologia_cliente: values[1],
+          settore: values[2],
+          ragione_sociale: values[3],
+          full_data: newCliente
+        });
 
-        if (error) {
-          console.error(`Errore riga ${i + 2}:`, error.message);
-          errors.push(`Riga ${i + 2}: ${error.message}`);
+        const { error: insertError } = await supabase
+          .from("tbclienti")
+          .insert(newCliente);
+
+        if (insertError) {
+          console.error(`❌ ERRORE RIGA ${i + 2}:`, {
+            errore: insertError.message,
+            codice: insertError.code,
+            dettaglio: insertError.details,
+            hint: insertError.hint,
+            dati_tentati: newCliente
+          });
+          errors.push(`Riga ${i + 2}: ${insertError.message}`);
         } else {
+          console.log(`✅ RIGA ${i + 2} IMPORTATA CON SUCCESSO`);
           imported++;
         }
       }
 
       await loadData();
-      
-      if (errors.length > 0) {
-         toast({
-          title: "Importazione completata parzialmente",
-          description: `${imported} clienti importati. ${errors.length} errori.`,
-          variant: "destructive",
+
+      if (errors.length === 0) {
+        toast({
+          title: "Importazione completata",
+          description: `${successCount} clienti importati con successo!`,
         });
       } else {
         toast({
-          title: "Importazione completata",
-          description: `${imported} clienti importati con successo.`,
+          title: "Importazione con errori",
+          description: `${successCount} clienti importati. ${errors.length} righe scartate (vedi console per dettagli).`,
+          variant: "destructive",
         });
+        console.error("Errori importazione:", errors);
       }
-
     } catch (error: any) {
-      console.error("Errore importazione:", error);
+      console.error("Errore critico importazione:", error);
       toast({
         title: "Errore importazione",
-        description: "Si è verificato un errore durante l'elaborazione del file.",
+        description: error.message || "Si è verificato un errore durante l'elaborazione del file.",
         variant: "destructive",
       });
     } finally {
       setImporting(false);
       event.target.value = "";
     }
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Funzione deprecata - ora usiamo handleImportCSV
-    handleImportCSV(event);
   };
 
   if (loading) {
@@ -1531,15 +1550,14 @@ export default function ClientiPage() {
             <TabsContent value="anagrafica" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cod_cliente">Codice Cliente *</Label>
+                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
                   <Input
                     id="cod_cliente"
-                    name="cod_cliente"
                     value={formData.cod_cliente}
-                    readOnly
-                    disabled
-                    className="bg-gray-100 cursor-not-allowed opacity-70"
-                    placeholder="Generato automaticamente"
+                    onChange={(e) =>
+                      setFormData({ ...formData, cod_cliente: e.target.value })
+                    }
+                    placeholder="Generato automaticamente se vuoto"
                   />
                 </div>
 
@@ -1931,22 +1949,38 @@ export default function ClientiPage() {
             </TabsContent>
 
             <TabsContent value="altri_dati" className="space-y-4 pt-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Partita IVA</Label>
-                  <div className="p-2 bg-gray-50 rounded border">{formData.partita_iva || "-"}</div>
+                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
+                  <Textarea
+                    id="matricola_inps"
+                    value={formData.matricola_inps}
+                    onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+                    placeholder="Inserisci matricola INPS..."
+                    rows={2}
+                  />
                 </div>
+
                 <div>
-                  <Label>Codice Fiscale</Label>
-                  <div className="p-2 bg-gray-50 rounded border">{formData.codice_fiscale || "-"}</div>
+                  <Label htmlFor="pat_inail">Pat INAIL</Label>
+                  <Textarea
+                    id="pat_inail"
+                    value={formData.pat_inail}
+                    onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+                    placeholder="Inserisci Pat INAIL..."
+                    rows={2}
+                  />
                 </div>
+
                 <div>
-                  <Label>Email</Label>
-                  <div className="p-2 bg-gray-50 rounded border">{formData.email || "-"}</div>
-                </div>
-                <div>
-                  <Label>PEC</Label>
-                  <div className="p-2 bg-gray-50 rounded border">{formData.email || "-"}</div>
+                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+                  <Textarea
+                    id="codice_ditta_ce"
+                    value={formData.codice_ditta_ce}
+                    onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+                    placeholder="Inserisci codice ditta CE..."
+                    rows={2}
+                  />
                 </div>
               </div>
             </TabsContent>
