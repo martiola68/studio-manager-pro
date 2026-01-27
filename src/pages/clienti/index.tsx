@@ -1164,29 +1164,50 @@ export default function ClientiPage() {
 
         // Costruzione oggetto cliente
         // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
-        const newCliente: any = {
+        const newCliente: {
+          cod_cliente: string;
+          tipologia_cliente: string;
+          settore: any;
+          ragione_sociale: string;
+          tipo_cliente: string;
+          indirizzo: string;
+          cap: string;
+          citta: string;
+          provincia: string;
+          partita_iva: string | null;
+          codice_fiscale: string | null;
+          email: string | null;
+          attivo: boolean;
+          note: string | null;
+          cassetto_fiscale_id: string | null;
+          contatto1_id: string | null;
+          contatto2_id: string | null;
+          utente_professionista_id: string | null;
+          utente_operatore_id: string | null;
+          utente_payroll_id: string | null;
+          professionista_payroll_id: string | null;
+        } = {
           cod_cliente: values[0] || "",
           tipologia_cliente: values[1],
-          settore: values[2] ? values[2] as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" : "",
+          settore: values[2] || "",
           ragione_sociale: values[3],
-          partita_iva: values[4] || null,
-          codice_fiscale: values[5] || null,
+          tipo_cliente: values[4] || "",
           indirizzo: values[6] || null,
           cap: values[7] || null,
           citta: values[8] || null,
           provincia: values[9] || null,
+          partita_iva: values[4] || null,
+          codice_fiscale: values[5] || null,
           email: values[10] || null,
           attivo: values[11]?.toUpperCase() === "VERO" || values[11]?.toLowerCase() === "TRUE",
           note: values[12] || null,
-          utente_operatore_id: utenteOperatoreId,
-          utente_professionista_id: utenteProfessionistaId,
-          utente_payroll_id: utentePayrollId,
-          professionista_payroll_id: professionistaPayrollId,
+          cassetto_fiscale_id: values[21] || null,
           contatto1_id: values[17] || null,
           contatto2_id: values[18] || null,
-          tipo_prestazione_id: values[19] || null,
-          tipo_redditi: values[20] || null,
-          cassetto_fiscale_id: values[21] || null,
+          utente_professionista_id: utenteProfessionistaId,
+          utente_operatore_id: utenteOperatoreId,
+          utente_payroll_id: utentePayrollId,
+          professionista_payroll_id: professionistaPayrollId,
         };
 
         console.log(`📋 TENTATIVO INSERIMENTO RIGA ${i + 2}:`, {
