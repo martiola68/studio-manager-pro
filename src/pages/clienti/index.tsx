@@ -1165,10 +1165,9 @@ export default function ClientiPage() {
         // Costruzione oggetto cliente
         // Utilizziamo 'any' parziale per evitare blocchi TS se i tipi del DB non sono aggiornati rispetto al CSV
         const newCliente: any = {
-          cod_cliente: `CLI${Date.now()}${Math.random().toString(36).substring(2, 9)}`,
-          tipo_cliente: values[0],
+          cod_cliente: values[0] || "",
           tipologia_cliente: values[1],
-          settore: (values[2] || "") as any,
+          settore: values[2] ? values[2] as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" : "",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
