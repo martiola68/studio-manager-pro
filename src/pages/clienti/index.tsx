@@ -50,6 +50,9 @@ import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -133,81 +136,11 @@ export default function ClientiPage() {
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<any[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [contatti, setContatti] = useState<Contatto[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
-  const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
-  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
-
-  const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
-  const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
-  const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
-
-  const [showMatricolaDropdown, setShowMatricolaDropdown] = useState(false);
-  const [showPatDropdown, setShowPatDropdown] = useState(false);
-  const [showCodiceDropdown, setShowCodiceDropdown] = useState(false);
-
-  const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
-  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
-    iva: true,
-    cu: true,
-    bilancio: true,
-    fiscali: true,
-    lipe: true,
-    modello_770: true,
-    esterometro: true,
-    ccgg: true,
-    proforma: true,
-    imu: true,
-  });
-
-  const [formData, setFormData] = useState({
-    cod_cliente: "",
-    ragione_sociale: "",
-    partita_iva: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-    email: "",
-    tipo_cliente: "PERSONA_FISICA" as string,
-    tipologia_cliente: "" as "CL interno" | "CL esterno" | "",
-    attivo: true,
-    note: "",
-    utente_operatore_id: "",
-    utente_professionista_id: "",
-    utente_payroll_id: "",
-    professionista_payroll_id: "",
-    contatto1_id: "",
-    contatto2_id: "",
-    tipo_prestazione_id: "",
-    tipo_redditi: "" as "SC" | "SP" | "ENC" | "PF" | "730" | "",
-    cassetto_fiscale_id: "",
-    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
-    matricola_inps: "",
-    pat_inail: "",
-    codice_ditta_ce: "",
-    tipo_prestazione_a: "",
-    tipo_prestazione_b: "",
-    rischio_ver_a: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
-    rischio_ver_b: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
-    gg_ver_a: undefined as number | undefined,
-    gg_ver_b: undefined as number | undefined,
-    data_ultima_verifica_antiric: undefined as Date | undefined,
-    scadenza_antiric: undefined as Date | undefined,
-    data_ultima_verifica_b: undefined as Date | undefined,
-    scadenza_antiric_b: undefined as Date | undefined,
-    gestione_antiriciclaggio: false,
-    note_antiriciclaggio: "",
-    giorni_scad_ver_a: null as number | null,
-    giorni_scad_ver_b: null as number | null,
+  
+  // STATI PER IMPORTAZIONE RIMOSSI PER PULIZIA
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
   });
 
   const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
@@ -441,7 +374,7 @@ export default function ClientiPage() {
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        settore: formData.settore || null,
+        settore: formData.settore || undefined,
         tipologia_cliente: formData.tipologia_cliente || null,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
@@ -700,8 +633,8 @@ export default function ClientiPage() {
       citta: cliente.citta || "",
       provincia: cliente.provincia || "",
       email: cliente.email || "",
-      tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
-      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
+      tipo_cliente: cliente.tipo_cliente || "Persona fisica",
+      tipologia_cliente: (cliente.tipologia_cliente as "Interno" | "Esterno") || "",
       attivo: cliente.attivo ?? true,
       note: cliente.note || "",
       utente_operatore_id: cliente.utente_operatore_id || "",
@@ -711,9 +644,9 @@ export default function ClientiPage() {
       contatto1_id: cliente.contatto1_id || "",
       contatto2_id: cliente.contatto2_id || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
-      tipo_redditi: (cliente.tipo_redditi as "SC" | "SP" | "ENC" | "PF" | "730") || "",
+      tipo_redditi: (cliente.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
+      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || undefined,
       matricola_inps: cliente.matricola_inps || "",
       pat_inail: cliente.pat_inail || "",
       codice_ditta_ce: cliente.codice_ditta_ce || "",
@@ -749,20 +682,6 @@ export default function ClientiPage() {
     setIsDialogOpen(true);
   };
 
-  const handleEditCliente = (cliente: Cliente) => {
-    setEditingCliente(cliente);
-    setShowDialog(true);
-    if (cliente) {
-      const { settore, ...clienteRest } = cliente;
-      form.reset({
-        cod_cliente: cliente.cod_cliente || '',
-        ...clienteRest,
-        settore: settore ?? undefined,
-        note: cliente.note || ''
-      });
-    }
-  };
-
   const resetForm = () => {
     setEditingCliente(null);
     setFormData({
@@ -775,7 +694,7 @@ export default function ClientiPage() {
       citta: "",
       provincia: "",
       email: "",
-      tipo_cliente: "PERSONA_FISICA",
+      tipo_cliente: "Persona fisica",
       tipologia_cliente: "",
       attivo: true,
       note: "",
@@ -1081,165 +1000,33 @@ export default function ClientiPage() {
     return false;
   };
 
-  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      let rows: any[] = [];
-
-      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        rows = jsonData.slice(1).map((row: any) => {
-          if (Array.isArray(row)) {
-            return row;
-          }
-          return [];
-        });
-      } else {
-        const text = await file.text();
-        const lines = text.split("\n");
-        rows = lines.slice(1).map(line => {
-          const delimiter = line.includes(";") ? ";" : ",";
-          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
-        });
-      }
-
-      let successCount = 0;
-      let errorCount = 0;
-      const errors: string[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const values = rows[i];
-        
-        if (!values || values.length === 0 || !values[0]) continue;
-
-        const tipoClienteRaw = (values[0] || "").toString().trim().toLowerCase();
-        const tipologiaRaw = (values[1] || "").toString().trim().toLowerCase();
-        const settoreRaw = (values[2] || "").toString().trim();
-        const ragioneSociale = (values[3] || "").toString().trim();
-        const piva = (values[4] || "").toString().trim();
-        const cf = (values[5] || "").toString().trim();
-        const indirizzo = (values[6] || "").toString().trim();
-        const cap = (values[7] || "").toString().trim();
-        const citta = (values[8] || "").toString().trim();
-        const provincia = (values[9] || "").toString().trim();
-        const email = (values[10] || "").toString().trim();
-        const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
-        const note = (values[12] || "").toString().trim();
-
-        if (!ragioneSociale) {
-          errors.push(`Riga ${i + 2}: Ragione sociale obbligatoria`);
-          errorCount++;
-          continue;
-        }
-
-        if (!tipoClienteRaw) {
-          errors.push(`Riga ${i + 2}: Tipo cliente obbligatorio`);
-          errorCount++;
-          continue;
-        }
-
-        if (!tipologiaRaw) {
-          errors.push(`Riga ${i + 2}: Tipologia cliente obbligatoria`);
-          errorCount++;
-          continue;
-        }
-
-        if (!settoreRaw) {
-          errors.push(`Riga ${i + 2}: Settore obbligatorio`);
-          errorCount++;
-          continue;
-        }
-
-        const tipoCliente = tipoClienteRaw.includes("fisica") 
-          ? "PERSONA_FISICA" 
-          : tipoClienteRaw.includes("giuridica") 
-          ? "PERSONA_GIURIDICA" 
-          : "PERSONA_GIURIDICA";
-
-        let tipologia: "CL interno" | "CL esterno" | null = null;
-        if (tipologiaRaw.includes("interno") || tipologiaRaw.includes("interna")) {
-          tipologia = "CL interno";
-        } else if (tipologiaRaw.includes("esterno") || tipologiaRaw.includes("esterna")) {
-          tipologia = "CL esterno";
-        }
-
-        if (!tipologia) {
-          errors.push(`Riga ${i + 2}: Tipologia non valida (deve essere Interno o Esterno)`);
-          errorCount++;
-          continue;
-        }
-
-        let settore: "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | null = null;
-        if (settoreRaw.toLowerCase().includes("fiscale") && settoreRaw.toLowerCase().includes("lavoro")) {
-          settore = "Fiscale & Lavoro";
-        } else if (settoreRaw.toLowerCase().includes("fiscale")) {
-          settore = "Fiscale";
-        } else if (settoreRaw.toLowerCase().includes("lavoro")) {
-          settore = "Lavoro";
-        }
-
-        if (!settore) {
-          errors.push(`Riga ${i + 2}: Settore non valido (deve essere Fiscale, Lavoro o Fiscale & Lavoro)`);
-          errorCount++;
-          continue;
-        }
-
-        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
-
-        const clienteData: any = {
-          tipo_cliente: tipoCliente,
-          tipologia_cliente: tipologia,
-          settore: settore,
-          ragione_sociale: ragioneSociale,
-          attivo: attivo,
-        };
-
-        if (piva) clienteData.partita_iva = piva;
-        if (cf) clienteData.codice_fiscale = cf;
-        if (indirizzo) clienteData.indirizzo = indirizzo;
-        if (cap) clienteData.cap = cap;
-        if (citta) clienteData.citta = citta;
-        if (provincia) clienteData.provincia = provincia;
-        if (email) clienteData.email = email;
-        if (note) clienteData.note = note;
-
-        try {
-          await clienteService.createCliente(clienteData);
-          successCount++;
-        } catch (error: any) {
-          errorCount++;
-          const errorMsg = error.message || "Errore sconosciuto";
-          errors.push(`Riga ${i + 2}: ${errorMsg}`);
-          console.error(`Errore importazione riga ${i + 2}:`, error);
-        }
-      }
-
-      if (errors.length > 0 && errors.length <= 10) {
-        console.error("Primi 10 errori importazione:", errors.slice(0, 10));
-      }
-
-      toast({
-        title: "Importazione completata",
-        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
-        variant: successCount > 0 ? "default" : "destructive",
-      });
-
-      loadData();
-      
-      event.target.value = "";
-    } catch (error) {
-      console.error("Errore importazione file:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
-        variant: "destructive",
+  const handleEditCliente = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setShowDialog(true);
+    if (cliente) {
+      form.reset({
+        cod_cliente: cliente.cod_cliente || '',
+        tipo_cliente: cliente.tipo_cliente,
+        tipologia_cliente: cliente.tipologia_cliente ?? undefined,
+        settore: cliente.settore ?? undefined,
+        ragione_sociale: cliente.ragione_sociale,
+        partita_iva: cliente.partita_iva,
+        codice_fiscale: cliente.codice_fiscale,
+        indirizzo: cliente.indirizzo,
+        cap: cliente.cap,
+        citta: cliente.citta,
+        provincia: cliente.provincia,
+        email: cliente.email,
+        pec: cliente.pec,
+        telefono: cliente.telefono,
+        cellulare: cliente.cellulare,
+        cassetto_fiscale_id: cliente.cassetto_fiscale_id,
+        utente_operatore_id: cliente.utente_operatore_id,
+        utente_professionista_id: cliente.utente_professionista_id,
+        utente_payroll_id: cliente.utente_payroll_id,
+        professionista_payroll_id: cliente.professionista_payroll_id,
+        attivo: cliente.attivo,
+        note: cliente.note || ''
       });
     }
   };
@@ -1260,79 +1047,34 @@ export default function ClientiPage() {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-2">
           <div>
-            <h1 className="text-3xl font-bold">Gestione Clienti</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Anagrafica Clienti</h1>
             <p className="text-muted-foreground mt-1">
               Anagrafica completa e gestione scadenzari
             </p>
           </div>
+          
           <div className="flex gap-2">
-            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Importa Excel
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
-                <DialogHeader>
-                  <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-blue-900">
-                        <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
-                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                          <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Persona giuridica)</li>
-                          <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
-                          <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
-                          <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
-                          <li><strong>Partita IVA</strong> - Opzionale</li>
-                          <li><strong>Codice Fiscale</strong> - Opzionale</li>
-                          <li><strong>Indirizzo</strong> - Opzionale</li>
-                          <li><strong>CAP</strong> - Opzionale</li>
-                          <li><strong>Città</strong> - Opzionale</li>
-                          <li><strong>Provincia</strong> - Opzionale</li>
-                          <li><strong>Email</strong> - Opzionale</li>
-                          <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
-                          <li><strong>Note</strong> - Opzionale</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={downloadTemplate}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Scarica Template CSV
-                  </Button>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="csv-file-clienti">Carica File Excel/CSV</Label>
-                    <Input
-                      id="csv-file-clienti"
-                      type="file"
-                      accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setCsvFile(file);
-                          handleImportCSV(e);
-                        }
-                      }}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button onClick={handleAddNew} className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button onClick={() => {
+              setEditingCliente(null);
+              form.reset({
+                cod_cliente: '',
+                tipo_cliente: 'Persona fisica', // Default valido
+                tipologia_cliente: undefined,
+                settore: undefined,
+                ragione_sociale: '',
+                partita_iva: '',
+                codice_fiscale: '',
+                indirizzo: '',
+                cap: '',
+                citta: '',
+                provincia: '',
+                email: '',
+                attivo: true,
+                note: ''
+              });
+              setShowDialog(true);
+            }}>
+              <Plus className="mr-2 h-4 w-4" />
               Nuovo Cliente
             </Button>
           </div>
@@ -1550,8 +1292,8 @@ export default function ClientiPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PERSONA_FISICA">Persona Fisica</SelectItem>
-                      <SelectItem value="PERSONA_GIURIDICA">Persona Giuridica</SelectItem>
+                      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+                      <SelectItem value="Altro">Altro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1561,15 +1303,15 @@ export default function ClientiPage() {
                   <Select
                     value={formData.tipologia_cliente || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipologia_cliente: value as "CL interno" | "CL esterno" })
+                      setFormData({ ...formData, tipologia_cliente: value as "Interno" | "Esterno" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipologia" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CL interno">Interno</SelectItem>
-                      <SelectItem value="CL esterno">Esterno</SelectItem>
+                      <SelectItem value="Interno">Interno</SelectItem>
+                      <SelectItem value="Esterno">Esterno</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1882,17 +1624,17 @@ export default function ClientiPage() {
                   <Select
                     value={formData.tipo_redditi || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value as "SC" | "SP" | "ENC" | "PF" | "730" })
+                      setFormData({ ...formData, tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SC">SC - Società di Capitali</SelectItem>
-                      <SelectItem value="SP">SP - Società di Persone</SelectItem>
+                      <SelectItem value="USC">USC - Società di Capitali</SelectItem>
+                      <SelectItem value="USP">USP - Società di Persone</SelectItem>
                       <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
-                      <SelectItem value="PF">PF - Persona Fisica</SelectItem>
+                      <SelectItem value="UPF">UPF - Persona Fisica</SelectItem>
                       <SelectItem value="730">730 - Modello 730</SelectItem>
                     </SelectContent>
                   </Select>
