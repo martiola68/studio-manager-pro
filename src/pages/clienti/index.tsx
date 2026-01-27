@@ -167,7 +167,48 @@ export default function ClientiPage() {
     imu: true,
   });
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    cod_cliente: string;
+    tipo_cliente: string;
+    tipologia_cliente?: string;
+    settore?: string;
+    ragione_sociale: string;
+    partita_iva: string;
+    codice_fiscale: string;
+    indirizzo: string;
+    cap: string;
+    citta: string;
+    provincia: string;
+    email: string;
+    attivo: boolean;
+    cassetto_fiscale_id: string;
+    matricola_inps: string;
+    pat_inail: string;
+    codice_ditta_ce: string;
+    utente_operatore_id: string;
+    utente_professionista_id: string;
+    utente_payroll_id: string;
+    professionista_payroll_id: string;
+    contatto1_id: string;
+    contatto2_id: string;
+    tipo_prestazione_id: string;
+    tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
+    gestione_antiriciclaggio: boolean;
+    note_antiriciclaggio: string;
+    giorni_scad_ver_a?: number | null;
+    giorni_scad_ver_b?: number | null;
+    tipo_prestazione_a: string;
+    tipo_prestazione_b: string;
+    rischio_ver_a: string;
+    rischio_ver_b: string;
+    gg_ver_a: number | null;
+    gg_ver_b: number | null;
+    data_ultima_verifica_antiric?: Date | null;
+    scadenza_antiric?: Date | null;
+    data_ultima_verifica_b?: Date | null;
+    scadenza_antiric_b?: Date | null;
+    note: string;
+  }>({
     cod_cliente: "",
     tipo_cliente: "Persona fisica",
     tipologia_cliente: "Interno",
@@ -441,8 +482,8 @@ export default function ClientiPage() {
         tipo_prestazione_id: formData.tipo_prestazione_id || null,
         tipo_redditi: formData.tipo_redditi || null,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-        settore: formData.settore || undefined,
-        tipologia_cliente: formData.tipologia_cliente || undefined,
+        settore: formData.settore || null,
+        tipologia_cliente: formData.tipologia_cliente || null,
         matricola_inps: formData.matricola_inps || null,
         pat_inail: formData.pat_inail || null,
         codice_ditta_ce: formData.codice_ditta_ce || null,
@@ -450,8 +491,8 @@ export default function ClientiPage() {
         tipo_prestazione_b: formData.tipo_prestazione_b || null,
         rischio_ver_a: formData.rischio_ver_a || null,
         rischio_ver_b: formData.rischio_ver_b || null,
-        gg_ver_a: formData.gg_ver_a || null,
-        gg_ver_b: formData.gg_ver_b || null,
+        gg_ver_a: formData.gg_ver_a,
+        gg_ver_b: formData.gg_ver_b,
         data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
         scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
         data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
@@ -691,23 +732,11 @@ export default function ClientiPage() {
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
     setFormData({
-      cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: cliente.tipo_cliente || "Persona fisica",
-      tipologia_cliente: (cliente.tipologia_cliente as "Interno" | "Esterno") || "",
-      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
-      ragione_sociale: cliente.ragione_sociale || "",
-      partita_iva: cliente.partita_iva || "",
-      codice_fiscale: cliente.codice_fiscale || "",
-      indirizzo: cliente.indirizzo || "",
-      cap: cliente.cap || "",
-      citta: cliente.citta || "",
-      provincia: cliente.provincia || "",
-      email: cliente.email || "",
-      attivo: cliente.attivo ?? true,
-      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      matricola_inps: cliente.matricola_inps || "",
-      pat_inail: cliente.pat_inail || "",
-      codice_ditta_ce: cliente.codice_ditta_ce || "",
+      ...formData,
+      ...cliente,
+      tipologia_cliente: cliente.tipologia_cliente || undefined,
+      settore: cliente.settore || undefined,
+      tipo_redditi: (cliente.tipo_redditi as any) || undefined,
       utente_operatore_id: cliente.utente_operatore_id || "",
       utente_professionista_id: cliente.utente_professionista_id || "",
       utente_payroll_id: cliente.utente_payroll_id || "",
@@ -715,22 +744,19 @@ export default function ClientiPage() {
       contatto1_id: cliente.contatto1_id || "",
       contatto2_id: cliente.contatto2_id || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
-      tipo_redditi: (cliente.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || "",
-      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
-      note_antiriciclaggio: cliente.note_antiriciclaggio || "",
-      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
-      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
+      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
+      gg_ver_a: cliente.gg_ver_a ?? null,
+      gg_ver_b: cliente.gg_ver_b ?? null,
+      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : null,
+      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : null,
+      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : null,
+      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : null,
+      rischio_ver_a: cliente.rischio_ver_a || "",
+      rischio_ver_b: cliente.rischio_ver_b || "",
       tipo_prestazione_a: cliente.tipo_prestazione_a || "",
       tipo_prestazione_b: cliente.tipo_prestazione_b || "",
-      rischio_ver_a: (cliente.rischio_ver_a as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
-      rischio_ver_b: (cliente.rischio_ver_b as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
-      gg_ver_a: cliente.gg_ver_a || undefined,
-      gg_ver_b: cliente.gg_ver_b || undefined,
-      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
-      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
-      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
-      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
-      note: cliente.note || "",
+      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
+      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
     });
     
     setScadenzari({
@@ -778,18 +804,18 @@ export default function ClientiPage() {
       tipo_redditi: undefined,
       gestione_antiriciclaggio: false,
       note_antiriciclaggio: "",
-      giorni_scad_ver_a: undefined,
-      giorni_scad_ver_b: undefined,
+      giorni_scad_ver_a: null,
+      giorni_scad_ver_b: null,
       tipo_prestazione_a: "",
       tipo_prestazione_b: "",
       rischio_ver_a: "",
       rischio_ver_b: "",
-      gg_ver_a: undefined,
-      gg_ver_b: undefined,
-      data_ultima_verifica_antiric: undefined,
-      scadenza_antiric: undefined,
-      data_ultima_verifica_b: undefined,
-      scadenza_antiric_b: undefined,
+      gg_ver_a: null,
+      gg_ver_b: null,
+      data_ultima_verifica_antiric: null,
+      scadenza_antiric: null,
+      data_ultima_verifica_b: null,
+      scadenza_antiric_b: null,
       note: "",
     });
     setScadenzari({
