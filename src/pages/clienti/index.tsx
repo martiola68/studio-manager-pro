@@ -1152,6 +1152,7 @@ export default function ClientiPage() {
             continue;
         }
 
+        // Validazione settore con type guard
         const settoreRaw = values[2]?.trim() || "";
         let settore: "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro" = "";
         if (settoreRaw === "Fiscale") settore = "Fiscale";
@@ -1161,11 +1162,11 @@ export default function ClientiPage() {
         const newCliente = {
           tipo_cliente: values[0] || "Persona Giuridica",
           tipologia_cliente: values[1] || "CL interno",
-          settore: settore,
+          settore: settore as "" | "Fiscale" | "Lavoro" | "Fiscale & Lavoro",
           ragione_sociale: values[3],
           partita_iva: values[4] || null,
           codice_fiscale: values[5] || null,
-          indirizzo: values[6] || null,
+          indirizzo: values[6] || "",
           cap: values[7] || "",
           citta: values[8] || "",
           provincia: values[9] || null,
