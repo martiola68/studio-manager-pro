@@ -222,7 +222,17 @@ export default function CalendarioScadenzePage() {
         }
       );
 
-      console.log("📬 Risposta Edge Function:", { result, error: functionError });
+      console.log("📬 Risposta Edge Function RAW:", { result, error: functionError });
+      console.log("📊 Dettagli result:", JSON.stringify(result, null, 2));
+      
+      if (result) {
+        console.log("✅ Result.success:", result.success);
+        console.log("📧 Email inviate (sent):", result.sent);
+        console.log("❌ Email fallite (failed):", result.failed);
+        console.log("📊 Totale (total):", result.total);
+        console.log("💬 Messaggio:", result.message);
+        console.log("🔍 Dettagli errori:", result.details);
+      }
 
       if (functionError) {
         console.error("❌ Errore Edge Function:", functionError);
