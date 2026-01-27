@@ -50,9 +50,6 @@ import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { riferimentiValoriService } from "@/services/riferimentiValoriService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -128,53 +125,34 @@ type PendingRiferimento = {
   valore: string;
 } | null;
 
-// STATI FONDAMENTALI
+export default function ClientiPage() {
+  const { toast } = useToast();
+  const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    cod_cliente: "",
-    ragione_sociale: "",
-    partita_iva: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-    email: "",
-    pec: "",
-    telefono: "",
-    cellulare: "",
-    tipo_cliente: "Persona fisica",
-    tipologia_cliente: undefined as "Interno" | "Esterno" | undefined,
-    attivo: true,
-    note: "",
-    utente_operatore_id: "",
-    utente_professionista_id: "",
-    utente_payroll_id: "",
-    professionista_payroll_id: "",
-    contatto1_id: "",
-    contatto2_id: "",
-    tipo_prestazione_id: "",
-    tipo_redditi: undefined as "USC" | "USP" | "ENC" | "UPF" | "730" | undefined,
-    cassetto_fiscale_id: "",
-    settore: undefined as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | undefined,
-    matricola_inps: "",
-    pat_inail: "",
-    codice_ditta_ce: "",
-    tipo_prestazione_a: "",
-    tipo_prestazione_b: "",
-    rischio_ver_a: "",
-    rischio_ver_b: "",
-    gg_ver_a: undefined as number | undefined,
-    gg_ver_b: undefined as number | undefined,
-    data_ultima_verifica_antiric: undefined as Date | undefined,
-    scadenza_antiric: undefined as Date | undefined,
-    data_ultima_verifica_b: undefined as Date | undefined,
-    scadenza_antiric_b: undefined as Date | undefined,
-    gestione_antiriciclaggio: false,
-    note_antiriciclaggio: "",
-    giorni_scad_ver_a: null as number | null,
-    giorni_scad_ver_b: null as number | null,
-  });
+  const [contatti, setContatti] = useState<Contatto[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
+  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
+
+  const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
+  const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
+  const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
+
+  const [showMatricolaDropdown, setShowMatricolaDropdown] = useState(false);
+  const [showPatDropdown, setShowPatDropdown] = useState(false);
+  const [showCodiceDropdown, setShowCodiceDropdown] = useState(false);
+
+  const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
@@ -189,204 +167,881 @@ type PendingRiferimento = {
     imu: true,
   });
 
-  const [utenti, setUtenti] = useState<Utente[]>([]);
-  const [contatti, setContatti] = useState<Contatto[]>([]);
-  const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
-  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
-  const [matricoleInps, setMatricoleInps] = useState<RiferimentoValore[]>([]);
-  const [patInail, setPatInail] = useState<RiferimentoValore[]>([]);
-  const [codiciDittaCe, setCodiciDittaCe] = useState<RiferimentoValore[]>([]);
-  
-  // STATI PER UI
-  const [showDialog, setShowDialog] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingRiferimento, setPendingRiferimento] = useState<PendingRiferimento>(null);
-  const [showMatricolaDropdown, setShowMatricolaDropdown] = useState(false);
-  const [showPatDropdown, setShowPatDropdown] = useState(false);
-  const [showCodiceDropdown, setShowCodiceDropdown] = useState(false);
+  const [formData, setFormData] = useState({
+    cod_cliente: "",
+    ragione_sociale: "",
+    partita_iva: "",
+    codice_fiscale: "",
+    indirizzo: "",
+    cap: "",
+    citta: "",
+    provincia: "",
+    email: "",
+    tipo_cliente: "PERSONA_FISICA" as string,
+    tipologia_cliente: "" as "Interno" | "Esterno" | "",
+    attivo: true,
+    note: "",
+    utente_operatore_id: "",
+    utente_professionista_id: "",
+    utente_payroll_id: "",
+    professionista_payroll_id: "",
+    contatto1_id: "",
+    contatto2_id: "",
+    tipo_prestazione_id: "",
+    tipo_redditi: "" as "USC" | "USP" | "ENC" | "UPF" | "730" | "",
+    cassetto_fiscale_id: "",
+    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" | "",
+    matricola_inps: "",
+    pat_inail: "",
+    codice_ditta_ce: "",
+    tipo_prestazione_a: "",
+    tipo_prestazione_b: "",
+    rischio_ver_a: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
+    rischio_ver_b: "" as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo" | "",
+    gg_ver_a: undefined as number | undefined,
+    gg_ver_b: undefined as number | undefined,
+    data_ultima_verifica_antiric: undefined as Date | undefined,
+    scadenza_antiric: undefined as Date | undefined,
+    data_ultima_verifica_b: undefined as Date | undefined,
+    scadenza_antiric_b: undefined as Date | undefined,
+    gestione_antiriciclaggio: false,
+    note_antiriciclaggio: "",
+    giorni_scad_ver_a: null as number | null,
+    giorni_scad_ver_b: null as number | null,
+  });
 
-  // LOGICA IMPORTAZIONE CSV
-  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [comunicazioni, setComunicazioni] = useState<ComunicazioniPreferenze>({
+    email_attiva: true,
+    ricevi_mailing_scadenze: true,
+    ricevi_newsletter: true,
+  });
 
-    try {
-      setLoading(true);
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  const handleRiskChange = (
+    value: string,
+    field: "rischio_ver_a" | "rischio_ver_b"
+  ) => {
+    let months = 0;
+    const riskValue = value as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
 
-      // Rimuovi header
-      const rows = jsonData.slice(1) as any[][];
-      let importedCount = 0;
-      let errorCount = 0;
+    switch (riskValue) {
+      case "Non significativo":
+        months = 60;
+        break;
+      case "Poco significativo":
+        months = 36;
+        break;
+      case "Abbastanza significativo":
+        months = 24;
+        break;
+      case "Molto significativo":
+        months = 12;
+        break;
+      default:
+        months = 0;
+    }
 
-      for (const row of rows) {
-        // Mappatura colonne (array index based 0)
-        // 0: Tipo Cliente (OBBLIGATORIO)
-        // 1: Tipologia Cliente (OBBLIGATORIO)
-        // 2: Settore (OBBLIGATORIO)
-        // 3: Ragione Sociale (OBBLIGATORIO)
-        // 4: P.IVA (Opzionale)
-        // 5: CF (Opzionale)
-        // 6: Indirizzo
-        // 7: CAP
-        // 8: Città
-        // 9: Provincia
-        // 10: Email
-        // 11: Attivo
-        // 12: Note
-        // 13: Utente Fiscale
-        // 14: Professionista Fiscale
-        // 15: Utente Payroll
-        // 16: Professionista Payroll
-        // 17: Contatto 1
-        // 18: Contatto 2
-        // 19: Tipo Prestazione
-        // 20: Tipo Redditi
+    const today = new Date();
+    const scadenza = addMonths(today, months);
 
-        const tipoCliente = row[0]?.toString().trim();
-        const tipologiaCliente = row[1]?.toString().trim();
-        const settore = row[2]?.toString().trim();
-        const ragioneSociale = row[3]?.toString().trim();
-
-        if (!tipoCliente || !tipologiaCliente || !settore || !ragioneSociale) {
-          console.warn("Riga saltata: dati obbligatori mancanti", row);
-          errorCount++;
-          continue;
-        }
-
-        // Helper per cercare ID da nome/cognome
-        const findUserId = (name: string) => {
-          if (!name) return null;
-          const user = utenti.find(u => 
-            `${u.nome} ${u.cognome}`.toLowerCase() === name.toLowerCase() ||
-            u.username?.toLowerCase() === name.toLowerCase()
-          );
-          return user?.id || null;
-        };
-
-        const findContattoId = (name: string) => {
-          if (!name) return null;
-          const contatto = contatti.find(c => 
-            `${c.cognome} ${c.nome}`.trim().toLowerCase() === name.toLowerCase()
-          );
-          return contatto?.id || null;
-        };
-        
-        const findPrestazioneId = (desc: string) => {
-          if (!desc) return null;
-          const prestazione = prestazioni.find(p => p.descrizione?.toLowerCase() === desc.toLowerCase());
-          return prestazione?.id || null;
-        };
-
-        const clienteData = {
-          cod_cliente: `CL-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`, // Generato auto
-          tipo_cliente: tipoCliente,
-          tipologia_cliente: tipologiaCliente,
-          settore: settore,
-          ragione_sociale: ragioneSociale,
-          partita_iva: row[4]?.toString().trim() || null,
-          codice_fiscale: row[5]?.toString().trim() || null,
-          indirizzo: row[6]?.toString().trim() || null,
-          cap: row[7]?.toString().trim() || null,
-          citta: row[8]?.toString().trim() || null,
-          provincia: row[9]?.toString().trim() || null,
-          email: row[10]?.toString().trim() || null,
-          attivo: row[11]?.toString().trim().toUpperCase() === "FALSO" ? false : true,
-          note: row[12]?.toString().trim() || null,
-          utente_operatore_id: findUserId(row[13]?.toString().trim()),
-          utente_professionista_id: findUserId(row[14]?.toString().trim()),
-          utente_payroll_id: findUserId(row[15]?.toString().trim()),
-          professionista_payroll_id: findUserId(row[16]?.toString().trim()),
-          contatto1_id: findContattoId(row[17]?.toString().trim()),
-          contatto2_id: findContattoId(row[18]?.toString().trim()),
-          tipo_prestazione_id: findPrestazioneId(row[19]?.toString().trim()),
-          tipo_redditi: row[20]?.toString().trim() || null
-        };
-
-        try {
-          await clienteService.createCliente(clienteData);
-          importedCount++;
-        } catch (error) {
-          console.error("Errore importazione riga:", error);
-          errorCount++;
-        }
-      }
-
-      toast({
-        title: "Importazione Completata",
-        description: `Importati: ${importedCount} | Errori/Saltati: ${errorCount}`,
-        variant: importedCount > 0 ? "default" : "destructive"
-      });
-
-      loadData(); // Ricarica lista
-
-    } catch (error) {
-      console.error("Errore lettura file:", error);
-      toast({
-        title: "Errore Importazione",
-        description: "Impossibile leggere il file CSV/Excel",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-      // Reset input file
-      e.target.value = "";
+    if (field === "rischio_ver_a") {
+      setFormData((prev) => ({
+        ...prev,
+        rischio_ver_a: riskValue,
+        gg_ver_a: months,
+        data_ultima_verifica_antiric: today,
+        scadenza_antiric: scadenza,
+        giorni_scad_ver_a: calcolaGiorniScadenza(scadenza),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        rischio_ver_b: riskValue,
+        gg_ver_b: months,
+        data_ultima_verifica_b: today,
+        scadenza_antiric_b: scadenza,
+        giorni_scad_ver_b: calcolaGiorniScadenza(scadenza),
+      }));
     }
   };
 
-  const formSchema = z.object({}); // Placeholder
+  const handleGgVerChange = (blocco: "A" | "B", value: number | undefined) => {
+    if (blocco === "A") {
+      setFormData(prev => {
+        const updated = { ...prev, gg_ver_a: value };
+        if (updated.data_ultima_verifica_antiric && value) {
+          updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, value);
+          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
+        }
+        return updated;
+      });
+    } else {
+      setFormData(prev => {
+        const updated = { ...prev, gg_ver_b: value };
+        if (updated.data_ultima_verifica_b && value) {
+          updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, value);
+          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
+        }
+        return updated;
+      });
+    }
+  };
+
+  const handleVerificaDateChange = (blocco: "A" | "B", date: Date | undefined) => {
+    if (blocco === "A") {
+      setFormData(prev => {
+        const updated = { ...prev, data_ultima_verifica_antiric: date };
+        if (date && prev.gg_ver_a) {
+          updated.scadenza_antiric = addMonths(date, prev.gg_ver_a);
+          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
+        }
+        return updated;
+      });
+    } else {
+      setFormData(prev => {
+        const updated = { ...prev, data_ultima_verifica_b: date };
+        if (date && prev.gg_ver_b) {
+          updated.scadenza_antiric_b = addMonths(date, prev.gg_ver_b);
+          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
+        }
+        return updated;
+      });
+    }
+  };
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const calcolaGiorniScadenza = (scadenza: Date | undefined): number | null => {
+    if (!scadenza) return null;
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const scadenzaDate = new Date(scadenza);
+    scadenzaDate.setHours(0, 0, 0, 0);
+    const diffTime = scadenzaDate.getTime() - oggi.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getBadgeColor = (giorni: number | null): string => {
+    if (giorni === null) return "bg-gray-200 text-gray-700";
+    if (giorni < 15) return "bg-red-600 text-white";
+    if (giorni < 30) return "bg-orange-500 text-white";
+    return "bg-green-600 text-white";
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    filterClienti();
+  }, [clienti, searchTerm, selectedLetter]);
+
+  useEffect(() => {
+    if (formData.settore === "Fiscale") {
+      setFormData(prev => ({
+        ...prev,
+        utente_payroll_id: "",
+        professionista_payroll_id: ""
+      }));
+    } else if (formData.settore === "Lavoro") {
+      setFormData(prev => ({
+        ...prev,
+        utente_operatore_id: "",
+        utente_professionista_id: ""
+      }));
+    }
+  }, [formData.settore]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [
+        clientiData,
+        contattiData,
+        utentiData,
+        cassettiData,
+        prestazioniData,
+        matricoleData,
+        patData,
+        codiciData
+      ] = await Promise.all([
+        clienteService.getClienti(),
+        contattoService.getContatti(),
+        utenteService.getUtenti(),
+        cassettiFiscaliService.getCassettiFiscali(),
+        supabase.from("tbprestazioni").select("*").order("descrizione"),
+        riferimentiValoriService.getValoriByTipo("matricola_inps"),
+        riferimentiValoriService.getValoriByTipo("pat_inail"),
+        riferimentiValoriService.getValoriByTipo("codice_ditta_ce")
+      ]);
+
+      setClienti(clientiData);
+      setContatti(contattiData);
+      setUtenti(utentiData);
+      setCassettiFiscali(cassettiData);
+      setPrestazioni(prestazioniData.data || []);
+      setMatricoleInps(matricoleData);
+      setPatInail(patData);
+      setCodiciDittaCe(codiciData);
+    } catch (error) {
+      console.error("Errore caricamento dati:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterClienti = () => {
+    let filtered = clienti;
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.ragione_sociale?.toLowerCase().includes(search) ||
+          c.partita_iva?.toLowerCase().includes(search) ||
+          c.codice_fiscale?.toLowerCase().includes(search) ||
+          c.email?.toLowerCase().includes(search)
+      );
+    }
+
+    if (selectedLetter !== "Tutti") {
+      filtered = filtered.filter((c) =>
+        c.ragione_sociale?.toUpperCase().startsWith(selectedLetter)
+      );
+    }
+
+    setFilteredClienti(filtered);
+  };
+
+  const handleSave = async () => {
+    try {
+      if (!formData.ragione_sociale || !formData.partita_iva || !formData.email) {
+        toast({
+          title: "Errore",
+          description: "Compila tutti i campi obbligatori",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const dataToSave = {
+        ...formData,
+        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+        utente_operatore_id: formData.utente_operatore_id || null,
+        utente_professionista_id: formData.utente_professionista_id || null,
+        utente_payroll_id: formData.utente_payroll_id || null,
+        professionista_payroll_id: formData.professionista_payroll_id || null,
+        contatto1_id: formData.contatto1_id || null,
+        contatto2_id: formData.contatto2_id || null,
+        tipo_prestazione_id: formData.tipo_prestazione_id || null,
+        tipo_redditi: formData.tipo_redditi || null,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+        settore: formData.settore || null,
+        tipologia_cliente: formData.tipologia_cliente || null,
+        matricola_inps: formData.matricola_inps || null,
+        pat_inail: formData.pat_inail || null,
+        codice_ditta_ce: formData.codice_ditta_ce || null,
+        tipo_prestazione_a: formData.tipo_prestazione_a || null,
+        tipo_prestazione_b: formData.tipo_prestazione_b || null,
+        rischio_ver_a: formData.rischio_ver_a || null,
+        rischio_ver_b: formData.rischio_ver_b || null,
+        gg_ver_a: formData.gg_ver_a || null,
+        gg_ver_b: formData.gg_ver_b || null,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
+        scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
+        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
+        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
+        note_antiriciclaggio: formData.note_antiriciclaggio,
+        giorni_scad_ver_a: formData.giorni_scad_ver_a,
+        giorni_scad_ver_b: formData.giorni_scad_ver_b,
+        
+        flag_iva: scadenzari.iva,
+        flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilancio,
+        flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
+        flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
+        flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
+        flag_imu: scadenzari.imu,
+      };
+
+      if (editingCliente) {
+        await clienteService.updateCliente(editingCliente.id, dataToSave);
+        toast({
+          title: "Successo",
+          description: "Cliente aggiornato con successo",
+        });
+      } else {
+        await clienteService.createCliente(dataToSave);
+        toast({
+          title: "Successo",
+          description: "Cliente creato con successo",
+        });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error("Errore salvataggio cliente:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare il cliente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
+
+    try {
+      await clienteService.deleteCliente(id);
+      toast({
+        title: "Successo",
+        description: "Cliente eliminato con successo",
+      });
+      loadData();
+    } catch (error) {
+      console.error("Errore eliminazione cliente:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il cliente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInsertIntoScadenzari = async (cliente: Cliente) => {
+    try {
+      const scadenzariAttivi: string[] = [];
+      const inserimenti: any[] = [];
+
+      const baseData = {
+        nominativo: cliente.ragione_sociale,
+        utente_operatore_id: cliente.utente_operatore_id,
+      };
+
+      if (cliente.flag_iva) {
+        scadenzariAttivi.push("IVA");
+        inserimenti.push(
+          supabase.from("tbscadiva").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_cu) {
+        scadenzariAttivi.push("CU");
+        inserimenti.push(
+          supabase.from("tbscadcu").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_bilancio) {
+        scadenzariAttivi.push("Bilanci");
+        inserimenti.push(
+          supabase.from("tbscadbilanci").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_fiscali) {
+        scadenzariAttivi.push("Fiscali");
+        inserimenti.push(
+          supabase.from("tbscadfiscali").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_lipe) {
+        scadenzariAttivi.push("LIPE");
+        inserimenti.push(
+          supabase.from("tbscadlipe").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_770) {
+        scadenzariAttivi.push("770");
+        inserimenti.push(
+          supabase.from("tbscad770").upsert({
+            ...baseData,
+            id: cliente.id,
+            utente_payroll_id: cliente.utente_payroll_id,
+            professionista_payroll_id: cliente.professionista_payroll_id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_esterometro) {
+        scadenzariAttivi.push("Esterometro");
+        inserimenti.push(
+          supabase.from("tbscadestero").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_ccgg) {
+        scadenzariAttivi.push("CCGG");
+        inserimenti.push(
+          supabase.from("tbscadccgg").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_proforma) {
+        scadenzariAttivi.push("Proforma");
+        inserimenti.push(
+          supabase.from("tbscadproforma").upsert({
+            ...baseData,
+            id: cliente.id,
+          }, { onConflict: "id" }).then()
+        );
+      }
+
+      if (cliente.flag_imu) {
+        scadenzariAttivi.push("IMU");
+        
+        const professionista = utenti.find(u => u.id === cliente.utente_professionista_id);
+        const operatore = utenti.find(u => u.id === cliente.utente_operatore_id);
+        
+        const promises = [
+          supabase.from("tbscadimu").upsert({
+            id: cliente.id,
+            nominativo: cliente.ragione_sociale,
+            professionista: professionista ? `${professionista.nome} ${professionista.cognome}` : null,
+            operatore: operatore ? `${operatore.nome} ${operatore.cognome}` : null,
+            acconto_imu: false,
+            acconto_dovuto: false,
+            acconto_comunicato: false,
+            data_com_acconto: null,
+            saldo_imu: false,
+            saldo_dovuto: false,
+            saldo_comunicato: false,
+            data_com_saldo: null,
+            dichiarazione_imu: false,
+            data_scad_dichiarazione: null,
+            dichiarazione_presentata: false,
+            data_presentazione: null,
+            note: null,
+            conferma_riga: false
+          }, { onConflict: "id" }).then()
+        ];
+        
+        inserimenti.push(...promises);
+      }
+
+      if (cliente.gestione_antiriciclaggio) {
+        scadenzariAttivi.push("Antiriciclaggio");
+      }
+
+      if (scadenzariAttivi.length === 0) {
+        toast({
+          title: "Attenzione",
+          description: "Nessuno scadenzario selezionato per questo cliente nell'anagrafica",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await Promise.all(inserimenti);
+
+      toast({
+        title: "Successo",
+        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(", ")}`,
+      });
+    } catch (error) {
+      console.error("Errore inserimento scadenzari:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inserire il cliente negli scadenzari",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddNew = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setFormData({
+      cod_cliente: cliente.cod_cliente || "",
+      ragione_sociale: cliente.ragione_sociale || "",
+      partita_iva: cliente.partita_iva || "",
+      codice_fiscale: cliente.codice_fiscale || "",
+      indirizzo: cliente.indirizzo || "",
+      cap: cliente.cap || "",
+      citta: cliente.citta || "",
+      provincia: cliente.provincia || "",
+      email: cliente.email || "",
+      tipo_cliente: cliente.tipo_cliente || "PERSONA_FISICA",
+      tipologia_cliente: (cliente.tipologia_cliente as "CL interno" | "CL esterno") || "",
+      attivo: cliente.attivo ?? true,
+      note: cliente.note || "",
+      utente_operatore_id: cliente.utente_operatore_id || "",
+      utente_professionista_id: cliente.utente_professionista_id || "",
+      utente_payroll_id: cliente.utente_payroll_id || "",
+      professionista_payroll_id: cliente.professionista_payroll_id || "",
+      contatto1_id: cliente.contatto1_id || "",
+      contatto2_id: cliente.contatto2_id || "",
+      tipo_prestazione_id: cliente.tipo_prestazione_id || "",
+      tipo_redditi: (cliente.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || "",
+      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
+      settore: (cliente.settore as "Fiscale" | "Lavoro" | "Fiscale & Lavoro") || "",
+      matricola_inps: cliente.matricola_inps || "",
+      pat_inail: cliente.pat_inail || "",
+      codice_ditta_ce: cliente.codice_ditta_ce || "",
+      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
+      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
+      rischio_ver_a: (cliente.rischio_ver_a as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
+      rischio_ver_b: (cliente.rischio_ver_b as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo") || "",
+      gg_ver_a: cliente.gg_ver_a || undefined,
+      gg_ver_b: cliente.gg_ver_b || undefined,
+      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : undefined,
+      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : undefined,
+      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : undefined,
+      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : undefined,
+      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
+      note_antiriciclaggio: cliente.note_antiriciclaggio || "",
+      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
+      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
+    });
+    
+    setScadenzari({
+      iva: cliente.flag_iva ?? false,
+      cu: cliente.flag_cu ?? false,
+      bilancio: cliente.flag_bilancio ?? false,
+      fiscali: cliente.flag_fiscali ?? false,
+      lipe: cliente.flag_lipe ?? false,
+      modello_770: cliente.flag_770 ?? false,
+      esterometro: cliente.flag_esterometro ?? false,
+      ccgg: cliente.flag_ccgg ?? false,
+      proforma: cliente.flag_proforma ?? false,
+      imu: cliente.flag_imu ?? false,
+    });
+    
+    setComunicazioni({
+      email_attiva: cliente.email_attiva ?? true,
+      ricevi_mailing_scadenze: cliente.ricevi_mailing_scadenze ?? true,
+      ricevi_newsletter: cliente.ricevi_newsletter ?? true,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setEditingCliente(null);
+    setFormData({
+      cod_cliente: "",
+      ragione_sociale: "",
+      partita_iva: "",
+      codice_fiscale: "",
+      indirizzo: "",
+      cap: "",
+      citta: "",
+      provincia: "",
+      email: "",
+      tipo_cliente: "PERSONA_FISICA",
+      tipologia_cliente: "",
+      attivo: true,
+      note: "",
+      utente_operatore_id: "",
+      utente_professionista_id: "",
+      utente_payroll_id: "",
+      professionista_payroll_id: "",
+      contatto1_id: "",
+      contatto2_id: "",
+      tipo_prestazione_id: "",
+      tipo_redditi: "",
+      cassetto_fiscale_id: "",
+      settore: "",
+      matricola_inps: "",
+      pat_inail: "",
+      codice_ditta_ce: "",
+      tipo_prestazione_a: "",
+      tipo_prestazione_b: "",
+      rischio_ver_a: "",
+      rischio_ver_b: "",
+      gg_ver_a: undefined,
+      gg_ver_b: undefined,
+      data_ultima_verifica_antiric: undefined,
+      scadenza_antiric: undefined,
+      data_ultima_verifica_b: undefined,
+      scadenza_antiric_b: undefined,
+      gestione_antiriciclaggio: false,
+      note_antiriciclaggio: "",
+      giorni_scad_ver_a: null,
+      giorni_scad_ver_b: null,
+    });
+    setScadenzari({
+      iva: true,
+      cu: true,
+      bilancio: true,
+      fiscali: true,
+      lipe: true,
+      modello_770: true,
+      esterometro: true,
+      ccgg: true,
+      proforma: true,
+      imu: true,
+    });
+    setComunicazioni({
+      email_attiva: true,
+      ricevi_mailing_scadenze: true,
+      ricevi_newsletter: true,
+    });
+  };
+
+  const handleRequestNewRiferimento = async (tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce", valore: string) => {
+    if (!valore.trim()) return;
+
+    const lista = tipo === "matricola_inps" ? matricoleInps : tipo === "pat_inail" ? patInail : codiciDittaCe;
+    const exists = lista.some(item => item.valore.toLowerCase() === valore.toLowerCase());
+
+    if (exists) {
+      if (tipo === "matricola_inps") {
+        setFormData({ ...formData, matricola_inps: valore });
+        setShowMatricolaDropdown(false);
+      } else if (tipo === "pat_inail") {
+        setFormData({ ...formData, pat_inail: valore });
+        setShowPatDropdown(false);
+      } else {
+        setFormData({ ...formData, codice_ditta_ce: valore });
+        setShowCodiceDropdown(false);
+      }
+      return;
+    }
+
+    setPendingRiferimento({ tipo, valore });
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmNewRiferimento = async () => {
+    if (!pendingRiferimento) return;
+
+    const { tipo, valore } = pendingRiferimento;
+
+    try {
+      const existingValue = await riferimentiValoriService.checkExists(tipo, valore);
+
+      if (existingValue) {
+        toast({
+          title: "ℹ️ Valore già esistente",
+          description: `Il valore "${existingValue.valore}" è già presente nell'elenco`,
+          variant: "default",
+        });
+
+        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+        
+        if (tipo === "matricola_inps") {
+          setMatricoleInps(updatedList);
+          setFormData({ ...formData, matricola_inps: existingValue.valore });
+          setShowMatricolaDropdown(false);
+        } else if (tipo === "pat_inail") {
+          setPatInail(updatedList);
+          setFormData({ ...formData, pat_inail: existingValue.valore });
+          setShowPatDropdown(false);
+        } else if (tipo === "codice_ditta_ce") {
+          setCodiciDittaCe(updatedList);
+          setFormData({ ...formData, codice_ditta_ce: existingValue.valore });
+          setShowCodiceDropdown(false);
+        }
+
+        setShowConfirmDialog(false);
+        setPendingRiferimento(null);
+        return;
+      }
+
+      const newValue = await riferimentiValoriService.createValore(tipo, valore);
+
+      if (newValue) {
+        toast({
+          title: "✅ Successo",
+          description: `${tipo === "matricola_inps" ? "Matricola INPS" : tipo === "pat_inail" ? "Pat INAIL" : "Codice Ditta CE"} aggiunto con successo`,
+        });
+
+        const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+        
+        if (tipo === "matricola_inps") {
+          setMatricoleInps(updatedList);
+          setFormData({ ...formData, matricola_inps: newValue.valore });
+          setShowMatricolaDropdown(false);
+        } else if (tipo === "pat_inail") {
+          setPatInail(updatedList);
+          setFormData({ ...formData, pat_inail: newValue.valore });
+          setShowPatDropdown(false);
+        } else if (tipo === "codice_ditta_ce") {
+          setCodiciDittaCe(updatedList);
+          setFormData({ ...formData, codice_ditta_ce: newValue.valore });
+          setShowCodiceDropdown(false);
+        }
+      }
+    } catch (error: any) {
+      console.error("Errore durante l'inserimento del riferimento:", error);
+
+      if (error.message?.includes("duplicate key") || error.message?.includes("unique constraint") || error.code === "23505") {
+        toast({
+          title: "⚠️ Valore già esistente",
+          description: `Il valore "${valore}" è già presente nell'elenco`,
+          variant: "default",
+        });
+
+        try {
+          const updatedList = await riferimentiValoriService.getValoriByTipo(tipo);
+          
+          if (tipo === "matricola_inps") {
+            setMatricoleInps(updatedList);
+            setFormData({ ...formData, matricola_inps: valore });
+            setShowMatricolaDropdown(false);
+          } else if (tipo === "pat_inail") {
+            setPatInail(updatedList);
+            setFormData({ ...formData, pat_inail: valore });
+            setShowPatDropdown(false);
+          } else if (tipo === "codice_ditta_ce") {
+            setCodiciDittaCe(updatedList);
+            setFormData({ ...formData, codice_ditta_ce: valore });
+            setShowCodiceDropdown(false);
+          }
+        } catch (reloadError) {
+          console.error("Errore durante il ricaricamento della lista:", reloadError);
+        }
+      } else {
+        toast({
+          title: "❌ Errore",
+          description: "Impossibile salvare il valore. Riprova.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setShowConfirmDialog(false);
+      setPendingRiferimento(null);
+    }
+  };
+
+  const handleCancelNewRiferimento = () => {
+    setShowConfirmDialog(false);
+    setPendingRiferimento(null);
+  };
+
+  const handleDeleteRiferimentoValore = async (id: string, tipo: "matricola_inps" | "pat_inail" | "codice_ditta_ce") => {
+    try {
+      await riferimentiValoriService.deleteValore(id);
+      
+      if (tipo === "matricola_inps") {
+        setMatricoleInps(matricoleInps.filter(m => m.id !== id));
+      } else if (tipo === "pat_inail") {
+        setPatInail(patInail.filter(p => p.id !== id));
+      } else {
+        setCodiciDittaCe(codiciDittaCe.filter(c => c.id !== id));
+      }
+
+      toast({
+        title: "Successo",
+        description: "Valore eliminato con successo",
+      });
+    } catch (error) {
+      console.error("Errore eliminazione valore:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il valore",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["Ragione Sociale", "P.IVA", "Codice Fiscale", "Email", "Città", "Stato"];
+    const rows = filteredClienti.map((c) => [
+      c.ragione_sociale,
+      c.partita_iva,
+      c.codice_fiscale,
+      c.email,
+      c.citta,
+      c.attivo ? "Attivo" : "Inattivo",
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clienti.csv";
+    a.click();
+  };
 
   const downloadTemplate = () => {
     const headers = [
-      "Tipo Cliente",              // 0
-      "Tipologia Cliente",         // 1
-      "Settore",                   // 2
-      "Ragione Sociale",           // 3
-      "Partita IVA",               // 4
-      "Codice Fiscale",            // 5
-      "Indirizzo",                 // 6
-      "CAP",                       // 7
-      "Città",                     // 8
-      "Provincia",                 // 9
-      "Email",                     // 10
-      "Attivo",                    // 11
-      "Note",                      // 12
-      "Utente Fiscale",            // 13
-      "Professionista Fiscale",    // 14
-      "Utente Payroll",            // 15
-      "Professionista Payroll",    // 16
-      "Contatto 1",                // 17
-      "Contatto 2",                // 18
-      "Tipo Prestazione",          // 19
-      "Tipo Redditi"               // 20
+      "Tipo Cliente",
+      "Tipologia Cliente",
+      "Settore",
+      "Ragione Sociale",
+      "Partita IVA",
+      "Codice Fiscale",
+      "Indirizzo",
+      "CAP",
+      "Città",
+      "Provincia",
+      "Email",
+      "Attivo",
+      "Note",
+      "Utente Fiscale",
+      "Professionista Fiscale",
+      "Utente Payroll",
+      "Professionista Payroll",
+      "Contatto 1",
+      "Contatto 2",
+      "Tipo Prestazione",
+      "Tipo Redditi"
     ];
 
     const exampleRows = [
       [
-        "Persona fisica",          // Tipo Cliente
-        "Interno",                 // Tipologia Cliente
-        "Fiscale",                 // Settore
-        "MARIO ROSSI SRL",         // Ragione Sociale
-        "01234567890",             // P.IVA
-        "RSSMRA80A01H501U",        // CF
-        "Via Roma 1",              // Indirizzo
-        "00100",                   // CAP
-        "Roma",                    // Città
-        "RM",                      // Provincia
-        "info@mariorossi.it",      // Email
-        "VERO",                    // Attivo
-        "Note varie...",           // Note
-        "",                        // Utente Fiscale
-        "",                        // Professionista Fiscale
-        "",                        // Utente Payroll
-        "",                        // Professionista Payroll
-        "",                        // Contatto 1
-        "",                        // Contatto 2
-        "",                        // Tipo Prestazione
-        "USC"                      // Tipo Redditi
+        "Persona fisica",
+        "Interno",
+        "Fiscale",
+        "ESEMPIO SRL",
+        "01234567890",
+        "01234567890",
+        "Via Roma 1",
+        "00100",
+        "Roma",
+        "RM",
+        "info@esempio.it",
+        "VERO",
+        "Note di esempio",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "USC"
       ]
     ];
 
@@ -403,7 +1058,7 @@ type PendingRiferimento = {
 
     toast({
       title: "Template scaricato",
-      description: "Compila il file CSV seguendo l'ordine esatto delle colonne."
+      description: "Compila il file CSV seguendo l'esempio fornito. Lascia vuoti i campi non obbligatori se non disponibili."
     });
   };
 
@@ -433,25 +1088,152 @@ type PendingRiferimento = {
     return false;
   };
 
-  const handleEditCliente = (cliente: Cliente) => {
-    setEditingCliente(cliente);
-    setShowDialog(true);
-    if (cliente) {
-      form.reset({
-        cod_cliente: cliente.cod_cliente || '',
-        tipo_cliente: cliente.tipo_cliente,
-        tipologia_cliente: cliente.tipologia_cliente ?? undefined,
-        settore: cliente.settore ?? undefined,
-        ragione_sociale: cliente.ragione_sociale,
-        partita_iva: cliente.partita_iva,
-        codice_fiscale: cliente.codice_fiscale,
-        indirizzo: cliente.indirizzo,
-        cap: cliente.cap,
-        citta: cliente.citta,
-        provincia: cliente.provincia,
-        email: cliente.email,
-        attivo: cliente.attivo,
-        note: cliente.note || ''
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      let rows: any[] = [];
+
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        rows = jsonData.slice(1).map((row: any) => {
+          if (Array.isArray(row)) {
+            return row;
+          }
+          return [];
+        });
+      } else {
+        const text = await file.text();
+        const lines = text.split("\n");
+        rows = lines.slice(1).map(line => {
+          const delimiter = line.includes(";") ? ";" : ",";
+          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+        });
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const values = rows[i];
+        
+        if (!values || values.length === 0 || !values[0]) continue;
+
+        const tipoCliente = (values[0] || "").toString().trim();
+        const tipologiaCliente = (values[1] || "").toString().trim();
+        const settore = (values[2] || "").toString().trim();
+        const ragioneSociale = (values[3] || "").toString().trim();
+
+        if (!tipoCliente || !tipologiaCliente || !settore || !ragioneSociale) {
+          errors.push(`Riga ${i + 2}: Campi obbligatori mancanti`);
+          errorCount++;
+          continue;
+        }
+
+        const findUserId = (name: string) => {
+          if (!name) return null;
+          const user = utenti.find(u => 
+            `${u.nome} ${u.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
+          );
+          return user?.id || null;
+        };
+
+        const findContattoId = (name: string) => {
+          if (!name) return null;
+          const contatto = contatti.find(c => 
+            `${c.nome} ${c.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
+          );
+          return contatto?.id || null;
+        };
+
+        const findPrestazioneId = (desc: string) => {
+          if (!desc) return null;
+          const prestazione = prestazioni.find(p => 
+            p.descrizione?.toLowerCase().trim() === desc.toLowerCase().trim()
+          );
+          return prestazione?.id || null;
+        };
+
+        const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
+        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
+
+        const clienteData: any = {
+          tipo_cliente: tipoCliente,
+          tipologia_cliente: tipologiaCliente,
+          settore: settore,
+          ragione_sociale: ragioneSociale,
+          attivo: attivo,
+        };
+
+        if (values[4]) clienteData.partita_iva = values[4].toString().trim();
+        if (values[5]) clienteData.codice_fiscale = values[5].toString().trim();
+        if (values[6]) clienteData.indirizzo = values[6].toString().trim();
+        if (values[7]) clienteData.cap = values[7].toString().trim();
+        if (values[8]) clienteData.citta = values[8].toString().trim();
+        if (values[9]) clienteData.provincia = values[9].toString().trim();
+        if (values[10]) clienteData.email = values[10].toString().trim();
+        if (values[12]) clienteData.note = values[12].toString().trim();
+        
+        const utenteFiscale = findUserId(values[13]?.toString().trim());
+        if (utenteFiscale) clienteData.utente_operatore_id = utenteFiscale;
+        
+        const profFiscale = findUserId(values[14]?.toString().trim());
+        if (profFiscale) clienteData.utente_professionista_id = profFiscale;
+        
+        const utentePayroll = findUserId(values[15]?.toString().trim());
+        if (utentePayroll) clienteData.utente_payroll_id = utentePayroll;
+        
+        const profPayroll = findUserId(values[16]?.toString().trim());
+        if (profPayroll) clienteData.professionista_payroll_id = profPayroll;
+        
+        const contatto1 = findContattoId(values[17]?.toString().trim());
+        if (contatto1) clienteData.contatto1_id = contatto1;
+        
+        const contatto2 = findContattoId(values[18]?.toString().trim());
+        if (contatto2) clienteData.contatto2_id = contatto2;
+        
+        const prestazione = findPrestazioneId(values[19]?.toString().trim());
+        if (prestazione) clienteData.tipo_prestazione_id = prestazione;
+        
+        if (values[20]) clienteData.tipo_redditi = values[20].toString().trim();
+
+        try {
+          await clienteService.createCliente(clienteData);
+          successCount++;
+        } catch (error: any) {
+          errorCount++;
+          const errorMsg = error.message || "Errore sconosciuto";
+          errors.push(`Riga ${i + 2}: ${errorMsg}`);
+          console.error(`Errore importazione riga ${i + 2}:`, error);
+        }
+      }
+
+      if (errors.length > 0 && errors.length <= 10) {
+        console.error("Primi 10 errori importazione:", errors.slice(0, 10));
+      }
+
+      toast({
+        title: "Importazione completata",
+        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
+        variant: successCount > 0 ? "default" : "destructive",
+      });
+
+      loadData();
+      
+      event.target.value = "";
+    } catch (error) {
+      console.error("Errore importazione file:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
+        variant: "destructive",
       });
     }
   };
@@ -472,23 +1254,87 @@ type PendingRiferimento = {
       <div className="mb-8">
         <div className="flex justify-between items-center mb-2">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Anagrafica Clienti</h1>
+            <h1 className="text-3xl font-bold">Gestione Clienti</h1>
             <p className="text-muted-foreground mt-1">
               Anagrafica completa e gestione scadenzari
             </p>
           </div>
-          
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => document.getElementById('file-upload')?.click()}>
-              <Upload className="mr-2 h-4 w-4" />
-              Importa CSV
-            </Button>
-            <Button variant="outline" onClick={downloadTemplate}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Scarica Template
-            </Button>
-            <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" />
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Importa Excel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+                <DialogHeader>
+                  <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
+                        <ol className="list-decimal list-inside space-y-1 text-xs">
+                          <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Altro)</li>
+                          <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
+                          <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
+                          <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
+                          <li><strong>Partita IVA</strong> - Opzionale</li>
+                          <li><strong>Codice Fiscale</strong> - Opzionale</li>
+                          <li><strong>Indirizzo</strong> - Opzionale</li>
+                          <li><strong>CAP</strong> - Opzionale</li>
+                          <li><strong>Città</strong> - Opzionale</li>
+                          <li><strong>Provincia</strong> - Opzionale</li>
+                          <li><strong>Email</strong> - Opzionale</li>
+                          <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
+                          <li><strong>Note</strong> - Opzionale</li>
+                          <li><strong>Utente Fiscale</strong> - Opzionale (nome utente dal sistema)</li>
+                          <li><strong>Professionista Fiscale</strong> - Opzionale (nome professionista dal sistema)</li>
+                          <li><strong>Utente Payroll</strong> - Opzionale (nome utente dal sistema)</li>
+                          <li><strong>Professionista Payroll</strong> - Opzionale (nome professionista dal sistema)</li>
+                          <li><strong>Contatto 1</strong> - Opzionale (nome contatto dalla rubrica)</li>
+                          <li><strong>Contatto 2</strong> - Opzionale (nome contatto dalla rubrica)</li>
+                          <li><strong>Tipo Prestazione</strong> - Opzionale (descrizione dalla tabella prestazioni)</li>
+                          <li><strong>Tipo Redditi</strong> - Opzionale (USC/USP/ENC/UPF/730)</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={downloadTemplate}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Scarica Template CSV
+                  </Button>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="csv-file-clienti">Carica File Excel/CSV</Label>
+                    <Input
+                      id="csv-file-clienti"
+                      type="file"
+                      accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCsvFile(file);
+                          handleImportCSV(e);
+                        }
+                      }}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleAddNew} className="gap-2">
+              <Plus className="h-4 w-4" />
               Nuovo Cliente
             </Button>
           </div>
@@ -1045,11 +1891,11 @@ type PendingRiferimento = {
                       <SelectValue placeholder="Seleziona tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USC">USC - Società di Capitali</SelectItem>
-                      <SelectItem value="USP">USP - Società di Persone</SelectItem>
-                      <SelectItem value="ENC">ENC - Ente Non Commerciale</SelectItem>
-                      <SelectItem value="UPF">UPF - Persona Fisica</SelectItem>
-                      <SelectItem value="730">730 - Modello 730</SelectItem>
+                      <SelectItem value="USC">USC</SelectItem>
+                      <SelectItem value="USP">USP</SelectItem>
+                      <SelectItem value="ENC">ENC</SelectItem>
+                      <SelectItem value="UPF">UPF</SelectItem>
+                      <SelectItem value="730">730</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1116,7 +1962,7 @@ type PendingRiferimento = {
             </TabsContent>
 
             <TabsContent value="antiriciclaggio" className="space-y-6 pt-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <Label className="flex items-center gap-2 font-medium text-blue-900 cursor-pointer">
                   <Input
                     type="checkbox"
