@@ -1146,8 +1146,15 @@ export default function ClientiPage() {
         };
 
         try {
-          await clienteService.createCliente(clienteData as any);
-          successCount++;
+          const { data, error } = await supabase.from("tbclienti").insert(clienteData);
+
+          if (error) {
+            console.error("Errore riga " + (i + 2) + ":", error);
+            console.error("Dati che hanno causato l'errore:", clienteData);
+            errors.push(`Riga ${i + 2}: ${error.message}`);
+          } else {
+            successCount++;
+          }
         } catch (error: any) {
           errorCount++;
           const errorMsg = error.message || "Errore sconosciuto";
