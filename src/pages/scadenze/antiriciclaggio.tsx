@@ -37,6 +37,7 @@ export default function Antiriciclaggio() {
           *,
           utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey(*)
         `)
+        .eq("gestione_antiriciclaggio", true)
         .order("ragione_sociale");
 
       if (error) throw error;
