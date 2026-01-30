@@ -62,7 +62,7 @@ export default function GestioneUtentiPage() {
     tipo_utente: "User" as "Admin" | "User",
     ruolo_operatore_id: "",
     attivo: true,
-    settore: "" as "Fiscale" | "Lavoro" | "Fiscale & lavoro" | "",
+    settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
     responsabile: false
   });
 
@@ -432,7 +432,7 @@ export default function GestioneUtentiPage() {
       tipo_utente: utente.tipo_utente as "Admin" | "User",
       ruolo_operatore_id: utente.ruolo_operatore_id || "",
       attivo: utente.attivo ?? true,
-      settore: (utente.settore as "Fiscale" | "Lavoro" | "Fiscale & lavoro") || "",
+      settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false
     });
     setDialogOpen(true);
@@ -665,7 +665,7 @@ export default function GestioneUtentiPage() {
                 <Label htmlFor="settore">Settore</Label>
                 <Select
                   value={formData.settore}
-                  onValueChange={(value: "Fiscale" | "Lavoro" | "Fiscale & lavoro") => 
+                  onValueChange={(value: "Fiscale" | "Lavoro" | "Consulenza") => 
                     setFormData({ ...formData, settore: value })
                   }
                 >
@@ -675,7 +675,7 @@ export default function GestioneUtentiPage() {
                   <SelectContent>
                     <SelectItem value="Fiscale">Fiscale</SelectItem>
                     <SelectItem value="Lavoro">Lavoro</SelectItem>
-                    <SelectItem value="Fiscale & lavoro">Fiscale & Lavoro</SelectItem>
+                    <SelectItem value="Consulenza">Consulenza</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
