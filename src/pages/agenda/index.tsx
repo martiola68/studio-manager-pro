@@ -346,6 +346,16 @@ export default function AgendaPage() {
     setFormData(prev => ({ ...prev, partecipanti: ids }));
   };
 
+  const handleSelezioneConsulenza = () => {
+    const ids = utenti.filter(u => u.settore === "Consulenza").map(u => u.id);
+    setFormData(prev => ({ ...prev, partecipanti: ids }));
+  };
+
+  const handleSelezioneTutti = () => {
+    const ids = utenti.map(u => u.id);
+    setFormData(prev => ({ ...prev, partecipanti: ids }));
+  };
+
   const getEventColor = (evento: EventoWithRelations) => {
     if (evento.evento_generico) return "#3B82F6"; // Blu
     if (evento.in_sede) return "#10B981"; // Verde
@@ -918,6 +928,8 @@ export default function AgendaPage() {
                <div className="flex gap-2 mb-2">
                  <Button type="button" variant="outline" size="sm" onClick={() => handleSelezioneSettore('Lavoro')}>Settore Lavoro</Button>
                  <Button type="button" variant="outline" size="sm" onClick={() => handleSelezioneSettore('Fiscale')}>Settore Fiscale</Button>
+                 <Button type="button" variant="outline" size="sm" onClick={handleSelezioneConsulenza}>Settore Consulenza</Button>
+                 <Button type="button" variant="outline" size="sm" onClick={handleSelezioneTutti}>Tutti</Button>
                  <Button type="button" variant="outline" size="sm" onClick={() => setFormData({...formData, partecipanti: []})}>Deseleziona Tutti</Button>
                </div>
                <ScrollArea className="h-[150px] border rounded p-2">
