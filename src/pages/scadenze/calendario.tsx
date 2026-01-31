@@ -204,10 +204,17 @@ export default function CalendarioScadenzePage() {
       if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
       if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
 
+      console.log("🔍 DEBUG - Settori selezionati nella scadenza:", {
+        settore_fiscale: tipoScadenza.settore_fiscale,
+        settore_lavoro: tipoScadenza.settore_lavoro,
+        settore_consulenza: tipoScadenza.settore_consulenza,
+        settori_array: settori,
+      });
+
       if (settori.length === 0) {
         toast({
           title: "Nessun settore",
-          description: "Questa scadenza non ha settori assegnati",
+          description: "Questa scadenza non ha settori assegnati. Vai in Impostazioni > Tipi Scadenze e spunta almeno una checkbox (Fiscale, Lavoro o Consulenza).",
           variant: "destructive",
         });
         return;
@@ -220,6 +227,43 @@ export default function CalendarioScadenzePage() {
         settori: settori,
         responsabile: `${currentUser.nome} ${currentUser.cognome}`,
       });
+
+      // Query con log dettagliati
+      console.log("🔍 DEBUG - Query Supabase:", {
+        table: "tbutenti",
+        filter: `settore IN [${settori.join(", ")}]`,
+        where: "attivo = true",
+      });
+
+      const { data: utenti, error: utentiError } = await supabase
+        .from("tbutenti")
+        .select("id, email, nome, cognome, settore")
+        .eq("attivo", true)
+        .in("settore", settori);
+
+      console.log("🔍 DEBUG - Risultato query:", {
+        error: utentiError,
+        utenti_trovati: utenti?.length || 0,
+        utenti: utenti,
+      });
+
+      if (utentiError) {
+        console.error("❌ Errore query utenti:", utentiError);
+        throw utentiError;
+      }
+
+      if (!utenti || utenti.length === 0) {
+        console.warn("⚠️ Nessun utente trovato per i settori:", settori);
+        toast({
+          title: "Nessun utente trovato",
+          description: `Nessun utente attivo trovato per i settori: ${settoreDisplay}. Verifica in Impostazioni > Utenti che ci siano utenti con questi settori.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log(`✅ Trovati ${utenti.length} utenti:`, utenti.map(u => `${u.nome} ${u.cognome} (${u.settore})`));
+      console.log(`📧 Invio alert a ${utenti.length} utenti dei settori: ${settoreDisplay}`);
 
       const { data: result, error: functionError } = await supabase.functions.invoke(
         "send-scadenza-alert",
