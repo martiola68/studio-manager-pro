@@ -198,20 +198,26 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
+      console.warn("════════════════════════════════════════════════");
+      console.warn("🔔 INIZIO INVIO ALERT - DEBUG DETTAGLIATO");
+      console.warn("════════════════════════════════════════════════");
+
       // Determina i settori attivi
       const settori: string[] = [];
       if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
       if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
       if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
 
-      console.log("🔍 DEBUG - Settori selezionati nella scadenza:", {
+      console.warn("🔍 STEP 1 - SETTORI SELEZIONATI:", {
         settore_fiscale: tipoScadenza.settore_fiscale,
         settore_lavoro: tipoScadenza.settore_lavoro,
         settore_consulenza: tipoScadenza.settore_consulenza,
         settori_array: settori,
+        lunghezza: settori.length
       });
 
       if (settori.length === 0) {
+        console.error("❌ ERRORE: Nessun settore selezionato!");
         toast({
           title: "Nessun settore",
           description: "Questa scadenza non ha settori assegnati. Vai in Impostazioni > Tipi Scadenze e spunta almeno una checkbox (Fiscale, Lavoro o Consulenza).",
@@ -221,18 +227,14 @@ export default function CalendarioScadenzePage() {
       }
 
       const settoreDisplay = settori.join(" & ");
+      console.warn("📋 Settore display:", settoreDisplay);
 
-      console.log("🔔 Invio alert per scadenza:", {
-        nome: tipoScadenza.nome,
-        settori: settori,
-        responsabile: `${currentUser.nome} ${currentUser.cognome}`,
-      });
-
-      // Query con log dettagliati
-      console.log("🔍 DEBUG - Query Supabase:", {
+      console.warn("🔍 STEP 2 - QUERY UTENTI");
+      console.warn("Query Supabase:", {
         table: "tbutenti",
-        filter: `settore IN [${settori.join(", ")}]`,
-        where: "attivo = true",
+        select: "id, email, nome, cognome, settore",
+        where_attivo: true,
+        where_settore_IN: settori
       });
 
       const { data: utenti, error: utentiError } = await supabase
@@ -241,19 +243,22 @@ export default function CalendarioScadenzePage() {
         .eq("attivo", true)
         .in("settore", settori);
 
-      console.log("🔍 DEBUG - Risultato query:", {
-        error: utentiError,
-        utenti_trovati: utenti?.length || 0,
-        utenti: utenti,
-      });
+      console.warn("🔍 STEP 3 - RISULTATO QUERY:");
+      console.warn("Error:", utentiError);
+      console.warn("Utenti trovati:", utenti?.length || 0);
+      if (utenti && utenti.length > 0) {
+        console.table(utenti);
+      }
 
       if (utentiError) {
-        console.error("❌ Errore query utenti:", utentiError);
+        console.error("❌ ERRORE QUERY DATABASE:", utentiError);
         throw utentiError;
       }
 
       if (!utenti || utenti.length === 0) {
-        console.warn("⚠️ Nessun utente trovato per i settori:", settori);
+        console.error("❌ NESSUN UTENTE TROVATO!");
+        console.error("Settori cercati:", settori);
+        console.error("Verifica che in 'Impostazioni > Utenti' ci siano utenti attivi con settore:", settori.join(" o "));
         toast({
           title: "Nessun utente trovato",
           description: `Nessun utente attivo trovato per i settori: ${settoreDisplay}. Verifica in Impostazioni > Utenti che ci siano utenti con questi settori.`,
@@ -262,8 +267,17 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
-      console.log(`✅ Trovati ${utenti.length} utenti:`, utenti.map(u => `${u.nome} ${u.cognome} (${u.settore})`));
-      console.log(`📧 Invio alert a ${utenti.length} utenti dei settori: ${settoreDisplay}`);
+      console.warn(`✅ TROVATI ${utenti.length} UTENTI:`);
+      utenti.forEach(u => console.warn(`  - ${u.nome} ${u.cognome} (${u.settore})`));
+
+      console.warn("🔍 STEP 4 - INVOCAZIONE EDGE FUNCTION");
+      console.warn("Parametri:", {
+        tipoScadenzaId: tipoScadenza.id,
+        settori: settori,
+        responsabileEmail: currentUser.email,
+        scadenzaNome: tipoScadenza.nome,
+        numeroUtenti: utenti.length
+      });
 
       const { data: result, error: functionError } = await supabase.functions.invoke(
         "send-scadenza-alert",
@@ -281,30 +295,27 @@ export default function CalendarioScadenzePage() {
         }
       );
 
-      console.log("📬 Risposta Edge Function RAW:", { result, error: functionError });
-      console.log("📊 Dettagli result:", JSON.stringify(result, null, 2));
-      
-      if (result) {
-        console.log("✅ Result.success:", result.success);
-        console.log("📧 Email inviate (sent):", result.sent);
-        console.log("❌ Email fallite (failed):", result.failed);
-        console.log("📊 Totale (total):", result.total);
-        console.log("💬 Messaggio:", result.message);
-        console.log("🔍 Dettagli errori:", result.details);
-      }
+      console.warn("🔍 STEP 5 - RISPOSTA EDGE FUNCTION:");
+      console.warn("Result:", result);
+      console.warn("Error:", functionError);
 
       if (functionError) {
-        console.error("❌ Errore Edge Function:", functionError);
+        console.error("❌ ERRORE EDGE FUNCTION:", functionError);
         throw functionError;
       }
 
       if (!result) {
+        console.error("❌ Nessuna risposta dalla Edge Function");
         throw new Error("Nessuna risposta dalla Edge Function");
       }
 
       if (!result.success) {
+        console.error("❌ Edge Function ha restituito success=false:", result);
         throw new Error(result.message || result.error || "Errore sconosciuto nell'invio");
       }
+
+      console.warn("✅ SUCCESS! Email inviate:", result.sent);
+      console.warn("════════════════════════════════════════════════");
 
       const annoCorrente = new Date().getFullYear();
       await supabase.from("tbtipi_scadenze_alert").insert({
@@ -320,7 +331,10 @@ export default function CalendarioScadenzePage() {
 
       await loadAlertsInviati();
     } catch (error) {
-      console.error("❌ Errore completo invio alert:", error);
+      console.error("════════════════════════════════════════════════");
+      console.error("❌ ERRORE COMPLETO INVIO ALERT:");
+      console.error(error);
+      console.error("════════════════════════════════════════════════");
       toast({
         title: "Errore invio alert",
         description: error instanceof Error ? error.message : "Impossibile inviare l'alert. Controlla i logs della console.",
