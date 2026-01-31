@@ -159,10 +159,18 @@ export default function TipiScadenzePage() {
 
   const handleInviaAlert = async (tipoScadenza: TipoScadenza) => {
     try {
+      // Determina quali settori sono attivi
       const settori: string[] = [];
       if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
       if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
       if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
+
+      console.log("🔍 DEBUG - Settori selezionati nella scadenza:", {
+        settore_fiscale: tipoScadenza.settore_fiscale,
+        settore_lavoro: tipoScadenza.settore_lavoro,
+        settore_consulenza: tipoScadenza.settore_consulenza,
+        settori_array: settori,
+      });
 
       if (settori.length === 0) {
         toast({
@@ -173,25 +181,44 @@ export default function TipiScadenzePage() {
         return;
       }
 
+      // Recupera utenti dei settori selezionati
+      console.log("🔍 DEBUG - Query Supabase:", {
+        table: "tbutenti",
+        filter: `settore IN [${settori.join(", ")}]`,
+        where: "email != ''",
+      });
+
       const { data: utenti, error: utentiError } = await supabase
         .from("tbutenti")
         .select("email, nome, cognome, settore")
         .in("settore", settori)
         .neq("email", "");
 
-      if (utentiError) throw utentiError;
+      console.log("🔍 DEBUG - Risultato query:", {
+        error: utentiError,
+        utenti_trovati: utenti?.length || 0,
+        utenti: utenti,
+      });
+
+      if (utentiError) {
+        console.error("❌ Errore query utenti:", utentiError);
+        throw utentiError;
+      }
 
       if (!utenti || utenti.length === 0) {
+        console.warn("⚠️ Nessun utente trovato per i settori:", settori);
         toast({
-          title: "Nessun utente",
-          description: "Nessun utente trovato per i settori selezionati",
+          title: "Nessun utente trovato",
+          description: `Nessun utente con email trovato per i settori: ${settori.join(", ")}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log(`Invio alert a ${utenti.length} utenti dei settori: ${settori.join(", ")}`);
-      
+      console.log(`✅ Trovati ${utenti.length} utenti:`, utenti);
+      console.log(`📧 Invio alert a ${utenti.length} utenti dei settori: ${settori.join(", ")}`);
+
+      // Registra l'invio nel database
       const annoCorrente = new Date().getFullYear();
       const { error: insertError } = await supabase
         .from("tbtipi_scadenze_alert")
@@ -201,19 +228,24 @@ export default function TipiScadenzePage() {
           data_invio: new Date().toISOString(),
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("❌ Errore inserimento alert:", insertError);
+        throw insertError;
+      }
+
+      console.log("✅ Alert registrato nel database");
 
       toast({
         title: "Alert inviato",
-        description: `Email di avvertimento inviata a ${utenti.length} utenti`,
+        description: `Email di avvertimento inviata a ${utenti.length} utenti dei settori: ${settori.join(", ")}`,
       });
 
       await loadAlertsInviati();
     } catch (error) {
-      console.error("Errore invio alert:", error);
+      console.error("❌ Errore invio alert:", error);
       toast({
-        title: "Errore",
-        description: "Impossibile inviare l'alert",
+        title: "Errore invio alert",
+        description: error instanceof Error ? error.message : "Errore sconosciuto",
         variant: "destructive",
       });
     }
