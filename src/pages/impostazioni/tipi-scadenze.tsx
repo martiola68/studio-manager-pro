@@ -132,6 +132,8 @@ export default function TipiScadenzePage() {
         description: "Impossibile caricare i tipi di scadenze",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
