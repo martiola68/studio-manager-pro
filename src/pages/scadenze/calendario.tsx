@@ -364,20 +364,44 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
+      console.warn("════════════════════════════════════════════════");
+      console.warn("📋 INIZIO CREAZIONE PROMEMORIA - DEBUG DETTAGLIATO");
+      console.warn("════════════════════════════════════════════════");
+
       // Determina i settori attivi
       const settori: string[] = [];
       if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
       if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
       if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
 
+      console.warn("🔍 STEP 1 - SETTORI SELEZIONATI:", {
+        settore_fiscale: tipoScadenza.settore_fiscale,
+        settore_lavoro: tipoScadenza.settore_lavoro,
+        settore_consulenza: tipoScadenza.settore_consulenza,
+        settori_array: settori,
+        lunghezza: settori.length
+      });
+
       if (settori.length === 0) {
+        console.error("❌ ERRORE: Nessun settore selezionato!");
         toast({
           title: "Nessun settore",
-          description: "Questa scadenza non ha settori assegnati",
+          description: "Questa scadenza non ha settori assegnati. Vai in Impostazioni > Tipi Scadenze e spunta almeno una checkbox (Fiscale, Lavoro o Consulenza).",
           variant: "destructive",
         });
         return;
       }
+
+      const settoreDisplay = settori.join(" & ");
+      console.warn("📋 Settore display:", settoreDisplay);
+
+      console.warn("🔍 STEP 2 - QUERY UTENTI");
+      console.warn("Query Supabase:", {
+        table: "tbutenti",
+        select: "id, nome, cognome, email, settore",
+        where_attivo: true,
+        where_settore_IN: settori
+      });
 
       // Recupera utenti dei settori specificati
       const { data: utenti, error: utentiError } = await supabase
@@ -386,61 +410,95 @@ export default function CalendarioScadenzePage() {
         .eq("attivo", true)
         .in("settore", settori);
 
-      if (utentiError) throw utentiError;
+      console.warn("🔍 STEP 3 - RISULTATO QUERY:");
+      console.warn("Error:", utentiError);
+      console.warn("Utenti trovati:", utenti?.length || 0);
+      if (utenti && utenti.length > 0) {
+        console.table(utenti);
+      }
+
+      if (utentiError) {
+        console.error("❌ ERRORE QUERY DATABASE:", utentiError);
+        throw utentiError;
+      }
 
       if (!utenti || utenti.length === 0) {
+        console.error("❌ NESSUN UTENTE TROVATO!");
+        console.error("Settori cercati:", settori);
+        console.error("Verifica che in 'Impostazioni > Utenti' ci siano utenti attivi con settore:", settori.join(" o "));
         toast({
-          title: "Nessun utente",
-          description: `Nessun utente attivo trovato per i settori: ${settori.join(", ")}`,
+          title: "Nessun utente trovato",
+          description: `Nessun utente attivo trovato per i settori: ${settoreDisplay}. Verifica in Impostazioni > Utenti che ci siano utenti con questi settori.`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log(`Creazione promemoria per ${utenti.length} utenti dei settori ${settori.join(", ")}`);
+      console.warn(`✅ TROVATI ${utenti.length} UTENTI:`);
+      utenti.forEach(u => console.warn(`  - ${u.nome} ${u.cognome} (${u.settore})`));
+
+      console.warn("🔍 STEP 4 - CREAZIONE PROMEMORIA");
 
       // Crea un promemoria per ogni utente del settore
-      const dataInserimento = new Date().toISOString().split("T")[0];
-      const dataScadenza = tipoScadenza.data_scadenza;
       const oggi = new Date();
-      const scadenza = new Date(dataScadenza);
+      const scadenza = new Date(tipoScadenza.data_scadenza);
       const giorniScadenza = Math.ceil((scadenza.getTime() - oggi.getTime()) / (1000 * 60 * 60 * 24));
 
       let promemoriaCreati = 0;
+      let erroriCreazione = 0;
+
       for (const utente of utenti) {
         try {
+          console.warn(`📝 Creazione promemoria per: ${utente.nome} ${utente.cognome} (${utente.settore})`);
+          
           await promemoriaService.createPromemoria({
             tipo_promemoria_id: "059347f7-f02f-4d93-89ec-b3af410e5766",
             titolo: tipoScadenza.nome,
             descrizione: tipoScadenza.descrizione || `Scadenza: ${tipoScadenza.nome}`,
             data_inserimento: new Date().toISOString().split("T")[0],
             data_scadenza: tipoScadenza.data_scadenza,
-            giorni_scadenza: Math.ceil(
-              (new Date(tipoScadenza.data_scadenza).getTime() - new Date().getTime()) /
-                (1000 * 60 * 60 * 24)
-            ),
+            giorni_scadenza: giorniScadenza,
             stato: "Aperto",
             priorita: "Alta",
             operatore_id: currentUser?.id || "",
             destinatario_id: utente.id,
             settore: utente.settore || "Lavoro",
           });
+          
           promemoriaCreati++;
+          console.warn(`✅ Promemoria creato per ${utente.nome} ${utente.cognome}`);
         } catch (err) {
-          console.error(`Errore creazione promemoria per ${utente.nome} ${utente.cognome}:`, err);
+          erroriCreazione++;
+          console.error(`❌ Errore creazione promemoria per ${utente.nome} ${utente.cognome}:`, err);
         }
       }
 
-      toast({
-        title: "Promemoria creati",
-        description: `${promemoriaCreati} promemoria creati con successo per i settori: ${settori.join(", ")}`,
-      });
+      console.warn("🔍 STEP 5 - RIEPILOGO FINALE:");
+      console.warn(`✅ Promemoria creati con successo: ${promemoriaCreati}`);
+      console.warn(`❌ Errori durante la creazione: ${erroriCreazione}`);
+      console.warn("════════════════════════════════════════════════");
+
+      if (promemoriaCreati > 0) {
+        toast({
+          title: "✅ Promemoria creati con successo!",
+          description: `${promemoriaCreati} promemoria creati per i settori: ${settoreDisplay}`,
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: "Nessun promemoria è stato creato. Controlla i log della console.",
+          variant: "destructive",
+        });
+      }
 
     } catch (error) {
-      console.error("Errore creazione promemoria:", error);
+      console.error("════════════════════════════════════════════════");
+      console.error("❌ ERRORE COMPLETO CREAZIONE PROMEMORIA:");
+      console.error(error);
+      console.error("════════════════════════════════════════════════");
       toast({
-        title: "Errore",
-        description: "Impossibile creare i promemoria",
+        title: "Errore creazione promemoria",
+        description: error instanceof Error ? error.message : "Impossibile creare i promemoria. Controlla i logs della console.",
         variant: "destructive",
       });
     }
