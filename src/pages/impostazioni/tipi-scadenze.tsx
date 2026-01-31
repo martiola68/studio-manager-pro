@@ -33,7 +33,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Calendar, Bell } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
 import { authService } from "@/services/authService";
 import { tipoScadenzaService } from "@/services/tipoScadenzaService";
 import { studioService } from "@/services/studioService";
@@ -66,13 +67,11 @@ export default function TipiScadenzePage() {
   const [studioId, setStudioId] = useState<string | null>(null);
   const [alertsInviati, setAlertsInviati] = useState<Record<string, boolean>>({});
 
-  // Dialog states
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingTipo, setEditingTipo] = useState<TipoScadenza | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Form states
   const [formData, setFormData] = useState({
     nome: "",
     descrizione: "",
@@ -82,7 +81,9 @@ export default function TipiScadenzePage() {
     giorni_preavviso_1: 7,
     giorni_preavviso_2: 15,
     attivo: true,
-    settore: "",
+    settore_fiscale: false,
+    settore_lavoro: false,
+    settore_consulenza: false,
   });
 
   useEffect(() => {
@@ -156,35 +157,39 @@ export default function TipiScadenzePage() {
 
   const handleInviaAlert = async (tipoScadenza: TipoScadenza) => {
     try {
-      const settore = tipoScadenza.settore || "Fiscale";
-      
-      // Recupera utenti del settore
-      let query = supabase
-        .from("tbutenti")
-        .select("email, nome, cognome");
+      const settori: string[] = [];
+      if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
+      if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
+      if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
 
-      if (settore === "Fiscale & Lavoro") {
-        query = query.neq("email", "");
-      } else {
-        query = query.eq("settore", settore);
+      if (settori.length === 0) {
+        toast({
+          title: "Nessun settore",
+          description: "Seleziona almeno un settore per inviare l'alert",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const { data: utenti, error: utentiError } = await query;
+      const { data: utenti, error: utentiError } = await supabase
+        .from("tbutenti")
+        .select("email, nome, cognome, settore")
+        .in("settore", settori)
+        .neq("email", "");
 
       if (utentiError) throw utentiError;
 
       if (!utenti || utenti.length === 0) {
         toast({
           title: "Nessun utente",
-          description: `Nessun utente trovato per il settore ${settore}`,
+          description: "Nessun utente trovato per i settori selezionati",
           variant: "destructive",
         });
         return;
       }
 
-      console.log(`Invio alert a ${utenti.length} utenti del settore ${settore}`);
+      console.log(`Invio alert a ${utenti.length} utenti dei settori: ${settori.join(", ")}`);
       
-      // Registra l'invio nel database
       const annoCorrente = new Date().getFullYear();
       const { error: insertError } = await supabase
         .from("tbtipi_scadenze_alert")
@@ -198,7 +203,7 @@ export default function TipiScadenzePage() {
 
       toast({
         title: "Alert inviato",
-        description: `Email di avvertimento inviata a ${utenti.length} utenti del settore ${settore}`,
+        description: `Email di avvertimento inviata a ${utenti.length} utenti`,
       });
 
       await loadAlertsInviati();
@@ -224,7 +229,9 @@ export default function TipiScadenzePage() {
         giorni_preavviso_1: tipo.giorni_preavviso_1 || 7,
         giorni_preavviso_2: tipo.giorni_preavviso_2 || 15,
         attivo: tipo.attivo ?? true,
-        settore: tipo.settore || "Fiscale",
+        settore_fiscale: tipo.settore_fiscale || false,
+        settore_lavoro: tipo.settore_lavoro || false,
+        settore_consulenza: tipo.settore_consulenza || false,
       });
     } else {
       setEditingTipo(null);
@@ -237,7 +244,9 @@ export default function TipiScadenzePage() {
         giorni_preavviso_1: 7,
         giorni_preavviso_2: 15,
         attivo: true,
-        settore: "Fiscale",
+        settore_fiscale: false,
+        settore_lavoro: false,
+        settore_consulenza: false,
       });
     }
     setIsDialogOpen(true);
@@ -261,7 +270,9 @@ export default function TipiScadenzePage() {
         giorni_preavviso_1: formData.giorni_preavviso_1,
         giorni_preavviso_2: formData.giorni_preavviso_2,
         attivo: formData.attivo,
-        settore: formData.settore,
+        settore_fiscale: formData.settore_fiscale,
+        settore_lavoro: formData.settore_lavoro,
+        settore_consulenza: formData.settore_consulenza,
       };
 
       if (editingTipo) {
@@ -363,6 +374,32 @@ export default function TipiScadenzePage() {
     return `Tra ${diffDays} giorni`;
   };
 
+  const getSettoriBadges = (tipo: TipoScadenza) => {
+    const badges = [];
+    if (tipo.settore_fiscale) {
+      badges.push(
+        <Badge key="fiscale" variant="secondary" className="bg-blue-100 text-blue-800">
+          Fiscale
+        </Badge>
+      );
+    }
+    if (tipo.settore_lavoro) {
+      badges.push(
+        <Badge key="lavoro" variant="secondary" className="bg-green-100 text-green-800">
+          Lavoro
+        </Badge>
+      );
+    }
+    if (tipo.settore_consulenza) {
+      badges.push(
+        <Badge key="consulenza" variant="secondary" className="bg-purple-100 text-purple-800">
+          Consulenza
+        </Badge>
+      );
+    }
+    return badges.length > 0 ? badges : [<Badge key="none" variant="secondary">Nessun settore</Badge>];
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -415,16 +452,7 @@ export default function TipiScadenzePage() {
                         <Badge variant="outline" className="text-xs">
                           {getTipoLabel(tipo.tipo_scadenza)}
                         </Badge>
-                        <Badge 
-                          variant="secondary" 
-                          className={
-                            tipo.settore === "Fiscale" ? "bg-blue-100 text-blue-800" :
-                            tipo.settore === "Lavoro" ? "bg-green-100 text-green-800" :
-                            "bg-purple-100 text-purple-800"
-                          }
-                        >
-                          {tipo.settore || "Fiscale"}
-                        </Badge>
+                        {getSettoriBadges(tipo)}
                         {tipo.ricorrente && (
                           <Badge variant="secondary" className="text-xs">
                             Ricorrente
@@ -495,7 +523,7 @@ export default function TipiScadenzePage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingTipo ? "Modifica Tipo Scadenza" : "Nuovo Tipo Scadenza"}
@@ -507,20 +535,47 @@ export default function TipiScadenzePage() {
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="settore">Settore *</Label>
-              <Select
-                value={formData.settore}
-                onValueChange={(value) => setFormData({ ...formData, settore: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona settore" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Fiscale">Fiscale</SelectItem>
-                  <SelectItem value="Lavoro">Lavoro</SelectItem>
-                  <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Settori *</Label>
+              <div className="space-y-3 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="settore_fiscale"
+                    checked={formData.settore_fiscale}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, settore_fiscale: !!checked })
+                    }
+                  />
+                  <Label htmlFor="settore_fiscale" className="font-normal cursor-pointer">
+                    Settore Fiscale
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="settore_lavoro"
+                    checked={formData.settore_lavoro}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, settore_lavoro: !!checked })
+                    }
+                  />
+                  <Label htmlFor="settore_lavoro" className="font-normal cursor-pointer">
+                    Settore Lavoro
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="settore_consulenza"
+                    checked={formData.settore_consulenza}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, settore_consulenza: !!checked })
+                    }
+                  />
+                  <Label htmlFor="settore_consulenza" className="font-normal cursor-pointer">
+                    Settore Consulenza
+                  </Label>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-2">
