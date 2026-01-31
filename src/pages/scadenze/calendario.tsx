@@ -198,11 +198,26 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
-      const settore = tipoScadenza.settore || "Fiscale";
+      // Determina i settori attivi
+      const settori: string[] = [];
+      if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
+      if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
+      if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
+
+      if (settori.length === 0) {
+        toast({
+          title: "Nessun settore",
+          description: "Questa scadenza non ha settori assegnati",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const settoreDisplay = settori.join(" & ");
 
       console.log("🔔 Invio alert per scadenza:", {
         nome: tipoScadenza.nome,
-        settore: settore,
+        settori: settori,
         responsabile: `${currentUser.nome} ${currentUser.cognome}`,
       });
 
@@ -211,7 +226,7 @@ export default function CalendarioScadenzePage() {
         {
           body: {
             tipoScadenzaId: tipoScadenza.id,
-            settore: settore,
+            settori: settori,
             responsabileEmail: currentUser.email,
             responsabileNome: `${currentUser.nome} ${currentUser.cognome}`,
             scadenzaNome: tipoScadenza.nome,
@@ -256,7 +271,7 @@ export default function CalendarioScadenzePage() {
 
       toast({
         title: "✅ Alert inviato con successo!",
-        description: `${result.sent || 0} email inviate agli utenti del settore ${settore}`,
+        description: `${result.sent || 0} email inviate agli utenti dei settori: ${settoreDisplay}`,
       });
 
       await loadAlertsInviati();
@@ -291,34 +306,40 @@ export default function CalendarioScadenzePage() {
         return;
       }
 
-      const settore = tipoScadenza.settore || "Fiscale";
+      // Determina i settori attivi
+      const settori: string[] = [];
+      if (tipoScadenza.settore_fiscale) settori.push("Fiscale");
+      if (tipoScadenza.settore_lavoro) settori.push("Lavoro");
+      if (tipoScadenza.settore_consulenza) settori.push("Consulenza");
 
-      // Recupera tutti gli utenti del settore
-      let query = supabase
-        .from("tbutenti")
-        .select("id, nome, cognome, email, settore")
-        .eq("attivo", true);
-
-      if (settore === "Fiscale & Lavoro") {
-        query = query.neq("email", "");
-      } else {
-        query = query.eq("settore", settore);
+      if (settori.length === 0) {
+        toast({
+          title: "Nessun settore",
+          description: "Questa scadenza non ha settori assegnati",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const { data: utenti, error: utentiError } = await query;
+      // Recupera utenti dei settori specificati
+      const { data: utenti, error: utentiError } = await supabase
+        .from("tbutenti")
+        .select("id, nome, cognome, email, settore")
+        .eq("attivo", true)
+        .in("settore", settori);
 
       if (utentiError) throw utentiError;
 
       if (!utenti || utenti.length === 0) {
         toast({
           title: "Nessun utente",
-          description: `Nessun utente attivo trovato per il settore ${settore}`,
+          description: `Nessun utente attivo trovato per i settori: ${settori.join(", ")}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log(`Creazione promemoria per ${utenti.length} utenti del settore ${settore}`);
+      console.log(`Creazione promemoria per ${utenti.length} utenti dei settori ${settori.join(", ")}`);
 
       // Crea un promemoria per ogni utente del settore
       const dataInserimento = new Date().toISOString().split("T")[0];
@@ -354,7 +375,7 @@ export default function CalendarioScadenzePage() {
 
       toast({
         title: "Promemoria creati",
-        description: `${promemoriaCreati} promemoria creati con successo per il settore ${settore}`,
+        description: `${promemoriaCreati} promemoria creati con successo per i settori: ${settori.join(", ")}`,
       });
 
     } catch (error) {
