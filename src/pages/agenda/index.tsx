@@ -343,12 +343,44 @@ export default function AgendaPage() {
 
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter(u => u.settore === settore).map(u => u.id);
-    setFormData(prev => ({ ...prev, partecipanti: ids }));
+    
+    // Controlla se almeno uno degli utenti del settore è già selezionato
+    const isSelected = ids.some(id => formData.partecipanti.includes(id));
+    
+    if (isSelected) {
+      // RIMUOVI gli utenti di questo settore
+      setFormData(prev => ({ 
+        ...prev, 
+        partecipanti: prev.partecipanti.filter(p => !ids.includes(p)) 
+      }));
+    } else {
+      // AGGIUNGI gli utenti di questo settore (senza duplicati)
+      setFormData(prev => ({ 
+        ...prev, 
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])] 
+      }));
+    }
   };
 
   const handleSelezioneConsulenza = () => {
     const ids = utenti.filter(u => u.settore === "Consulenza").map(u => u.id);
-    setFormData(prev => ({ ...prev, partecipanti: ids }));
+    
+    // Controlla se almeno uno degli utenti del settore è già selezionato
+    const isSelected = ids.some(id => formData.partecipanti.includes(id));
+    
+    if (isSelected) {
+      // RIMUOVI gli utenti della Consulenza
+      setFormData(prev => ({ 
+        ...prev, 
+        partecipanti: prev.partecipanti.filter(p => !ids.includes(p)) 
+      }));
+    } else {
+      // AGGIUNGI gli utenti della Consulenza (senza duplicati)
+      setFormData(prev => ({ 
+        ...prev, 
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])] 
+      }));
+    }
   };
 
   const handleSelezioneTutti = () => {
