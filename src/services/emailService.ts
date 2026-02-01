@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate } from "@/lib/emailTemplates";
 
 export interface EventEmailData {
   eventoId: string;
@@ -25,15 +26,12 @@ export interface EmailData {
 
 export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
   try {
-    // Tenta di invocare una funzione generica per l'invio email
-    // Se non esiste, fallirà gracefully
     const { data: result, error } = await supabase.functions.invoke("send-email", {
       body: data
     });
 
     if (error) {
       console.warn("Edge function 'send-email' not found or error:", error);
-      // Fallback o log
       return { success: false, error: error.message };
     }
 
@@ -43,6 +41,110 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; er
     return { 
       success: false, 
       error: error instanceof Error ? error.message : "Unknown error" 
+    };
+  }
+}
+
+export async function sendWelcomeEmail(
+  nome: string,
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const loginUrl = typeof window !== "undefined" 
+      ? `${window.location.origin}/login`
+      : `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/login`;
+    
+    const htmlContent = getWelcomeEmailTemplate(nome, email, password, loginUrl);
+    
+    const textContent = `
+Benvenuto in Studio Manager Pro
+
+Ciao ${nome}!
+
+Il tuo account è stato creato con successo.
+
+Le tue credenziali di accesso:
+📧 Email: ${email}
+🔐 Password: ${password}
+
+Accedi al sistema: ${loginUrl}
+
+Conserva questa email in un luogo sicuro.
+Non condividere mai le tue credenziali.
+
+Se hai problemi ad accedere, contatta l'amministratore.
+
+Buon lavoro!
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Questa è una email automatica, non rispondere a questo messaggio
+    `.trim();
+    
+    return await sendEmail({
+      to: email,
+      subject: "Benvenuto in Studio Manager Pro - Credenziali di accesso",
+      html: htmlContent,
+      text: textContent
+    });
+  } catch (error) {
+    console.error("Error sending welcome email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+export async function sendPasswordResetEmail(
+  nome: string,
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const loginUrl = typeof window !== "undefined" 
+      ? `${window.location.origin}/login`
+      : `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/login`;
+    
+    const htmlContent = getPasswordResetEmailTemplate(nome, email, password, loginUrl);
+    
+    const textContent = `
+Password Reset - Studio Manager Pro
+
+Ciao ${nome},
+
+La tua password è stata resettata dall'amministratore.
+
+Le tue nuove credenziali:
+📧 Email: ${email}
+🔐 Nuova Password: ${password}
+
+Accedi al sistema: ${loginUrl}
+
+La tua password precedente non è più valida.
+Conserva questa email in un luogo sicuro.
+
+Se hai problemi ad accedere, contatta l'amministratore.
+
+Buon lavoro!
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Questa è una email automatica, non rispondere a questo messaggio
+    `.trim();
+    
+    return await sendEmail({
+      to: email,
+      subject: "Password Reset - Studio Manager Pro",
+      html: htmlContent,
+      text: textContent
+    });
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
     };
   }
 }
@@ -57,18 +159,14 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
   try {
     console.log("📧 emailService.sendEventNotification - Building recipients list");
 
-    // ✅ COSTRUISCE ARRAY DESTINATARI VALIDO
     const recipients: string[] = [];
 
-    // ✅ FUNZIONE DI VALIDAZIONE EMAIL MIGLIORATA
     const isValidEmail = (email: string): boolean => {
       if (!email || typeof email !== "string") return false;
       
-      // Deve contenere @ e un dominio
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) return false;
       
-      // Escludi email di test comuni
       const testDomains = ["prova", "test", "example", "xxx", "fake"];
       const domain = email.split("@")[1]?.toLowerCase();
       if (testDomains.some(test => domain?.includes(test))) return false;
@@ -76,7 +174,6 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
       return true;
     };
 
-    // 1. Aggiungi responsabile (obbligatorio)
     if (isValidEmail(data.responsabileEmail)) {
       recipients.push(data.responsabileEmail);
       console.log("✅ Responsabile:", data.responsabileEmail);
@@ -91,7 +188,6 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
       };
     }
 
-    // 2. Aggiungi partecipanti (opzionali)
     if (data.partecipantiEmails && Array.isArray(data.partecipantiEmails)) {
       data.partecipantiEmails.forEach(email => {
         if (isValidEmail(email) && !recipients.includes(email)) {
@@ -103,13 +199,10 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
       });
     }
 
-    // ❌ CLIENTE ESCLUSO COMPLETAMENTE DALL'INVIO EMAIL
-    // Il cliente viene notificato tramite altri canali (SMS, portale clienti, ecc.)
     if (data.clienteEmail) {
       console.log("ℹ️ Cliente escluso dall'invio email:", data.clienteEmail);
     }
 
-    // ✅ VALIDAZIONE FINALE
     if (recipients.length === 0) {
       console.error("❌ No valid recipients found!");
       return {
@@ -124,13 +217,12 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
     console.log(`📧 Total valid recipients: ${recipients.length}`);
     console.log("📧 Recipients list:", recipients);
 
-    // ✅ CHIAMA EDGE FUNCTION CON DATI CORRETTI
     const { data: result, error } = await supabase.functions.invoke(
       "send-event-notification",
       {
         body: {
           ...data,
-          recipients  // ✅ AGGIUNGE ARRAY RECIPIENTS VALIDATO
+          recipients
         }
       }
     );
@@ -203,5 +295,7 @@ export async function triggerEventReminders(): Promise<{
 export const emailService = {
   sendEventNotification,
   triggerEventReminders,
-  sendEmail
+  sendEmail,
+  sendWelcomeEmail,
+  sendPasswordResetEmail
 };

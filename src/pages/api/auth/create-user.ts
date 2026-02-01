@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { generateSecurePassword, validatePassword } from "@/lib/passwordGenerator";
 
-// Admin client con Service Role Key (solo backend!)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -13,24 +13,6 @@ const supabaseAdmin = createClient(
   }
 );
 
-// Genera password sicura
-function generateSecurePassword(): string {
-  const length = 16;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let password = "";
-  
-  password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
-  password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
-  password += "0123456789"[Math.floor(Math.random() * 10)];
-  password += "!@#$%^&*"[Math.floor(Math.random() * 8)];
-  
-  for (let i = password.length; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  return password.split("").sort(() => Math.random() - 0.5).join("");
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -40,23 +22,22 @@ export default async function handler(
   }
 
   try {
-    const { email, password, nome, cognome, useAutoPassword } = req.body;
+    const { email, nome, cognome } = req.body;
 
     if (!email || !nome || !cognome) {
       return res.status(400).json({ error: "Email, nome e cognome richiesti" });
     }
 
-    // Determina password da usare
-    const passwordToUse = useAutoPassword ? generateSecurePassword() : password;
+    const passwordGenerata = generateSecurePassword();
 
-    if (!passwordToUse || passwordToUse.length < 8) {
-      return res.status(400).json({ error: "Password deve essere almeno 8 caratteri" });
+    if (!validatePassword(passwordGenerata)) {
+      console.error("Password generata non valida:", passwordGenerata);
+      return res.status(500).json({ error: "Errore generazione password sicura" });
     }
 
-    // Crea utente in Supabase Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: passwordToUse,
+      password: passwordGenerata,
       email_confirm: true,
       user_metadata: {
         nome,
@@ -72,11 +53,10 @@ export default async function handler(
       });
     }
 
-    // Restituisci i dati
     return res.status(200).json({
       success: true,
       userId: authData.user.id,
-      password: passwordToUse,
+      password: passwordGenerata,
       email: authData.user.email
     });
 

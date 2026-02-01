@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import { generateSecurePassword, validatePassword } from "@/lib/passwordGenerator";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -14,24 +15,6 @@ const supabaseAdmin = supabaseUrl && serviceRoleKey ? createClient(
     }
   }
 ) : null;
-
-// Genera password sicura temporanea
-function generateSecurePassword(): string {
-  const length = 16;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let password = "";
-  
-  password += "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)];
-  password += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
-  password += "0123456789"[Math.floor(Math.random() * 10)];
-  password += "!@#$%^&*"[Math.floor(Math.random() * 8)];
-  
-  for (let i = password.length; i < length; i++) {
-    password += charset[Math.floor(Math.random() * charset.length)];
-  }
-  
-  return password.split("").sort(() => Math.random() - 0.5).join("");
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -49,25 +32,22 @@ export default async function handler(
   }
 
   try {
-    const { userId, userEmail, password, useAutoPassword } = req.body;
+    const { userId, userEmail } = req.body;
 
     if (!userId || !userEmail) {
       return res.status(400).json({ error: "userId e userEmail richiesti" });
     }
 
-    // Determina password da usare
-    const tempPassword = useAutoPassword || !password 
-      ? generateSecurePassword() 
-      : password;
+    const nuovaPassword = generateSecurePassword();
 
-    if (tempPassword.length < 8) {
-      return res.status(400).json({ error: "Password deve essere almeno 8 caratteri" });
+    if (!validatePassword(nuovaPassword)) {
+      console.error("Password generata non valida:", nuovaPassword);
+      return res.status(500).json({ error: "Errore generazione password sicura" });
     }
 
-    // Aggiorna password usando Admin API
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
-      { password: tempPassword }
+      { password: nuovaPassword }
     );
 
     if (error) {
@@ -81,7 +61,7 @@ export default async function handler(
 
     return res.status(200).json({
       success: true,
-      tempPassword,
+      tempPassword: nuovaPassword,
       message: "Password resettata con successo"
     });
 
