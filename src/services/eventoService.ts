@@ -190,6 +190,7 @@ export const eventoService = {
         eventoOraFine: formatTime(evento.data_fine),
         eventoLuogo: evento.luogo || undefined,
         eventoDescrizione: evento.descrizione || undefined,
+        eventoInSede: evento.in_sede || false,
         responsabileEmail: responsabile.email,
         responsabileNome: `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() || responsabile.email,
         partecipantiEmails,
