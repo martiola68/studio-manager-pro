@@ -55,27 +55,92 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
   error?: string;
 }> {
   try {
-    const { data: result, error } = await supabase.functions.invoke(
-      "send-event-notification",
-      {
-        body: data
-      }
-    );
+    console.log("📧 emailService.sendEventNotification - Building recipients list");
 
-    if (error) {
-      console.error("Error invoking email function:", error);
+    // ✅ COSTRUISCE ARRAY DESTINATARI VALIDO
+    const recipients: string[] = [];
+
+    // 1. Aggiungi responsabile (obbligatorio)
+    if (data.responsabileEmail && data.responsabileEmail.includes("@")) {
+      recipients.push(data.responsabileEmail);
+      console.log("✅ Responsabile:", data.responsabileEmail);
+    } else {
+      console.error("❌ Responsabile email invalid or missing:", data.responsabileEmail);
       return {
         success: false,
         sent: 0,
         failed: 0,
         total: 0,
+        error: "Responsabile email is required and must be valid"
+      };
+    }
+
+    // 2. Aggiungi partecipanti (opzionali)
+    if (data.partecipantiEmails && Array.isArray(data.partecipantiEmails)) {
+      data.partecipantiEmails.forEach(email => {
+        if (email && email.includes("@") && !recipients.includes(email)) {
+          recipients.push(email);
+          console.log("✅ Partecipante:", email);
+        }
+      });
+    }
+
+    // 3. Aggiungi cliente (opzionale)
+    if (data.clienteEmail && data.clienteEmail.includes("@")) {
+      if (!recipients.includes(data.clienteEmail)) {
+        recipients.push(data.clienteEmail);
+        console.log("✅ Cliente:", data.clienteEmail);
+      }
+    }
+
+    // ✅ VALIDAZIONE FINALE
+    if (recipients.length === 0) {
+      console.error("❌ No valid recipients found!");
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        total: 0,
+        error: "No valid email recipients"
+      };
+    }
+
+    console.log(`📧 Total valid recipients: ${recipients.length}`);
+    console.log("📧 Recipients list:", recipients);
+
+    // ✅ CHIAMA EDGE FUNCTION CON DATI CORRETTI
+    const { data: result, error } = await supabase.functions.invoke(
+      "send-event-notification",
+      {
+        body: {
+          ...data,
+          recipients  // ✅ AGGIUNGE ARRAY RECIPIENTS VALIDATO
+        }
+      }
+    );
+
+    if (error) {
+      console.error("❌ Error invoking email function:", error);
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        total: recipients.length,
         error: error.message
       };
     }
 
-    return result;
+    console.log("✅ Email function response:", result);
+
+    return {
+      success: true,
+      sent: recipients.length,
+      failed: 0,
+      total: recipients.length,
+      ...result
+    };
   } catch (error) {
-    console.error("Error sending event notification:", error);
+    console.error("💥 Error sending event notification:", error);
     return {
       success: false,
       sent: 0,
