@@ -88,7 +88,7 @@ export default function AgendaPage() {
     utente_id: "",
     in_sede: false,
     sala: "",
-    luogo: "", // NUOVO CAMPO
+    luogo: "",
     evento_generico: false,
     riunione_teams: false,
     link_teams: "",
@@ -97,6 +97,20 @@ export default function AgendaPage() {
 
   // Stato per ricerca partecipanti
   const [searchPartecipanti, setSearchPartecipanti] = useState("");
+
+  // Helper per formattare orari con timezone italiano
+  const formatTimeWithTimezone = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("it-IT", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Rome"
+      });
+    } catch (e) {
+      return "00:00";
+    }
+  };
 
   // Caricamento dati
   useEffect(() => {
@@ -171,7 +185,7 @@ export default function AgendaPage() {
       utente_id: "",
       in_sede: false,
       sala: "",
-      luogo: "", // RESET CAMPO
+      luogo: "",
       evento_generico: false,
       riunione_teams: false,
       link_teams: "",
@@ -217,15 +231,15 @@ export default function AgendaPage() {
       titolo: evento.titolo,
       descrizione: evento.descrizione || "",
       data_inizio: format(startDate, "yyyy-MM-dd"),
-      ora_inizio: format(startDate, "HH:mm"),
+      ora_inizio: formatTimeWithTimezone(evento.data_inizio),
       data_fine: format(endDate, "yyyy-MM-dd"),
-      ora_fine: format(endDate, "HH:mm"),
+      ora_fine: formatTimeWithTimezone(evento.data_fine),
       tutto_giorno: evento.tutto_giorno || false,
       cliente_id: evento.cliente_id || "",
       utente_id: evento.utente_id,
       in_sede: evento.in_sede || false,
       sala: evento.sala || "",
-      luogo: evento.luogo || "", // POPOLA CAMPO
+      luogo: evento.luogo || "",
       evento_generico: evento.evento_generico || false,
       riunione_teams: evento.riunione_teams || false,
       link_teams: evento.link_teams || "",
@@ -263,25 +277,13 @@ export default function AgendaPage() {
         utente_id: formData.utente_id,
         in_sede: formData.in_sede,
         sala: formData.in_sede ? formData.sala : null,
-        luogo: !formData.in_sede ? formData.luogo : null, // SALVA LUOGO SE NON IN SEDE
+        luogo: !formData.in_sede ? formData.luogo : null,
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
         link_teams: formData.link_teams || null,
         partecipanti: formData.partecipanti.length ? formData.partecipanti : null
       };
 
-      // Importante: le email vengono inviate dal servizio eventoService 
-      // che viene chiamato internamente se usassimo il servizio, 
-      // ma qui chiamiamo direttamente Supabase. 
-      // Per garantire l'invio email, dovremmo usare il servizio o chiamare la funzione qui.
-      // Modifichiamo per usare il servizio "eventoService" sarebbe meglio, ma per ora
-      // mantengo la logica diretta e invoco l'invio email manualmente o mi affido al trigger DB se c'è,
-      // MA la richiesta dice "una volta salvato l'evento deve partire l'email".
-      // Poiché stiamo chiamando supabase direttamente qui, aggiungo la chiamata al servizio email.
-      
-      // NOTA: Per semplicità e coerenza con il codice esistente che usa supabase direct,
-      // integro la chiamata alla notifica tramite il servizio che abbiamo aggiornato/aggiorneremo.
-      
       let eventoSalvato;
 
       if (editingEventoId) {
@@ -298,12 +300,6 @@ export default function AgendaPage() {
 
       // INVIO NOTIFICA EMAIL
       if (eventoSalvato) {
-         // Importiamo dinamicamente per evitare dipendenze circolari o problemi di build se non necessario
-         // Ma qui è meglio chiamare una funzione di utilità o il servizio.
-         // Per ora invochiamo la edge function direttamente qui o usiamo il servizio aggiornato.
-         // Poiché aggiorno anche il service, userò quello nella prossima iterazione se possibile,
-         // ma qui faccio una chiamata diretta alla Edge Function per sicurezza "chirurgica".
-         
          const { eventoService } = await import("@/services/eventoService");
          await eventoService.sendEventNotification(eventoSalvato);
       }
@@ -343,7 +339,6 @@ export default function AgendaPage() {
 
   // --- UTILITIES ---
 
-  // ✅ NUOVA VERSIONE - TOGGLE INDIPENDENTI
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter(u => u.settore === settore).map(u => u.id);
     const isSelected = ids.some(id => formData.partecipanti.includes(id));
@@ -440,7 +435,7 @@ export default function AgendaPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>{format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}</span>
+                    <span>{formatTimeWithTimezone(evento.data_inizio)} - {formatTimeWithTimezone(evento.data_fine)}</span>
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}>
@@ -560,7 +555,8 @@ export default function AgendaPage() {
               {weekDays.map(day => {
                 const cellEvents = filteredEvents.filter(e => {
                   const eventDate = parseISO(e.data_inizio);
-                  const eventHour = parseInt(format(eventDate, "HH"));
+                  const eventTime = formatTimeWithTimezone(e.data_inizio);
+                  const eventHour = parseInt(eventTime.split(':')[0]);
                   if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
                   return isSameDay(eventDate, day) && eventHour === hour;
                 });
@@ -579,7 +575,7 @@ export default function AgendaPage() {
                                     <div className="text-gray-600 truncate">🏢 {evento.cliente?.ragione_sociale || ""}</div>
                                     {evento.in_sede && evento.sala && <div className="text-green-700 font-medium mt-1">📍 SALA {evento.sala}</div>}
                                     {!evento.in_sede && evento.luogo && <div className="text-red-700 font-medium mt-1 truncate">📍 {evento.luogo}</div>}
-                                    <div className="text-gray-500 mt-1">⏰ {format(parseISO(evento.data_inizio), "HH:mm")}</div>
+                                    <div className="text-gray-500 mt-1">⏰ {formatTimeWithTimezone(evento.data_inizio)}</div>
                                   </div>
                                   <button className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
                                     onClick={(e) => handleDeleteEventoDirect(evento.id, e)} title="Elimina evento">×</button>
@@ -701,7 +697,6 @@ export default function AgendaPage() {
                 </div>
               )}
               
-              {/* CAMPO LUOGO PER EVENTI ESTERNI */}
               {!formData.in_sede && (
                 <div className="ml-6 flex gap-2 items-end">
                    <div className="flex-1">
@@ -721,7 +716,6 @@ export default function AgendaPage() {
                     disabled={!formData.luogo}
                     onClick={() => {
                       if (!formData.luogo) return;
-                      // Apre Google Maps (funziona anche su mobile aprendo l'app)
                       window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.luogo)}`, '_blank');
                     }}
                    >
@@ -745,7 +739,6 @@ export default function AgendaPage() {
             <div>
                <Label className="mb-2 block">Partecipanti</Label>
                
-               {/* CAMPO RICERCA PARTECIPANTI */}
                <div className="relative mb-2">
                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                  <Input 
