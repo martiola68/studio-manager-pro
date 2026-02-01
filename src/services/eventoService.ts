@@ -237,6 +237,17 @@ export const eventoService = {
       console.error("Error updating evento:", error);
       throw error;
     }
+
+    // Invia notifica email dopo l'aggiornamento dell'evento
+    if (data) {
+      try {
+        await this.sendEventNotification(data);
+      } catch (emailError) {
+        console.error("Error sending event notification:", emailError);
+        // Non bloccare l'aggiornamento dell'evento se l'invio email fallisce
+      }
+    }
+
     return data;
   },
 

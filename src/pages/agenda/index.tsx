@@ -103,6 +103,9 @@ export default function AgendaPage() {
     partecipanti: [] as string[]
   });
 
+  // Stato per ricerca partecipanti
+  const [searchPartecipanti, setSearchPartecipanti] = useState("");
+
   // Caricamento dati
   useEffect(() => {
     loadData();
@@ -585,7 +588,7 @@ export default function AgendaPage() {
                               {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ''}
                             </span>
                             <button
-                              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded px-1"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
                               onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
                               title="Elimina"
                             >
@@ -948,6 +951,22 @@ export default function AgendaPage() {
                     value={formData.link_teams}
                     onChange={(e) =>
                       setFormData({ ...formData, link_teams: e.target.value })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Campo Luogo - INSERITO DOPO Link Teams */}
+              {formData.riunione_teams && (
+                <div className="space-y-2">
+                  <Label htmlFor="luogo">Luogo</Label>
+                  <Input
+                    id="luogo"
+                    type="text"
+                    placeholder="Es. Sala riunioni A"
+                    value={formData.luogo}
+                    onChange={(e) =>
+                      setFormData({ ...formData, luogo: e.target.value })
                     }
                   />
                 </div>
