@@ -5,7 +5,7 @@ import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/supabase/types";
@@ -320,6 +320,65 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-600 rounded-lg">
+              <BookOpen className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-blue-900">📚 Manuale Utente Completo</CardTitle>
+              <CardDescription className="text-blue-700">Guida completa all'utilizzo di Studio Manager Pro</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-700 mb-4">
+            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria, Rubrica, Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Agenda & Eventi</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Messaggi & Chat</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Promemoria</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Rubrica & Clienti</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Accesso Portali</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Cassetti Fiscali</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Scadenzari</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Best Practices</span>
+            </div>
+          </div>
+          <a href="/guide/MANUALE_UTENTE_COMPLETO.html" target="_blank" rel="noopener noreferrer">
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+              <BookOpen className="h-5 w-5 mr-2" />
+              Apri Manuale Completo
+            </Button>
+          </a>
         </CardContent>
       </Card>
     </div>
