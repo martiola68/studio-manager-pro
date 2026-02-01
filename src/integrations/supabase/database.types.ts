@@ -125,6 +125,8 @@ export type Database = {
           in_sede: boolean | null
           link_teams: string | null
           luogo: string | null
+          ora_fine: string | null
+          ora_inizio: string | null
           partecipanti: Json | null
           riunione_teams: boolean | null
           sala: string | null
@@ -146,6 +148,8 @@ export type Database = {
           in_sede?: boolean | null
           link_teams?: string | null
           luogo?: string | null
+          ora_fine?: string | null
+          ora_inizio?: string | null
           partecipanti?: Json | null
           riunione_teams?: boolean | null
           sala?: string | null
@@ -167,6 +171,8 @@ export type Database = {
           in_sede?: boolean | null
           link_teams?: string | null
           luogo?: string | null
+          ora_fine?: string | null
+          ora_inizio?: string | null
           partecipanti?: Json | null
           riunione_teams?: boolean | null
           sala?: string | null

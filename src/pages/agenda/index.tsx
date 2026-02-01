@@ -231,9 +231,9 @@ export default function AgendaPage() {
       titolo: evento.titolo,
       descrizione: evento.descrizione || "",
       data_inizio: format(startDate, "yyyy-MM-dd"),
-      ora_inizio: formatTimeWithTimezone(evento.data_inizio),
+      ora_inizio: evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "09:00",
       data_fine: format(endDate, "yyyy-MM-dd"),
-      ora_fine: formatTimeWithTimezone(evento.data_fine),
+      ora_fine: evento.ora_fine ? evento.ora_fine.substring(0, 5) : "10:00",
       tutto_giorno: evento.tutto_giorno || false,
       cliente_id: evento.cliente_id || "",
       utente_id: evento.utente_id,
@@ -260,18 +260,20 @@ export default function AgendaPage() {
       }
 
       const startDateTime = formData.tutto_giorno 
-        ? `${formData.data_inizio}T00:00:00` 
-        : `${formData.data_inizio}T${formData.ora_inizio}:00`;
+        ? `${formData.data_inizio}T00:00:00+00:00` 
+        : `${formData.data_inizio}T${formData.ora_inizio}:00+00:00`;
         
       const endDateTime = formData.tutto_giorno 
-        ? `${formData.data_fine || formData.data_inizio}T23:59:59` 
-        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00`;
+        ? `${formData.data_fine || formData.data_inizio}T23:59:59+00:00` 
+        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00+00:00`;
 
       const payload = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
         data_inizio: startDateTime,
         data_fine: endDateTime,
+        ora_inizio: formData.tutto_giorno ? null : formData.ora_inizio,
+        ora_fine: formData.tutto_giorno ? null : formData.ora_fine,
         tutto_giorno: formData.tutto_giorno,
         cliente_id: formData.cliente_id || null,
         utente_id: formData.utente_id,
@@ -391,9 +393,12 @@ export default function AgendaPage() {
         ? "Riunione Teams" 
         : "Appuntamento";
     
+    const oraInizio = evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00";
+    const oraFine = evento.ora_fine ? evento.ora_fine.substring(0, 5) : "00:00";
+    
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
-    summary += `⏰ ${formatTimeWithTimezone(evento.data_inizio)} - ${formatTimeWithTimezone(evento.data_fine)}\n\n`;
+    summary += `⏰ ${oraInizio} - ${oraFine}\n\n`;
     summary += `👤 Assegnato a: ${utenteNome}\n\n`;
     summary += `🏢 Cliente: ${clienteNome}\n\n`;
     summary += `📍 Luogo: ${luogo}\n\n`;
@@ -435,7 +440,9 @@ export default function AgendaPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    <span>{formatTimeWithTimezone(evento.data_inizio)} - {formatTimeWithTimezone(evento.data_fine)}</span>
+                    <span>
+                      {evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00"} - {evento.ora_fine ? evento.ora_fine.substring(0, 5) : "00:00"}
+                    </span>
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}>
@@ -555,9 +562,10 @@ export default function AgendaPage() {
               {weekDays.map(day => {
                 const cellEvents = filteredEvents.filter(e => {
                   const eventDate = parseISO(e.data_inizio);
-                  const eventTime = formatTimeWithTimezone(e.data_inizio);
-                  const eventHour = parseInt(eventTime.split(':')[0]);
                   if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
+                  
+                  if (!e.ora_inizio) return false;
+                  const eventHour = parseInt(e.ora_inizio.substring(0, 2));
                   return isSameDay(eventDate, day) && eventHour === hour;
                 });
 
@@ -575,7 +583,7 @@ export default function AgendaPage() {
                                     <div className="text-gray-600 truncate">🏢 {evento.cliente?.ragione_sociale || ""}</div>
                                     {evento.in_sede && evento.sala && <div className="text-green-700 font-medium mt-1">📍 SALA {evento.sala}</div>}
                                     {!evento.in_sede && evento.luogo && <div className="text-red-700 font-medium mt-1 truncate">📍 {evento.luogo}</div>}
-                                    <div className="text-gray-500 mt-1">⏰ {formatTimeWithTimezone(evento.data_inizio)}</div>
+                                    <div className="text-gray-500 mt-1">⏰ {evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00"}</div>
                                   </div>
                                   <button className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
                                     onClick={(e) => handleDeleteEventoDirect(evento.id, e)} title="Elimina evento">×</button>
