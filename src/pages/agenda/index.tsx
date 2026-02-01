@@ -260,12 +260,12 @@ export default function AgendaPage() {
       }
 
       const startDateTime = formData.tutto_giorno 
-        ? `${formData.data_inizio}T00:00:00` 
-        : `${formData.data_inizio}T${formData.ora_inizio}:00`;
+        ? `${formData.data_inizio}T00:00:00Z` 
+        : `${formData.data_inizio}T${formData.ora_inizio}:00Z`;
         
       const endDateTime = formData.tutto_giorno 
-        ? `${formData.data_fine || formData.data_inizio}T23:59:59` 
-        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00`;
+        ? `${formData.data_fine || formData.data_inizio}T23:59:59Z` 
+        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00Z`;
 
       const payload = {
         titolo: formData.titolo,
