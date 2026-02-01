@@ -380,6 +380,37 @@ export default function TipiScadenzePage() {
     }
   };
 
+  const handleRinnovaScadenza = async (tipo: TipoScadenza) => {
+    if (!studioId) return;
+
+    try {
+      // Calcola nuova data: +1 anno
+      const dataAttuale = new Date(tipo.data_scadenza);
+      const nuovaData = new Date(dataAttuale);
+      nuovaData.setFullYear(dataAttuale.getFullYear() + 1);
+      const nuovaDataStr = nuovaData.toISOString().split("T")[0];
+
+      // Aggiorna solo la data, mantieni tutto il resto invariato
+      await tipoScadenzaService.update(tipo.id, {
+        data_scadenza: nuovaDataStr,
+      });
+
+      toast({
+        title: "Scadenza rinnovata",
+        description: `Data aggiornata a ${nuovaData.toLocaleDateString("it-IT")}`,
+      });
+
+      await loadTipiScadenze(studioId);
+    } catch (error) {
+      console.error("Errore rinnovo scadenza:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile rinnovare la scadenza",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getTipoLabel = (tipo: string) => {
     return TIPI_SCADENZA_OPTIONS.find((t) => t.value === tipo)?.label || tipo;
   };
@@ -526,6 +557,24 @@ export default function TipiScadenzePage() {
                       <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
 
                       <div className="flex items-center gap-1">
+                        {/* Pulsante Rinnova - Visibile solo per scadenze scadute */}
+                        {new Date(tipo.data_scadenza) < new Date() && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRinnovaScadenza(tipo)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title="Rinnova scadenza (+1 anno)"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 2v6h-6"/>
+                              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                              <path d="M3 22v-6h6"/>
+                              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                            </svg>
+                          </Button>
+                        )}
+
                         <Button
                           variant="ghost"
                           size="icon"
