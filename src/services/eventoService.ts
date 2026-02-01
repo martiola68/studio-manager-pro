@@ -244,7 +244,6 @@ export const eventoService = {
         await this.sendEventNotification(data);
       } catch (emailError) {
         console.error("Error sending event notification:", emailError);
-        // Non bloccare l'aggiornamento dell'evento se l'invio email fallisce
       }
     }
 
