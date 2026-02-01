@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { Database } from "@/lib/supabase/types";
+import { emailService } from "./emailService";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 type EventoAgendaInsert = Database["public"]["Tables"]["tbagenda"]["Insert"];
