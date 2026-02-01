@@ -60,8 +60,24 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
     // ✅ COSTRUISCE ARRAY DESTINATARI VALIDO
     const recipients: string[] = [];
 
+    // ✅ FUNZIONE DI VALIDAZIONE EMAIL MIGLIORATA
+    const isValidEmail = (email: string): boolean => {
+      if (!email || typeof email !== "string") return false;
+      
+      // Deve contenere @ e un dominio
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) return false;
+      
+      // Escludi email di test comuni
+      const testDomains = ["prova", "test", "example", "xxx", "fake"];
+      const domain = email.split("@")[1]?.toLowerCase();
+      if (testDomains.some(test => domain?.includes(test))) return false;
+      
+      return true;
+    };
+
     // 1. Aggiungi responsabile (obbligatorio)
-    if (data.responsabileEmail && data.responsabileEmail.includes("@")) {
+    if (isValidEmail(data.responsabileEmail)) {
       recipients.push(data.responsabileEmail);
       console.log("✅ Responsabile:", data.responsabileEmail);
     } else {
@@ -78,19 +94,19 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
     // 2. Aggiungi partecipanti (opzionali)
     if (data.partecipantiEmails && Array.isArray(data.partecipantiEmails)) {
       data.partecipantiEmails.forEach(email => {
-        if (email && email.includes("@") && !recipients.includes(email)) {
+        if (isValidEmail(email) && !recipients.includes(email)) {
           recipients.push(email);
           console.log("✅ Partecipante:", email);
+        } else if (email) {
+          console.warn("⚠️ Partecipante email non valida, esclusa:", email);
         }
       });
     }
 
-    // 3. Aggiungi cliente (opzionale)
-    if (data.clienteEmail && data.clienteEmail.includes("@")) {
-      if (!recipients.includes(data.clienteEmail)) {
-        recipients.push(data.clienteEmail);
-        console.log("✅ Cliente:", data.clienteEmail);
-      }
+    // ❌ CLIENTE ESCLUSO COMPLETAMENTE DALL'INVIO EMAIL
+    // Il cliente viene notificato tramite altri canali (SMS, portale clienti, ecc.)
+    if (data.clienteEmail) {
+      console.log("ℹ️ Cliente escluso dall'invio email:", data.clienteEmail);
     }
 
     // ✅ VALIDAZIONE FINALE
