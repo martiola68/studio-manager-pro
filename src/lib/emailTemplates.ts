@@ -2,7 +2,7 @@ export function getWelcomeEmailTemplate(
   nome: string,
   email: string,
   password: string,
-  loginUrl: string
+  loginUrl: string = "https://studio-manager-pro.vercel.app/login"
 ): string {
   return `
 <!DOCTYPE html>
@@ -84,7 +84,7 @@ export function getPasswordResetEmailTemplate(
   nome: string,
   email: string,
   password: string,
-  loginUrl: string
+  loginUrl: string = "https://studio-manager-pro.vercel.app/login"
 ): string {
   return `
 <!DOCTYPE html>
