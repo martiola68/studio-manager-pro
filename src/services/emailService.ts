@@ -51,9 +51,7 @@ export async function sendWelcomeEmail(
   password: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const loginUrl = typeof window !== "undefined" 
-      ? `${window.location.origin}/login`
-      : `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/login`;
+    const loginUrl = "https://studio-manager-pro.vercel.app/login";
     
     const htmlContent = getWelcomeEmailTemplate(nome, email, password, loginUrl);
     
@@ -103,9 +101,7 @@ export async function sendPasswordResetEmail(
   password: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const loginUrl = typeof window !== "undefined" 
-      ? `${window.location.origin}/login`
-      : `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/login`;
+    const loginUrl = "https://studio-manager-pro.vercel.app/login";
     
     const htmlContent = getPasswordResetEmailTemplate(nome, email, password, loginUrl);
     

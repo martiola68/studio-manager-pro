@@ -6,6 +6,7 @@ import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import type { Database } from "@/lib/supabase/types";
+import { authService } from "@/services/authService";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -61,10 +62,20 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      router.push("/login");
+      console.log("🚪 Logout in corso...");
+      const { error } = await authService.signOut();
+      
+      if (error) {
+        console.error("❌ Errore durante il logout:", error);
+        return;
+      }
+      
+      console.log("✅ Logout completato, redirect a /login");
+      
+      // Force reload per cancellare ogni stato cached
+      window.location.href = "/login";
     } catch (error) {
-      console.error("Errore logout:", error);
+      console.error("💥 Errore critico logout:", error);
     }
   };
 
