@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio Manager Pro - Manuale Utente Completo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f8fafc;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 3em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 1.3em;
+      opacity: 0.95;
+    }
+
+    .toc {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 40px;
+    }
+
+    .toc h2 {
+      color: #2563eb;
+      margin-bottom: 20px;
+      font-size: 1.8em;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 10px;
+    }
+
+    .toc ul {
+      list-style: none;
+    }
+
+    .toc li {
+      margin: 12px 0;
+    }
+
+    .toc a {
+      color: #1e40af;
+      text-decoration: none;
+      font-size: 1.1em;
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+
+    .toc a:hover {
+      background: #eff6ff;
+      padding-left: 15px;
+    }
+
+    .toc-icon {
+      margin-right: 12px;
+      font-size: 1.3em;
+    }
+
+    .section {
+      background: white;
+      padding: 40px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .section h2 {
+      color: #2563eb;
+      font-size: 2.2em;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      border-bottom: 3px solid #e5e7eb;
+      padding-bottom: 15px;
+    }
+
+    .section-icon {
+      margin-right: 15px;
+      font-size: 1.2em;
+    }
+
+    .section h3 {
+      color: #1e40af;
+      font-size: 1.6em;
+      margin: 30px 0 15px 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .subsection-icon {
+      margin-right: 10px;
+      font-size: 0.9em;
+    }
+
+    .section h4 {
+      color: #475569;
+      font-size: 1.3em;
+      margin: 20px 0 10px 0;
+      font-weight: 600;
+    }
+
+    .section p {
+      margin-bottom: 15px;
+      font-size: 1.05em;
+      color: #475569;
+    }
+
+    .step-list {
+      background: #f8fafc;
+      padding: 25px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #2563eb;
+    }
+
+    .step-list ol {
+      margin-left: 20px;
+    }
+
+    .step-list li {
+      margin: 12px 0;
+      font-size: 1.05em;
+      color: #334155;
+    }
+
+    .step-list strong {
+      color: #1e40af;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 6px;
+    }
+
+    .info-box.warning {
+      background: #fef3c7;
+      border-left-color: #f59e0b;
+    }
+
+    .info-box.success {
+      background: #d1fae5;
+      border-left-color: #10b981;
+    }
+
+    .info-box.tip {
+      background: #f3e8ff;
+      border-left-color: #a855f7;
+    }
+
+    .info-box p {
+      margin: 0;
+      color: #1e293b;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1.1em;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 25px 0;
+    }
+
+    .feature-card {
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .feature-card h4 {
+      color: #2563eb;
+      margin: 0 0 10px 0;
+      font-size: 1.2em;
+    }
+
+    .feature-card p {
+      margin: 0;
+      font-size: 0.95em;
+    }
+
+    .button-example {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 5px;
+      transition: all 0.3s;
+    }
+
+    .button-example:hover {
+      background: #1e40af;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .button-example.secondary {
+      background: #64748b;
+    }
+
+    .button-example.danger {
+      background: #dc2626;
+    }
+
+    .button-example.success {
+      background: #16a34a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    table th {
+      background: #2563eb;
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    table tr:hover {
+      background: #f8fafc;
+    }
+
+    .key-combo {
+      background: #334155;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      margin: 0 3px;
+    }
+
+    footer {
+      background: #1e293b;
+      color: white;
+      text-align: center;
+      padding: 30px 20px;
+      margin-top: 50px;
+    }
+
+    footer p {
+      margin: 5px 0;
+      color: #cbd5e1;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+      .section {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+      }
+      header {
+        background: #2563eb;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 2em;
+      }
+      .section {
+        padding: 20px;
+      }
+      .section h2 {
+        font-size: 1.6em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📘 Studio Manager Pro</h1>
+    <p>Manuale Utente Completo - Guida all'utilizzo del sistema</p>
+  </header>
+
+  <div class="container">
+    <!-- INDICE -->
+    <div class="toc">
+      <h2>📑 Indice dei Contenuti</h2>
+      <ul>
+        <li><a href="#agenda"><span class="toc-icon">📅</span> 1. Agenda - Gestione Eventi e Calendario</a></li>
+        <li><a href="#messaggi"><span class="toc-icon">💬</span> 2. Messaggi - Sistema di Messaggistica</a></li>
+        <li><a href="#promemoria"><span class="toc-icon">📝</span> 3. Promemoria - Gestione Promemoria</a></li>
+        <li><a href="#rubrica"><span class="toc-icon">👥</span> 4. Rubrica - Gestione Contatti</a></li>
+        <li><a href="#clienti"><span class="toc-icon">🏢</span> 5. Clienti - Anagrafica e Gestione</a></li>
+        <li><a href="#accesso-portali"><span class="toc-icon">🔑</span> 6. Accesso Portali - Gestione Credenziali</a></li>
+        <li><a href="#cassetti-fiscali"><span class="toc-icon">📁</span> 7. Cassetti Fiscali - Organizzazione Documenti</a></li>
+        <li><a href="#scadenzari"><span class="toc-icon">📊</span> 8. Scadenzari - Gestione Scadenze Fiscali</a></li>
+        <li><a href="#tips"><span class="toc-icon">💡</span> 9. Suggerimenti e Best Practices</a></li>
+      </ul>
+    </div>
+
+    <!-- SEZIONE 1: AGENDA -->
+    <div class="section" id="agenda">
+      <h2><span class="section-icon">📅</span> 1. Agenda - Gestione Eventi e Calendario</h2>
+      
+      <p>L'<strong>Agenda</strong> è il cuore organizzativo di Studio Manager Pro. Permette di pianificare appuntamenti, riunioni e attività assegnandole a collaboratori e clienti.</p>
+
+      <h3><span class="subsection-icon">➕</span> Creare un Nuovo Evento</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li><strong>Accedi alla sezione Agenda</strong> dal menu principale</li>
+          <li>Clicca sul pulsante <span class="button-example">+ Nuovo Evento</span></li>
+          <li><strong>Compila i campi obbligatori:</strong>
+            <ul>
+              <li><strong>Titolo:</strong> Nome descrittivo dell'evento (es. "Riunione Bilancio 2026")</li>
+              <li><strong>Data:</strong> Giorno dell'evento</li>
+              <li><strong>Ora Inizio/Fine:</strong> Orario dell'evento</li>
+              <li><strong>Responsabile:</strong> Seleziona il collaboratore responsabile</li>
+            </ul>
+          </li>
+          <li><strong>Campi opzionali:</strong>
+            <ul>
+              <li><strong>Cliente:</strong> Associa l'evento ad un cliente specifico</li>
+              <li><strong>Partecipanti:</strong> Aggiungi altri collaboratori coinvolti</li>
+              <li><strong>Luogo:</strong> Indirizzo o sede dell'incontro</li>
+              <li><strong>Descrizione:</strong> Note e dettagli aggiuntivi</li>
+              <li><strong>Note:</strong> Informazioni extra per i partecipanti</li>
+            </ul>
+          </li>
+          <li>Clicca su <span class="button-example success">Salva Evento</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>💡 Notifiche Email Automatiche</strong>
+        <p>Quando crei o modifichi un evento, il sistema invia automaticamente email di notifica a:</p>
+        <ul>
+          <li>✅ Responsabile dell'evento</li>
+          <li>✅ Tutti i partecipanti selezionati</li>
+          <li>❌ Il cliente NON riceve email (privacy)</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Visualizzare gli Eventi</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>📋 Vista Lista</h4>
+          <p>Visualizza tutti gli eventi in ordine cronologico con dettagli completi, data, ora e partecipanti.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🔎 Ricerca e Filtri</h4>
+          <p>Cerca eventi per titolo, cliente, responsabile o partecipante. Filtra per data o stato.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 Ordinamento</h4>
+          <p>Ordina per data, titolo, responsabile o cliente per trovare rapidamente quello che cerchi.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">✏️</span> Modificare un Evento</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova l'evento nella lista</li>
+          <li>Clicca sul pulsante <span class="button-example secondary">✏️ Modifica</span></li>
+          <li>Aggiorna i campi necessari</li>
+          <li>Clicca su <span class="button-example success">Salva Modifiche</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Importante</strong>
+        <p>Modificando l'evento, viene inviata una nuova email di notifica a tutti i partecipanti con le informazioni aggiornate.</p>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare un Evento</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova l'evento da eliminare</li>
+          <li>Clicca sul pulsante <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione nella finestra di dialogo</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Attenzione</strong>
+        <p>L'eliminazione è permanente e non può essere annullata. I partecipanti NON ricevono notifica di cancellazione.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 2: MESSAGGI -->
+    <div class="section" id="messaggi">
+      <h2><span class="section-icon">💬</span> 2. Messaggi - Sistema di Messaggistica</h2>
+      
+      <p>Il sistema <strong>Messaggi</strong> permette la comunicazione interna tra i membri dello studio in modo organizzato e tracciabile.</p>
+
+      <h3><span class="subsection-icon">➕</span> Inviare un Nuovo Messaggio</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Accedi alla sezione <strong>Messaggi</strong> dal menu</li>
+          <li>Clicca su <span class="button-example">+ Nuovo Messaggio</span></li>
+          <li><strong>Compila il messaggio:</strong>
+            <ul>
+              <li><strong>Destinatario:</strong> Seleziona l'utente a cui inviare il messaggio</li>
+              <li><strong>Oggetto:</strong> Titolo breve e descrittivo</li>
+              <li><strong>Messaggio:</strong> Testo del messaggio (supporta testo lungo)</li>
+            </ul>
+          </li>
+          <li>Opzionale: <strong>Allega File</strong> (documenti, immagini, PDF)</li>
+          <li>Clicca su <span class="button-example success">📤 Invia</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box success">
+        <strong>✅ Conferma di Lettura</strong>
+        <p>Il sistema traccia automaticamente quando un messaggio viene letto dal destinatario.</p>
+      </div>
+
+      <h3><span class="subsection-icon">📥</span> Gestire i Messaggi Ricevuti</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>📬 Messaggi Ricevuti</h4>
+          <p>Visualizza tutti i messaggi ricevuti con indicatore di lettura/non lettura.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📤 Messaggi Inviati</h4>
+          <p>Controlla i messaggi che hai inviato e verifica se sono stati letti.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🔍 Ricerca Messaggi</h4>
+          <p>Cerca per mittente, destinatario, oggetto o contenuto del messaggio.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">📎</span> Allegati nei Messaggi</h3>
+      
+      <div class="step-list">
+        <p><strong>Per allegare un file:</strong></p>
+        <ol>
+          <li>Clicca su <strong>"📎 Allega File"</strong> nel form del messaggio</li>
+          <li>Seleziona uno o più file dal tuo computer</li>
+          <li>Formati supportati: PDF, DOC, DOCX, XLS, XLSX, immagini (JPG, PNG)</li>
+          <li>Dimensione massima: 10 MB per file</li>
+        </ol>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Suggerimento</strong>
+        <p>Usa oggetti chiari e descrittivi per facilitare la ricerca futura dei messaggi (es. "Bilancio Cliente Rossi 2026" invece di "Documento").</p>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare Messaggi</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Seleziona il messaggio da eliminare</li>
+          <li>Clicca su <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Nota</strong>
+        <p>Eliminando un messaggio, verrà rimosso solo dalla tua casella. Il destinatario/mittente lo conserverà nella sua.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 3: PROMEMORIA -->
+    <div class="section" id="promemoria">
+      <h2><span class="section-icon">📝</span> 3. Promemoria - Gestione Promemoria</h2>
+      
+      <p>I <strong>Promemoria</strong> sono note personali o condivise con scadenza, perfetti per non dimenticare attività importanti.</p>
+
+      <h3><span class="subsection-icon">➕</span> Creare un Promemoria</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Promemoria</strong></li>
+          <li>Clicca su <span class="button-example">+ Nuovo Promemoria</span></li>
+          <li><strong>Compila i campi:</strong>
+            <ul>
+              <li><strong>Cliente:</strong> Associa il promemoria ad un cliente (opzionale)</li>
+              <li><strong>Tipo Promemoria:</strong> Seleziona la categoria (Telefonata, Email, Appuntamento, etc.)</li>
+              <li><strong>Data Scadenza:</strong> Quando il promemoria deve scattare</li>
+              <li><strong>Descrizione:</strong> Dettagli del promemoria</li>
+              <li><strong>Priorità:</strong> Bassa, Media, Alta, Urgente</li>
+              <li><strong>Stato:</strong> Da Fare, In Corso, Completato, Annullato</li>
+            </ul>
+          </li>
+          <li>Opzionale: <strong>Condividi con altri utenti</strong> selezionando i destinatari</li>
+          <li>Clicca su <span class="button-example success">Salva Promemoria</span></li>
+        </ol>
+      </div>
+
+      <h3><span class="subsection-icon">🔔</span> Promemoria dal Calendario (Solo Responsabili)</h3>
+      
+      <p><strong>I responsabili possono creare promemoria direttamente dal calendario scadenze:</strong></p>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Scadenzario → Calendario</strong></li>
+          <li>Trova una scadenza specifica (IVA, IMU, etc.)</li>
+          <li>Clicca sul pulsante <span class="button-example">📝 Crea Promemoria</span> accanto alla scadenza</li>
+          <li>Il sistema <strong>precompila automaticamente</strong>:
+            <ul>
+              <li>Cliente collegato alla scadenza</li>
+              <li>Data scadenza</li>
+              <li>Tipo promemoria correlato</li>
+              <li>Descrizione con riferimento alla scadenza</li>
+            </ul>
+          </li>
+          <li>Completa eventuali campi aggiuntivi</li>
+          <li>Seleziona gli utenti con cui condividere il promemoria</li>
+          <li>Clicca su <span class="button-example success">Salva e Condividi</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>🎯 Vantaggi dei Promemoria dal Calendario</strong>
+        <ul>
+          <li>✅ <strong>Precompilazione automatica:</strong> Risparmia tempo, tutti i dati sono già inseriti</li>
+          <li>✅ <strong>Collegamento diretto:</strong> Il promemoria rimane associato alla scadenza</li>
+          <li>✅ <strong>Condivisione rapida:</strong> Assegna immediatamente ai collaboratori</li>
+          <li>✅ <strong>Tracciabilità:</strong> Vedi chi ha completato il promemoria</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🎨</span> Stati e Priorità</h3>
+      
+      <table>
+        <tr>
+          <th>Stato</th>
+          <th>Significato</th>
+          <th>Quando Usarlo</th>
+        </tr>
+        <tr>
+          <td><strong>📋 Da Fare</strong></td>
+          <td>Promemoria non ancora iniziato</td>
+          <td>Quando crei un nuovo promemoria</td>
+        </tr>
+        <tr>
+          <td><strong>⏳ In Corso</strong></td>
+          <td>Attività iniziata ma non completata</td>
+          <td>Quando inizi a lavorare sul promemoria</td>
+        </tr>
+        <tr>
+          <td><strong>✅ Completato</strong></td>
+          <td>Attività conclusa con successo</td>
+          <td>Quando hai terminato il promemoria</td>
+        </tr>
+        <tr>
+          <td><strong>❌ Annullato</strong></td>
+          <td>Promemoria non più necessario</td>
+          <td>Quando il promemoria non è più rilevante</td>
+        </tr>
+      </table>
+
+      <table style="margin-top: 20px;">
+        <tr>
+          <th>Priorità</th>
+          <th>Colore</th>
+          <th>Quando Usarla</th>
+        </tr>
+        <tr>
+          <td><strong>🔵 Bassa</strong></td>
+          <td>Blu</td>
+          <td>Attività non urgenti, da fare con calma</td>
+        </tr>
+        <tr>
+          <td><strong>🟡 Media</strong></td>
+          <td>Giallo</td>
+          <td>Attività normali da completare nei tempi</td>
+        </tr>
+        <tr>
+          <td><strong>🟠 Alta</strong></td>
+          <td>Arancione</td>
+          <td>Attività importanti da completare presto</td>
+        </tr>
+        <tr>
+          <td><strong>🔴 Urgente</strong></td>
+          <td>Rosso</td>
+          <td>Attività critiche da completare immediatamente</td>
+        </tr>
+      </table>
+
+      <h3><span class="subsection-icon">🔍</span> Filtrare e Cercare Promemoria</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🎯 Per Stato</h4>
+          <p>Visualizza solo i promemoria "Da Fare", "In Corso", "Completati" o "Annullati".</p>
+        </div>
+        <div class="feature-card">
+          <h4>⚡ Per Priorità</h4>
+          <p>Filtra per priorità Bassa, Media, Alta o Urgente per concentrarti su ciò che conta.</p>
+        </div>
+        <div class="feature-card">
+          <h4>👤 Per Cliente</h4>
+          <p>Visualizza tutti i promemoria associati ad un cliente specifico.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📅 Per Data</h4>
+          <p>Filtra per data di scadenza per vedere cosa devi fare oggi, questa settimana o questo mese.</p>
+        </div>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Best Practice</strong>
+        <p>Controlla i promemoria ogni mattina e aggiorna lo stato durante la giornata. Usa le priorità per organizzare il lavoro quotidiano.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 4: RUBRICA -->
+    <div class="section" id="rubrica">
+      <h2><span class="section-icon">👥</span> 4. Rubrica - Gestione Contatti</h2>
+      
+      <p>La <strong>Rubrica</strong> è l'archivio centralizzato di tutti i contatti professionali dello studio (fornitori, consulenti, partner, etc.).</p>
+
+      <h3><span class="subsection-icon">➕</span> Aggiungere un Contatto</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Rubrica</strong></li>
+          <li>Clicca su <span class="button-example">+ Nuovo Contatto</span></li>
+          <li><strong>Compila i dati anagrafici:</strong>
+            <ul>
+              <li><strong>Nome:</strong> Nome completo del contatto</li>
+              <li><strong>Azienda:</strong> Ragione sociale o nome azienda</li>
+              <li><strong>Email:</strong> Indirizzo email principale</li>
+              <li><strong>Telefono:</strong> Numero di telefono</li>
+              <li><strong>Cellulare:</strong> Numero cellulare (opzionale)</li>
+              <li><strong>Ruolo:</strong> Posizione o ruolo (es. Consulente Fiscale, Fornitore IT)</li>
+            </ul>
+          </li>
+          <li><strong>Indirizzo (opzionale):</strong>
+            <ul>
+              <li>Via, Città, CAP, Provincia</li>
+            </ul>
+          </li>
+          <li><strong>Note:</strong> Informazioni aggiuntive utili</li>
+          <li>Clicca su <span class="button-example success">Salva Contatto</span></li>
+        </ol>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Cercare un Contatto</h3>
+      
+      <div class="step-list">
+        <p><strong>Utilizza la barra di ricerca per trovare rapidamente un contatto per:</strong></p>
+        <ul>
+          <li>📝 Nome o cognome</li>
+          <li>🏢 Nome azienda</li>
+          <li>📧 Email</li>
+          <li>📞 Telefono</li>
+          <li>💼 Ruolo</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">✏️</span> Modificare un Contatto</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il contatto nella lista o cerca per nome</li>
+          <li>Clicca sul pulsante <span class="button-example secondary">✏️ Modifica</span></li>
+          <li>Aggiorna le informazioni necessarie</li>
+          <li>Clicca su <span class="button-example success">Salva Modifiche</span></li>
+        </ol>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare un Contatto</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il contatto da eliminare</li>
+          <li>Clicca sul pulsante <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione nella finestra di dialogo</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Attenzione</strong>
+        <p>L'eliminazione è permanente. Assicurati che il contatto non sia collegato a clienti, eventi o promemoria prima di eliminarlo.</p>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Differenza tra Rubrica e Clienti</strong>
+        <ul>
+          <li><strong>Rubrica:</strong> Contatti generici (fornitori, consulenti, partner)</li>
+          <li><strong>Clienti:</strong> Clienti dello studio con dati fiscali completi</li>
+        </ul>
+        <p>Usa la Rubrica per contatti che non sono clienti diretti dello studio.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 5: CLIENTI -->
+    <div class="section" id="clienti">
+      <h2><span class="section-icon">🏢</span> 5. Clienti - Anagrafica e Gestione</h2>
+      
+      <p>La sezione <strong>Clienti</strong> è l'anagrafica completa di tutti i clienti dello studio con dati fiscali e amministrativi.</p>
+
+      <h3><span class="subsection-icon">➕</span> Aggiungere un Nuovo Cliente</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Clienti</strong></li>
+          <li>Clicca su <span class="button-example">+ Nuovo Cliente</span></li>
+          <li><strong>Dati Anagrafici Obbligatori:</strong>
+            <ul>
+              <li><strong>Ragione Sociale:</strong> Nome completo o ragione sociale azienda</li>
+              <li><strong>Codice Fiscale:</strong> Codice fiscale (16 caratteri per persone fisiche)</li>
+            </ul>
+          </li>
+          <li><strong>Dati Fiscali (opzionali ma consigliati):</strong>
+            <ul>
+              <li><strong>Partita IVA:</strong> P.IVA per aziende/professionisti</li>
+              <li><strong>Email:</strong> Email principale del cliente</li>
+            </ul>
+          </li>
+          <li><strong>Indirizzo Completo (opzionale):</strong>
+            <ul>
+              <li>Via, Numero Civico, CAP, Città, Provincia</li>
+            </ul>
+          </li>
+          <li><strong>Stato Cliente:</strong>
+            <ul>
+              <li>✅ <strong>Attivo:</strong> Cliente corrente dello studio</li>
+              <li>❌ <strong>Non Attivo:</strong> Cliente cessato o sospeso</li>
+            </ul>
+          </li>
+          <li>Clicca su <span class="button-example success">Salva Cliente</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>📋 Validazione Automatica</strong>
+        <p>Il sistema controlla automaticamente la validità di:</p>
+        <ul>
+          <li>✅ Codice Fiscale (formato italiano 16 caratteri)</li>
+          <li>✅ Partita IVA (formato italiano 11 cifre)</li>
+          <li>✅ Email (formato valido)</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">✏️</span> Modificare un Cliente</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il cliente tramite ricerca o scorrimento lista</li>
+          <li>Clicca sul pulsante <span class="button-example secondary">✏️ Modifica</span></li>
+          <li>Aggiorna i dati necessari</li>
+          <li>Clicca su <span class="button-example success">Salva Modifiche</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Modifica Rapida</strong>
+        <p>Puoi modificare rapidamente lo stato di un cliente (Attivo/Non Attivo) direttamente dalla lista senza aprire il form di modifica.</p>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Ricerca e Filtri Avanzati</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🔎 Ricerca Testuale</h4>
+          <p>Cerca per Ragione Sociale, Codice Fiscale, Partita IVA o Email.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🎯 Filtro per Stato</h4>
+          <p>Visualizza solo clienti "Attivi" o "Non Attivi" con un click.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 Ordinamento</h4>
+          <p>Ordina per Ragione Sociale, Codice Fiscale o Data di Creazione.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare un Cliente</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il cliente da eliminare</li>
+          <li>Clicca sul pulsante <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Attenzione - Eliminazione Critica</strong>
+        <p><strong>Eliminando un cliente verranno eliminate TUTTE le informazioni collegate:</strong></p>
+        <ul>
+          <li>❌ Scadenze fiscali associate</li>
+          <li>❌ Promemoria collegati</li>
+          <li>❌ Eventi/Appuntamenti</li>
+          <li>❌ Credenziali accesso portali</li>
+          <li>❌ Cassetti fiscali e documenti</li>
+        </ul>
+        <p><strong>CONSIGLIO:</strong> Invece di eliminare, imposta il cliente come "Non Attivo" per conservare lo storico.</p>
+      </div>
+
+      <h3><span class="subsection-icon">📤</span> Importazione Massiva Clienti</h3>
+      
+      <div class="step-list">
+        <p><strong>Per importare molti clienti contemporaneamente:</strong></p>
+        <ol>
+          <li>Scarica il template CSV dal pulsante <span class="button-example secondary">📥 Scarica Template</span></li>
+          <li>Compila il file Excel/CSV con i dati dei clienti</li>
+          <li>Clicca su <span class="button-example">📤 Importa Clienti</span></li>
+          <li>Seleziona il file CSV compilato</li>
+          <li>Controlla l'anteprima dei dati da importare</li>
+          <li>Conferma l'importazione</li>
+        </ol>
+      </div>
+
+      <div class="info-box success">
+        <strong>✅ Formato Template CSV</strong>
+        <p><strong>Colonne obbligatorie:</strong></p>
+        <ul>
+          <li>ragione_sociale</li>
+          <li>codice_fiscale</li>
+        </ul>
+        <p><strong>Colonne opzionali:</strong></p>
+        <ul>
+          <li>partita_iva, email, indirizzo, cap, citta, provincia</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SEZIONE 6: ACCESSO PORTALI -->
+    <div class="section" id="accesso-portali">
+      <h2><span class="section-icon">🔑</span> 6. Accesso Portali - Gestione Credenziali</h2>
+      
+      <p>La sezione <strong>Accesso Portali</strong> permette di gestire in modo sicuro tutte le credenziali di accesso ai portali istituzionali per conto dei clienti.</p>
+
+      <h3><span class="subsection-icon">➕</span> Aggiungere Credenziali</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Accesso Portali</strong></li>
+          <li>Clicca su <span class="button-example">+ Nuove Credenziali</span></li>
+          <li><strong>Compila i campi obbligatori:</strong>
+            <ul>
+              <li><strong>Cliente:</strong> Seleziona il cliente proprietario delle credenziali</li>
+              <li><strong>Portale:</strong> Scegli il portale dalla lista (Agenzia Entrate, INPS, Camera di Commercio, etc.)</li>
+              <li><strong>Username:</strong> Nome utente/codice accesso</li>
+              <li><strong>Password:</strong> Password del portale</li>
+            </ul>
+          </li>
+          <li><strong>Campi aggiuntivi (opzionali):</strong>
+            <ul>
+              <li><strong>PIN/Codice OTP:</strong> Codice PIN o secondo fattore</li>
+              <li><strong>URL Portale:</strong> Link diretto al portale</li>
+              <li><strong>Note:</strong> Informazioni aggiuntive (es. domande di sicurezza, scadenza password)</li>
+            </ul>
+          </li>
+          <li>Clicca su <span class="button-example success">Salva Credenziali</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>🔐 Sicurezza delle Password</strong>
+        <p>Il sistema <strong>cripta automaticamente</strong> tutte le password salvate. Solo gli utenti autorizzati possono visualizzarle.</p>
+      </div>
+
+      <h3><span class="subsection-icon">👁️</span> Visualizzare le Password</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova le credenziali nella lista</li>
+          <li>Clicca sull'icona <strong>👁️ (occhio)</strong> accanto al campo password</li>
+          <li>La password verrà mostrata in chiaro per alcuni secondi</li>
+          <li>Clicca nuovamente per nasconderla</li>
+        </ol>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Copia Rapida</strong>
+        <p>Clicca sul pulsante <strong>📋 Copia</strong> per copiare username o password negli appunti senza visualizzarli.</p>
+      </div>
+
+      <h3><span class="subsection-icon">🔧</span> Portali Disponibili</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🏛️ Agenzia Entrate</h4>
+          <p>Fisconline, Entratel, Cassetto Fiscale</p>
+        </div>
+        <div class="feature-card">
+          <h4>💼 INPS</h4>
+          <p>Portale INPS, Cassetto Previdenziale</p>
+        </div>
+        <div class="feature-card">
+          <h4>🏢 Camera Commercio</h4>
+          <p>Registro Imprese, Visure</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 Portali Regionali</h4>
+          <p>SUAP, Portali Regionali Fiscali</p>
+        </div>
+        <div class="feature-card">
+          <h4>🏦 Banche/POS</h4>
+          <p>Home Banking, Portali POS</p>
+        </div>
+        <div class="feature-card">
+          <h4>⚖️ Altri Portali</h4>
+          <p>Portali personalizzati non in lista</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Ricerca e Filtri</h3>
+      
+      <div class="step-list">
+        <p><strong>Trova rapidamente le credenziali per:</strong></p>
+        <ul>
+          <li>👤 <strong>Cliente:</strong> Visualizza tutte le credenziali di un cliente</li>
+          <li>🌐 <strong>Portale:</strong> Filtra per tipo di portale</li>
+          <li>🔎 <strong>Username:</strong> Cerca per nome utente</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">✏️</span> Modificare o Aggiornare Credenziali</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova le credenziali da modificare</li>
+          <li>Clicca sul pulsante <span class="button-example secondary">✏️ Modifica</span></li>
+          <li>Aggiorna password, PIN o note</li>
+          <li>Clicca su <span class="button-example success">Salva Modifiche</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Importante - Aggiornamento Password</strong>
+        <p>Quando un portale comunica cambio password obbligatorio, aggiorna immediatamente le credenziali nel sistema per evitare problemi di accesso.</p>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare Credenziali</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova le credenziali da eliminare</li>
+          <li>Clicca sul pulsante <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Attenzione</strong>
+        <p>L'eliminazione è permanente. Assicurati di non avere più bisogno delle credenziali prima di eliminarle.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 7: CASSETTI FISCALI -->
+    <div class="section" id="cassetti-fiscali">
+      <h2><span class="section-icon">📁</span> 7. Cassetti Fiscali - Organizzazione Documenti</h2>
+      
+      <p>I <strong>Cassetti Fiscali</strong> sono cartelle virtuali per organizzare e archiviare documenti fiscali e amministrativi per cliente e anno.</p>
+
+      <h3><span class="subsection-icon">📂</span> Struttura dei Cassetti</h3>
+      
+      <p><strong>Ogni cassetto fiscale è organizzato per:</strong></p>
+      <ul>
+        <li>👤 <strong>Cliente:</strong> Un cassetto per ogni cliente</li>
+        <li>📅 <strong>Anno Fiscale:</strong> Suddivisione per anno di competenza</li>
+        <li>📋 <strong>Tipo Documento:</strong> Categorie predefinite (Fatture, Dichiarazioni, F24, etc.)</li>
+      </ul>
+
+      <h3><span class="subsection-icon">➕</span> Caricare Documenti</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai alla sezione <strong>Cassetti Fiscali</strong></li>
+          <li>Seleziona il <strong>Cliente</strong> dal menu a tendina</li>
+          <li>Seleziona l'<strong>Anno Fiscale</strong></li>
+          <li>Clicca su <span class="button-example">📤 Carica Documento</span></li>
+          <li><strong>Compila i dettagli del documento:</strong>
+            <ul>
+              <li><strong>Tipo Documento:</strong> Categoria (Fattura Attiva, Fattura Passiva, F24, Dichiarazione IVA, etc.)</li>
+              <li><strong>Nome Documento:</strong> Titolo descrittivo</li>
+              <li><strong>Data Documento:</strong> Data di emissione o competenza</li>
+              <li><strong>Descrizione:</strong> Note aggiuntive (opzionale)</li>
+            </ul>
+          </li>
+          <li><strong>Seleziona il file</strong> dal computer (PDF, DOC, XLS, immagini)</li>
+          <li>Clicca su <span class="button-example success">Carica e Salva</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box">
+        <strong>📋 Formati Supportati</strong>
+        <ul>
+          <li>✅ PDF (consigliato per documenti fiscali)</li>
+          <li>✅ DOC, DOCX (documenti Word)</li>
+          <li>✅ XLS, XLSX (fogli Excel)</li>
+          <li>✅ JPG, PNG (immagini/scansioni)</li>
+          <li>✅ ZIP (archivi compressi)</li>
+        </ul>
+        <p><strong>Dimensione massima:</strong> 10 MB per file</p>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Cercare e Filtrare Documenti</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>👤 Per Cliente</h4>
+          <p>Visualizza tutti i documenti di un cliente specifico.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📅 Per Anno</h4>
+          <p>Filtra i documenti per anno fiscale di competenza.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📋 Per Tipo</h4>
+          <p>Visualizza solo fatture, F24, dichiarazioni o altri tipi specifici.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🔎 Ricerca Testuale</h4>
+          <p>Cerca per nome documento o descrizione.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">📥</span> Scaricare Documenti</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il documento nella lista</li>
+          <li>Clicca sul pulsante <span class="button-example secondary">📥 Scarica</span></li>
+          <li>Il file verrà scaricato sul tuo computer</li>
+        </ol>
+      </div>
+
+      <div class="info-box tip">
+        <strong>💡 Organizzazione Consigliata</strong>
+        <ul>
+          <li>📁 Usa nomi descrittivi per i documenti (es. "Fattura 001/2026 - Cliente Rossi")</li>
+          <li>📅 Verifica sempre l'anno fiscale corretto prima di caricare</li>
+          <li>🏷️ Sfrutta le categorie predefinite per trovare rapidamente i documenti</li>
+          <li>🗂️ Carica periodicamente i documenti per non accumularli</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🗑️</span> Eliminare Documenti</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Trova il documento da eliminare</li>
+          <li>Clicca sul pulsante <span class="button-example danger">🗑️ Elimina</span></li>
+          <li>Conferma l'eliminazione</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Attenzione - Eliminazione Permanente</strong>
+        <p>I documenti eliminati non possono essere recuperati. Assicurati di avere backup esterni prima di eliminare documenti importanti.</p>
+      </div>
+    </div>
+
+    <!-- SEZIONE 8: SCADENZARI -->
+    <div class="section" id="scadenzari">
+      <h2><span class="section-icon">📊</span> 8. Scadenzari - Gestione Scadenze Fiscali</h2>
+      
+      <p>Gli <strong>Scadenzari</strong> sono il cuore della gestione fiscale di Studio Manager Pro. Permettono di tracciare tutte le scadenze fiscali per cliente.</p>
+
+      <h3><span class="subsection-icon">📅</span> Tipi di Scadenzario</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🗓️ Calendario</h4>
+          <p>Vista riepilogativa di tutte le scadenze con filtri per tipo e cliente.</p>
+        </div>
+        <div class="feature-card">
+          <h4>💰 IVA</h4>
+          <p>Scadenze liquidazioni IVA mensili, trimestrali e annuali.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📋 CCGG</h4>
+          <p>Scadenze Certificazione Unica e Comunicazioni CCGG.</p>
+        </div>
+        <div class="feature-card">
+          <h4>💼 CU</h4>
+          <p>Certificazione Unica dipendenti e collaboratori.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🏠 IMU</h4>
+          <p>Scadenze IMU acconto e saldo per proprietà immobiliari.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 Fiscali</h4>
+          <p>Dichiarazioni dei redditi, IRAP, ISA e altre scadenze fiscali.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📈 Bilanci</h4>
+          <p>Approvazione e deposito bilanci annuali.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📑 770</h4>
+          <p>Dichiarazione annuale sostituti d'imposta.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 LIPE</h4>
+          <p>Liquidazioni periodiche IVA trimestrali.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🌍 Esterometro</h4>
+          <p>Comunicazioni operazioni transfrontaliere.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📄 Proforma</h4>
+          <p>Fatture proforma e preventivi.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🔒 Antiriciclaggio</h4>
+          <p>Adempimenti normativa antiriciclaggio.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">➕</span> Aggiungere una Scadenza</h3>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai nella sezione specifica dello scadenzario (es. <strong>IVA</strong>)</li>
+          <li>Clicca su <span class="button-example">+ Nuova Scadenza</span></li>
+          <li><strong>Compila i campi obbligatori:</strong>
+            <ul>
+              <li><strong>Cliente:</strong> Seleziona il cliente interessato</li>
+              <li><strong>Data Scadenza:</strong> Data entro cui adempiere</li>
+              <li><strong>Descrizione:</strong> Dettagli della scadenza (es. "IVA Mensile Gennaio 2026")</li>
+              <li><strong>Stato:</strong> Da Fare, In Corso, Completato, Scaduto</li>
+            </ul>
+          </li>
+          <li><strong>Campi specifici per tipo (es. IVA):</strong>
+            <ul>
+              <li>Periodo di Riferimento</li>
+              <li>Importo</li>
+              <li>Note operative</li>
+            </ul>
+          </li>
+          <li>Clicca su <span class="button-example success">Salva Scadenza</span></li>
+        </ol>
+      </div>
+
+      <h3><span class="subsection-icon">🔔</span> Stati delle Scadenze</h3>
+      
+      <table>
+        <tr>
+          <th>Stato</th>
+          <th>Significato</th>
+          <th>Azione</th>
+        </tr>
+        <tr>
+          <td><strong>📋 Da Fare</strong></td>
+          <td>Scadenza non ancora processata</td>
+          <td>La scadenza è in attesa di lavorazione</td>
+        </tr>
+        <tr>
+          <td><strong>⏳ In Corso</strong></td>
+          <td>Lavorazione in corso</td>
+          <td>Qualcuno sta lavorando sulla scadenza</td>
+        </tr>
+        <tr>
+          <td><strong>✅ Completato</strong></td>
+          <td>Adempimento concluso</td>
+          <td>La scadenza è stata evasa con successo</td>
+        </tr>
+        <tr>
+          <td><strong>❌ Scaduto</strong></td>
+          <td>Scadenza non rispettata</td>
+          <td>Attenzione: verificare sanzioni o ravvedimenti</td>
+        </tr>
+      </table>
+
+      <h3><span class="subsection-icon">📝</span> Creare Promemoria dal Calendario</h3>
+      
+      <p><strong>Come responsabile, puoi creare promemoria direttamente dalle scadenze:</strong></p>
+      
+      <div class="step-list">
+        <ol>
+          <li>Vai su <strong>Scadenzario → Calendario</strong></li>
+          <li>Trova la scadenza per cui creare il promemoria</li>
+          <li>Clicca sul pulsante <span class="button-example">📝 Crea Promemoria</span></li>
+          <li>Il sistema precompila automaticamente:
+            <ul>
+              <li>Cliente collegato</li>
+              <li>Data scadenza</li>
+              <li>Descrizione con riferimento alla scadenza</li>
+            </ul>
+          </li>
+          <li>Seleziona i collaboratori da coinvolgere</li>
+          <li>Clicca su <span class="button-example success">Salva e Condividi</span></li>
+        </ol>
+      </div>
+
+      <div class="info-box success">
+        <strong>✅ Vantaggi</strong>
+        <ul>
+          <li>⚡ <strong>Veloce:</strong> Non devi riscrivere i dati, sono già precompilati</li>
+          <li>🔗 <strong>Collegato:</strong> Il promemoria resta associato alla scadenza</li>
+          <li>👥 <strong>Collaborativo:</strong> Assegni subito ai collaboratori giusti</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🔍</span> Filtrare le Scadenze</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>👤 Per Cliente</h4>
+          <p>Visualizza tutte le scadenze di un cliente specifico.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📅 Per Periodo</h4>
+          <p>Filtra per mese, trimestre o anno per pianificare il lavoro.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🎯 Per Stato</h4>
+          <p>Vedi solo scadenze "Da Fare", "In Corso", "Completate" o "Scadute".</p>
+        </div>
+        <div class="feature-card">
+          <h4>📊 Per Tipo</h4>
+          <p>Concentrati su un solo tipo di scadenza (IVA, IMU, etc.).</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">⚠️</span> Gestire Scadenze Scadute</h3>
+      
+      <div class="step-list">
+        <p><strong>Quando una scadenza è marcata come "Scaduta":</strong></p>
+        <ol>
+          <li>Verifica se c'è stato effettivamente un ritardo</li>
+          <li>Valuta la necessità di ravvedimento operoso</li>
+          <li>Aggiorna lo stato una volta risolto</li>
+          <li>Aggiungi note sul ravvedimento o sulle sanzioni pagate</li>
+        </ol>
+      </div>
+
+      <div class="info-box warning">
+        <strong>⚠️ Alert Automatici</strong>
+        <p>Il sistema può inviare alert automatici per scadenze imminenti (configurabile nelle impostazioni). Controlla regolarmente il calendario per non perdere scadenze importanti!</p>
+      </div>
+
+      <h3><span class="subsection-icon">📊</span> Report e Statistiche</h3>
+      
+      <p><strong>Usa il Calendario Scadenze per:</strong></p>
+      <ul>
+        <li>📈 Monitorare il carico di lavoro mensile</li>
+        <li>🎯 Verificare la percentuale di completamento</li>
+        <li>⚠️ Identificare clienti con scadenze critiche o scadute</li>
+        <li>📊 Pianificare le risorse dello studio</li>
+      </ul>
+    </div>
+
+    <!-- SEZIONE 9: SUGGERIMENTI -->
+    <div class="section" id="tips">
+      <h2><span class="section-icon">💡</span> 9. Suggerimenti e Best Practices</h2>
+      
+      <h3><span class="subsection-icon">⭐</span> Organizzazione Quotidiana</h3>
+      
+      <div class="step-list">
+        <ul>
+          <li>🌅 <strong>Inizia la giornata controllando:</strong>
+            <ul>
+              <li>Messaggi non letti</li>
+              <li>Eventi in agenda per oggi</li>
+              <li>Promemoria con priorità Alta/Urgente</li>
+              <li>Scadenze imminenti (entro 7 giorni)</li>
+            </ul>
+          </li>
+          <li>📋 <strong>Aggiorna gli stati:</strong>
+            <ul>
+              <li>Marca promemoria completati</li>
+              <li>Aggiorna lo stato delle scadenze in lavorazione</li>
+              <li>Rispondi ai messaggi pendenti</li>
+            </ul>
+          </li>
+          <li>🗓️ <strong>Pianifica la settimana:</strong>
+            <ul>
+              <li>Controlla eventi e appuntamenti</li>
+              <li>Verifica scadenze della settimana</li>
+              <li>Crea promemoria per attività ricorrenti</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🎯</span> Gestione Efficiente</h3>
+      
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>🏷️ Nomenclatura Chiara</h4>
+          <p>Usa nomi descrittivi per eventi, promemoria e documenti. Evita sigle poco chiare.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📅 Date Accurate</h4>
+          <p>Inserisci sempre date corrette. Una scadenza sbagliata può causare sanzioni.</p>
+        </div>
+        <div class="feature-card">
+          <h4>📝 Note Dettagliate</h4>
+          <p>Aggiungi note esplicative. Aiutano te e i colleghi a ricordare contesti importanti.</p>
+        </div>
+        <div class="feature-card">
+          <h4>🔄 Aggiornamenti Costanti</h4>
+          <p>Mantieni aggiornati stati e informazioni. Un dato vecchio è peggio di nessun dato.</p>
+        </div>
+      </div>
+
+      <h3><span class="subsection-icon">🔐</span> Sicurezza e Privacy</h3>
+      
+      <div class="info-box warning">
+        <strong>🔒 Regole di Sicurezza</strong>
+        <ul>
+          <li>❌ Non condividere le tue credenziali di accesso</li>
+          <li>❌ Non lasciare il computer incustodito con sessione aperta</li>
+          <li>❌ Non inviare credenziali clienti via email non criptata</li>
+          <li>✅ Fai logout quando ti allontani dalla postazione</li>
+          <li>✅ Cambia la password periodicamente</li>
+          <li>✅ Verifica sempre i destinatari prima di inviare messaggi</li>
+        </ul>
+      </div>
+
+      <h3><span class="subsection-icon">🚀</span> Scorciatoie Utili</h3>
+      
+      <table>
+        <tr>
+          <th>Azione</th>
+          <th>Scorciatoia</th>
+          <th>Descrizione</th>
+        </tr>
+        <tr>
+          <td>Ricerca Globale</td>
+          <td><span class="key-combo">Ctrl + K</span></td>
+          <td>Apre la ricerca rapida in qualsiasi sezione</td>
+        </tr>
+        <tr>
+          <td>Nuovo Record</td>
+          <td><span class="key-combo">Ctrl + N</span></td>
+          <td>Crea nuovo elemento nella sezione corrente</td>
+        </tr>
+        <tr>
+          <td>Salva Form</td>
+          <td><span class="key-combo">Ctrl + S</span></td>
+          <td>Salva il form corrente (se aperto)</td>
+        </tr>
+        <tr>
+          <td>Chiudi Dialog</td>
+          <td><span class="key-combo">ESC</span></td>
+          <td>Chiude finestre di dialogo e form</td>
+        </tr>
+      </table>
+
+      <h3><span class="subsection-icon">📞</span> Supporto e Assistenza</h3>
+      
+      <div class="info-box">
+        <strong>🆘 Bisogno di Aiuto?</strong>
+        <p>Se hai problemi o domande:</p>
+        <ul>
+          <li>💬 Contatta l'amministratore dello studio tramite <strong>Messaggi</strong></li>
+          <li>📧 Invia una email all'assistenza tecnica</li>
+          <li>📚 Consulta questo manuale per dubbi comuni</li>
+          <li>🎥 Richiedi una sessione di formazione se necessario</li>
+        </ul>
+      </div>
+
+      <div class="info-box success">
+        <strong>✨ Suggerimento Finale</strong>
+        <p><strong>Studio Manager Pro è uno strumento potente!</strong> Più lo usi, più diventerai efficiente. Non aver paura di esplorare le funzionalità e personalizzare il tuo flusso di lavoro.</p>
+        <p><strong>Buon lavoro! 💼</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+    <p>Versione 2.0 | © 2026 | Manuale Utente Completo</p>
+    <p>Per assistenza: <a href="mailto:support@studiomanagerpro.it" style="color: #60a5fa;">support@studiomanagerpro.it</a></p>
+  </footer>
+</body>
+</html>
