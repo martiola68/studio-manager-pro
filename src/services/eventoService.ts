@@ -126,7 +126,6 @@ export const eventoService = {
       let partecipantiEmails: string[] = [];
       let partecipantiNomi: string[] = [];
       
-      // Cast sicuro per partecipanti (Json -> string[])
       const partecipantiIds = Array.isArray(evento.partecipanti) 
         ? (evento.partecipanti as string[]) 
         : [];
@@ -181,8 +180,8 @@ export const eventoService = {
         }
       };
 
-      // Prepara i dati per la notifica
-      const notificationData = {
+      // Usa emailService per inviare la notifica
+      const emailData = {
         eventoId: evento.id,
         eventoTitolo: evento.titolo || "Evento senza titolo",
         eventoData: formatDate(evento.data_inizio),
@@ -199,30 +198,17 @@ export const eventoService = {
         clienteNome
       };
 
-      console.log("📧 Sending notification with data:", {
-        eventoId: notificationData.eventoId,
-        responsabileEmail: notificationData.responsabileEmail,
-        partecipantiCount: partecipantiEmails.length,
-        hasCliente: !!clienteEmail
-      });
-
-      // Invoca la Edge Function
-      const { data: result, error: invokeError } = await supabase.functions.invoke(
-        "send-event-notification",
-        {
-          body: notificationData
-        }
-      );
-
-      if (invokeError) {
-        console.error("❌ Error invoking send-event-notification:", invokeError);
-        throw invokeError;
+      console.log("📧 Sending notification via emailService");
+      const result = await emailService.sendEventNotification(emailData);
+      
+      if (result.success) {
+        console.log("✅ Event notification sent successfully:", result);
+      } else {
+        console.error("❌ Failed to send event notification:", result.error);
       }
-
-      console.log("✅ Event notification sent successfully:", result);
     } catch (error) {
       console.error("💥 Critical error in sendEventNotification:", error);
-      throw error;
+      // Non bloccare la creazione/modifica dell'evento se l'email fallisce
     }
   },
 
