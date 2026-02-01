@@ -260,12 +260,12 @@ export default function AgendaPage() {
       }
 
       const startDateTime = formData.tutto_giorno 
-        ? `${formData.data_inizio}T00:00:00Z` 
-        : `${formData.data_inizio}T${formData.ora_inizio}:00Z`;
+        ? `${formData.data_inizio}T00:00:00` 
+        : `${formData.data_inizio}T${formData.ora_inizio}:00`;
         
       const endDateTime = formData.tutto_giorno 
-        ? `${formData.data_fine || formData.data_inizio}T23:59:59Z` 
-        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00Z`;
+        ? `${formData.data_fine || formData.data_inizio}T23:59:59` 
+        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00`;
 
       const payload = {
         titolo: formData.titolo,
@@ -383,7 +383,7 @@ export default function AgendaPage() {
     
     const luogo = evento.in_sede 
       ? `Sala ${evento.sala || "??"} (In Sede)` 
-      : (evento.luogo || "Fuori Sede"); // Mostra luogo se presente
+      : (evento.luogo || "Fuori Sede");
     
     const tipo = evento.evento_generico 
       ? "Evento Generico" 
@@ -393,7 +393,7 @@ export default function AgendaPage() {
     
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
-    summary += `⏰ ${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")}\n\n`;
+    summary += `⏰ ${formatTimeWithTimezone(evento.data_inizio)} - ${formatTimeWithTimezone(evento.data_fine)}\n\n`;
     summary += `👤 Assegnato a: ${utenteNome}\n\n`;
     summary += `🏢 Cliente: ${clienteNome}\n\n`;
     summary += `📍 Luogo: ${luogo}\n\n`;
