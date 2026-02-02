@@ -316,7 +316,7 @@ export default function ScadenzeFiscaliPage() {
       <Card>
         <CardContent className="p-0">
           <div className="relative">
-            <div className="h-[600px] overflow-x-scroll overflow-y-auto border rounded-lg">
+            <div className="h-[600px] overflow-y-auto border rounded-lg">
               <Table className="relative min-w-[2400px]">
                 <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
                   <TableRow>
