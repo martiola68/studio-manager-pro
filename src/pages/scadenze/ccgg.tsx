@@ -289,7 +289,7 @@ export default function ScadenzeCCGGPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto overflow-y-auto max-h-[600px] border rounded-lg">
+          <div className="h-[600px] overflow-x-auto overflow-y-auto border rounded-lg">
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                 <TableRow>
