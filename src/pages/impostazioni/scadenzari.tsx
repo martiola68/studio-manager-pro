@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Archive, Plus, AlertTriangle, CalendarCog } from "lucide-react";
+import { Archive, Plus, AlertTriangle, CalendarCog, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function GenerazioneScadenzariPage() {
   const router = useRouter();
@@ -16,6 +17,19 @@ export default function GenerazioneScadenzariPage() {
   const [processing, setProcessing] = useState(false);
   const [annoArchiviazione, setAnnoArchiviazione] = useState(new Date().getFullYear() - 1);
   const [annoGenerazione, setAnnoGenerazione] = useState(new Date().getFullYear());
+  
+  // Flag per scelta scadenzari
+  const [scadenzariFlags, setScadenzariFlags] = useState({
+    iva: true,
+    ccgg: true,
+    cu: true,
+    fiscali: true,
+    bilanci: true,
+    modello770: true,
+    lipe: true,
+    esterometro: true,
+    proforma: true
+  });
 
   useEffect(() => {
     checkAuth();
@@ -45,6 +59,38 @@ export default function GenerazioneScadenzariPage() {
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
+    }
+  };
+
+  const handleAzzeraScadenzario = async (nomeScadenzario: string, nomeTabella: string) => {
+    if (!confirm(`Sei sicuro di voler AZZERARE COMPLETAMENTE lo scadenzario ${nomeScadenzario}?\n\nQuesta operazione eliminerà TUTTI i dati e NON può essere annullata!`)) {
+      return;
+    }
+
+    try {
+      setProcessing(true);
+
+      const { error } = await supabase
+        .from(nomeTabella)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Elimina tutti i record
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: `Scadenzario ${nomeScadenzario} azzerato completamente`
+      });
+
+    } catch (error) {
+      console.error("Errore azzeramento:", error);
+      toast({
+        title: "Errore",
+        description: `Impossibile azzerare lo scadenzario ${nomeScadenzario}`,
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -79,7 +125,19 @@ export default function GenerazioneScadenzariPage() {
   };
 
   const handleGenera = async () => {
-    if (!confirm(`Sei sicuro di voler generare gli scadenzari per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
+    const scadenzariSelezionati = Object.entries(scadenzariFlags)
+      .filter(([_, selected]) => selected)
+      .map(([key, _]) => key);
+
+    if (scadenzariSelezionati.length === 0) {
+      toast({
+        title: "Attenzione",
+        description: "Seleziona almeno uno scadenzario da generare",
+      });
+      return;
+    }
+
+    if (!confirm(`Sei sicuro di voler generare gli scadenzari selezionati per l'anno ${annoGenerazione}?\n\nVerranno creati record per tutti i clienti attivi in base ai flag attivi.`)) {
       return;
     }
 
@@ -107,8 +165,8 @@ export default function GenerazioneScadenzariPage() {
 
       for (const cliente of clienti) {
         try {
-          // TBScadIva - Prima verifica se esiste
-          if (cliente.flag_iva) {
+          // TBScadIva
+          if (scadenzariFlags.iva && cliente.flag_iva) {
             const { data: existing } = await supabase
               .from("tbscadiva")
               .select("id")
@@ -131,7 +189,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadCCGG
-          if (cliente.flag_ccgg) {
+          if (scadenzariFlags.ccgg && cliente.flag_ccgg) {
             const { data: existing } = await supabase
               .from("tbscadccgg")
               .select("id")
@@ -154,7 +212,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadCU
-          if (cliente.flag_cu) {
+          if (scadenzariFlags.cu && cliente.flag_cu) {
             const { data: existing } = await supabase
               .from("tbscadcu")
               .select("id")
@@ -177,7 +235,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadFiscali
-          if (cliente.flag_fiscali) {
+          if (scadenzariFlags.fiscali && cliente.flag_fiscali) {
             const { data: existing } = await supabase
               .from("tbscadfiscali")
               .select("id")
@@ -200,7 +258,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadBilanci
-          if (cliente.flag_bilancio) {
+          if (scadenzariFlags.bilanci && cliente.flag_bilancio) {
             const { data: existing } = await supabase
               .from("tbscadbilanci")
               .select("id")
@@ -223,7 +281,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScad770
-          if (cliente.flag_770) {
+          if (scadenzariFlags.modello770 && cliente.flag_770) {
             const { data: existing } = await supabase
               .from("tbscad770")
               .select("id")
@@ -246,7 +304,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadLipe
-          if (cliente.flag_lipe) {
+          if (scadenzariFlags.lipe && cliente.flag_lipe) {
             const { data: existing } = await supabase
               .from("tbscadlipe")
               .select("id")
@@ -268,7 +326,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadEstero
-          if (cliente.flag_esterometro) {
+          if (scadenzariFlags.esterometro && cliente.flag_esterometro) {
             const { data: existing } = await supabase
               .from("tbscadestero")
               .select("id")
@@ -290,7 +348,7 @@ export default function GenerazioneScadenzariPage() {
           }
 
           // TBScadProforma
-          if (cliente.flag_proforma) {
+          if (scadenzariFlags.proforma && cliente.flag_proforma) {
             const { data: existing } = await supabase
               .from("tbscadproforma")
               .select("id")
@@ -311,7 +369,6 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
-          // Antiriciclaggio ora gestito direttamente su tbclienti con flag gestione_antiriciclaggio
         } catch (error) {
           console.error(`Errore elaborazione cliente ${cliente.ragione_sociale}:`, error);
           errori++;
@@ -349,10 +406,10 @@ export default function GenerazioneScadenzariPage() {
   const anni = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
+    <div className="max-w-6xl mx-auto p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Generazione Scadenzari</h1>
-        <p className="text-gray-500 mt-1">Archivia scadenze precedenti e genera nuovi scadenzari</p>
+        <p className="text-gray-500 mt-1">Archivia scadenze precedenti, genera nuovi scadenzari o azzera dati esistenti</p>
       </div>
 
       <div className="space-y-6">
@@ -459,6 +516,84 @@ export default function GenerazioneScadenzariPage() {
               </Select>
             </div>
 
+            <div className="space-y-3">
+              <Label>Scadenzari da Generare</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_iva" 
+                    checked={scadenzariFlags.iva}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
+                  />
+                  <label htmlFor="flag_iva" className="text-sm cursor-pointer">IVA</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_ccgg" 
+                    checked={scadenzariFlags.ccgg}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
+                  />
+                  <label htmlFor="flag_ccgg" className="text-sm cursor-pointer">CCGG</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_cu" 
+                    checked={scadenzariFlags.cu}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
+                  />
+                  <label htmlFor="flag_cu" className="text-sm cursor-pointer">CU</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_fiscali" 
+                    checked={scadenzariFlags.fiscali}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
+                  />
+                  <label htmlFor="flag_fiscali" className="text-sm cursor-pointer">Fiscali</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_bilanci" 
+                    checked={scadenzariFlags.bilanci}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
+                  />
+                  <label htmlFor="flag_bilanci" className="text-sm cursor-pointer">Bilanci</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_770" 
+                    checked={scadenzariFlags.modello770}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
+                  />
+                  <label htmlFor="flag_770" className="text-sm cursor-pointer">Modello 770</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_lipe" 
+                    checked={scadenzariFlags.lipe}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
+                  />
+                  <label htmlFor="flag_lipe" className="text-sm cursor-pointer">LIPE</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_esterometro" 
+                    checked={scadenzariFlags.esterometro}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
+                  />
+                  <label htmlFor="flag_esterometro" className="text-sm cursor-pointer">Esterometro</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_proforma" 
+                    checked={scadenzariFlags.proforma}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
+                  />
+                  <label htmlFor="flag_proforma" className="text-sm cursor-pointer">Proforma</label>
+                </div>
+              </div>
+            </div>
+
             <Button
               onClick={handleGenera}
               disabled={processing}
@@ -472,10 +607,117 @@ export default function GenerazioneScadenzariPage() {
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Genera Scadenzari {annoGenerazione}
+                  Genera Scadenzari Selezionati {annoGenerazione}
                 </>
               )}
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-600">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-700">
+              <Trash2 className="h-5 w-5" />
+              Azzera Scadenzari
+            </CardTitle>
+            <CardDescription>
+              Elimina TUTTI i dati di uno scadenzario specifico
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-orange-800">
+                  <p className="font-semibold mb-1">ATTENZIONE!</p>
+                  <p>L'azzeramento eliminerà PERMANENTEMENTE tutti i dati dello scadenzario selezionato. Questa operazione NON può essere annullata!</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <Button
+                onClick={() => handleAzzeraScadenzario("IVA", "tbscadiva")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera IVA
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("CCGG", "tbscadccgg")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera CCGG
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("CU", "tbscadcu")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera CU
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("Fiscali", "tbscadfiscali")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera Fiscali
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("Bilanci", "tbscadbilanci")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera Bilanci
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("Modello 770", "tbscad770")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera 770
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("LIPE", "tbscadlipe")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera LIPE
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("Esterometro", "tbscadestero")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera Esterometro
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("Proforma", "tbscadproforma")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera Proforma
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
