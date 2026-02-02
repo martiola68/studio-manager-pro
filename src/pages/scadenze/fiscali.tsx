@@ -315,11 +315,11 @@ export default function ScadenzeFiscaliPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
-            <Table>
-              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+          <div className="h-[600px] overflow-auto border rounded-lg">
+            <Table className="min-w-[2000px] relative">
+              <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                  <TableHead className="sticky left-0 bg-white z-30 min-w-[200px] border-r">Nominativo</TableHead>
                   <TableHead className="min-w-[150px]">Professionista</TableHead>
                   <TableHead className="min-w-[150px]">Operatore</TableHead>
                   <TableHead className="min-w-[120px]">Tipo Redditi</TableHead>

@@ -71,7 +71,7 @@ export default function GenerazioneScadenzariPage() {
       setProcessing(true);
 
       const { error } = await supabase
-        .from(nomeTabella)
+        .from(nomeTabella as any) // Fix: cast a any per evitare errore TS
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Elimina tutti i record
 
@@ -171,7 +171,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadiva")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -194,7 +194,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadccgg")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -217,7 +217,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadcu")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -240,7 +240,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadfiscali")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -263,7 +263,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadbilanci")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -286,7 +286,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscad770")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -309,7 +309,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadlipe")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -331,7 +331,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadestero")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -353,7 +353,7 @@ export default function GenerazioneScadenzariPage() {
               .from("tbscadproforma")
               .select("id")
               .eq("id", cliente.id)
-              .single();
+              .maybeSingle();
 
             if (!existing) {
               const { error } = await supabase
@@ -453,6 +453,84 @@ export default function GenerazioneScadenzariPage() {
               </Select>
             </div>
 
+            <div className="space-y-3">
+              <Label>Scadenzari da Archiviare</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_iva" 
+                    checked={scadenzariFlags.iva}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, iva: checked as boolean})}
+                  />
+                  <label htmlFor="arch_iva" className="text-sm cursor-pointer">IVA</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_ccgg" 
+                    checked={scadenzariFlags.ccgg}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, ccgg: checked as boolean})}
+                  />
+                  <label htmlFor="arch_ccgg" className="text-sm cursor-pointer">CCGG</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_cu" 
+                    checked={scadenzariFlags.cu}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, cu: checked as boolean})}
+                  />
+                  <label htmlFor="arch_cu" className="text-sm cursor-pointer">CU</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_fiscali" 
+                    checked={scadenzariFlags.fiscali}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, fiscali: checked as boolean})}
+                  />
+                  <label htmlFor="arch_fiscali" className="text-sm cursor-pointer">Fiscali</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_bilanci" 
+                    checked={scadenzariFlags.bilanci}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, bilanci: checked as boolean})}
+                  />
+                  <label htmlFor="arch_bilanci" className="text-sm cursor-pointer">Bilanci</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_770" 
+                    checked={scadenzariFlags.modello770}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, modello770: checked as boolean})}
+                  />
+                  <label htmlFor="arch_770" className="text-sm cursor-pointer">Modello 770</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_lipe" 
+                    checked={scadenzariFlags.lipe}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, lipe: checked as boolean})}
+                  />
+                  <label htmlFor="arch_lipe" className="text-sm cursor-pointer">LIPE</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_esterometro" 
+                    checked={scadenzariFlags.esterometro}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, esterometro: checked as boolean})}
+                  />
+                  <label htmlFor="arch_esterometro" className="text-sm cursor-pointer">Esterometro</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_proforma" 
+                    checked={scadenzariFlags.proforma}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, proforma: checked as boolean})}
+                  />
+                  <label htmlFor="arch_proforma" className="text-sm cursor-pointer">Proforma</label>
+                </div>
+              </div>
+            </div>
+
             <Button
               onClick={handleArchivia}
               disabled={processing}
@@ -467,7 +545,7 @@ export default function GenerazioneScadenzariPage() {
               ) : (
                 <>
                   <Archive className="h-4 w-4 mr-2" />
-                  Archivia Scadenze {annoArchiviazione}
+                  Archivia Selezionati {annoArchiviazione}
                 </>
               )}
             </Button>
