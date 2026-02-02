@@ -247,14 +247,6 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
-              const { data: riferimenti } = await supabase
-                .from("tbrif")
-                .select("tipo_redditi")
-                .eq("id", cliente.id)
-                .maybeSingle();
-
-              const tipo_redditi = riferimenti?.tipo_redditi || null;
-
               const { error } = await supabase
                 .from("tbscadfiscali")
                 .insert({
@@ -262,7 +254,7 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  tipo_redditi: tipo_redditi,
+                  tipo_redditi: cliente.tipo_redditi, // Prendo il valore direttamente dal cliente
                   conferma_riga: false
                 });
               if (!error) generati++;
