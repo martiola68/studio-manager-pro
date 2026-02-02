@@ -28,7 +28,8 @@ export default function GenerazioneScadenzariPage() {
     modello770: true,
     lipe: true,
     esterometro: true,
-    proforma: true
+    proforma: true,
+    imu: true
   });
 
   useEffect(() => {
@@ -369,6 +370,29 @@ export default function GenerazioneScadenzariPage() {
             }
           }
 
+          // TBScadIMU
+          if (scadenzariFlags.imu && cliente.flag_imu) {
+            const { data: existing } = await supabase
+              .from("tbscadimu")
+              .select("id")
+              .eq("id", cliente.id)
+              .maybeSingle();
+
+            if (!existing) {
+              const { error } = await supabase
+                .from("tbscadimu")
+                .insert({
+                  id: cliente.id,
+                  nominativo: cliente.ragione_sociale,
+                  utente_operatore_id: cliente.utente_operatore_id,
+                  utente_professionista_id: cliente.utente_professionista_id,
+                  conferma_riga: false
+                });
+              if (!error) generati++;
+              else errori++;
+            }
+          }
+
         } catch (error) {
           console.error(`Errore elaborazione cliente ${cliente.ragione_sociale}:`, error);
           errori++;
@@ -528,6 +552,14 @@ export default function GenerazioneScadenzariPage() {
                   />
                   <label htmlFor="arch_proforma" className="text-sm cursor-pointer">Proforma</label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="arch_imu" 
+                    checked={scadenzariFlags.imu}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
+                  />
+                  <label htmlFor="arch_imu" className="text-sm cursor-pointer">IMU</label>
+                </div>
               </div>
             </div>
 
@@ -669,6 +701,14 @@ export default function GenerazioneScadenzariPage() {
                   />
                   <label htmlFor="flag_proforma" className="text-sm cursor-pointer">Proforma</label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="flag_imu" 
+                    checked={scadenzariFlags.imu}
+                    onCheckedChange={(checked) => setScadenzariFlags({...scadenzariFlags, imu: checked as boolean})}
+                  />
+                  <label htmlFor="flag_imu" className="text-sm cursor-pointer">IMU</label>
+                </div>
               </div>
             </div>
 
@@ -794,6 +834,15 @@ export default function GenerazioneScadenzariPage() {
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Azzera Proforma
+              </Button>
+              <Button
+                onClick={() => handleAzzeraScadenzario("IMU", "tbscadimu")}
+                disabled={processing}
+                variant="outline"
+                className="border-orange-300 hover:bg-orange-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Azzera IMU
               </Button>
             </div>
           </CardContent>
