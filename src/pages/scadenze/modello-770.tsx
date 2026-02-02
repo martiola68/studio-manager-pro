@@ -30,6 +30,13 @@ export default function Scadenze770Page() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSettore, setFilterSettore] = useState("__all__");
 
+  // Stats
+  const [stats, setStats] = useState({
+    totale: 0,
+    confermate: 0,
+    nonConfermate: 0
+  });
+
   useEffect(() => {
     checkAuthAndLoad();
   }, []);
@@ -57,6 +64,14 @@ export default function Scadenze770Page() {
       ]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
+      
+      // Calculate stats
+      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      setStats({
+        totale: scadenzeData.length,
+        confermate,
+        nonConfermate: scadenzeData.length - confermate
+      });
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
@@ -201,6 +216,28 @@ export default function Scadenze770Page() {
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario 770</h1>
           <p className="text-gray-500 mt-1">Gestione Modello 770</p>
         </div>
+      </div>
+
+      {/* STATISTICHE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Totale Dichiarazioni</div>
+            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Confermate</div>
+            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
+            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="mb-6">

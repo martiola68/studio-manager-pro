@@ -258,6 +258,28 @@ export default function ScadenzeIvaPage() {
         </div>
       </div>
 
+      {/* STATISTICHE */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Totale Dichiarazioni</div>
+            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Confermate</div>
+            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
+            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Filtri e Ricerca</CardTitle>
