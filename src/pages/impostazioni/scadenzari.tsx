@@ -185,7 +185,10 @@ export default function GenerazioneScadenzariPage() {
                   conferma_riga: false
                 });
               if (!error) generati++;
-              else errori++;
+              else {
+                console.error("Errore inserimento IVA:", error);
+                errori++;
+              }
             }
           }
 
@@ -380,13 +383,39 @@ export default function GenerazioneScadenzariPage() {
               .maybeSingle();
 
             if (!existing) {
+              // Ottieni i nomi completi degli utenti
+              let operatoreNome = null;
+              let professionistaNome = null;
+
+              if (cliente.utente_operatore_id) {
+                const { data: operatore } = await supabase
+                  .from("tbutenti")
+                  .select("nome, cognome")
+                  .eq("id", cliente.utente_operatore_id)
+                  .single();
+                if (operatore) {
+                  operatoreNome = `${operatore.nome} ${operatore.cognome}`;
+                }
+              }
+
+              if (cliente.utente_professionista_id) {
+                const { data: professionista } = await supabase
+                  .from("tbutenti")
+                  .select("nome, cognome")
+                  .eq("id", cliente.utente_professionista_id)
+                  .single();
+                if (professionista) {
+                  professionistaNome = `${professionista.nome} ${professionista.cognome}`;
+                }
+              }
+
               const { error } = await supabase
                 .from("tbscadimu")
                 .insert({
                   id: cliente.id,
                   nominativo: cliente.ragione_sociale,
-                  utente_operatore_id: cliente.utente_operatore_id,
-                  utente_professionista_id: cliente.utente_professionista_id,
+                  operatore: operatoreNome,
+                  professionista: professionistaNome,
                   conferma_riga: false
                 });
               if (!error) generati++;
