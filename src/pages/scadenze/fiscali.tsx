@@ -374,8 +374,8 @@ export default function ScadenzeFiscaliPage() {
                           {/* Tipo Redditi */}
                           <TableCell>
                             <Select
-                              value={scadenza.tipo_redditi || "__none__"}
-                              onValueChange={(value) => handleUpdateField(scadenza.id, "tipo_redditi", value === "__none__" ? null : value)}
+                              value={scadenza.tipo_redditi || ""}
+                              onValueChange={(value) => handleUpdateField(scadenza.id, "tipo_redditi", value || null)}
                               disabled={isConfermata}
                             >
                               <SelectTrigger className="w-full text-xs">
