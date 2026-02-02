@@ -251,6 +251,7 @@ export default function GenerazioneScadenzariPage() {
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
+                  tipo_redditi: null,
                   conferma_riga: false
                 });
               if (!error) generati++;

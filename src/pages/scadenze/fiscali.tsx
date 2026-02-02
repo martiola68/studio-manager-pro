@@ -315,9 +315,9 @@ export default function ScadenzeFiscaliPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="h-[600px] overflow-auto border rounded-lg">
-            <div className="min-w-full">
-              <Table className="min-w-[2000px] relative">
+          <div className="relative">
+            <div className="h-[600px] overflow-auto border rounded-lg">
+              <Table className="relative min-w-[2000px]">
                 <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
                   <TableRow>
                     <TableHead className="sticky left-0 bg-white z-30 min-w-[200px] border-r">Nominativo</TableHead>
