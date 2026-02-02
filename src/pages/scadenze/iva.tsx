@@ -26,6 +26,10 @@ export default function ScadenzeIvaPage() {
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
+  
+  // Local state for notes to prevent refresh on every keystroke
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
+  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   // Stats
   const [stats, setStats] = useState({
@@ -149,6 +153,48 @@ export default function ScadenzeIvaPage() {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleNoteChange = (scadenzaId: string, value: string) => {
+    // Update local state immediately for smooth typing
+    setLocalNotes(prev => ({
+      ...prev,
+      [scadenzaId]: value
+    }));
+    
+    // Clear existing timer for this note
+    if (noteTimers[scadenzaId]) {
+      clearTimeout(noteTimers[scadenzaId]);
+    }
+    
+    // Set new timer to save after 1 second of inactivity
+    const timer = setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("tbscadiva")
+          .update({ note: value || null })
+          .eq("id", scadenzaId);
+
+        if (error) throw error;
+        
+        // Update the scadenze array without reloading all data
+        setScadenze(prev => prev.map(s => 
+          s.id === scadenzaId ? { ...s, note: value } : s
+        ));
+      } catch (error) {
+        console.error("Errore salvataggio nota:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile salvare la nota",
+          variant: "destructive"
+        });
+      }
+    }, 1000);
+    
+    setNoteTimers(prev => ({
+      ...prev,
+      [scadenzaId]: timer
+    }));
   };
 
   const handleDelete = async (id: string) => {
@@ -375,8 +421,8 @@ export default function ScadenzeIvaPage() {
                         </TableCell>
                         <TableCell>
                           <Textarea
-                            value={scadenza.note || ""}
-                            onChange={(e) => handleUpdateField(scadenza.id, "note", e.target.value)}
+                            value={localNotes[scadenza.id] !== undefined ? localNotes[scadenza.id] : (scadenza.note || "")}
+                            onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
                             className="min-h-[60px] text-xs"
                             disabled={isConfermata}
                             placeholder="Note..."
