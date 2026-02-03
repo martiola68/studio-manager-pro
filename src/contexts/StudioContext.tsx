@@ -8,7 +8,7 @@ interface StudioContextType {
 
 const StudioContext = createContext<StudioContextType>({
   studioId: null,
-  isLoading: true,
+  isLoading: false,
 });
 
 export function useStudio() {
@@ -21,7 +21,7 @@ export function useStudio() {
 
 export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [studioId, setStudioId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,40 +30,19 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         
-        if (!user) {
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
+        if (!user || !isMounted) return;
 
-        const { data: utente, error } = await supabase
+        const { data: utente } = await supabase
           .from("tbutenti")
           .select("studio_id")
           .eq("id", user.id)
-          .single();
-        
-        if (error) {
-          console.error("Errore caricamento studio_id:", error);
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          return;
-        }
+          .maybeSingle();
         
         if (isMounted && utente?.studio_id) {
           setStudioId(utente.studio_id);
-          console.log("Studio ID caricato:", utente.studio_id);
-        }
-        
-        if (isMounted) {
-          setIsLoading(false);
         }
       } catch (error) {
-        console.error("Errore nel caricamento dello studio_id:", error);
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        console.error("Errore caricamento studio_id:", error);
       }
     }
 
@@ -72,23 +51,17 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN" && session?.user && isMounted) {
-          try {
-            const { data: utente, error } = await supabase
-              .from("tbutenti")
-              .select("studio_id")
-              .eq("id", session.user.id)
-              .single();
-            
-            if (!error && utente?.studio_id && isMounted) {
-              setStudioId(utente.studio_id);
-              console.log("Studio ID aggiornato:", utente.studio_id);
-            }
-          } catch (error) {
-            console.error("Errore aggiornamento studio_id:", error);
+          const { data: utente } = await supabase
+            .from("tbutenti")
+            .select("studio_id")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          
+          if (utente?.studio_id && isMounted) {
+            setStudioId(utente.studio_id);
           }
         } else if (event === "SIGNED_OUT" && isMounted) {
           setStudioId(null);
-          console.log("Studio ID rimosso");
         }
       }
     );
