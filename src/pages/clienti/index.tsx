@@ -104,6 +104,7 @@ function addMonths(date: Date, months: number): Date {
 
 export default function ClientiPage() {
   const { toast } = useToast();
+  const { studioId } = useStudio();
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");

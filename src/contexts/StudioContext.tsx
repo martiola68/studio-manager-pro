@@ -3,12 +3,10 @@ import { supabase } from "@/lib/supabase/client";
 
 interface StudioContextType {
   studioId: string | null;
-  isLoading: boolean;
 }
 
 const StudioContext = createContext<StudioContextType>({
   studioId: null,
-  isLoading: true,
 });
 
 export function useStudio() {
@@ -21,7 +19,6 @@ export function useStudio() {
 
 export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [studioId, setStudioId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadStudioId() {
@@ -41,8 +38,6 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error("Error loading studio_id:", error);
-      } finally {
-        setIsLoading(false);
       }
     }
 
@@ -72,7 +67,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <StudioContext.Provider value={{ studioId, isLoading }}>
+    <StudioContext.Provider value={{ studioId }}>
       {children}
     </StudioContext.Provider>
   );
