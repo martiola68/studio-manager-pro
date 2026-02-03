@@ -21,51 +21,46 @@ export function useStudio() {
 
 export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [studioId, setStudioId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     
     async function loadStudioId() {
       try {
-        // Timeout di 5 secondi per evitare blocchi infiniti
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000)
-        );
-
-        const loadPromise = (async () => {
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (!user) {
-            console.log('📍 Nessun utente autenticato');
-            return null;
-          }
-
-          const { data: utente, error } = await supabase
-            .from("tbutenti")
-            .select("studio_id")
-            .eq("id", user.id)
-            .single();
-          
-          if (error) {
-            console.error("❌ Errore caricamento studio_id:", error);
-            return null;
-          }
-          
-          console.log('✅ Studio ID caricato:', utente?.studio_id);
-          return utente?.studio_id || null;
-        })();
-
-        // Race tra caricamento e timeout
-        const result = await Promise.race([loadPromise, timeoutPromise]) as string | null;
+        const { data: { user } } = await supabase.auth.getUser();
         
-        if (isMounted && result) {
-          setStudioId(result);
+        if (!user) {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const { data: utente, error } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (error) {
+          console.error("Errore caricamento studio_id:", error);
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+        
+        if (isMounted && utente?.studio_id) {
+          setStudioId(utente.studio_id);
+          console.log("Studio ID caricato:", utente.studio_id);
+        }
+        
+        if (isMounted) {
+          setIsLoading(false);
         }
       } catch (error) {
-        console.warn('⚠️ Caricamento studio_id fallito o timeout:', error);
-        // Non bloccare l'app se fallisce
-      } finally {
+        console.error("Errore nel caricamento dello studio_id:", error);
         if (isMounted) {
           setIsLoading(false);
         }
@@ -86,14 +81,14 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
             
             if (!error && utente?.studio_id && isMounted) {
               setStudioId(utente.studio_id);
-              console.log('✅ Studio ID aggiornato dopo login:', utente.studio_id);
+              console.log("Studio ID aggiornato:", utente.studio_id);
             }
           } catch (error) {
-            console.warn('⚠️ Errore aggiornamento studio_id dopo auth:', error);
+            console.error("Errore aggiornamento studio_id:", error);
           }
         } else if (event === "SIGNED_OUT" && isMounted) {
           setStudioId(null);
-          console.log('🔓 Studio ID rimosso dopo logout');
+          console.log("Studio ID rimosso");
         }
       }
     );
