@@ -1404,23 +1404,31 @@ export default function ClientiPage() {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="settore">Settore</Label>
-                  <Select
-                    value={formData.settore || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({ ...formData, settore: value as "Fiscale" | "Lavoro" | "Fiscale & Lavoro" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona settore" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Fiscale">Fiscale</SelectItem>
-                      <SelectItem value="Lavoro">Lavoro</SelectItem>
-                      <SelectItem value="Fiscale & Lavoro">Fiscale & Lavoro</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Settori *</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
+                    {["Fiscale", "Lavoro", "Consulenza"].map((sector) => (
+                      <div key={sector} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`settore-${sector}`}
+                          checked={formData.settore?.includes(sector) || false}
+                          onCheckedChange={(checked) => {
+                            let currentSectors = formData.settore ? formData.settore.split(" & ").filter(s => s.trim() !== "") : [];
+                            
+                            if (checked) {
+                              if (!currentSectors.includes(sector)) currentSectors.push(sector);
+                            } else {
+                              currentSectors = currentSectors.filter(s => s !== sector);
+                            }
+                            setFormData({ ...formData, settore: currentSectors.join(" & ") });
+                          }}
+                        />
+                        <Label htmlFor={`settore-${sector}`} className="font-medium cursor-pointer">
+                          Settore {sector}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
@@ -1654,9 +1662,15 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti.map((contatto) => (
+                      {contatti
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
-                          {contatto.nome} {contatto.cognome}
+                          {contatto.cognome?.toUpperCase()} {contatto.nome?.toUpperCase()}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1676,9 +1690,15 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti.map((contatto) => (
+                      {contatti
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((contatto) => (
                         <SelectItem key={contatto.id} value={contatto.id}>
-                          {contatto.nome} {contatto.cognome}
+                          {contatto.cognome?.toUpperCase()} {contatto.nome?.toUpperCase()}
                         </SelectItem>
                       ))}
                     </SelectContent>
