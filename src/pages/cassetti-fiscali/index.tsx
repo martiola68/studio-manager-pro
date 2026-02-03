@@ -71,18 +71,6 @@ export default function CassettiFiscaliPage() {
     },
   });
 
-  // Watch password active states to enforce mutual exclusion
-  const pwAttiva1 = form.watch("pw_attiva1");
-  const pwAttiva2 = form.watch("pw_attiva2");
-
-  useEffect(() => {
-    if (pwAttiva1 && pwAttiva2) {
-      // If 1 became active, deactivate 2
-      // This logic needs to be careful about which one triggered the change
-      // For simplicity in useEffect, we might need a different approach or rely on manual handlers
-    }
-  }, [pwAttiva1, pwAttiva2]);
-
   const handlePw1Change = (checked: boolean) => {
     form.setValue("pw_attiva1", checked);
     if (checked) form.setValue("pw_attiva2", false);
@@ -151,7 +139,6 @@ export default function CassettiFiscaliPage() {
         toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
       }
       
-      // Reset form e stato
       form.reset({
         nominativo: "",
         username: "",
@@ -215,12 +202,10 @@ export default function CassettiFiscaliPage() {
       return true;
     }
     
-    // Se searchTerm è una singola lettera (A-Z), filtra per iniziale del nominativo
     if (searchTerm.length === 1 && /^[A-Z]$/i.test(searchTerm)) {
       return cassetto.nominativo?.toUpperCase().startsWith(searchTerm.toUpperCase());
     }
     
-    // Altrimenti ricerca normale su tutti i campi
     return (
       cassetto.nominativo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cassetto.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -243,7 +228,6 @@ export default function CassettiFiscaliPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Filtri */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -276,7 +260,6 @@ export default function CassettiFiscaliPage() {
           </div>
         </div>
 
-        {/* Tabella */}
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
@@ -322,7 +305,6 @@ export default function CassettiFiscaliPage() {
                         )}
                       </div>
                     </TableCell>
-                    {/* Password 1 */}
                     <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
@@ -356,7 +338,6 @@ export default function CassettiFiscaliPage() {
                         )}
                       </div>
                     </TableCell>
-                    {/* Password 2 */}
                     <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
@@ -390,7 +371,6 @@ export default function CassettiFiscaliPage() {
                         )}
                       </div>
                     </TableCell>
-                    {/* PIN */}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
@@ -424,7 +404,6 @@ export default function CassettiFiscaliPage() {
                         )}
                       </div>
                     </TableCell>
-                    {/* Password Iniziale */}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
@@ -458,7 +437,6 @@ export default function CassettiFiscaliPage() {
                         )}
                       </div>
                     </TableCell>
-                    {/* Azioni */}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -538,7 +516,6 @@ export default function CassettiFiscaliPage() {
                 />
               </div>
 
-              {/* Sezione Password 1 */}
               <div className={`p-4 border rounded-md ${form.watch("pw_attiva1") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Password 1</h4>
@@ -578,7 +555,6 @@ export default function CassettiFiscaliPage() {
                 />
               </div>
 
-              {/* Sezione Password 2 */}
               <div className={`p-4 border rounded-md ${form.watch("pw_attiva2") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Password 2</h4>
