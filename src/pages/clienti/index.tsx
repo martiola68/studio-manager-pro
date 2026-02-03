@@ -156,7 +156,7 @@ export default function ClientiPage() {
     utente_payroll_id: string;
     professionista_payroll_id: string;
     contatto1_id: string;
-    contatto2_id: string;
+    referente_esterno: string;
     tipo_prestazione_id: string;
     tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
     gestione_antiriciclaggio: boolean;
@@ -197,7 +197,7 @@ export default function ClientiPage() {
     utente_payroll_id: "",
     professionista_payroll_id: "",
     contatto1_id: "",
-    contatto2_id: "",
+    referente_esterno: "",
     tipo_prestazione_id: "",
     tipo_redditi: undefined,
     gestione_antiriciclaggio: false,
@@ -444,7 +444,7 @@ export default function ClientiPage() {
         utente_payroll_id: formData.utente_payroll_id || undefined,
         professionista_payroll_id: formData.professionista_payroll_id || undefined,
         contatto1_id: formData.contatto1_id || undefined,
-        contatto2_id: formData.contatto2_id || undefined,
+        referente_esterno: formData.referente_esterno || undefined,
         tipo_prestazione_id: formData.tipo_prestazione_id || undefined,
         tipo_redditi: formData.tipo_redditi || undefined,
         cassetto_fiscale_id: formData.cassetto_fiscale_id || undefined,
@@ -719,7 +719,7 @@ export default function ClientiPage() {
       utente_payroll_id: cliente.utente_payroll_id || "",
       professionista_payroll_id: cliente.professionista_payroll_id || "",
       contatto1_id: cliente.contatto1_id || "",
-      contatto2_id: cliente.contatto2_id || "",
+      referente_esterno: cliente.referente_esterno || "",
       tipo_prestazione_id: cliente.tipo_prestazione_id || "",
       cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
       matricola_inps: cliente.matricola_inps || "",
@@ -782,7 +782,7 @@ export default function ClientiPage() {
       utente_payroll_id: "",
       professionista_payroll_id: "",
       contatto1_id: "",
-      contatto2_id: "",
+      referente_esterno: "",
       tipo_prestazione_id: "",
       tipo_redditi: undefined,
       gestione_antiriciclaggio: false,
@@ -1678,31 +1678,15 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="contatto2_id">Contatto 2</Label>
-                  <Select
-                    value={formData.contatto2_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, contatto2_id: value === "none" ? "" : value })
+                  <Label htmlFor="referente_esterno">Referente esterno</Label>
+                  <Input
+                    id="referente_esterno"
+                    value={formData.referente_esterno}
+                    onChange={(e) =>
+                      setFormData({ ...formData, referente_esterno: e.target.value })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona contatto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti
-                        .sort((a, b) => {
-                          const cognomeA = (a.cognome || "").toLowerCase();
-                          const cognomeB = (b.cognome || "").toLowerCase();
-                          return cognomeA.localeCompare(cognomeB);
-                        })
-                        .map((contatto) => (
-                        <SelectItem key={contatto.id} value={contatto.id}>
-                          {contatto.cognome?.toUpperCase()} {contatto.nome?.toUpperCase()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Nome referente esterno"
+                  />
                 </div>
 
                 <div>

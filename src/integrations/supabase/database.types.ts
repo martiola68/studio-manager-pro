@@ -311,6 +311,7 @@ export type Database = {
           scadenza_antiric: string | null
           scadenza_antiric_b: string | null
           settore: string
+          studio_id: string | null
           tipo_cliente: string
           tipo_prestazione_a: string | null
           tipo_prestazione_b: string | null
@@ -370,6 +371,7 @@ export type Database = {
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
           settore: string
+          studio_id?: string | null
           tipo_cliente: string
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
@@ -429,6 +431,7 @@ export type Database = {
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
           settore?: string
+          studio_id?: string | null
           tipo_cliente?: string
           tipo_prestazione_a?: string | null
           tipo_prestazione_b?: string | null
@@ -467,6 +470,13 @@ export type Database = {
             columns: ["professionista_payroll_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbclienti_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -509,6 +519,7 @@ export type Database = {
           messaggio: string
           oggetto: string
           stato: string | null
+          studio_id: string | null
           tipo: string
           updated_at: string | null
         }
@@ -521,6 +532,7 @@ export type Database = {
           messaggio: string
           oggetto: string
           stato?: string | null
+          studio_id?: string | null
           tipo: string
           updated_at?: string | null
         }
@@ -533,10 +545,19 @@ export type Database = {
           messaggio?: string
           oggetto?: string
           stato?: string | null
+          studio_id?: string | null
           tipo?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbcomunicazioni_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbcontatti: {
         Row: {
@@ -552,6 +573,7 @@ export type Database = {
           nome: string
           note: string | null
           pec: string | null
+          studio_id: string | null
           tel: string | null
           updated_at: string | null
         }
@@ -568,6 +590,7 @@ export type Database = {
           nome: string
           note?: string | null
           pec?: string | null
+          studio_id?: string | null
           tel?: string | null
           updated_at?: string | null
         }
@@ -584,10 +607,19 @@ export type Database = {
           nome?: string
           note?: string | null
           pec?: string | null
+          studio_id?: string | null
           tel?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbcontatti_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbconversazioni: {
         Row: {
@@ -681,6 +713,7 @@ export type Database = {
           login_utente: string | null
           note: string | null
           portale: string
+          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -693,6 +726,7 @@ export type Database = {
           login_utente?: string | null
           note?: string | null
           portale: string
+          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -705,9 +739,18 @@ export type Database = {
           login_utente?: string | null
           note?: string | null
           portale?: string
+          studio_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbcredenziali_accesso_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbmessaggi: {
         Row: {
@@ -817,21 +860,32 @@ export type Database = {
           created_at: string | null
           descrizione: string
           id: string
+          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           descrizione: string
           id?: string
+          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           descrizione?: string
           id?: string
+          studio_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbprestazioni_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbpromemoria: {
         Row: {
@@ -922,43 +976,65 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          studio_id: string | null
           tipo: string
           valore: string
         }
         Insert: {
           created_at?: string | null
           id?: string
+          studio_id?: string | null
           tipo: string
           valore: string
         }
         Update: {
           created_at?: string | null
           id?: string
+          studio_id?: string | null
           tipo?: string
           valore?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbreferimenti_valori_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbroperatore: {
         Row: {
           created_at: string | null
           id: string
           ruolo: string
+          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           ruolo: string
+          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           ruolo?: string
+          studio_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbroperatore_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbscad770: {
         Row: {
@@ -2168,6 +2244,7 @@ export type Database = {
           descrizione: string | null
           id: string
           nome: string
+          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2177,6 +2254,7 @@ export type Database = {
           descrizione?: string | null
           id?: string
           nome: string
+          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2186,9 +2264,18 @@ export type Database = {
           descrizione?: string | null
           id?: string
           nome?: string
+          studio_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tbtipopromemoria_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tbutenti: {
         Row: {
