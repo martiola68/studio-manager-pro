@@ -547,7 +547,7 @@ export default function PromemoriaPage() {
             .filter(p => {
               // Filtra per responsabile specifico se selezionato
               if (filtroResponsabile !== "tutti") {
-                return p.operatore_id === filtroResponsabile || p.destinatario_id === filtroResponsabile;
+                return p.operatore_id === filtroResponsabile;
               }
               return true;
             })
