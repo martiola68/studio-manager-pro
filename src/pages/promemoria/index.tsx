@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -88,6 +89,10 @@ export default function PromemoriaPage() {
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
 
+  // NUOVI STATI PER INVIO MULTIPLO
+  const [invioMultiplo, setInvioMultiplo] = useState(false);
+  const [searchDestinatari, setSearchDestinatari] = useState("");
+
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
@@ -97,12 +102,10 @@ export default function PromemoriaPage() {
     priorita: "Media",
     working_progress: "Aperto",
     destinatario_id: "",
+    destinatari_multipli: [] as string[],
     settore: "",
     tipo_promemoria_id: ""
   });
-
-  // Stato per ricerca partecipanti
-  const [searchPartecipanti, setSearchPartecipanti] = useState("");
 
   // Reset form helper
   const resetForm = () => {
@@ -115,11 +118,14 @@ export default function PromemoriaPage() {
       priorita: "Media",
       working_progress: "Aperto",
       destinatario_id: "",
+      destinatari_multipli: [],
       settore: "",
       tipo_promemoria_id: ""
     });
     setFilesToUpload([]);
     setAttachmentsToDelete([]);
+    setInvioMultiplo(false);
+    setSearchDestinatari("");
   };
 
   // Caricamento Iniziale
@@ -127,11 +133,9 @@ export default function PromemoriaPage() {
     try {
       setLoading(true);
       
-      // 1. Get Current User Auth
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 2. Get User Profile
       const { data: userProfile } = await supabase
         .from("tbutenti")
         .select("*")
@@ -140,7 +144,6 @@ export default function PromemoriaPage() {
       
       if (userProfile) setCurrentUser(userProfile);
 
-      // 3. Load Data in parallel
       const [promemoriaResult, utentiData, tipiData] = await Promise.all([
         supabase
           .from("tbpromemoria")
@@ -195,16 +198,13 @@ export default function PromemoriaPage() {
   const handleOpenAllegato = (allegato: Allegato) => {
     const fileExt = allegato.nome.split('.').pop()?.toLowerCase();
     
-    // PDF e immagini si aprono direttamente in nuova tab
     if (fileExt === 'pdf' || ['jpg', 'jpeg', 'png', 'gif'].includes(fileExt || '')) {
       window.open(allegato.url, '_blank');
     } 
-    // Documenti Office usano Google Docs Viewer
     else if (['doc', 'docx', 'xls', 'xlsx'].includes(fileExt || '')) {
       setCurrentDocUrl(`https://docs.google.com/viewer?url=${encodeURIComponent(allegato.url)}&embedded=true`);
       setIsDocViewerOpen(true);
     }
-    // Altri file si aprono in nuova tab
     else {
       window.open(allegato.url, '_blank');
     }
@@ -238,6 +238,43 @@ export default function PromemoriaPage() {
     setAttachmentsToDelete(prev => prev.filter(u => u !== url));
   };
 
+  // HANDLERS INVIO MULTIPLO
+  const handleSelezioneLavoro = () => {
+    const utentiLavoro = utenti.filter(u => u.settore === "Lavoro").map(u => u.id);
+    setFormData(prev => ({ ...prev, destinatari_multipli: utentiLavoro }));
+  };
+
+  const handleSelezioneFiscale = () => {
+    const utentiFiscale = utenti.filter(u => u.settore === "Fiscale").map(u => u.id);
+    setFormData(prev => ({ ...prev, destinatari_multipli: utentiFiscale }));
+  };
+
+  const handleSelezioneConsulenza = () => {
+    const utentiConsulenza = utenti.filter(u => u.settore === "Consulenza").map(u => u.id);
+    setFormData(prev => ({ ...prev, destinatari_multipli: utentiConsulenza }));
+  };
+
+  const handleSelezioneTutti = () => {
+    const tuttiUtenti = utenti.map(u => u.id);
+    setFormData(prev => ({ ...prev, destinatari_multipli: tuttiUtenti }));
+  };
+
+  const handleDeselezionaTutti = () => {
+    setFormData(prev => ({ ...prev, destinatari_multipli: [] }));
+  };
+
+  const toggleDestinatario = (userId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.destinatari_multipli.includes(userId);
+      return {
+        ...prev,
+        destinatari_multipli: isSelected
+          ? prev.destinatari_multipli.filter(id => id !== userId)
+          : [...prev.destinatari_multipli, userId]
+      };
+    });
+  };
+
   // Handlers CRUD
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,7 +293,7 @@ export default function PromemoriaPage() {
         priorita: formData.priorita,
         stato: formData.working_progress,
         operatore_id: currentUser?.id ?? "",
-        destinatario_id: formData.destinatario_id || null,
+        destinatario_id: invioMultiplo ? null : (formData.destinatario_id || null),
         settore: formData.settore || "",
         tipo_promemoria_id: formData.tipo_promemoria_id || null
       });
@@ -298,6 +335,7 @@ export default function PromemoriaPage() {
       priorita: p.priorita || "Media",
       working_progress: p.working_progress || "Aperto",
       destinatario_id: p.destinatario_id || "",
+      destinatari_multipli: [],
       settore: p.settore || "",
       tipo_promemoria_id: p.tipo_promemoria_id || ""
     });
@@ -312,18 +350,15 @@ export default function PromemoriaPage() {
       setLoading(true);
       setIsUploading(true);
 
-      // Determina se l'utente corrente è solo destinatario (non operatore)
       const isRecipientOnly = !!(currentUser && selectedPromemoria && 
         currentUser.id === selectedPromemoria.destinatario_id && 
         currentUser.id !== selectedPromemoria.operatore_id);
 
       if (isRecipientOnly) {
-        // Il destinatario può aggiornare SOLO lo stato
         await promemoriaService.updatePromemoria(selectedPromemoria.id, {
           working_progress: formData.working_progress
         });
       } else {
-        // L'operatore può aggiornare tutti i campi
         await promemoriaService.updatePromemoria(selectedPromemoria.id, {
           titolo: formData.titolo,
           descrizione: formData.descrizione,
@@ -337,12 +372,10 @@ export default function PromemoriaPage() {
           tipo_promemoria_id: formData.tipo_promemoria_id || null
         });
 
-        // Elimina allegati
         for (const url of attachmentsToDelete) {
           await promemoriaService.deleteAllegato(selectedPromemoria.id, url);
         }
 
-        // Upload nuovi
         for (const file of filesToUpload) {
           await promemoriaService.uploadAllegato(selectedPromemoria.id, file);
         }
@@ -355,7 +388,6 @@ export default function PromemoriaPage() {
       checkUserAndLoad();
     } catch (error) {
       console.error(error);
-      console.error("ERRORE COMPLETO:", JSON.stringify(error, null, 2));
       toast({ title: "Errore", description: "Impossibile aggiornare", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -392,6 +424,15 @@ export default function PromemoriaPage() {
       setFormData(prev => ({ ...prev, destinatario_id: val, settore: u?.settore || "" }));
     }
   };
+
+  // Filtra utenti per ricerca
+  const utentiFiltrati = utenti.filter(u => {
+    const searchLower = searchDestinatari.toLowerCase();
+    return (
+      u.nome?.toLowerCase().includes(searchLower) ||
+      u.cognome?.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading && promemoria.length === 0) {
     return <div className="p-8 text-center">Caricamento in corso...</div>;
@@ -506,7 +547,7 @@ export default function PromemoriaPage() {
           })}
           {promemoria.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
               </TableCell>
             </TableRow>
@@ -567,24 +608,100 @@ export default function PromemoriaPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Destinatario</Label>
-                <Select value={formData.destinatario_id || "none"} onValueChange={handleDestinatarioChange}>
-                  <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nessuno</SelectItem>
-                    {utenti.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Settore</Label>
-                <Input value={formData.settore} disabled className="bg-gray-100" />
-              </div>
+            {/* CHECKBOX INVIO MULTIPLO */}
+            <div className="flex items-center space-x-2 p-4 border rounded-lg bg-gray-50">
+              <Checkbox 
+                id="invio-multiplo-create" 
+                checked={invioMultiplo}
+                onCheckedChange={(checked) => {
+                  setInvioMultiplo(!!checked);
+                  if (checked) {
+                    setFormData(prev => ({ ...prev, destinatario_id: "", settore: "" }));
+                  } else {
+                    setFormData(prev => ({ ...prev, destinatari_multipli: [] }));
+                  }
+                }}
+              />
+              <Label htmlFor="invio-multiplo-create" className="cursor-pointer font-medium">
+                Invio a più destinatari
+              </Label>
             </div>
+
+            {/* DESTINATARIO SINGOLO O MULTIPLO */}
+            {!invioMultiplo ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Destinatario</Label>
+                  <Select value={formData.destinatario_id || "none"} onValueChange={handleDestinatarioChange}>
+                    <SelectTrigger><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Settore</Label>
+                  <Input value={formData.settore} disabled className="bg-gray-100" />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 border rounded-lg p-4">
+                <Label>Destinatari Multipli</Label>
+                
+                {/* Campo Ricerca */}
+                <Input
+                  placeholder="Cerca destinatari..."
+                  value={searchDestinatari}
+                  onChange={(e) => setSearchDestinatari(e.target.value)}
+                  className="mb-2"
+                />
+
+                {/* Pulsanti Filtro Settore */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Button type="button" variant="outline" size="sm" onClick={handleSelezioneLavoro}>
+                    Settore Lavoro
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleSelezioneFiscale}>
+                    Settore Fiscale
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleSelezioneConsulenza}>
+                    Settore Consulenza
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleSelezioneTutti}>
+                    Tutti
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleDeselezionaTutti}>
+                    Deseleziona Tutti
+                  </Button>
+                </div>
+
+                {/* Lista Checkboxes */}
+                <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-3 bg-white">
+                  {utentiFiltrati.map((u) => (
+                    <div key={u.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`dest-${u.id}`}
+                        checked={formData.destinatari_multipli.includes(u.id)}
+                        onCheckedChange={() => toggleDestinatario(u.id)}
+                      />
+                      <Label htmlFor={`dest-${u.id}`} className="cursor-pointer flex-1">
+                        {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
+                      </Label>
+                    </div>
+                  ))}
+                  {utentiFiltrati.length === 0 && (
+                    <p className="text-sm text-gray-500 italic">Nessun utente trovato</p>
+                  )}
+                </div>
+                
+                <p className="text-sm text-gray-600">
+                  Selezionati: {formData.destinatari_multipli.length} utent{formData.destinatari_multipli.length === 1 ? 'e' : 'i'}
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
