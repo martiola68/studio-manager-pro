@@ -6,11 +6,17 @@ type UtenteInsert = Database["public"]["Tables"]["tbutenti"]["Insert"];
 type UtenteUpdate = Database["public"]["Tables"]["tbutenti"]["Update"];
 
 export const utenteService = {
-  async getUtenti() {
-    const { data, error } = await supabase
+  async getUtenti(studioId?: string | null) {
+    let query = supabase
       .from("tbutenti")
       .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile, studio_id")
       .order("cognome", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
@@ -76,9 +82,7 @@ export const utenteService = {
   },
 
   async getUtentiStudio(studioId: string): Promise<Utente[]> {
-    // In un sistema multi-studio, qui filtreremmo per studio_id
-    // Dato che lo schema attuale non ha studio_id su tbutenti, restituiamo tutti (single tenant logic)
-    return this.getUtenti();
+    return this.getUtenti(studioId);
   },
 
   async getUtenteByUserId(userId: string): Promise<Utente | null> {

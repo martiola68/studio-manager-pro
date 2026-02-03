@@ -1,13 +1,19 @@
 import { supabase } from "@/lib/supabase/client";
 
 export const scadenzaService = {
-  async getScadenzeIva() {
-    const { data, error } = await supabase
+  async getScadenzeIva(studioId?: string | null) {
+    let query = supabase
       .from("tbscadiva")
       .select(`
         *,
         cliente:tbclienti(ragione_sociale)
       `);
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+      
+    const { data, error } = await query;
       
     if (error) {
       console.error("Error fetching scadenze IVA:", error);
@@ -16,13 +22,19 @@ export const scadenzaService = {
     return data || [];
   },
 
-  async getScadenzeFiscali() {
-    const { data, error } = await supabase
+  async getScadenzeFiscali(studioId?: string | null) {
+    let query = supabase
       .from("tbscadfiscali")
       .select(`
         *,
         cliente:tbclienti(ragione_sociale)
       `);
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+      
+    const { data, error } = await query;
       
     if (error) {
       console.error("Error fetching scadenze Fiscali:", error);
@@ -31,18 +43,21 @@ export const scadenzaService = {
     return data || [];
   },
 
-  async getAllScadenzeCounts() {
-    const results = await Promise.all([
-      supabase.from("tbscadiva").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadccgg").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadcu").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadfiscali").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadbilanci").select("id", { count: "exact", head: true }),
-      supabase.from("tbscad770").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadlipe").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadestero").select("id", { count: "exact", head: true }),
-      supabase.from("tbscadproforma").select("id", { count: "exact", head: true })
-    ]);
+  async getAllScadenzeCounts(studioId?: string | null) {
+    const tables = [
+      "tbscadiva", "tbscadccgg", "tbscadcu", "tbscadfiscali", 
+      "tbscadbilanci", "tbscad770", "tbscadlipe", "tbscadestero", "tbscadproforma"
+    ];
+
+    const promises = tables.map(table => {
+      let query = supabase.from(table).select("id", { count: "exact", head: true });
+      if (studioId) {
+        query = query.eq("studio_id", studioId);
+      }
+      return query;
+    });
+
+    const results = await Promise.all(promises);
 
     return {
       iva: results[0].count || 0,

@@ -6,11 +6,17 @@ type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
 type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
 
 export const clienteService = {
-  async getClienti() {
-    const { data, error } = await supabase
+  async getClienti(studioId?: string | null) {
+    let query = supabase
       .from("tbclienti")
       .select("*")
       .order("ragione_sociale");
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -74,34 +80,52 @@ export const clienteService = {
     if (error) throw error;
   },
 
-  async searchClienti(query: string) {
-    const { data, error } = await supabase
+  async searchClienti(query: string, studioId?: string | null) {
+    let supabaseQuery = supabase
       .from("tbclienti")
       .select("*")
       .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
       .order("ragione_sociale");
 
+    if (studioId) {
+      supabaseQuery = supabaseQuery.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await supabaseQuery;
+
     if (error) throw error;
     return data || [];
   },
 
-  async getClientiByUtente(utenteId: string) {
-    const { data, error } = await supabase
+  async getClientiByUtente(utenteId: string, studioId?: string | null) {
+    let query = supabase
       .from("tbclienti")
       .select("*")
       .or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`)
       .order("ragione_sociale");
 
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
     return data || [];
   },
 
-  async getClientiAttivi() {
-    const { data, error } = await supabase
+  async getClientiAttivi(studioId?: string | null) {
+    let query = supabase
       .from("tbclienti")
       .select("*")
       .eq("attivo", true)
       .order("ragione_sociale");
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];

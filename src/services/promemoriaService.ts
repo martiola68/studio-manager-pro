@@ -13,8 +13,8 @@ export interface Allegato {
 }
 
 export const promemoriaService = {
-  async getPromemoria() {
-    const { data, error } = await supabase
+  async getPromemoria(studioId?: string | null) {
+    let query = supabase
       .from("tbpromemoria")
       .select(`
         *,
@@ -26,6 +26,12 @@ export const promemoriaService = {
         )
       `)
       .order("data_scadenza", { ascending: true, nullsFirst: false });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
@@ -72,13 +78,13 @@ export const promemoriaService = {
       });
   },
 
-  async getPromemoriaInScadenza(utenteId: string): Promise<Promemoria[]> {
+  async getPromemoriaInScadenza(utenteId: string, studioId?: string | null): Promise<Promemoria[]> {
     const oggi = new Date().toISOString().split("T")[0];
     const traSetteGiorni = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("tbpromemoria")
       .select(`
         *,
@@ -91,6 +97,12 @@ export const promemoriaService = {
       .gte("data_scadenza", oggi)
       .lte("data_scadenza", traSetteGiorni)
       .order("data_scadenza", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Errore caricamento promemoria in scadenza:", error);

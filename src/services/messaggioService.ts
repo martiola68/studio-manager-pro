@@ -6,8 +6,8 @@ type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
 export const messaggioService = {
-  async getConversazioni(userId: string) {
-    const { data, error } = await supabase
+  async getConversazioni(userId: string, studioId?: string | null) {
+    let query = supabase
       .from("tbconversazioni")
       .select(`
         *,
@@ -24,6 +24,12 @@ export const messaggioService = {
         )
       `)
       .order("updated_at", { ascending: false });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -460,7 +466,7 @@ export const messaggioService = {
     supabase.removeChannel(channel);
   },
 
-  async getMessaggiNonLettiCount(userId: string): Promise<number> {
+  async getMessaggiNonLettiCount(userId: string, studioId?: string | null): Promise<number> {
     try {
       console.log("📊 Caricamento messaggi non letti per userId:", userId);
 
@@ -478,10 +484,22 @@ export const messaggioService = {
       }
 
       // Ottieni tutte le conversazioni dell'utente con timeout e retry
-      const { data: conversazioni, error: convError } = await supabase
+      const convQuery = supabase
         .from("tbconversazioni_utenti")
-        .select("conversazione_id, ultimo_letto_at")
+        .select(`
+          conversazione_id, 
+          ultimo_letto_at,
+          conversazione:tbconversazioni(studio_id)
+        `)
         .eq("utente_id", userId);
+
+      // Nota: il filtro studio_id qui è indiretto tramite la join, ma per ora lo gestiamo post-fetch o via RLS
+      // Se volessimo filtrare strettamente:
+      // Purtroppo Supabase non supporta filtro profondo su join in questo modo semplice per delete/update, 
+      // ma per select sì. Tuttavia, per semplicità e visto che RLS protegge, 
+      // possiamo lasciare che RLS filtri le conversazioni accessibili.
+      
+      const { data: conversazioni, error: convError } = await convQuery;
 
       if (convError) {
         // Log dell'errore ma non bloccare l'applicazione
@@ -494,10 +512,15 @@ export const messaggioService = {
         return 0;
       }
 
+      // Filtra lato client se necessario per studioId, anche se RLS dovrebbe averlo già fatto
+      const conversazioniFiltrate = studioId 
+        ? conversazioni.filter((c: any) => c.conversazione?.studio_id === studioId)
+        : conversazioni;
+
       // Per ogni conversazione, conta i messaggi non letti
       let totalNonLetti = 0;
 
-      for (const conv of conversazioni) {
+      for (const conv of conversazioniFiltrate) {
         const query = supabase
           .from("tbmessaggi")
           .select("id", { count: "exact", head: true })

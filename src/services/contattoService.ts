@@ -6,11 +6,17 @@ export type ContattoInsert = Database["public"]["Tables"]["tbcontatti"]["Insert"
 export type ContattoUpdate = Database["public"]["Tables"]["tbcontatti"]["Update"];
 
 export const contattoService = {
-  async getContatti() {
-    const { data, error } = await supabase
+  async getContatti(studioId?: string | null) {
+    let query = supabase
       .from("tbcontatti")
       .select("*")
       .order("cognome", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data;
@@ -28,10 +34,8 @@ export const contattoService = {
   },
 
   async createContatto(contatto: ContattoInsert) {
-    // Rimuovi campi non validi se presenti (pulizia difensiva)
     const { ...validContatto } = contatto;
     
-    // Assicurati che il nome sia una stringa (anche vuota) se undefined/null, poiché è NOT NULL nel DB
     if (validContatto.nome === undefined || validContatto.nome === null) {
       validContatto.nome = ""; 
     }
@@ -47,7 +51,6 @@ export const contattoService = {
   },
 
   async updateContatto(id: string, updates: ContattoUpdate) {
-    // Rimuovi campi non validi se presenti (pulizia difensiva)
     const { ...validUpdates } = updates;
 
     const { data, error } = await supabase
