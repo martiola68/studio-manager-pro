@@ -49,6 +49,7 @@ import { utenteService } from "@/services/utenteService";
 import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
+import { useStudio } from "@/contexts/StudioContext";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -1527,7 +1528,9 @@ export default function ClientiPage() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                     placeholder="info@happy.it"
                   />
                 </div>
