@@ -101,6 +101,9 @@ export default function PromemoriaPage() {
     tipo_promemoria_id: ""
   });
 
+  // Stato per ricerca partecipanti
+  const [searchPartecipanti, setSearchPartecipanti] = useState("");
+
   // Reset form helper
   const resetForm = () => {
     setFormData({
