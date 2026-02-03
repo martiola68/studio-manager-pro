@@ -13,7 +13,7 @@ export interface Allegato {
 }
 
 export const promemoriaService = {
-  async getPromemoria(studioId?: string | null) {
+  async getPromemoria(studioId?: string | null, settoreResponsabile?: string | null) {
     let query = supabase
       .from("tbpromemoria")
       .select(`
@@ -29,6 +29,11 @@ export const promemoriaService = {
 
     if (studioId) {
       query = query.eq("studio_id", studioId);
+    }
+
+    // Se è un responsabile, filtra solo i promemoria del suo settore
+    if (settoreResponsabile) {
+      query = query.eq("settore", settoreResponsabile);
     }
 
     const { data, error } = await query;

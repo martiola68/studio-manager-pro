@@ -90,6 +90,9 @@ export default function PromemoriaPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
 
+  // NUOVO: Stato per filtro responsabile
+  const [filtroResponsabile, setFiltroResponsabile] = useState<string>("tutti");
+
   const [formData, setFormData] = useState({
     titolo: "",
     descrizione: "",
@@ -139,6 +142,11 @@ export default function PromemoriaPage() {
       
       if (userProfile) setCurrentUser(userProfile);
 
+      // Determina se l'utente è responsabile e quale settore
+      const settoreResponsabile = userProfile?.responsabile && userProfile?.settore 
+        ? userProfile.settore 
+        : null;
+
       const [promemoriaResult, utentiData, tipiData] = await Promise.all([
         supabase
           .from("tbpromemoria")
@@ -149,8 +157,15 @@ export default function PromemoriaPage() {
       ]);
 
       if (promemoriaResult.data) {
+        let promemoriaFiltrati = promemoriaResult.data;
+
+        // FILTRO PER SETTORE DEL RESPONSABILE
+        if (settoreResponsabile) {
+          promemoriaFiltrati = promemoriaFiltrati.filter(p => p.settore === settoreResponsabile);
+        }
+
         const promemoriaWithAllegati = await Promise.all(
-          promemoriaResult.data.map(async (p) => {
+          promemoriaFiltrati.map(async (p) => {
             const allegati = await promemoriaService.getAllegati(p.id);
             return { ...p, allegati };
           })
@@ -485,6 +500,28 @@ export default function PromemoriaPage() {
         </div>
       </div>
 
+      {/* FILTRO PER RESPONSABILE */}
+      {currentUser?.responsabile && currentUser?.settore && (
+        <div className="mb-4 flex items-center gap-4">
+          <Label className="text-sm font-medium">Filtra per Responsabile:</Label>
+          <Select value={filtroResponsabile} onValueChange={setFiltroResponsabile}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Tutti i responsabili" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tutti">Tutti i responsabili del settore {currentUser.settore}</SelectItem>
+              {utenti
+                .filter(u => u.responsabile && u.settore === currentUser.settore)
+                .map(u => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.nome} {u.cognome}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -507,7 +544,15 @@ export default function PromemoriaPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {promemoria.map((p) => {
+          {promemoria
+            .filter(p => {
+              // Filtra per responsabile specifico se selezionato
+              if (filtroResponsabile !== "tutti") {
+                return p.operatore_id === filtroResponsabile || p.destinatario_id === filtroResponsabile;
+              }
+              return true;
+            })
+            .map((p) => {
             const isOverdue = new Date(p.data_scadenza) < new Date() && p.working_progress !== "Completato";
             const isCompleted = p.working_progress === "Completato";
             const isAnnullata = p.working_progress === "Annullata";
@@ -1064,7 +1109,7 @@ export default function PromemoriaPage() {
               <FileText className="h-4 w-4" /> Anteprima Documento
             </h3>
             <Button variant="ghost" size="icon" onClick={() => setIsDocViewerOpen(false)}>
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
           <iframe
