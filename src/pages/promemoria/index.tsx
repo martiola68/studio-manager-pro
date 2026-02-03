@@ -39,14 +39,12 @@ import {
   FileText, 
   ImageIcon, 
   File, 
-  X,
-  Calendar as CalendarIcon
+  X
 } from "lucide-react";
 import { promemoriaService, type Promemoria, type Allegato } from "@/services/promemoriaService";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 
-// Definizioni tipi locali se non esportati globalmente
 interface Utente {
   id: string;
   nome: string;
@@ -65,13 +63,11 @@ interface TipoPromemoria {
 export default function PromemoriaPage() {
   const { toast } = useToast();
   
-  // Stati Dati
   const [promemoria, setPromemoria] = useState<Promemoria[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [tipiPromemoria, setTipiPromemoria] = useState<TipoPromemoria[]>([]);
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   
-  // Stati UI
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -80,18 +76,19 @@ export default function PromemoriaPage() {
   const [isAllegatiDialogOpen, setIsAllegatiDialogOpen] = useState(false);
   const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   
-  // Stati Selezione
   const [selectedPromemoria, setSelectedPromemoria] = useState<Promemoria | null>(null);
   const [viewAllegatiPromemoria, setViewAllegatiPromemoria] = useState<Promemoria | null>(null);
   const [currentDocUrl, setCurrentDocUrl] = useState<string>("");
   
-  // Stati File
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
 
-  // NUOVI STATI PER INVIO MULTIPLO
   const [invioMultiplo, setInvioMultiplo] = useState(false);
   const [searchDestinatari, setSearchDestinatari] = useState("");
+
+  // NUOVI STATI PER SELEZIONE MULTIPLA
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
 
   const [formData, setFormData] = useState({
     titolo: "",
@@ -107,7 +104,6 @@ export default function PromemoriaPage() {
     tipo_promemoria_id: ""
   });
 
-  // Reset form helper
   const resetForm = () => {
     setFormData({
       titolo: "",
@@ -128,7 +124,6 @@ export default function PromemoriaPage() {
     setSearchDestinatari("");
   };
 
-  // Caricamento Iniziale
   const checkUserAndLoad = useCallback(async () => {
     try {
       setLoading(true);
@@ -181,7 +176,6 @@ export default function PromemoriaPage() {
     checkUserAndLoad();
   }, [checkUserAndLoad]);
 
-  // Calcolo Data Scadenza Automatico
   useEffect(() => {
     if (formData.data_inserimento && formData.giorni_scadenza >= 0) {
       const scadenza = addDays(formData.data_inserimento, formData.giorni_scadenza);
@@ -189,7 +183,62 @@ export default function PromemoriaPage() {
     }
   }, [formData.data_inserimento, formData.giorni_scadenza]);
 
-  // Handlers Allegati
+  // HANDLERS SELEZIONE MULTIPLA
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedIds([]);
+      setSelectAll(false);
+    } else {
+      setSelectedIds(promemoria.map(p => p.id));
+      setSelectAll(true);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSelection = prev.includes(id)
+        ? prev.filter(selectedId => selectedId !== id)
+        : [...prev, id];
+      
+      setSelectAll(newSelection.length === promemoria.length);
+      return newSelection;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    try {
+      setLoading(true);
+      
+      for (const id of selectedIds) {
+        await promemoriaService.deletePromemoria(id);
+      }
+      
+      toast({
+        title: "Successo",
+        description: `${selectedIds.length} promemoria eliminati correttamente`
+      });
+      
+      setSelectedIds([]);
+      setSelectAll(false);
+      setIsDeleteDialogOpen(false);
+      checkUserAndLoad();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare i promemoria selezionati",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleViewAllegati = (p: Promemoria) => {
     setViewAllegatiPromemoria(p);
     setIsAllegatiDialogOpen(true);
@@ -238,7 +287,6 @@ export default function PromemoriaPage() {
     setAttachmentsToDelete(prev => prev.filter(u => u !== url));
   };
 
-  // HANDLERS INVIO MULTIPLO
   const handleSelezioneLavoro = () => {
     const utentiLavoro = utenti.filter(u => u.settore === "Lavoro").map(u => u.id);
     setFormData(prev => ({ ...prev, destinatari_multipli: utentiLavoro }));
@@ -275,7 +323,6 @@ export default function PromemoriaPage() {
     });
   };
 
-  // Handlers CRUD
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.titolo) return;
@@ -395,27 +442,6 @@ export default function PromemoriaPage() {
     }
   };
 
-  const handleDeleteClick = (p: Promemoria) => {
-    setSelectedPromemoria(p);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedPromemoria) return;
-    try {
-      setLoading(true);
-      await promemoriaService.deletePromemoria(selectedPromemoria.id);
-      toast({ title: "Successo", description: "Eliminato correttamente" });
-      setIsDeleteDialogOpen(false);
-      checkUserAndLoad();
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Errore", description: "Impossibile eliminare", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDestinatarioChange = (val: string) => {
     if (val === "none") {
       setFormData(prev => ({ ...prev, destinatario_id: "", settore: "" }));
@@ -425,7 +451,6 @@ export default function PromemoriaPage() {
     }
   };
 
-  // Filtra utenti per ricerca
   const utentiFiltrati = utenti.filter(u => {
     const searchLower = searchDestinatari.toLowerCase();
     return (
@@ -442,15 +467,33 @@ export default function PromemoriaPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Promemoria</h1>
-        <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuovo Promemoria
-        </Button>
+        <div className="flex gap-2">
+          {selectedIds.length > 0 && (
+            <Button 
+              onClick={handleBulkDelete}
+              variant="destructive"
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Elimina Promemoria ({selectedIds.length})
+            </Button>
+          )}
+          <Button onClick={() => { resetForm(); setIsCreateDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuovo Promemoria
+          </Button>
+        </div>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12">
+              <Checkbox 
+                checked={selectAll}
+                onCheckedChange={handleSelectAll}
+              />
+            </TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Titolo</TableHead>
             <TableHead>Descrizione</TableHead>
@@ -465,7 +508,6 @@ export default function PromemoriaPage() {
         </TableHeader>
         <TableBody>
           {promemoria.map((p) => {
-            const destinatario = utenti.find(u => u.id === p.destinatario_id);
             const isOverdue = new Date(p.data_scadenza) < new Date() && p.working_progress !== "Completato";
             const isCompleted = p.working_progress === "Completato";
             const isAnnullata = p.working_progress === "Annullata";
@@ -480,6 +522,12 @@ export default function PromemoriaPage() {
                   ""
                 }
               >
+                <TableCell>
+                  <Checkbox 
+                    checked={selectedIds.includes(p.id)}
+                    onCheckedChange={() => handleToggleSelect(p.id)}
+                  />
+                </TableCell>
                 <TableCell>{tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || "-"}</TableCell>
                 <TableCell className="font-medium">{p.titolo}</TableCell>
                 <TableCell>{p.descrizione}</TableCell>
@@ -533,21 +581,16 @@ export default function PromemoriaPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(p)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             );
           })}
           {promemoria.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={11} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
               </TableCell>
             </TableRow>
@@ -608,7 +651,6 @@ export default function PromemoriaPage() {
               />
             </div>
 
-            {/* CHECKBOX INVIO MULTIPLO */}
             <div className="flex items-center space-x-2 p-4 border rounded-lg bg-gray-50">
               <Checkbox 
                 id="invio-multiplo-create" 
@@ -627,7 +669,6 @@ export default function PromemoriaPage() {
               </Label>
             </div>
 
-            {/* DESTINATARIO SINGOLO O MULTIPLO */}
             {!invioMultiplo ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -651,7 +692,6 @@ export default function PromemoriaPage() {
               <div className="space-y-4 border rounded-lg p-4">
                 <Label>Destinatari Multipli</Label>
                 
-                {/* Campo Ricerca */}
                 <Input
                   placeholder="Cerca destinatari..."
                   value={searchDestinatari}
@@ -659,7 +699,6 @@ export default function PromemoriaPage() {
                   className="mb-2"
                 />
 
-                {/* Pulsanti Filtro Settore */}
                 <div className="flex flex-wrap gap-2 mb-3">
                   <Button type="button" variant="outline" size="sm" onClick={handleSelezioneLavoro}>
                     Settore Lavoro
@@ -678,7 +717,6 @@ export default function PromemoriaPage() {
                   </Button>
                 </div>
 
-                {/* Lista Checkboxes */}
                 <div className="max-h-60 overflow-y-auto space-y-2 border rounded p-3 bg-white">
                   {utentiFiltrati.map((u) => (
                     <div key={u.id} className="flex items-center space-x-2">
@@ -968,7 +1006,7 @@ export default function PromemoriaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG VISUALIZZA ALLEGATI (SOLO VISUALIZZA) */}
+      {/* DIALOG VISUALIZZA ALLEGATI */}
       <Dialog open={isAllegatiDialogOpen} onOpenChange={setIsAllegatiDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1043,12 +1081,16 @@ export default function PromemoriaPage() {
           <DialogHeader>
             <DialogTitle>Conferma Eliminazione</DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare questo promemoria? L'azione è irreversibile.
+              {selectedIds.length === 1 
+                ? "Sei sicuro di voler eliminare questo promemoria?"
+                : `Sei sicuro di voler eliminare ${selectedIds.length} promemoria selezionati?`
+              }
+              {" "}L'azione è irreversibile.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Annulla</Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>Elimina</Button>
+            <Button variant="destructive" onClick={handleBulkDeleteConfirm}>Elimina</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
