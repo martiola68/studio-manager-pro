@@ -3,10 +3,12 @@ import { supabase } from "@/lib/supabase/client";
 
 interface StudioContextType {
   studioId: string | null;
+  isLoading: boolean;
 }
 
 const StudioContext = createContext<StudioContextType>({
   studioId: null,
+  isLoading: true,
 });
 
 export function useStudio() {
@@ -19,13 +21,26 @@ export function useStudio() {
 
 export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [studioId, setStudioId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function loadStudioId() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
+        // Timeout di 5 secondi per evitare blocchi infiniti
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+
+        const loadPromise = (async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (!user) {
+            console.log('📍 Nessun utente autenticato');
+            return null;
+          }
+
           const { data: utente, error } = await supabase
             .from("tbutenti")
             .select("studio_id")
@@ -33,16 +48,27 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
             .single();
           
           if (error) {
-            console.error("Error loading studio_id:", error);
-            return;
+            console.error("❌ Errore caricamento studio_id:", error);
+            return null;
           }
           
-          if (utente?.studio_id) {
-            setStudioId(utente.studio_id);
-          }
+          console.log('✅ Studio ID caricato:', utente?.studio_id);
+          return utente?.studio_id || null;
+        })();
+
+        // Race tra caricamento e timeout
+        const result = await Promise.race([loadPromise, timeoutPromise]) as string | null;
+        
+        if (isMounted && result) {
+          setStudioId(result);
         }
       } catch (error) {
-        console.error("Error loading studio_id:", error);
+        console.warn('⚠️ Caricamento studio_id fallito o timeout:', error);
+        // Non bloccare l'app se fallisce
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
@@ -50,7 +76,7 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
+        if (event === "SIGNED_IN" && session?.user && isMounted) {
           try {
             const { data: utente, error } = await supabase
               .from("tbutenti")
@@ -58,30 +84,28 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
               .eq("id", session.user.id)
               .single();
             
-            if (error) {
-              console.error("Error loading studio_id on auth change:", error);
-              return;
-            }
-            
-            if (utente?.studio_id) {
+            if (!error && utente?.studio_id && isMounted) {
               setStudioId(utente.studio_id);
+              console.log('✅ Studio ID aggiornato dopo login:', utente.studio_id);
             }
           } catch (error) {
-            console.error("Error in auth state change:", error);
+            console.warn('⚠️ Errore aggiornamento studio_id dopo auth:', error);
           }
-        } else if (event === "SIGNED_OUT") {
+        } else if (event === "SIGNED_OUT" && isMounted) {
           setStudioId(null);
+          console.log('🔓 Studio ID rimosso dopo logout');
         }
       }
     );
 
     return () => {
+      isMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
 
   return (
-    <StudioContext.Provider value={{ studioId }}>
+    <StudioContext.Provider value={{ studioId, isLoading }}>
       {children}
     </StudioContext.Provider>
   );
