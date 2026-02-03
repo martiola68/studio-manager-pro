@@ -1,6 +1,9 @@
 # Force Vercel deployment
 # Fix: Remove blocking studio_id loading
-# Date: 2026-02-03 21:05:34 UTC
+# Date: 2026-02-03 21:15:00 UTC
 # Reason: Login works locally but production stuck on infinite loading
+# Critical fix: Simplified StudioContext to prevent blocking
 
 This file forces Vercel to recognize a change and trigger a new deployment.
+
+TIMESTAMP: 2026-02-03T21:15:00Z
