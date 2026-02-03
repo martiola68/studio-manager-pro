@@ -284,7 +284,7 @@ export default function CassettiFiscaliImpostazioniPage() {
                       value={formData.password1}
                       onChange={(e) => setFormData({ ...formData, password1: e.target.value })}
                       disabled={!formData.pw_attiva1}
-                      className={formData.pw_attiva1 ? "bg-green-50 border-green-300" : ""}
+                      className={formData.pw_attiva1 ? "bg-blue-50 border-blue-300" : ""}
                     />
                     <input
                       type="checkbox"
@@ -305,7 +305,7 @@ export default function CassettiFiscaliImpostazioniPage() {
                       value={formData.password2}
                       onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
                       disabled={!formData.pw_attiva2}
-                      className={formData.pw_attiva2 ? "bg-green-50 border-green-300" : ""}
+                      className={formData.pw_attiva2 ? "bg-blue-50 border-blue-300" : ""}
                     />
                     <input
                       type="checkbox"
@@ -413,7 +413,7 @@ export default function CassettiFiscaliImpostazioniPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className={`flex items-center gap-2 justify-center p-2 rounded ${cassetto.pw_attiva1 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                      <div className={`flex items-center gap-2 justify-center p-2 rounded ${cassetto.pw_attiva1 ? 'bg-blue-50' : 'bg-gray-50'}`}>
                         <span className="font-mono text-sm">
                           {cassetto.password1 ? (isVisible(cassetto.id, "password1") ? cassetto.password1 : "••••••••") : "-"}
                         </span>
@@ -448,7 +448,7 @@ export default function CassettiFiscaliImpostazioniPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className={`flex items-center gap-2 justify-center p-2 rounded ${cassetto.pw_attiva2 ? 'bg-green-50' : 'bg-gray-50'}`}>
+                      <div className={`flex items-center gap-2 justify-center p-2 rounded ${cassetto.pw_attiva2 ? 'bg-blue-50' : 'bg-gray-50'}`}>
                         <span className="font-mono text-sm">
                           {cassetto.password2 ? (isVisible(cassetto.id, "password2") ? cassetto.password2 : "••••••••") : "-"}
                         </span>
