@@ -5,12 +5,10 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { useRouter } from "next/router";
 import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
-import { useState } from "react";
+import { TopNavBar } from "@/components/TopNavBar";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagine pubbliche che non devono mostrare il layout
   const isPublicPage = router.pathname === "/login" || 
@@ -27,18 +25,13 @@ export default function App({ Component, pageProps }: AppProps) {
             <Toaster />
           </>
         ) : (
-          // Pagine private: con layout completo (Header + Sidebar)
-          <div className="flex min-h-screen bg-gray-50">
-            <Sidebar 
-              mobileOpen={sidebarOpen} 
-              onClose={() => setSidebarOpen(false)} 
-            />
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-              <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
-                <Component {...pageProps} />
-              </main>
-            </div>
+          // Pagine private: con layout completo (Header + TopNavBar)
+          <div className="flex flex-col min-h-screen bg-gray-50">
+            <Header onMenuToggle={() => {}} />
+            <TopNavBar />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+              <Component {...pageProps} />
+            </main>
             <Toaster />
           </div>
         )}
