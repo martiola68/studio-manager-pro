@@ -37,7 +37,7 @@ import {
   Paperclip, 
   Eye, 
   FileText, 
-  Image as ImageIcon, 
+  ImageIcon, 
   File, 
   X,
   Calendar as CalendarIcon
