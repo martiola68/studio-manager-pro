@@ -1,0 +1,1 @@
+ALTER TABLE tbclienti ADD COLUMN IF NOT EXISTS referente_esterno TEXT;

@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -306,6 +306,7 @@ export type Database = {
           professionista_payroll_id: string | null
           provincia: string | null
           ragione_sociale: string
+          referente_esterno: string | null
           rischio_ver_a: string | null
           rischio_ver_b: string | null
           scadenza_antiric: string | null
@@ -366,6 +367,7 @@ export type Database = {
           professionista_payroll_id?: string | null
           provincia?: string | null
           ragione_sociale: string
+          referente_esterno?: string | null
           rischio_ver_a?: string | null
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
@@ -426,6 +428,7 @@ export type Database = {
           professionista_payroll_id?: string | null
           provincia?: string | null
           ragione_sociale?: string
+          referente_esterno?: string | null
           rischio_ver_a?: string | null
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
@@ -761,6 +764,7 @@ export type Database = {
           evento_id: string | null
           id: string
           mittente_id: string
+          studio_id: string | null
           testo: string
         }
         Insert: {
@@ -771,6 +775,7 @@ export type Database = {
           evento_id?: string | null
           id?: string
           mittente_id: string
+          studio_id?: string | null
           testo: string
         }
         Update: {
@@ -781,6 +786,7 @@ export type Database = {
           evento_id?: string | null
           id?: string
           mittente_id?: string
+          studio_id?: string | null
           testo?: string
         }
         Relationships: [
@@ -810,6 +816,13 @@ export type Database = {
             columns: ["mittente_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbmessaggi_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
         ]
@@ -903,6 +916,7 @@ export type Database = {
           operatore_id: string
           priorita: string | null
           settore: string | null
+          studio_id: string | null
           tipo_promemoria_id: string | null
           titolo: string | null
           updated_at: string | null
@@ -923,6 +937,7 @@ export type Database = {
           operatore_id: string
           priorita?: string | null
           settore?: string | null
+          studio_id?: string | null
           tipo_promemoria_id?: string | null
           titolo?: string | null
           updated_at?: string | null
@@ -943,6 +958,7 @@ export type Database = {
           operatore_id?: string
           priorita?: string | null
           settore?: string | null
+          studio_id?: string | null
           tipo_promemoria_id?: string | null
           titolo?: string | null
           updated_at?: string | null
@@ -961,6 +977,13 @@ export type Database = {
             columns: ["operatore_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbpromemoria_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1050,6 +1073,7 @@ export type Database = {
           note: string | null
           professionista_payroll_id: string | null
           ricevuta: boolean | null
+          studio_id: string | null
           tipo_invio: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
@@ -1070,6 +1094,7 @@ export type Database = {
           note?: string | null
           professionista_payroll_id?: string | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_invio?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1090,6 +1115,7 @@ export type Database = {
           note?: string | null
           professionista_payroll_id?: string | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_invio?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1110,6 +1136,13 @@ export type Database = {
             columns: ["professionista_payroll_id"]
             isOneToOne: false
             referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscad770_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1159,6 +1192,7 @@ export type Database = {
           relazione_revisore: boolean | null
           relazione_sindaci: boolean | null
           ricevuta: boolean | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -1181,6 +1215,7 @@ export type Database = {
           relazione_revisore?: boolean | null
           relazione_sindaci?: boolean | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1203,6 +1238,7 @@ export type Database = {
           relazione_revisore?: boolean | null
           relazione_sindaci?: boolean | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1215,6 +1251,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadbilanci_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1251,6 +1294,7 @@ export type Database = {
           importo_calcolato: boolean | null
           nominativo: string
           note: string | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -1266,6 +1310,7 @@ export type Database = {
           importo_calcolato?: boolean | null
           nominativo: string
           note?: string | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1281,6 +1326,7 @@ export type Database = {
           importo_calcolato?: boolean | null
           nominativo?: string
           note?: string | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1292,6 +1338,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadccgg_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1330,6 +1383,7 @@ export type Database = {
           nominativo: string
           note: string | null
           num_cu: string | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -1347,6 +1401,7 @@ export type Database = {
           nominativo: string
           note?: string | null
           num_cu?: string | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1364,6 +1419,7 @@ export type Database = {
           nominativo?: string
           note?: string | null
           num_cu?: string | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1375,6 +1431,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadcu_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1441,6 +1504,7 @@ export type Database = {
           ott_previsto: boolean | null
           set_invio: boolean | null
           set_previsto: boolean | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           tot_doc: number | null
           updated_at: string | null
@@ -1487,6 +1551,7 @@ export type Database = {
           ott_previsto?: boolean | null
           set_invio?: boolean | null
           set_previsto?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           tot_doc?: number | null
           updated_at?: string | null
@@ -1533,6 +1598,7 @@ export type Database = {
           ott_previsto?: boolean | null
           set_invio?: boolean | null
           set_previsto?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           tot_doc?: number | null
           updated_at?: string | null
@@ -1545,6 +1611,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadestero_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1592,6 +1665,7 @@ export type Database = {
           note: string | null
           ricevuta_r: boolean | null
           saldo_acc_cciaa: boolean | null
+          studio_id: string | null
           tipo_redditi: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
@@ -1619,6 +1693,7 @@ export type Database = {
           note?: string | null
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
+          studio_id?: string | null
           tipo_redditi?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1646,6 +1721,7 @@ export type Database = {
           note?: string | null
           ricevuta_r?: boolean | null
           saldo_acc_cciaa?: boolean | null
+          studio_id?: string | null
           tipo_redditi?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1658,6 +1734,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadfiscali_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1704,6 +1787,7 @@ export type Database = {
           saldo_comunicato: boolean | null
           saldo_dovuto: boolean | null
           saldo_imu: boolean | null
+          studio_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1726,6 +1810,7 @@ export type Database = {
           saldo_comunicato?: boolean | null
           saldo_dovuto?: boolean | null
           saldo_imu?: boolean | null
+          studio_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1748,6 +1833,7 @@ export type Database = {
           saldo_comunicato?: boolean | null
           saldo_dovuto?: boolean | null
           saldo_imu?: boolean | null
+          studio_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1756,6 +1842,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadimu_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
         ]
@@ -1772,6 +1865,7 @@ export type Database = {
           nominativo: string
           note: string | null
           ricevuta: boolean | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -1788,6 +1882,7 @@ export type Database = {
           nominativo: string
           note?: string | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1804,6 +1899,7 @@ export type Database = {
           nominativo?: string
           note?: string | null
           ricevuta?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -1815,6 +1911,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadiva_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1867,6 +1970,7 @@ export type Database = {
           nov: boolean | null
           ott: boolean | null
           set: boolean | null
+          studio_id: string | null
           tipo_liq: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
@@ -1899,6 +2003,7 @@ export type Database = {
           nov?: boolean | null
           ott?: boolean | null
           set?: boolean | null
+          studio_id?: string | null
           tipo_liq?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1931,6 +2036,7 @@ export type Database = {
           nov?: boolean | null
           ott?: boolean | null
           set?: boolean | null
+          studio_id?: string | null
           tipo_liq?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
@@ -1943,6 +2049,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadlipe_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
@@ -1985,6 +2098,7 @@ export type Database = {
           novembre: boolean | null
           ottobre: boolean | null
           settembre: boolean | null
+          studio_id: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -2006,6 +2120,7 @@ export type Database = {
           novembre?: boolean | null
           ottobre?: boolean | null
           settembre?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -2027,6 +2142,7 @@ export type Database = {
           novembre?: boolean | null
           ottobre?: boolean | null
           settembre?: boolean | null
+          studio_id?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -2038,6 +2154,13 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "tbclienti"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tbscadproforma_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "tbstudio"
             referencedColumns: ["id"]
           },
           {
