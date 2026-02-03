@@ -47,9 +47,10 @@ export const scadenzaService = {
     const tables = [
       "tbscadiva", "tbscadccgg", "tbscadcu", "tbscadfiscali", 
       "tbscadbilanci", "tbscad770", "tbscadlipe", "tbscadestero", "tbscadproforma"
-    ];
+    ] as const;
 
     const promises = tables.map(table => {
+      // @ts-ignore - Ignoriamo l'errore di tipo qui perché sappiamo che le tabelle sono valide
       let query = supabase.from(table).select("id", { count: "exact", head: true });
       if (studioId) {
         query = query.eq("studio_id", studioId);

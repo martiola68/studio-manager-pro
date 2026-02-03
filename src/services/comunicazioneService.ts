@@ -6,11 +6,17 @@ type ComunicazioneInsert = Database["public"]["Tables"]["tbcomunicazioni"]["Inse
 type ComunicazioneUpdate = Database["public"]["Tables"]["tbcomunicazioni"]["Update"];
 
 export const comunicazioneService = {
-  async getComunicazioni(): Promise<Comunicazione[]> {
-    const { data, error } = await supabase
+  async getComunicazioni(studioId?: string | null): Promise<Comunicazione[]> {
+    let query = supabase
       .from("tbcomunicazioni")
       .select("*")
       .order("created_at", { ascending: false });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching comunicazioni:", error);

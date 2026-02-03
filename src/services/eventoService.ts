@@ -7,11 +7,17 @@ type EventoAgendaInsert = Database["public"]["Tables"]["tbagenda"]["Insert"];
 type EventoAgendaUpdate = Database["public"]["Tables"]["tbagenda"]["Update"];
 
 export const eventoService = {
-  async getEventi(): Promise<EventoAgenda[]> {
-    const { data, error } = await supabase
+  async getEventi(studioId?: string | null): Promise<EventoAgenda[]> {
+    let query = supabase
       .from("tbagenda")
       .select("*")
       .order("data_inizio", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching eventi:", error);
@@ -34,12 +40,18 @@ export const eventoService = {
     return data;
   },
 
-  async getEventiByUtente(utenteId: string): Promise<EventoAgenda[]> {
-    const { data, error } = await supabase
+  async getEventiByUtente(utenteId: string, studioId?: string | null): Promise<EventoAgenda[]> {
+    let query = supabase
       .from("tbagenda")
       .select("*")
       .eq("utente_id", utenteId)
       .order("data_inizio", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching eventi by utente:", error);
@@ -48,12 +60,18 @@ export const eventoService = {
     return data || [];
   },
 
-  async getEventiByCliente(clienteId: string): Promise<EventoAgenda[]> {
-    const { data, error } = await supabase
+  async getEventiByCliente(clienteId: string, studioId?: string | null): Promise<EventoAgenda[]> {
+    let query = supabase
       .from("tbagenda")
       .select("*")
       .eq("cliente_id", clienteId)
       .order("data_inizio", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching eventi by cliente:", error);
@@ -62,13 +80,19 @@ export const eventoService = {
     return data || [];
   },
 
-  async getEventiByDateRange(startDate: string, endDate: string): Promise<EventoAgenda[]> {
-    const { data, error } = await supabase
+  async getEventiByDateRange(startDate: string, endDate: string, studioId?: string | null): Promise<EventoAgenda[]> {
+    let query = supabase
       .from("tbagenda")
       .select("*")
       .gte("data_inizio", startDate)
       .lte("data_inizio", endDate)
       .order("data_inizio", { ascending: true });
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching eventi by date range:", error);

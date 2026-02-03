@@ -6,11 +6,17 @@ export type CassettoFiscaleInsert = Database["public"]["Tables"]["tbcassetti_fis
 export type CassettoFiscaleUpdate = Database["public"]["Tables"]["tbcassetti_fiscali"]["Update"];
 
 export const cassettiFiscaliService = {
-  async getCassettiFiscali() {
-    const { data, error } = await supabase
+  async getCassettiFiscali(studioId?: string | null) {
+    let query = supabase
       .from("tbcassetti_fiscali")
       .select("*")
       .order("nominativo");
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
