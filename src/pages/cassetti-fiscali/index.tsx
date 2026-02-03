@@ -323,7 +323,7 @@ export default function CassettiFiscaliPage() {
                       </div>
                     </TableCell>
                     {/* Password 1 */}
-                    <TableCell className={cassetto.pw_attiva1 ? "bg-green-50/50" : ""}>
+                    <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
                           {cassetto.password1 ? (
@@ -357,7 +357,7 @@ export default function CassettiFiscaliPage() {
                       </div>
                     </TableCell>
                     {/* Password 2 */}
-                    <TableCell className={cassetto.pw_attiva2 ? "bg-green-50/50" : ""}>
+                    <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
                           {cassetto.password2 ? (
@@ -539,7 +539,7 @@ export default function CassettiFiscaliPage() {
               </div>
 
               {/* Sezione Password 1 */}
-              <div className={`p-4 border rounded-md ${form.watch("pw_attiva1") ? "bg-green-50 border-green-200" : "bg-gray-50"}`}>
+              <div className={`p-4 border rounded-md ${form.watch("pw_attiva1") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Password 1</h4>
                   <FormField
@@ -579,7 +579,7 @@ export default function CassettiFiscaliPage() {
               </div>
 
               {/* Sezione Password 2 */}
-              <div className={`p-4 border rounded-md ${form.watch("pw_attiva2") ? "bg-green-50 border-green-200" : "bg-gray-50"}`}>
+              <div className={`p-4 border rounded-md ${form.watch("pw_attiva2") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">Password 2</h4>
                   <FormField
