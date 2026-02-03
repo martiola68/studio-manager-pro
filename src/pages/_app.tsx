@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { useRouter } from "next/router";
-import { Header } from "@/components/Header";
+import Header from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { useState } from "react";
 
