@@ -142,10 +142,9 @@ export default function PromemoriaPage() {
       
       if (userProfile) setCurrentUser(userProfile);
 
-      // Determina se l'utente è responsabile e quale settore
-      const settoreResponsabile = userProfile?.responsabile && userProfile?.settore 
-        ? userProfile.settore 
-        : null;
+      // Determina se l'utente è responsabile
+      const isResponsabile = userProfile?.responsabile === true;
+      const currentUserId = userProfile?.id;
 
       const [promemoriaResult, utentiData, tipiData] = await Promise.all([
         supabase
@@ -159,9 +158,9 @@ export default function PromemoriaPage() {
       if (promemoriaResult.data) {
         let promemoriaFiltrati = promemoriaResult.data;
 
-        // FILTRO PER SETTORE DEL RESPONSABILE
-        if (settoreResponsabile) {
-          promemoriaFiltrati = promemoriaFiltrati.filter(p => p.settore === settoreResponsabile);
+        // FILTRO PER OPERATORE (se utente è responsabile)
+        if (isResponsabile && currentUserId) {
+          promemoriaFiltrati = promemoriaFiltrati.filter(p => p.operatore_id === currentUserId);
         }
 
         const promemoriaWithAllegati = await Promise.all(
@@ -501,7 +500,7 @@ export default function PromemoriaPage() {
       </div>
 
       {/* FILTRO PER RESPONSABILE */}
-      {currentUser?.responsabile && currentUser?.settore && (
+      {currentUser?.responsabile && (
         <div className="mb-4 flex items-center gap-4">
           <Label className="text-sm font-medium">Filtra per Responsabile:</Label>
           <Select value={filtroResponsabile} onValueChange={setFiltroResponsabile}>
@@ -509,12 +508,12 @@ export default function PromemoriaPage() {
               <SelectValue placeholder="Tutti i responsabili" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="tutti">Tutti i responsabili del settore {currentUser.settore}</SelectItem>
+              <SelectItem value="tutti">Tutti i responsabili</SelectItem>
               {utenti
-                .filter(u => u.responsabile && u.settore === currentUser.settore)
+                .filter(u => u.responsabile)
                 .map(u => (
                   <SelectItem key={u.id} value={u.id}>
-                    {u.nome} {u.cognome}
+                    {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
                   </SelectItem>
                 ))}
             </SelectContent>
