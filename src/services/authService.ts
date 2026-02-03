@@ -94,12 +94,6 @@ export const authService = {
         return { user: null, error: { message: error.message, code: error.status?.toString() } };
       }
 
-      // CRITICAL FIX: Forza il refresh della sessione per assicurarsi che auth.uid() funzioni
-      if (data.session) {
-        await supabase.auth.setSession(data.session);
-        console.log('✅ Sessione Auth impostata correttamente per:', data.user.id);
-      }
-
       const authUser = data.user ? {
         id: data.user.id,
         email: data.user.email || "",
