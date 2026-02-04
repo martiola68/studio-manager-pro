@@ -56,7 +56,7 @@ export async function sendWelcomeEmail(
     const htmlContent = getWelcomeEmailTemplate(nome, email, password, loginUrl);
     
     const textContent = `
-Benvenuto in Studio Manager Pro
+Benvenuto in ProWork Studio M
 
 Ciao ${nome}!
 
@@ -76,13 +76,13 @@ Se hai problemi ad accedere, contatta l'amministratore.
 Buon lavoro!
 
 ---
-Studio Manager Pro - Sistema Gestionale Integrato
+ProWork Studio M - Gestione professionale dello studio
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
     
     return await sendEmail({
       to: email,
-      subject: "Benvenuto in Studio Manager Pro - Credenziali di accesso",
+      subject: "Benvenuto in ProWork Studio M - Credenziali di accesso",
       html: htmlContent,
       text: textContent
     });
@@ -106,7 +106,7 @@ export async function sendPasswordResetEmail(
     const htmlContent = getPasswordResetEmailTemplate(nome, email, password, loginUrl);
     
     const textContent = `
-Password Reset - Studio Manager Pro
+Password Reset - ProWork Studio M
 
 Ciao ${nome},
 
@@ -126,13 +126,13 @@ Se hai problemi ad accedere, contatta l'amministratore.
 Buon lavoro!
 
 ---
-Studio Manager Pro - Sistema Gestionale Integrato
+ProWork Studio M - Gestione professionale dello studio
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
     
     return await sendEmail({
       to: email,
-      subject: "Password Reset - Studio Manager Pro",
+      subject: "Password Reset - ProWork Studio M",
       html: htmlContent,
       text: textContent
     });

@@ -48,8 +48,8 @@ export function initializeDatabase() {
   if (!studioData) {
     const defaultStudio: Studio = {
       ID_Studio: "studio-001",
-      RagioneSociale: "Studio Manager Pro",
-      DenominazioneBreve: "SMP",
+      RagioneSociale: "ProWork Studio M",
+      DenominazioneBreve: "PWSM",
       PartitaIVA: "12345678901",
       CodiceFiscale: "12345678901",
       Indirizzo: "Via Roma 1",
@@ -57,8 +57,8 @@ export function initializeDatabase() {
       Citta: "Roma",
       Provincia: "RM",
       Telefono: "06 1234567",
-      Email: "info@studiomanagerpro.it",
-      PEC: "pec@studiomanagerpro.it",
+      Email: "info@proworkstudiom.it",
+      PEC: "pec@proworkstudiom.it",
       Logo: null,
       DataCreazione: new Date().toISOString(),
       DataUltimaModifica: new Date().toISOString()

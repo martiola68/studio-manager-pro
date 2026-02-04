@@ -117,9 +117,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           )}
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {studio?.denominazione_breve || studio?.ragione_sociale || "Studio Manager Pro"}
+              {studio?.denominazione_breve || studio?.ragione_sociale || "ProWork Studio M"}
             </h1>
-            <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
+            <p className="text-sm text-gray-500">Gestione professionale dello studio</p>
           </div>
         </div>
 
