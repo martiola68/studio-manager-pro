@@ -36,7 +36,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (currentUserId) {
       loadDashboardData();
-      // Aggiorna messaggi non letti ogni 30 secondi
       const interval = setInterval(async () => {
         const { messaggioService } = await import("@/services/messaggioService");
         const nonLetti = await messaggioService.getMessaggiNonLettiCount(currentUserId);
@@ -55,13 +54,12 @@ export default function DashboardPage() {
         return;
       }
 
-      // Ottieni l'utente corrente per l'ID
       if (session.user.email) {
         const { data: utente } = await supabase
           .from("tbutenti")
           .select("id")
           .eq("email", session.user.email)
-          .single();
+          .maybeSingle();
         
         if (utente) {
           setCurrentUserId(utente.id);
