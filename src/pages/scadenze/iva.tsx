@@ -361,6 +361,9 @@ export default function ScadenzeIvaPage() {
                   <TableHead className="min-w-[150px]">Operatore</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Predisposto</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Definitivo</TableHead>
+                  <TableHead className="text-center min-w-[120px]">Asseverazione</TableHead>
+                  <TableHead className="text-center min-w-[140px]">Importo Credito</TableHead>
+                  <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
                   <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
                   <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
@@ -372,7 +375,7 @@ export default function ScadenzeIvaPage() {
               <TableBody>
                 {filteredScadenze.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={13} className="text-center py-8 text-gray-500">
                       Nessuna scadenza trovata
                     </TableCell>
                   </TableRow>
@@ -412,6 +415,26 @@ export default function ScadenzeIvaPage() {
                             onChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
                             className="rounded w-4 h-4 cursor-pointer"
                             disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.asseverazione || false}
+                            onChange={() => handleToggleField(scadenza.id, "asseverazione", scadenza.asseverazione)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={scadenza.importo_credito || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "importo_credito", e.target.value ? parseFloat(e.target.value) : null)}
+                            className="w-32 text-xs"
+                            disabled={!scadenza.asseverazione || isConfermata}
+                            placeholder="€ 0.00"
                           />
                         </TableCell>
                         <TableCell className="text-center">

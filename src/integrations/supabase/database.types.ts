@@ -1855,10 +1855,12 @@ export type Database = {
       }
       tbscadiva: {
         Row: {
+          asseverazione: boolean | null
           conferma_riga: boolean | null
           created_at: string | null
           data_invio: string | null
           id: string
+          importo_credito: number | null
           mod_definitivo: boolean | null
           mod_inviato: boolean | null
           mod_predisposto: boolean | null
@@ -1872,10 +1874,12 @@ export type Database = {
           utente_professionista_id: string | null
         }
         Insert: {
+          asseverazione?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
           data_invio?: string | null
           id: string
+          importo_credito?: number | null
           mod_definitivo?: boolean | null
           mod_inviato?: boolean | null
           mod_predisposto?: boolean | null
@@ -1889,10 +1893,12 @@ export type Database = {
           utente_professionista_id?: string | null
         }
         Update: {
+          asseverazione?: boolean | null
           conferma_riga?: boolean | null
           created_at?: string | null
           data_invio?: string | null
           id?: string
+          importo_credito?: number | null
           mod_definitivo?: boolean | null
           mod_inviato?: boolean | null
           mod_predisposto?: boolean | null
