@@ -24,51 +24,48 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
   const [isLoading] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
     
-    async function loadStudioId() {
+    const loadStudio = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user || !isMounted) return;
+        if (!user || !mounted) return;
 
-        const { data: utente } = await supabase
+        const { data } = await supabase
           .from("tbutenti")
           .select("studio_id")
           .eq("id", user.id)
           .maybeSingle();
         
-        if (isMounted && utente?.studio_id) {
-          setStudioId(utente.studio_id);
+        if (mounted && data?.studio_id) {
+          setStudioId(data.studio_id);
         }
-      } catch (error) {
-        console.error("Errore caricamento studio_id:", error);
+      } catch (err) {
+        console.error("Studio load error:", err);
       }
-    }
+    };
 
-    loadStudioId();
+    loadStudio();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user && isMounted) {
-          const { data: utente } = await supabase
-            .from("tbutenti")
-            .select("studio_id")
-            .eq("id", session.user.id)
-            .maybeSingle();
-          
-          if (utente?.studio_id && isMounted) {
-            setStudioId(utente.studio_id);
-          }
-        } else if (event === "SIGNED_OUT" && isMounted) {
-          setStudioId(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user && mounted) {
+        const { data } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("id", session.user.id)
+          .maybeSingle();
+        
+        if (mounted && data?.studio_id) {
+          setStudioId(data.studio_id);
         }
+      } else if (event === "SIGNED_OUT" && mounted) {
+        setStudioId(null);
       }
-    );
+    });
 
     return () => {
-      isMounted = false;
-      authListener.subscription.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
