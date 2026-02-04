@@ -103,20 +103,22 @@ export function Sidebar({
 
   const loadPromemoriaAttivi = async () => {
     if (!currentUser) return;
-    
+
     try {
+      const today = new Date().toISOString();
+      
       const { data, error } = await supabase
         .from("tbpromemoria")
         .select("id")
-        .eq("completato", false)
-        .lte("data_scadenza", new Date().toISOString());
-      
+        .neq("working_progress", "Completato")
+        .lte("data_scadenza", today);
+
       if (error) {
         console.warn("⚠️ Errore query promemoria:", error);
         setPromemoriaAttivi(0);
         return;
       }
-      
+
       setPromemoriaAttivi(data?.length || 0);
     } catch (error) {
       console.warn("⚠️ Errore caricamento promemoria attivi (gestito):", error);
