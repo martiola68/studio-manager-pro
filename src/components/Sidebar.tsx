@@ -48,6 +48,7 @@ export function Sidebar({
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
+  const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
 
   useEffect(() => {
     loadCurrentUser();
@@ -56,8 +57,12 @@ export function Sidebar({
   useEffect(() => {
     if (currentUser) {
       loadMessaggiNonLetti();
+      loadPromemoriaAttivi();
       // Aggiorna ogni 30 secondi
-      const interval = setInterval(loadMessaggiNonLetti, 30000);
+      const interval = setInterval(() => {
+        loadMessaggiNonLetti();
+        loadPromemoriaAttivi();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [currentUser]);
@@ -93,6 +98,22 @@ export function Sidebar({
       setMessaggiNonLetti(count);
     } catch (error) {
       console.error("Errore caricamento messaggi non letti:", error);
+    }
+  };
+
+  const loadPromemoriaAttivi = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data } = await supabase
+        .from("tbpromemoria")
+        .select("id", { count: "exact", head: true })
+        .eq("completato", false)
+        .lte("data_scadenza", new Date().toISOString());
+      
+      setPromemoriaAttivi(data?.length || 0);
+    } catch (error) {
+      console.error("Errore caricamento promemoria attivi:", error);
     }
   };
 
@@ -227,6 +248,8 @@ export function Sidebar({
 
     // Badge per messaggi non letti
     const showBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+    const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
+    const hasNotification = showBadge || showPromemoriaAlert;
 
     return (
       <Link
@@ -238,6 +261,8 @@ export function Sidebar({
           depth > 0 && "pl-12 text-sm",
           isActive(item.href || "")
             ? "bg-blue-600 text-white font-semibold"
+            : hasNotification
+            ? "text-red-500 hover:bg-red-50 hover:text-red-600 font-bold"
             : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
         )}
       >
@@ -246,6 +271,11 @@ export function Sidebar({
         {showBadge && (
           <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+          </span>
+        )}
+        {showPromemoriaAlert && (
+          <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+            {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
           </span>
         )}
       </Link>

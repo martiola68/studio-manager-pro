@@ -46,6 +46,7 @@ export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
+  const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
 
   // ⚠️ FEATURE DISABILITATA TEMPORANEAMENTE - Causava network errors
   // useEffect(() => {
@@ -77,6 +78,31 @@ export function TopNavBar() {
   useEffect(() => {
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadPromemoriaAttivi();
+      const interval = setInterval(loadPromemoriaAttivi, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
+
+  const loadPromemoriaAttivi = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data } = await supabase
+        .from("tbpromemoria")
+        .select("id", { count: "exact", head: true })
+        .eq("completato", false)
+        .lte("data_scadenza", new Date().toISOString());
+      
+      setPromemoriaAttivi(data?.length || 0);
+    } catch (error) {
+      console.warn("⚠️ Errore caricamento promemoria attivi (gestito):", error);
+      setPromemoriaAttivi(0);
+    }
+  };
 
   const loadCurrentUser = async () => {
     try {
@@ -189,6 +215,8 @@ export function TopNavBar() {
 
     const hasChildren = item.children && item.children.length > 0;
     const showBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+    const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
+    const hasNotification = showBadge || showPromemoriaAlert;
 
     if (hasChildren) {
       return (
@@ -234,6 +262,8 @@ export function TopNavBar() {
           "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative",
           isActive(item.href || "")
             ? "bg-blue-600 text-white"
+            : hasNotification
+            ? "text-red-500 hover:bg-red-50 hover:text-red-600 font-bold"
             : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
         )}
       >
@@ -242,6 +272,11 @@ export function TopNavBar() {
         {showBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+          </Badge>
+        )}
+        {showPromemoriaAlert && (
+          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
+            {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
           </Badge>
         )}
       </Link>
