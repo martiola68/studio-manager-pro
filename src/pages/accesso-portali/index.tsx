@@ -396,6 +396,7 @@ export default function AccessoPortaliPage() {
                   value={formData.login_utente}
                   onChange={(e) => setFormData({ ...formData, login_utente: e.target.value })}
                   placeholder="Username"
+                  autoComplete="off"
                 />
               </div>
 
@@ -407,6 +408,7 @@ export default function AccessoPortaliPage() {
                   value={formData.login_pw}
                   onChange={(e) => setFormData({ ...formData, login_pw: e.target.value })}
                   placeholder="Password"
+                  autoComplete="new-password"
                 />
               </div>
             </div>
