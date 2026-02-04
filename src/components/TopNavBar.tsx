@@ -91,11 +91,17 @@ export function TopNavBar() {
     if (!currentUser) return;
     
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tbpromemoria")
-        .select("id", { count: "exact", head: true })
+        .select("id")
         .eq("completato", false)
         .lte("data_scadenza", new Date().toISOString());
+      
+      if (error) {
+        console.warn("⚠️ Errore query promemoria:", error);
+        setPromemoriaAttivi(0);
+        return;
+      }
       
       setPromemoriaAttivi(data?.length || 0);
     } catch (error) {
