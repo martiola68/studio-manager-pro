@@ -97,8 +97,12 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
       <Card className="w-full max-w-md shadow-2xl border-0">
         <CardHeader className="space-y-4 text-center pb-8">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg">
-            <Building2 className="h-8 w-8 text-white" />
+          <div className="mx-auto w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
+            <img 
+              src="/logo-elma.png" 
+              alt="ELMA Software" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <CardTitle className="text-3xl font-bold text-gray-900">

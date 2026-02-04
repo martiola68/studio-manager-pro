@@ -109,9 +109,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               className="h-12 w-auto object-contain"
             />
           ) : (
-            <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-md">
-              {studio?.denominazione_breve ? getInitials(studio.denominazione_breve) : "SMP"}
-            </div>
+            <img 
+              src="/logo-elma.png" 
+              alt="ELMA Software" 
+              className="h-12 w-auto object-contain"
+            />
           )}
           <div>
             <h1 className="text-xl font-bold text-gray-900">
