@@ -859,11 +859,19 @@ export default function AgendaPage() {
               {formData.in_sede && (
                 <div>
                   <Label>Sala</Label>
-                  <Input 
-                    value={formData.sala} 
-                    onChange={e => setFormData({...formData, sala: e.target.value})} 
-                    placeholder="Es. A, B, Riunioni..."
-                  />
+                  <Select
+                    value={formData.sala}
+                    onValueChange={(v) => setFormData({...formData, sala: v})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona Sala" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A - Sala riunioni">A - Sala riunioni</SelectItem>
+                      <SelectItem value="B - Sala Briefing">B - Sala Briefing</SelectItem>
+                      <SelectItem value="C - Stanza personale">C - Stanza personale</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               
