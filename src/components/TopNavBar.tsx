@@ -47,14 +47,47 @@ export function TopNavBar() {
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
+  const [eventiImminenti, setEventiImminenti] = useState(0);
 
   useEffect(() => {
     if (currentUser) {
       loadMessaggiNonLetti();
-      const interval = setInterval(loadMessaggiNonLetti, 60000);
+      loadPromemoriaAttivi();
+      loadEventiImminenti();
+      const interval = setInterval(() => {
+        loadMessaggiNonLetti();
+        loadPromemoriaAttivi();
+        loadEventiImminenti();
+      }, 60000);
       return () => clearInterval(interval);
     }
   }, [currentUser]);
+
+  const loadEventiImminenti = async () => {
+    if (!currentUser) return;
+
+    try {
+      const now = new Date();
+      const twoDaysLater = new Date();
+      twoDaysLater.setDate(now.getDate() + 2);
+      
+      const { count, error } = await supabase
+        .from("tbagenda")
+        .select("*", { count: 'exact', head: true })
+        .eq("utente_id", currentUser.id)
+        .gte("data_inizio", now.toISOString())
+        .lte("data_inizio", twoDaysLater.toISOString());
+
+      if (error) {
+        console.warn("⚠️ Errore query eventi imminenti:", error);
+        return;
+      }
+
+      setEventiImminenti(count || 0);
+    } catch (error) {
+      console.warn("⚠️ Errore caricamento eventi imminenti:", error);
+    }
+  };
 
   const loadMessaggiNonLetti = async () => {
     try {
@@ -223,6 +256,7 @@ export function TopNavBar() {
     const hasChildren = item.children && item.children.length > 0;
     const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
+    const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
     const hasNotification = showMessaggiBadge || showPromemoriaAlert;
 
     if (hasChildren) {
@@ -282,6 +316,11 @@ export function TopNavBar() {
         {showPromemoriaAlert && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
+          </Badge>
+        )}
+        {showAgendaBadge && (
+          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
+            {eventiImminenti > 99 ? "99+" : eventiImminenti}
           </Badge>
         )}
       </Link>
