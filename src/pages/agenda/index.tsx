@@ -810,11 +810,10 @@ export default function AgendaPage() {
                 <Label>Ora Fine</Label>
                 <Input 
                   type="time" 
-                  disabled={formData.tutto_giorno || formData.ricorrente} 
+                  disabled={formData.tutto_giorno} 
                   value={formData.ora_fine} 
                   onChange={e => setFormData({...formData, ora_fine: e.target.value})} 
                 />
-                {formData.ricorrente && <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente</p>}
               </div>
             </div>
             <div className="flex items-center space-x-2">
