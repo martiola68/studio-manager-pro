@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,6 +23,8 @@ interface LipeWithRelations extends LipeRow {
   tbutenti_operatore?: UtenteRow | null;
 }
 
+const ITEMS_PER_PAGE = 50;
+
 export default function LipePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -32,10 +34,14 @@ export default function LipePage() {
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [studioId, setStudioId] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   useEffect(() => {
     checkAuthAndLoadData();
-  }, []);
+  }, [currentPage]); // Reload when page changes
 
   async function checkAuthAndLoadData() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -53,7 +59,7 @@ export default function LipePage() {
     if (userData?.studio_id) {
       setStudioId(userData.studio_id);
       await Promise.all([
-        loadLipeRecords(userData.studio_id),
+        loadLipeRecords(userData.studio_id, currentPage),
         loadClienti(userData.studio_id),
         loadUtenti(userData.studio_id)
       ]);
@@ -61,9 +67,26 @@ export default function LipePage() {
     setLoading(false);
   }
 
-  async function loadLipeRecords(studio_id: string) {
-    console.log("Caricamento LIPE per studio:", studio_id);
+  async function loadLipeRecords(studio_id: string, page: number) {
+    setLoading(true);
+    console.log("Caricamento LIPE per studio:", studio_id, "Pagina:", page);
     
+    // Get total count first
+    const { count, error: countError } = await supabase
+      .from("tbscadlipe")
+      .select("*", { count: 'exact', head: true })
+      .eq("studio_id", studio_id);
+
+    if (countError) {
+      console.error("Errore conteggio LIPE:", countError);
+    } else {
+      setTotalRecords(count || 0);
+    }
+
+    // Get paginated data
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+
     const { data, error } = await supabase
       .from("tbscadlipe")
       .select(`
@@ -72,17 +95,20 @@ export default function LipePage() {
         tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(id, nome, cognome)
       `)
       .eq("studio_id", studio_id)
-      .order("nominativo", { ascending: true });
+      .order("nominativo", { ascending: true })
+      .range(from, to);
 
     console.log("LIPE Query result:", { count: data?.length, error });
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({ title: "Errore", description: "Impossibile caricare i dati LIPE", variant: "destructive" });
+      setLoading(false);
       return;
     }
 
     setLipeRecords(data as LipeWithRelations[] || []);
+    setLoading(false);
   }
 
   async function loadClienti(studio_id: string) {
@@ -118,7 +144,8 @@ export default function LipePage() {
   async function handleAddRecord() {
     if (!studioId) return;
 
-    const newRecord: LipeInsert = {
+    // Use any to bypass strict type checking for Insert where ID is optional/generated
+    const newRecord: any = {
       nominativo: "",
       studio_id: studioId,
       tipo_liq: "T",
@@ -159,7 +186,7 @@ export default function LipePage() {
     }
 
     if (data && studioId) {
-      await loadLipeRecords(studioId);
+      await loadLipeRecords(studioId, currentPage);
       toast({ title: "Successo", description: "Record aggiunto con successo" });
     }
   }
@@ -223,7 +250,9 @@ export default function LipePage() {
     );
   }
 
-  if (loading) {
+  const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
+
+  if (loading && lipeRecords.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -248,22 +277,49 @@ export default function LipePage() {
   const cellStyle = "p-0 h-12 border-r border-b text-center align-middle bg-background";
   const headerStyle = "p-0 h-12 border-r border-b text-center align-middle font-semibold bg-muted/50 text-foreground";
   const stickyLeft = "sticky left-0 z-20";
-  const stickyLeftCell = "sticky left-0 z-10 bg-background";
+  const stickyLeftCell = "sticky left-0 z-10 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]";
   
   const inputStyle = "w-full h-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 text-center bg-transparent";
   const selectTriggerStyle = "w-full h-full border-0 rounded-none focus:ring-0 focus:ring-offset-0 px-1 bg-transparent";
   const checkboxContainer = "flex items-center justify-center w-full h-full";
 
   return (
-    <div className="w-full p-2">
+    <div className="w-full p-2 space-y-4">
       <Card className="border-0 shadow-none">
         <CardHeader className="px-0 pt-0 pb-4">
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Scadenzario LIPE ({lipeRecords.length} record)</CardTitle>
-            <Button onClick={handleAddRecord} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Aggiungi Record
-            </Button>
+            <CardTitle className="text-2xl font-bold">
+              Scadenzario LIPE ({totalRecords} record)
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Pagina {currentPage} di {totalPages || 1}</span>
+                <div className="flex gap-1">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Button onClick={handleAddRecord} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Aggiungi Record
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -311,7 +367,7 @@ export default function LipePage() {
                         >
                           <SelectTrigger className={`${selectTriggerStyle}`}>
                             <SelectValue>
-                              <div className="truncate px-2 text-left w-full">
+                              <div className="truncate px-2 text-left w-full" title={record.nominativo || ""}>
                                 {record.nominativo || "Seleziona cliente"}
                               </div>
                             </SelectValue>
