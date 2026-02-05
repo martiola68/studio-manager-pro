@@ -334,7 +334,7 @@ export async function sendComunicazioneEmail(
 
       recipients = (clienti || [])
         .filter(c => c.email)
-        .map(c => ({ email: c.email, nome: c.ragione_sociale }));
+        .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
 
     } else if (data.tipo === "scadenze") {
       // Tutti i clienti iscritti agli avvisi scadenze
@@ -351,7 +351,7 @@ export async function sendComunicazioneEmail(
 
       recipients = (clienti || [])
         .filter(c => c.email)
-        .map(c => ({ email: c.email, nome: c.ragione_sociale }));
+        .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
 
     } else if (data.tipo === "interna") {
       // Comunicazione interna agli utenti dello studio
@@ -369,7 +369,7 @@ export async function sendComunicazioneEmail(
 
         recipients = (utenti || [])
           .filter(u => u.email)
-          .map(u => ({ email: u.email, nome: `${u.nome} ${u.cognome}` }));
+          .map(u => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
 
       } else {
         // Tutti gli utenti attivi
@@ -384,7 +384,7 @@ export async function sendComunicazioneEmail(
 
         recipients = (utenti || [])
           .filter(u => u.email)
-          .map(u => ({ email: u.email, nome: `${u.nome} ${u.cognome}` }));
+          .map(u => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
       }
     }
 
