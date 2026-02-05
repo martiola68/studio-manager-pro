@@ -289,14 +289,9 @@ export default function DashboardPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/messaggi">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2 relative">
+              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <MessageSquare className="h-8 w-8 text-blue-600" />
                 <span className="text-sm font-medium">Messaggi</span>
-                {messaggiNonLetti > 0 && (
-                  <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                    {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
-                  </span>
-                )}
               </Button>
             </Link>
             <Link href="/agenda">

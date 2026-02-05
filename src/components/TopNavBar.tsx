@@ -48,32 +48,31 @@ export function TopNavBar() {
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
 
-  // ⚠️ FEATURE DISABILITATA TEMPORANEAMENTE - Causava network errors
-  // useEffect(() => {
-  //   if (currentUser) {
-  //     loadMessaggiNonLetti();
-  //     const interval = setInterval(loadMessaggiNonLetti, 60000);
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [currentUser]);
+  useEffect(() => {
+    if (currentUser) {
+      loadMessaggiNonLetti();
+      const interval = setInterval(loadMessaggiNonLetti, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
 
-  // const loadMessaggiNonLetti = async () => {
-  //   try {
-  //     const { data: { session } } = await supabase.auth.getSession();
-  //     if (!session?.user?.id) {
-  //       console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
-  //       setMessaggiNonLetti(0);
-  //       return;
-  //     }
-  //
-  //     const { messaggioService } = await import("@/services/messaggioService");
-  //     const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
-  //     setMessaggiNonLetti(count);
-  //   } catch (error) {
-  //     console.warn("⚠️ Errore caricamento messaggi non letti (gestito):", error);
-  //     setMessaggiNonLetti(0);
-  //   }
-  // };
+  const loadMessaggiNonLetti = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
+        setMessaggiNonLetti(0);
+        return;
+      }
+
+      const { messaggioService } = await import("@/services/messaggioService");
+      const count = await messaggioService.getMessaggiNonLettiCount(session.user.id);
+      setMessaggiNonLetti(count);
+    } catch (error) {
+      console.warn("⚠️ Errore caricamento messaggi non letti (gestito):", error);
+      setMessaggiNonLetti(0);
+    }
+  };
 
   useEffect(() => {
     loadCurrentUser();
@@ -222,9 +221,9 @@ export function TopNavBar() {
     }
 
     const hasChildren = item.children && item.children.length > 0;
-    const showBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+    const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
-    const hasNotification = showBadge || showPromemoriaAlert;
+    const hasNotification = showMessaggiBadge || showPromemoriaAlert;
 
     if (hasChildren) {
       return (
@@ -270,14 +269,12 @@ export function TopNavBar() {
           "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative",
           isActive(item.href || "")
             ? "bg-blue-600 text-white"
-            : hasNotification
-            ? "text-red-500 hover:bg-red-50 hover:text-red-600 font-bold"
             : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
         )}
       >
         {item.icon}
         <span>{item.label}</span>
-        {showBadge && (
+        {showMessaggiBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
           </Badge>
