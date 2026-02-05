@@ -14,15 +14,19 @@ export interface Allegato {
 
 export const promemoriaService = {
   async getPromemoria(studioId?: string | null, userId?: string, isResponsabile?: boolean, userSettore?: string | null) {
-    const query = supabase
+    let query = supabase
       .from("tbpromemoria")
       .select(`
         *,
         operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
         destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
-      `)
-      .eq("studio_id", studioId ?? null)
-      .order("data_scadenza", { ascending: true, nullsFirst: false });
+      `);
+
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
+
+    query = query.order("data_scadenza", { ascending: true, nullsFirst: false });
 
     const { data, error } = await query;
 
