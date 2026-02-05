@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,7 +41,7 @@ export default function LipePage() {
 
   useEffect(() => {
     checkAuthAndLoadData();
-  }, [currentPage]); // Reload when page changes
+  }, [currentPage]);
 
   async function checkAuthAndLoadData() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -69,7 +69,6 @@ export default function LipePage() {
 
   async function loadLipeRecords(studio_id: string, page: number) {
     setLoading(true);
-    console.log("Caricamento LIPE per studio:", studio_id, "Pagina:", page);
     
     // Get total count first
     const { count, error: countError } = await supabase
@@ -97,8 +96,6 @@ export default function LipePage() {
       .eq("studio_id", studio_id)
       .order("nominativo", { ascending: true })
       .range(from, to);
-
-    console.log("LIPE Query result:", { count: data?.length, error });
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
@@ -209,6 +206,8 @@ export default function LipePage() {
   }
 
   async function handleDeleteRecord(id: string) {
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
     const { error } = await supabase
       .from("tbscadlipe")
       .delete()
@@ -254,7 +253,7 @@ export default function LipePage() {
 
   if (loading && lipeRecords.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-gray-600">Caricamento...</p>
@@ -263,34 +262,30 @@ export default function LipePage() {
     );
   }
 
-  const wNominativo = "w-[189px]";
-  const wProfessionista = "w-[189px]";
-  const wOperatore = "w-[189px]";
-  const wTipoLiq = "w-[76px]";
-  const wMese = "w-[57px]";
-  const wLipeCheck = "w-[57px]";
-  const wLipeDate = "w-[113px]";
-  const wAcconto = "w-[113px]";
-  const wAccontoCom = "w-[57px]";
-  const wAzioni = "w-[76px]";
-
-  const cellStyle = "p-0 h-12 border-r border-b text-center align-middle bg-background";
-  const headerStyle = "p-0 h-12 border-r border-b text-center align-middle font-semibold bg-muted/50 text-foreground";
-  const stickyLeft = "sticky left-0 z-20";
-  const stickyLeftCell = "sticky left-0 z-10 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]";
-  
-  const inputStyle = "w-full h-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 text-center bg-transparent";
-  const selectTriggerStyle = "w-full h-full border-0 rounded-none focus:ring-0 focus:ring-offset-0 px-1 bg-transparent";
-  const checkboxContainer = "flex items-center justify-center w-full h-full";
+  // Definisco le larghezze fisse per l'allineamento tra header e body
+  const widths = {
+    nominativo: "min-w-[250px]",
+    professionista: "min-w-[180px]",
+    operatore: "min-w-[180px]",
+    tipoLiq: "min-w-[100px]",
+    mese: "min-w-[80px]",
+    lipeCheck: "min-w-[80px]",
+    dataInvio: "min-w-[150px]",
+    acconto: "min-w-[130px]",
+    azioni: "min-w-[80px]"
+  };
 
   return (
-    <div className="w-full p-2 space-y-4">
-      <Card className="border-0 shadow-none">
-        <CardHeader className="px-0 pt-0 pb-4">
+    <div className="space-y-6 p-6">
+      <Card>
+        <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">
-              Scadenzario LIPE ({totalRecords} record)
-            </CardTitle>
+            <div>
+              <CardTitle className="text-2xl font-bold">
+                Scadenzario LIPE ({totalRecords} record)
+              </CardTitle>
+              <p className="text-gray-500 mt-1">Gestione liquidazioni periodiche IVA</p>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>Pagina {currentPage} di {totalPages || 1}</span>
@@ -323,347 +318,357 @@ export default function LipePage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="border rounded-none overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table className="border-collapse w-max">
-                <TableHeader>
-                  <TableRow className="h-12 border-b">
-                    <TableHead className={`${wNominativo} ${headerStyle} ${stickyLeft}`}>Nominativo</TableHead>
-                    <TableHead className={`${wProfessionista} ${headerStyle}`}>Professionista</TableHead>
-                    <TableHead className={`${wOperatore} ${headerStyle}`}>Operatore</TableHead>
-                    <TableHead className={`${wTipoLiq} ${headerStyle}`}>Tipo Liq</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Gen</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Feb</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Mar</TableHead>
-                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 1T</TableHead>
-                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 1T</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Apr</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Mag</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Giu</TableHead>
-                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 2T</TableHead>
-                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 2T</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Lug</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Ago</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Set</TableHead>
-                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 3T</TableHead>
-                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 3T</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Ott</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Nov</TableHead>
-                    <TableHead className={`${wAcconto} ${headerStyle}`}>Acconto</TableHead>
-                    <TableHead className={`${wAccontoCom} ${headerStyle}`}>Acc. Com</TableHead>
-                    <TableHead className={`${wMese} ${headerStyle}`}>Dic</TableHead>
-                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 4T</TableHead>
-                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 4T</TableHead>
-                    <TableHead className={`${wAzioni} ${headerStyle} border-r-0`}>Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lipeRecords.map((record) => (
-                    <TableRow key={record.id} className="h-12 border-b hover:bg-muted/30">
-                      <TableCell className={`${wNominativo} ${cellStyle} ${stickyLeftCell}`}>
-                        <Select
-                          value={record.nominativo || ""}
-                          onValueChange={(val) => handleNominativoChange(record.id, val)}
-                        >
-                          <SelectTrigger className={`${selectTriggerStyle}`}>
-                            <SelectValue>
-                              <div className="truncate px-2 text-left w-full" title={record.nominativo || ""}>
-                                {record.nominativo || "Seleziona cliente"}
-                              </div>
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {clienti.map((cliente) => (
-                              <SelectItem key={cliente.id} value={cliente.id}>
-                                {cliente.ragione_sociale}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      <TableCell className={`${wProfessionista} ${cellStyle}`}>
-                        <Select
-                          value={record.utente_professionista_id || "none"}
-                          onValueChange={(val) => handleUpdateRecord(record.id, { utente_professionista_id: val === "none" ? null : val })}
-                        >
-                          <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue>
-                              {record.tbutenti_professionista 
-                                ? `${record.tbutenti_professionista.nome} ${record.tbutenti_professionista.cognome}`
-                                : "Seleziona"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleziona</SelectItem>
-                            {utenti.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.nome} {u.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      <TableCell className={`${wOperatore} ${cellStyle}`}>
-                        <Select
-                          value={record.utente_operatore_id || "none"}
-                          onValueChange={(val) => handleUpdateRecord(record.id, { utente_operatore_id: val === "none" ? null : val })}
-                        >
-                          <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue>
-                              {record.tbutenti_operatore
-                                ? `${record.tbutenti_operatore.nome} ${record.tbutenti_operatore.cognome}`
-                                : "Seleziona"}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleziona</SelectItem>
-                            {utenti.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>
-                                {u.nome} {u.cognome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      <TableCell className={`${wTipoLiq} ${cellStyle}`}>
-                        <Select
-                          value={record.tipo_liq || "T"}
-                          onValueChange={(val) => handleUpdateRecord(record.id, { tipo_liq: val })}
-                        >
-                          <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="T">T</SelectItem>
-                            <SelectItem value="M">M</SelectItem>
-                            <SelectItem value="CL">CL</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.gen || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { gen: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.feb || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { feb: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.mar || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { mar: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.lipe1t || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe1t: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
-                        <Input
-                          type="date"
-                          value={record.lipe1t_invio || ""}
-                          onChange={(e) => handleUpdateRecord(record.id, { lipe1t_invio: e.target.value })}
-                          className={inputStyle}
-                        />
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.apr || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { apr: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.mag || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { mag: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.giu || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { giu: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.lipe2t || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe2t: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
-                        <Input
-                          type="date"
-                          value={record.lipe2t_invio || ""}
-                          onChange={(e) => handleUpdateRecord(record.id, { lipe2t_invio: e.target.value })}
-                          className={inputStyle}
-                        />
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.lug || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lug: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.ago || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { ago: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.set || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { set: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.lipe3t || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe3t: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
-                        <Input
-                          type="date"
-                          value={record.lipe3t_invio || ""}
-                          onChange={(e) => handleUpdateRecord(record.id, { lipe3t_invio: e.target.value })}
-                          className={inputStyle}
-                        />
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.ott || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { ott: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.nov || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { nov: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wAcconto} ${cellStyle}`}>
-                        <Select
-                          value={record.acconto || "Non dovuto"}
-                          onValueChange={(val) => handleUpdateRecord(record.id, { acconto: val })}
-                        >
-                          <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Dovuto">Dovuto</SelectItem>
-                            <SelectItem value="Non dovuto">Non dovuto</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-
-                      <TableCell className={`${wAccontoCom} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.acconto_com || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { acconto_com: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wMese} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.dic || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { dic: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
-                        <div className={checkboxContainer}>
-                          <Checkbox
-                            checked={record.lipe4t || false}
-                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe4t: !!c })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
-                        <Input
-                          type="date"
-                          value={record.lipe4t_invio || ""}
-                          onChange={(e) => handleUpdateRecord(record.id, { lipe4t_invio: e.target.value })}
-                          className={inputStyle}
-                        />
-                      </TableCell>
-
-                      <TableCell className={`${wAzioni} ${cellStyle} border-r-0`}>
-                        <div className="flex items-center justify-center w-full h-full">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteRecord(record.id)}
-                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+          <div className="overflow-x-auto">
+            <div className="inline-block min-w-full align-middle">
+              
+              {/* HEADER TABLE - STICKY TOP */}
+              <div className="sticky top-0 z-20 bg-white border-b">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={`sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${widths.nominativo}`}>Nominativo</TableHead>
+                      <TableHead className={`${widths.professionista}`}>Professionista</TableHead>
+                      <TableHead className={`${widths.operatore}`}>Operatore</TableHead>
+                      <TableHead className={`${widths.tipoLiq}`}>Tipo Liq</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Gen</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Feb</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Mar</TableHead>
+                      <TableHead className={`text-center ${widths.lipeCheck}`}>Lipe 1T</TableHead>
+                      <TableHead className={`${widths.dataInvio}`}>Data Invio 1T</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Apr</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Mag</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Giu</TableHead>
+                      <TableHead className={`text-center ${widths.lipeCheck}`}>Lipe 2T</TableHead>
+                      <TableHead className={`${widths.dataInvio}`}>Data Invio 2T</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Lug</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Ago</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Set</TableHead>
+                      <TableHead className={`text-center ${widths.lipeCheck}`}>Lipe 3T</TableHead>
+                      <TableHead className={`${widths.dataInvio}`}>Data Invio 3T</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Ott</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Nov</TableHead>
+                      <TableHead className={`${widths.acconto}`}>Acconto</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Acc. Com</TableHead>
+                      <TableHead className={`text-center ${widths.mese}`}>Dic</TableHead>
+                      <TableHead className={`text-center ${widths.lipeCheck}`}>Lipe 4T</TableHead>
+                      <TableHead className={`${widths.dataInvio}`}>Data Invio 4T</TableHead>
+                      <TableHead className={`text-center ${widths.azioni}`}>Azioni</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                </Table>
+              </div>
+
+              {/* BODY TABLE - SCROLLABLE Y */}
+              <div className="max-h-[600px] overflow-y-auto">
+                <Table>
+                  <TableBody>
+                    {lipeRecords.map((record) => (
+                      <TableRow key={record.id} className="hover:bg-muted/50 bg-background">
+                        <TableCell className={`sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium ${widths.nominativo}`}>
+                          <Select
+                            value={record.nominativo || ""}
+                            onValueChange={(val) => handleNominativoChange(record.id, val)}
+                          >
+                            <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0">
+                              <SelectValue placeholder="Seleziona cliente">
+                                <span className="truncate block" title={record.nominativo || ""}>
+                                  {record.nominativo || "Seleziona cliente"}
+                                </span>
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clienti.map((cliente) => (
+                                <SelectItem key={cliente.id} value={cliente.id}>
+                                  {cliente.ragione_sociale}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className={`${widths.professionista}`}>
+                          <Select
+                            value={record.utente_professionista_id || "none"}
+                            onValueChange={(val) => handleUpdateRecord(record.id, { utente_professionista_id: val === "none" ? null : val })}
+                          >
+                            <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0">
+                              <SelectValue placeholder="Seleziona">
+                                {record.tbutenti_professionista 
+                                  ? `${record.tbutenti_professionista.nome} ${record.tbutenti_professionista.cognome}`
+                                  : "Seleziona"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Seleziona</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className={`${widths.operatore}`}>
+                          <Select
+                            value={record.utente_operatore_id || "none"}
+                            onValueChange={(val) => handleUpdateRecord(record.id, { utente_operatore_id: val === "none" ? null : val })}
+                          >
+                            <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0">
+                              <SelectValue placeholder="Seleziona">
+                                {record.tbutenti_operatore
+                                  ? `${record.tbutenti_operatore.nome} ${record.tbutenti_operatore.cognome}`
+                                  : "Seleziona"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Seleziona</SelectItem>
+                              {utenti.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.nome} {u.cognome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className={`${widths.tipoLiq}`}>
+                          <Select
+                            value={record.tipo_liq || "T"}
+                            onValueChange={(val) => handleUpdateRecord(record.id, { tipo_liq: val })}
+                          >
+                            <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="T">T</SelectItem>
+                              <SelectItem value="M">M</SelectItem>
+                              <SelectItem value="CL">CL</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.gen || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { gen: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.feb || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { feb: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.mar || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { mar: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.lipeCheck}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.lipe1t || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe1t: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`${widths.dataInvio}`}>
+                          <Input
+                            type="date"
+                            value={record.lipe1t_invio || ""}
+                            onChange={(e) => handleUpdateRecord(record.id, { lipe1t_invio: e.target.value })}
+                            className="border-0 bg-transparent focus-visible:ring-0 px-2"
+                          />
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.apr || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { apr: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.mag || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { mag: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.giu || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { giu: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.lipeCheck}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.lipe2t || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe2t: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`${widths.dataInvio}`}>
+                          <Input
+                            type="date"
+                            value={record.lipe2t_invio || ""}
+                            onChange={(e) => handleUpdateRecord(record.id, { lipe2t_invio: e.target.value })}
+                            className="border-0 bg-transparent focus-visible:ring-0 px-2"
+                          />
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.lug || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { lug: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.ago || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { ago: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.set || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { set: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.lipeCheck}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.lipe3t || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe3t: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`${widths.dataInvio}`}>
+                          <Input
+                            type="date"
+                            value={record.lipe3t_invio || ""}
+                            onChange={(e) => handleUpdateRecord(record.id, { lipe3t_invio: e.target.value })}
+                            className="border-0 bg-transparent focus-visible:ring-0 px-2"
+                          />
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.ott || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { ott: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.nov || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { nov: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`${widths.acconto}`}>
+                          <Select
+                            value={record.acconto || "Non dovuto"}
+                            onValueChange={(val) => handleUpdateRecord(record.id, { acconto: val })}
+                          >
+                            <SelectTrigger className="w-full border-0 bg-transparent focus:ring-0">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Dovuto">Dovuto</SelectItem>
+                              <SelectItem value="Non dovuto">Non dovuto</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.acconto_com || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { acconto_com: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.mese}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.dic || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { dic: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.lipeCheck}`}>
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={record.lipe4t || false}
+                              onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe4t: !!c })}
+                            />
+                          </div>
+                        </TableCell>
+
+                        <TableCell className={`${widths.dataInvio}`}>
+                          <Input
+                            type="date"
+                            value={record.lipe4t_invio || ""}
+                            onChange={(e) => handleUpdateRecord(record.id, { lipe4t_invio: e.target.value })}
+                            className="border-0 bg-transparent focus-visible:ring-0 px-2"
+                          />
+                        </TableCell>
+
+                        <TableCell className={`text-center ${widths.azioni}`}>
+                          <div className="flex justify-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRecord(record.id)}
+                              className="hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
         </CardContent>
