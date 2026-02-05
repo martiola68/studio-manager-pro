@@ -19,7 +19,6 @@ type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 interface LipeWithRelations extends LipeRow {
-  tbclienti?: ClienteRow | null;
   tbutenti_professionista?: UtenteRow | null;
   tbutenti_operatore?: UtenteRow | null;
 }
@@ -73,9 +72,9 @@ export default function LipePage() {
         tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(id, nome, cognome)
       `)
       .eq("studio_id", studio_id)
-      .order("created_at", { ascending: false });
+      .order("nominativo", { ascending: true });
 
-    console.log("LIPE Query result:", { data, error });
+    console.log("LIPE Query result:", { count: data?.length, error });
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
@@ -83,26 +82,7 @@ export default function LipePage() {
       return;
     }
 
-    const clientIds = data?.map((r) => r.id) || [];
-    if (clientIds.length > 0) {
-      const { data: clientiData, error: clientiError } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .in("id", clientIds)
-        .eq("studio_id", studio_id);
-
-      if (!clientiError && clientiData) {
-        const recordsWithClients = data?.map((record) => ({
-          ...record,
-          tbclienti: clientiData.find((c) => c.id === record.id) || null
-        })) as LipeWithRelations[];
-        setLipeRecords(recordsWithClients);
-      } else {
-        setLipeRecords(data as unknown as LipeWithRelations[]);
-      }
-    } else {
-      setLipeRecords(data as unknown as LipeWithRelations[]);
-    }
+    setLipeRecords(data as LipeWithRelations[] || []);
   }
 
   async function loadClienti(studio_id: string) {
@@ -138,7 +118,7 @@ export default function LipePage() {
   async function handleAddRecord() {
     if (!studioId) return;
 
-    const newRecord: any = {
+    const newRecord: LipeInsert = {
       nominativo: "",
       studio_id: studioId,
       tipo_liq: "T",
@@ -217,7 +197,7 @@ export default function LipePage() {
     toast({ title: "Successo", description: "Record eliminato con successo" });
   }
 
-  async function handleClienteChange(recordId: string, clienteId: string) {
+  async function handleNominativoChange(recordId: string, clienteId: string) {
     const cliente = clienti.find((c) => c.id === clienteId);
     if (!cliente) return;
 
@@ -231,16 +211,14 @@ export default function LipePage() {
       .eq("id", recordId);
 
     if (error) {
-      console.error("Errore aggiornamento cliente:", error);
-      toast({ title: "Errore", description: "Impossibile aggiornare il cliente", variant: "destructive" });
+      console.error("Errore aggiornamento nominativo:", error);
+      toast({ title: "Errore", description: "Impossibile aggiornare il nominativo", variant: "destructive" });
       return;
     }
 
     setLipeRecords((prev) =>
       prev.map((r) =>
-        r.id === recordId
-          ? { ...r, ...updates, tbclienti: cliente }
-          : r
+        r.id === recordId ? { ...r, ...updates } : r
       )
     );
   }
@@ -281,7 +259,7 @@ export default function LipePage() {
       <Card className="border-0 shadow-none">
         <CardHeader className="px-0 pt-0 pb-4">
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Scadenzario LIPE</CardTitle>
+            <CardTitle className="text-2xl font-bold">Scadenzario LIPE ({lipeRecords.length} record)</CardTitle>
             <Button onClick={handleAddRecord} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Aggiungi Record
@@ -328,13 +306,13 @@ export default function LipePage() {
                     <TableRow key={record.id} className="h-12 border-b hover:bg-muted/30">
                       <TableCell className={`${wNominativo} ${cellStyle} ${stickyLeftCell}`}>
                         <Select
-                          value={record.id}
-                          onValueChange={(val) => handleClienteChange(record.id, val)}
+                          value={record.nominativo || ""}
+                          onValueChange={(val) => handleNominativoChange(record.id, val)}
                         >
                           <SelectTrigger className={`${selectTriggerStyle}`}>
                             <SelectValue>
                               <div className="truncate px-2 text-left w-full">
-                                {record.tbclienti?.ragione_sociale || record.nominativo || ""}
+                                {record.nominativo || "Seleziona cliente"}
                               </div>
                             </SelectValue>
                           </SelectTrigger>
@@ -354,7 +332,11 @@ export default function LipePage() {
                           onValueChange={(val) => handleUpdateRecord(record.id, { utente_professionista_id: val === "none" ? null : val })}
                         >
                           <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue />
+                            <SelectValue>
+                              {record.tbutenti_professionista 
+                                ? `${record.tbutenti_professionista.nome} ${record.tbutenti_professionista.cognome}`
+                                : "Seleziona"}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Seleziona</SelectItem>
@@ -373,7 +355,11 @@ export default function LipePage() {
                           onValueChange={(val) => handleUpdateRecord(record.id, { utente_operatore_id: val === "none" ? null : val })}
                         >
                           <SelectTrigger className={selectTriggerStyle}>
-                            <SelectValue />
+                            <SelectValue>
+                              {record.tbutenti_operatore
+                                ? `${record.tbutenti_operatore.nome} ${record.tbutenti_operatore.cognome}`
+                                : "Seleziona"}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Seleziona</SelectItem>
