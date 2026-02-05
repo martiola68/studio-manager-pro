@@ -2,38 +2,45 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
-type ScadenzaEsterometro = Database["public"]["Tables"]["tbscadesterometro"]["Row"];
+type ScadenzaEstero = Database["public"]["Tables"]["tbscadestero"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function ScadenzeEsterometroPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [scadenze, setScadenze] = useState<ScadenzaEsterometro[]>([]);
+  const [scadenze, setScadenze] = useState<ScadenzaEstero[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
-  const [filterConferma, setFilterConferma] = useState("__all__");
-  
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
     totale: 0,
-    confermate: 0,
-    nonConfermate: 0
+    docTotali: 0
   });
+
+  const mesi = [
+    { key: "gen", label: "Gen" },
+    { key: "feb", label: "Feb" },
+    { key: "mar", label: "Mar" },
+    { key: "apr", label: "Apr" },
+    { key: "mag", label: "Mag" },
+    { key: "giu", label: "Giu" },
+    { key: "lug", label: "Lug" },
+    { key: "ago", label: "Ago" },
+    { key: "set", label: "Set" },
+    { key: "ott", label: "Ott" },
+    { key: "nov", label: "Nov" },
+    { key: "dic", label: "Dic" }
+  ];
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -63,11 +70,10 @@ export default function ScadenzeEsterometroPage() {
       setScadenze(scadenzeData);
       setUtenti(utentiData);
       
-      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      const docTotali = scadenzeData.reduce((acc, curr) => acc + (curr.tot_doc || 0), 0);
       setStats({
         totale: scadenzeData.length,
-        confermate,
-        nonConfermate: scadenzeData.length - confermate
+        docTotali
       });
     } catch (error) {
       console.error("Errore caricamento:", error);
@@ -81,9 +87,9 @@ export default function ScadenzeEsterometroPage() {
     }
   };
 
-  const loadScadenze = async (): Promise<ScadenzaEsterometro[]> => {
+  const loadScadenze = async (): Promise<ScadenzaEstero[]> => {
     const { data, error } = await supabase
-      .from("tbscadesterometro")
+      .from("tbscadestero")
       .select("*")
       .order("nominativo", { ascending: true });
     
@@ -101,7 +107,7 @@ export default function ScadenzeEsterometroPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaEstero, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
@@ -109,17 +115,9 @@ export default function ScadenzeEsterometroPage() {
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
       
-      if (field === "conferma_riga") {
-        setStats(prev => ({
-          ...prev,
-          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
-          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
-        }));
-      }
-      
       const updates: any = { [field]: newValue };
       const { error } = await supabase
-        .from("tbscadesterometro")
+        .from("tbscadestero")
         .update(updates)
         .eq("id", scadenzaId);
 
@@ -135,83 +133,27 @@ export default function ScadenzeEsterometroPage() {
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+  const handleUpdateNumDoc = async (scadenzaId: string, meseKey: string, value: string) => {
     try {
-      const updates: any = { [field]: value || null };
+      const numValue = parseInt(value) || 0;
+      const field = `nmese${mesi.findIndex(m => m.key === meseKey) + 1}` as keyof ScadenzaEstero;
       
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: numValue } : s
+      ));
+
+      const updates: any = { [field]: numValue };
       const { error } = await supabase
-        .from("tbscadesterometro")
+        .from("tbscadestero")
         .update(updates)
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare il campo",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleNoteChange = (scadenzaId: string, value: string) => {
-    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
-    
-    if (noteTimers[scadenzaId]) {
-      clearTimeout(noteTimers[scadenzaId]);
-    }
-    
-    const timer = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from("tbscadesterometro")
-          .update({ note: value || null })
-          .eq("id", scadenzaId);
-
-        if (error) throw error;
-        
-        setScadenze(prev => prev.map(s => 
-          s.id === scadenzaId ? { ...s, note: value } : s
-        ));
-      } catch (error) {
-        console.error("Errore salvataggio nota:", error);
-        toast({
-          title: "Errore",
-          description: "Impossibile salvare la nota",
-          variant: "destructive"
-        });
-      }
-    }, 1000);
-    
-    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("tbscadesterometro")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Successo",
-        description: "Record eliminato"
-      });
-      await loadData();
-    } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il record",
+        description: "Impossibile aggiornare il numero documenti",
         variant: "destructive"
       });
     }
@@ -221,9 +163,7 @@ export default function ScadenzeEsterometroPage() {
     const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    const matchConferma = filterConferma === "__all__" || 
-      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
-    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
+    return matchSearch && matchOperatore && matchProfessionista;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
@@ -252,23 +192,17 @@ export default function ScadenzeEsterometroPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Totale Comunicazioni</div>
+            <div className="text-sm text-gray-600 mb-1">Totale Clienti</div>
             <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Confermate</div>
-            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
-            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+            <div className="text-sm text-gray-600 mb-1">Documenti Totali</div>
+            <div className="text-3xl font-bold text-blue-600">{stats.docTotali}</div>
           </CardContent>
         </Card>
       </div>
@@ -278,7 +212,7 @@ export default function ScadenzeEsterometroPage() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
               <div className="relative">
@@ -319,19 +253,6 @@ export default function ScadenzeEsterometroPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
-              <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti</SelectItem>
-                  <SelectItem value="true">Confermate</SelectItem>
-                  <SelectItem value="false">Non Confermate</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -347,13 +268,16 @@ export default function ScadenzeEsterometroPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
-                      <TableHead className="min-w-[150px]">Data Invio</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
-                      <TableHead className="min-w-[300px]">Note</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
-                      <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
+                      {mesi.map(mese => (
+                        <TableHead key={mese.key} className="min-w-[120px] text-center border-l bg-gray-50/50">
+                          {mese.label}
+                          <div className="flex justify-between text-[10px] font-normal text-gray-500 px-1 mt-1">
+                            <span>Prev.</span>
+                            <span>Invio</span>
+                            <span>N.Doc</span>
+                          </div>
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                 </Table>
@@ -364,7 +288,7 @@ export default function ScadenzeEsterometroPage() {
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={15} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -376,56 +300,37 @@ export default function ScadenzeEsterometroPage() {
                           </TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_predisposto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_definitivo || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_inviato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[300px]">
-                            <Textarea
-                              value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                              onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                              placeholder="Aggiungi note..."
-                              className="min-h-[60px] resize-none"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[100px]">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(scadenza.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                          {mesi.map((mese, index) => {
+                            const prevField = `${mese.key}_previsto` as keyof ScadenzaEstero;
+                            const invioField = `${mese.key}_invio` as keyof ScadenzaEstero;
+                            const numField = `nmese${index + 1}` as keyof ScadenzaEstero;
+                            
+                            return (
+                              <TableCell key={mese.key} className="min-w-[120px] border-l p-1">
+                                <div className="flex items-center justify-between gap-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(scadenza[prevField])}
+                                    onChange={() => handleToggleField(scadenza.id, prevField, scadenza[prevField])}
+                                    className="rounded w-3 h-3 cursor-pointer"
+                                  />
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(scadenza[invioField])}
+                                    onChange={() => handleToggleField(scadenza.id, invioField, scadenza[invioField])}
+                                    className="rounded w-3 h-3 cursor-pointer"
+                                  />
+                                  <input
+                                    type="number"
+                                    value={Number(scadenza[numField]) || 0}
+                                    onChange={(e) => handleUpdateNumDoc(scadenza.id, mese.key, e.target.value)}
+                                    className="w-8 h-6 text-xs text-center border rounded p-0"
+                                    min="0"
+                                  />
+                                </div>
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))
                     )}

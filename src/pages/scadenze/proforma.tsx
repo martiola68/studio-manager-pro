@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Trash2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -105,15 +104,18 @@ export default function ScadenzeProformaPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaProforma, currentValue: any) => {
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
+      // Cast field to correct keyof ScadenzaProforma
+      const fieldKey = field as keyof ScadenzaProforma;
+
       setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: newValue } : s
+        s.id === scadenzaId ? { ...s, [fieldKey]: newValue } : s
       ));
       
-      const updates: any = { [field]: newValue };
+      const updates: any = { [fieldKey]: newValue };
       const { error } = await supabase
         .from("tbscadproforma")
         .update(updates)
@@ -128,32 +130,6 @@ export default function ScadenzeProformaPage() {
         variant: "destructive"
       });
       await loadData();
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("tbscadproforma")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Successo",
-        description: "Record eliminato"
-      });
-      await loadData();
-    } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il record",
-        variant: "destructive"
-      });
     }
   };
 
@@ -264,7 +240,6 @@ export default function ScadenzeProformaPage() {
                       {mesi.map(mese => (
                         <TableHead key={mese.key} className="min-w-[80px] text-center">{mese.label}</TableHead>
                       ))}
-                      <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                 </Table>
@@ -276,7 +251,7 @@ export default function ScadenzeProformaPage() {
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={16} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={15} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -288,26 +263,21 @@ export default function ScadenzeProformaPage() {
                           </TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
-                          {mesi.map(mese => (
-                            <TableCell key={mese.key} className="text-center min-w-[80px]">
-                              <input
-                                type="checkbox"
-                                checked={scadenza[mese.key as keyof ScadenzaProforma] || false}
-                                onChange={() => handleToggleField(scadenza.id, mese.key as keyof ScadenzaProforma, scadenza[mese.key as keyof ScadenzaProforma])}
-                                className="rounded w-4 h-4 cursor-pointer"
-                              />
-                            </TableCell>
-                          ))}
-                          <TableCell className="text-center min-w-[100px]">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(scadenza.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                          {mesi.map(mese => {
+                            // Cast dinamico sicuro per accedere alle proprietà mensili
+                            const fieldKey = mese.key as keyof ScadenzaProforma;
+                            const value = scadenza[fieldKey];
+                            return (
+                              <TableCell key={mese.key} className="text-center min-w-[80px]">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(value)}
+                                  onChange={() => handleToggleField(scadenza.id, fieldKey, value)}
+                                  className="rounded w-4 h-4 cursor-pointer"
+                                />
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))
                     )}
