@@ -30,7 +30,7 @@ export function getWelcomeEmailTemplate(
 <body>
   <div class="container">
     <div class="header">
-      <h1>🏢 ProWork Studio M</h1>
+      <h1>🏢 Studio Manager Pro</h1>
       <p>Benvenuto nel sistema</p>
     </div>
     
@@ -65,13 +65,12 @@ export function getWelcomeEmailTemplate(
         </ul>
       </div>
       
-      <p>Se hai problemi ad accedere, contatta l'amministratore.</p>
-      
       <p>Buon lavoro! 💼</p>
     </div>
     
     <div class="footer">
-      <p><strong>ProWork Studio M</strong> - Gestione professionale dello studio</p>
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by <strong>ProWork Studio M</strong></p>
       <p>Questa è una email automatica, non rispondere a questo messaggio</p>
     </div>
   </div>
@@ -113,7 +112,7 @@ export function getPasswordResetEmailTemplate(
   <div class="container">
     <div class="header">
       <h1>🔄 Password Reset</h1>
-      <p>ProWork Studio M</p>
+      <p>Studio Manager Pro</p>
     </div>
     
     <div class="content">
@@ -147,13 +146,12 @@ export function getPasswordResetEmailTemplate(
         </ul>
       </div>
       
-      <p>Se hai problemi ad accedere, contatta l'amministratore.</p>
-      
       <p>Buon lavoro! 💼</p>
     </div>
     
     <div class="footer">
-      <p><strong>ProWork Studio M</strong> - Gestione professionale dello studio</p>
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by <strong>ProWork Studio M</strong></p>
       <p>Questa è una email automatica, non rispondere a questo messaggio</p>
     </div>
   </div>

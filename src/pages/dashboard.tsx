@@ -329,7 +329,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <CardTitle className="text-blue-900">📚 Manuale Utente Completo</CardTitle>
-              <CardDescription className="text-blue-700">Guida completa all'utilizzo di ProWork Studio M</CardDescription>
+              <CardDescription className="text-blue-700">Guida completa all'utilizzo di Studio Manager Pro</CardDescription>
             </div>
           </div>
         </CardHeader>

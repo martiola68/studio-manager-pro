@@ -68,7 +68,7 @@ export default function LoginPage() {
       if (data.session) {
         toast({
           title: "Accesso effettuato",
-          description: "Benvenuto in ProWork Studio M"
+          description: "Benvenuto in Studio Manager Pro"
         });
         router.push("/dashboard");
       }
@@ -100,16 +100,16 @@ export default function LoginPage() {
           <div className="mx-auto w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
             <img 
               src="/logo-elma.png" 
-              alt="ProWork Studio M" 
+              alt="Studio Manager Pro" 
               className="w-full h-full object-contain"
             />
           </div>
           <div>
             <CardTitle className="text-3xl font-bold text-gray-900">
-              ProWork Studio M
+              Studio Manager Pro
             </CardTitle>
             <CardDescription className="text-base mt-2">
-              Gestione professionale dello studio
+              Sistema Gestionale Integrato per Studi Commerciali
             </CardDescription>
           </div>
         </CardHeader>

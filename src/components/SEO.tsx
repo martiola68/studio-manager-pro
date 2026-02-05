@@ -9,8 +9,8 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "ProWork Studio M",
-  description = "Gestione professionale dello studio - Software gestionale per studi commerciali",
+  title = "Studio Manager Pro",
+  description = "Sistema Gestionale Integrato per Studi Commerciali",
   image = "/logo-elma.png",
   url,
 }: SEOProps) {
