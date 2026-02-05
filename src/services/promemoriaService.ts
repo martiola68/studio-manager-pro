@@ -31,20 +31,44 @@ export const promemoriaService = {
       query = query.eq("studio_id", studioId);
     }
 
-    if (userId && isResponsabile !== undefined) {
-      if (isResponsabile && userSettore) {
-        // RESPONSABILE: vede tutti i promemoria ricevuti da utenti NON responsabili del suo settore
-        // + i propri promemoria
-        query = query.or(`and(destinatario.settore.eq.${userSettore},destinatario.responsabile.eq.false),operatore_id.eq.${userId},destinatario_id.eq.${userId}`);
-      } else if (!isResponsabile) {
-        // NON RESPONSABILE: vede solo promemoria dove è destinatario O operatore
-        query = query.or(`destinatario_id.eq.${userId},operatore_id.eq.${userId}`);
-      }
-    }
-
     const { data, error } = await query;
 
     if (error) throw error;
+
+    // Applica filtro lato client basato su ruolo utente
+    if (userId && isResponsabile !== undefined) {
+      let filteredData = data || [];
+
+      if (isResponsabile && userSettore) {
+        // RESPONSABILE: vede tutti i promemoria ricevuti da utenti NON responsabili del suo settore
+        // + i propri promemoria (come operatore o destinatario)
+        filteredData = filteredData.filter(p => {
+          const destinatario = p.destinatario as any;
+          
+          // Promemoria dove l'utente è operatore o destinatario
+          if (p.operatore_id === userId || p.destinatario_id === userId) {
+            return true;
+          }
+          
+          // Promemoria destinati a utenti NON responsabili dello stesso settore
+          if (destinatario && 
+              destinatario.settore === userSettore && 
+              destinatario.responsabile === false) {
+            return true;
+          }
+          
+          return false;
+        });
+      } else if (!isResponsabile) {
+        // NON RESPONSABILE: vede solo promemoria dove è destinatario O operatore
+        filteredData = filteredData.filter(p => 
+          p.destinatario_id === userId || p.operatore_id === userId
+        );
+      }
+
+      return filteredData;
+    }
+
     return data;
   },
 
