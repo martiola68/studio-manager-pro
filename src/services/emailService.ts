@@ -17,6 +17,15 @@ export interface EventEmailData {
   clienteNome?: string;
 }
 
+export interface ComunicazioneEmailData {
+  tipo: "newsletter" | "scadenze" | "singola" | "interna";
+  destinatarioId?: string;
+  destinatariIds?: string[];
+  oggetto: string;
+  messaggio: string;
+  allegati?: any;
+}
+
 export interface EmailData {
   to: string;
   subject: string;
@@ -286,10 +295,209 @@ export async function triggerEventReminders(): Promise<{
   }
 }
 
+export async function sendComunicazioneEmail(
+  data: ComunicazioneEmailData
+): Promise<{ success: boolean; sent: number; failed: number; error?: string }> {
+  try {
+    const { supabase } = await import("@/lib/supabase/client");
+    
+    let recipients: { email: string; nome: string }[] = [];
+
+    // 1. Raccogli destinatari in base al tipo
+    if (data.tipo === "singola" && data.destinatarioId) {
+      // Singolo cliente
+      const { data: cliente, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("id", data.destinatarioId)
+        .eq("attivo", true)
+        .single();
+
+      if (error || !cliente?.email) {
+        return { success: false, sent: 0, failed: 0, error: "Cliente non trovato o senza email" };
+      }
+
+      recipients.push({ email: cliente.email, nome: cliente.ragione_sociale });
+
+    } else if (data.tipo === "newsletter") {
+      // Tutti i clienti iscritti alla newsletter
+      const { data: clienti, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("attivo", true)
+        .eq("flag_mail_attivo", true)
+        .eq("flag_mail_newsletter", true);
+
+      if (error) {
+        return { success: false, sent: 0, failed: 0, error: error.message };
+      }
+
+      recipients = (clienti || [])
+        .filter(c => c.email)
+        .map(c => ({ email: c.email, nome: c.ragione_sociale }));
+
+    } else if (data.tipo === "scadenze") {
+      // Tutti i clienti iscritti agli avvisi scadenze
+      const { data: clienti, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("attivo", true)
+        .eq("flag_mail_attivo", true)
+        .eq("flag_mail_scadenze", true);
+
+      if (error) {
+        return { success: false, sent: 0, failed: 0, error: error.message };
+      }
+
+      recipients = (clienti || [])
+        .filter(c => c.email)
+        .map(c => ({ email: c.email, nome: c.ragione_sociale }));
+
+    } else if (data.tipo === "interna") {
+      // Comunicazione interna agli utenti dello studio
+      if (data.destinatariIds && data.destinatariIds.length > 0) {
+        // Destinatari specifici
+        const { data: utenti, error } = await supabase
+          .from("tbutenti")
+          .select("email, nome, cognome")
+          .in("id", data.destinatariIds)
+          .eq("attivo", true);
+
+        if (error) {
+          return { success: false, sent: 0, failed: 0, error: error.message };
+        }
+
+        recipients = (utenti || [])
+          .filter(u => u.email)
+          .map(u => ({ email: u.email, nome: `${u.nome} ${u.cognome}` }));
+
+      } else {
+        // Tutti gli utenti attivi
+        const { data: utenti, error } = await supabase
+          .from("tbutenti")
+          .select("email, nome, cognome")
+          .eq("attivo", true);
+
+        if (error) {
+          return { success: false, sent: 0, failed: 0, error: error.message };
+        }
+
+        recipients = (utenti || [])
+          .filter(u => u.email)
+          .map(u => ({ email: u.email, nome: `${u.nome} ${u.cognome}` }));
+      }
+    }
+
+    if (recipients.length === 0) {
+      return { success: false, sent: 0, failed: 0, error: "Nessun destinatario valido trovato" };
+    }
+
+    console.log(`📧 Invio comunicazione a ${recipients.length} destinatari`);
+
+    // 2. Prepara il contenuto HTML
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .content { padding: 30px 20px; }
+    .message { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; white-space: pre-wrap; }
+    .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+    .footer p { margin: 5px 0; }
+    .cta-button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📧 ${data.oggetto}</h1>
+    </div>
+    <div class="content">
+      <div class="message">
+        ${data.messaggio.replace(/\n/g, '<br>')}
+      </div>
+      ${data.allegati ? '<p><strong>📎 Questa comunicazione contiene allegati</strong></p>' : ''}
+    </div>
+    <div class="footer">
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by ProWork Studio M</p>
+      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const textContent = `
+${data.oggetto}
+
+${data.messaggio}
+
+${data.allegati ? '📎 Questa comunicazione contiene allegati' : ''}
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Powered by ProWork Studio M
+Questa è una email automatica, non rispondere a questo messaggio
+    `.trim();
+
+    // 3. Invia email a tutti i destinatari
+    let sent = 0;
+    let failed = 0;
+
+    for (const recipient of recipients) {
+      try {
+        const result = await sendEmail({
+          to: recipient.email,
+          subject: data.oggetto,
+          html: htmlContent,
+          text: textContent
+        });
+
+        if (result.success) {
+          sent++;
+          console.log(`✅ Email inviata a ${recipient.email}`);
+        } else {
+          failed++;
+          console.error(`❌ Errore invio a ${recipient.email}:`, result.error);
+        }
+      } catch (error) {
+        failed++;
+        console.error(`❌ Errore invio a ${recipient.email}:`, error);
+      }
+    }
+
+    console.log(`📊 Risultato invio: ${sent} inviate, ${failed} fallite su ${recipients.length} totali`);
+
+    return {
+      success: sent > 0,
+      sent,
+      failed,
+      error: failed > 0 ? `${failed} email non inviate` : undefined
+    };
+
+  } catch (error) {
+    console.error("💥 Errore generale invio comunicazione:", error);
+    return {
+      success: false,
+      sent: 0,
+      failed: 0,
+      error: error instanceof Error ? error.message : "Errore sconosciuto"
+    };
+  }
+}
+
 export const emailService = {
   sendEventNotification,
   triggerEventReminders,
   sendEmail,
   sendWelcomeEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendComunicazioneEmail
 };

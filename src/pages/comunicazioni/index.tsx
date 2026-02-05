@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { comunicazioneService } from "@/services/comunicazioneService";
 import { clienteService } from "@/services/clienteService";
+import { emailService } from "@/services/emailService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,6 +183,7 @@ export default function ComunicazioniPage() {
         destinatariCount = multiDestinatari ? selectedDestinatari.length : utenti.filter(u => u.attivo).length;
       }
 
+      // 1. Salva il record nel database
       await comunicazioneService.createComunicazione({
         tipo: formData.tipo,
         oggetto: formData.oggetto,
@@ -192,10 +194,28 @@ export default function ComunicazioniPage() {
         data_invio: new Date().toISOString()
       });
 
-      toast({
-        title: "Inviata con successo",
-        description: `Comunicazione inviata a ${destinatariCount} destinatari`
+      // 2. Invia effettivamente le email
+      const emailResult = await emailService.sendComunicazioneEmail({
+        tipo: formData.tipo,
+        destinatarioId: formData.tipo === "singola" ? formData.destinatario_id : undefined,
+        destinatariIds: formData.tipo === "interna" && multiDestinatari ? selectedDestinatari : undefined,
+        oggetto: formData.oggetto,
+        messaggio: formData.messaggio,
+        allegati: allegati
       });
+
+      if (emailResult.success) {
+        toast({
+          title: "Inviata con successo",
+          description: `${emailResult.sent} email inviate${emailResult.failed > 0 ? ` (${emailResult.failed} fallite)` : ""}`
+        });
+      } else {
+        toast({
+          title: "Errore parziale",
+          description: emailResult.error || "Alcune email non sono state inviate",
+          variant: "destructive"
+        });
+      }
 
       setDialogOpen(false);
       resetForm();
