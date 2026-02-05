@@ -90,8 +90,8 @@ export default function PromemoriaPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
 
-  // NUOVO: Stato per filtro responsabile
-  const [filtroResponsabile, setFiltroResponsabile] = useState<string>("tutti");
+  // NUOVO: Stato per filtro destinatario
+  const [filtroDestinatario, setFiltroDestinatario] = useState<string>("tutti");
 
   const [formData, setFormData] = useState({
     titolo: "",
@@ -147,24 +147,19 @@ export default function PromemoriaPage() {
       const currentUserId = userProfile?.id;
 
       const [promemoriaResult, utentiData, tipiData] = await Promise.all([
-        supabase
-          .from("tbpromemoria")
-          .select("*")
-          .order("data_scadenza", { ascending: true, nullsFirst: false }),
+        promemoriaService.getPromemoria(
+          userProfile?.studio_id,
+          currentUserId,
+          isResponsabile,
+          userProfile?.settore
+        ),
         supabase.from("tbutenti").select("*").order("cognome"),
         supabase.from("tbtipopromemoria").select("*").order("nome")
       ]);
 
-      if (promemoriaResult.data) {
-        let promemoriaFiltrati = promemoriaResult.data;
-
-        // FILTRO PER OPERATORE (se utente è responsabile)
-        if (isResponsabile && currentUserId) {
-          promemoriaFiltrati = promemoriaFiltrati.filter(p => p.operatore_id === currentUserId);
-        }
-
+      if (promemoriaResult) {
         const promemoriaWithAllegati = await Promise.all(
-          promemoriaFiltrati.map(async (p) => {
+          promemoriaResult.map(async (p) => {
             const allegati = await promemoriaService.getAllegati(p.id);
             return { ...p, allegati };
           })
@@ -499,27 +494,23 @@ export default function PromemoriaPage() {
         </div>
       </div>
 
-      {/* FILTRO PER RESPONSABILE */}
-      {currentUser?.responsabile && (
-        <div className="mb-4 flex items-center gap-4">
-          <Label className="text-sm font-medium">Filtra per Responsabile:</Label>
-          <Select value={filtroResponsabile} onValueChange={setFiltroResponsabile}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Tutti i responsabili" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tutti">Tutti i responsabili</SelectItem>
-              {utenti
-                .filter(u => u.responsabile)
-                .map(u => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* FILTRO PER DESTINATARIO */}
+      <div className="mb-4 flex items-center gap-4">
+        <Label className="text-sm font-medium">Filtra per Destinatario:</Label>
+        <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Tutti i destinatari" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti i destinatari</SelectItem>
+            {utenti.map(u => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <Table>
         <TableHeader>
@@ -545,9 +536,9 @@ export default function PromemoriaPage() {
         <TableBody>
           {promemoria
             .filter(p => {
-              // Filtra per responsabile specifico se selezionato
-              if (filtroResponsabile !== "tutti") {
-                return p.operatore_id === filtroResponsabile;
+              // Filtra per destinatario specifico se selezionato
+              if (filtroDestinatario !== "tutti") {
+                return p.destinatario_id === filtroDestinatario;
               }
               return true;
             })

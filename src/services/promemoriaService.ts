@@ -13,7 +13,7 @@ export interface Allegato {
 }
 
 export const promemoriaService = {
-  async getPromemoria(studioId?: string | null, settoreResponsabile?: string | null) {
+  async getPromemoria(studioId?: string | null, userId?: string, isResponsabile?: boolean, userSettore?: string | null) {
     let query = supabase
       .from("tbpromemoria")
       .select(`
@@ -31,9 +31,15 @@ export const promemoriaService = {
       query = query.eq("studio_id", studioId);
     }
 
-    // Se è un responsabile, filtra solo i promemoria del suo settore
-    if (settoreResponsabile) {
-      query = query.eq("settore", settoreResponsabile);
+    if (userId && isResponsabile !== undefined) {
+      if (isResponsabile && userSettore) {
+        // RESPONSABILE: vede tutti i promemoria ricevuti da utenti NON responsabili del suo settore
+        // + i propri promemoria
+        query = query.or(`and(destinatario.settore.eq.${userSettore},destinatario.responsabile.eq.false),operatore_id.eq.${userId},destinatario_id.eq.${userId}`);
+      } else if (!isResponsabile) {
+        // NON RESPONSABILE: vede solo promemoria dove è destinatario O operatore
+        query = query.or(`destinatario_id.eq.${userId},operatore_id.eq.${userId}`);
+      }
     }
 
     const { data, error } = await query;
