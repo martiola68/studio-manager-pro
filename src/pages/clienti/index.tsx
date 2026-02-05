@@ -1269,71 +1269,73 @@ export default function ClientiPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cod. Cliente</TableHead>
-                  <TableHead>Ragione Sociale</TableHead>
-                  <TableHead>Utente Fiscale</TableHead>
-                  <TableHead>Utente Payroll</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-center">Scadenzari</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClienti.map((cliente) => (
-                  <TableRow key={cliente.id}>
-                    <TableCell className="font-mono text-sm">
-                      {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {cliente.ragione_sociale}
-                    </TableCell>
-                    <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-                    <TableCell>{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
-                    <TableCell>
-                      {cliente.attivo ? (
-                        <Badge variant="default" className="bg-green-600">
-                          Attivo
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Inattivo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleInsertIntoScadenzari(cliente)}
-                        title="Inserisci negli Scadenzari"
-                      >
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(cliente)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(cliente.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-background z-20 shadow-r">Cod. Cliente</TableHead>
+                    <TableHead className="sticky left-[120px] bg-background z-20 shadow-r">Ragione Sociale</TableHead>
+                    <TableHead>Utente Fiscale</TableHead>
+                    <TableHead>Utente Payroll</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead className="text-center">Scadenzari</TableHead>
+                    <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">Azioni</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredClienti.map((cliente) => (
+                    <TableRow key={cliente.id}>
+                      <TableCell className="sticky left-0 bg-background z-10 font-mono text-sm">
+                        {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
+                      </TableCell>
+                      <TableCell className="sticky left-[120px] bg-background z-10 font-medium">
+                        {cliente.ragione_sociale}
+                      </TableCell>
+                      <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
+                      <TableCell>{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
+                      <TableCell>
+                        {cliente.attivo ? (
+                          <Badge variant="default" className="bg-green-600">
+                            Attivo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Inattivo</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleInsertIntoScadenzari(cliente)}
+                          title="Inserisci negli Scadenzari"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="sticky right-0 bg-background z-10 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(cliente)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(cliente.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
