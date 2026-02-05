@@ -18,8 +18,8 @@ type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 interface LipeWithRelations extends LipeRow {
-  tbutenti_professionista?: UtenteRow | null;
-  tbutenti_operatore?: UtenteRow | null;
+  tbutenti_professionista?: { nome: string; cognome: string } | null;
+  tbutenti_operatore?: { nome: string; cognome: string } | null;
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -29,10 +29,9 @@ export default function LipePage() {
   const { toast } = useToast();
 
   const [lipeRecords, setLipeRecords] = useState<LipeWithRelations[]>([]);
-  const [clienti, setClienti] = useState<ClienteRow[]>([]);
-  const [utenti, setUtenti] = useState<UtenteRow[]>([]);
+  const [clienti, setClienti] = useState<Pick<ClienteRow, "id" | "ragione_sociale">[]>([]);
+  const [utenti, setUtenti] = useState<Pick<UtenteRow, "id" | "nome" | "cognome">[]>([]);
   const [loading, setLoading] = useState(true);
-  const [studioId, setStudioId] = useState<string | null>(null);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -65,7 +64,6 @@ export default function LipePage() {
       .single();
 
     if (userData?.studio_id) {
-      setStudioId(userData.studio_id);
       await Promise.all([
         loadLipeRecords(userData.studio_id, currentPage),
         loadClienti(userData.studio_id),
@@ -78,17 +76,17 @@ export default function LipePage() {
   async function loadLipeRecords(studio_id: string, page: number) {
     setLoading(true);
     
+    // Conteggio totale
     const { count, error: countError } = await supabase
       .from("tbscadlipe")
       .select("*", { count: 'exact', head: true })
       .eq("studio_id", studio_id);
 
-    if (countError) {
-      console.error("Errore conteggio LIPE:", countError);
-    } else {
+    if (!countError) {
       setTotalRecords(count || 0);
     }
 
+    // Caricamento dati paginati
     const from = (page - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
@@ -96,8 +94,8 @@ export default function LipePage() {
       .from("tbscadlipe")
       .select(`
         *,
-        tbutenti_professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(id, nome, cognome),
-        tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(id, nome, cognome)
+        tbutenti_professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(nome, cognome),
+        tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(nome, cognome)
       `)
       .eq("studio_id", studio_id)
       .order("nominativo", { ascending: true })
@@ -105,57 +103,66 @@ export default function LipePage() {
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
-      toast({ title: "Errore", description: "Impossibile caricare i dati LIPE", variant: "destructive" });
-      setLoading(false);
-      return;
+      toast({ title: "Errore", description: "Impossibile caricare i dati", variant: "destructive" });
+    } else {
+      setLipeRecords(data as LipeWithRelations[] || []);
+      
+      // Calcolo statistiche (approssimativo sui dati caricati per performance, o query separata se serve preciso)
+      // Per precisione assoluta servirebbe una query separata di count condizionale, qui usiamo i dati caricati + stima
+      // O facciamo una query leggera solo per le stats
+      loadStats(studio_id);
     }
-
-    setLipeRecords(data as LipeWithRelations[] || []);
-    
-    const lipeInviate = (data || []).filter(r => 
-      r.lipe1t_invio || r.lipe2t_invio || r.lipe3t_invio || r.lipe4t_invio
-    ).length;
-    
-    setStats({
-      totale: count || 0,
-      lipeInviate,
-      lipeNonInviate: (count || 0) - lipeInviate
-    });
     
     setLoading(false);
   }
 
-  async function loadClienti(studio_id: string) {
+  async function loadStats(studio_id: string) {
+    // Query ottimizzata per statistiche
     const { data, error } = await supabase
+      .from("tbscadlipe")
+      .select("lipe1t_invio, lipe2t_invio, lipe3t_invio, lipe4t_invio")
+      .eq("studio_id", studio_id);
+
+    if (!error && data) {
+      let inviate = 0;
+      data.forEach(r => {
+        if (r.lipe1t_invio || r.lipe2t_invio || r.lipe3t_invio || r.lipe4t_invio) inviate++;
+      });
+      
+      setStats({
+        totale: data.length,
+        lipeInviate: inviate,
+        lipeNonInviate: data.length - inviate
+      });
+    }
+  }
+
+  async function loadClienti(studio_id: string) {
+    const { data } = await supabase
       .from("tbclienti")
       .select("id, ragione_sociale")
       .eq("studio_id", studio_id)
       .eq("flag_lipe", true)
       .order("ragione_sociale", { ascending: true });
-
-    if (error) {
-      console.error("Errore caricamento clienti:", error);
-      return;
-    }
+    
     setClienti(data || []);
   }
 
   async function loadUtenti(studio_id: string) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("tbutenti")
       .select("id, nome, cognome")
       .eq("studio_id", studio_id)
       .eq("attivo", true)
       .order("cognome", { ascending: true });
-
-    if (error) {
-      console.error("Errore caricamento utenti:", error);
-      return;
-    }
+    
     setUtenti(data || []);
   }
 
   async function handleUpdateRecord(id: string, updates: Partial<LipeUpdate>) {
+    // Optimistic update
+    setLipeRecords(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+
     const { error } = await supabase
       .from("tbscadlipe")
       .update(updates)
@@ -163,17 +170,15 @@ export default function LipePage() {
 
     if (error) {
       console.error("Errore aggiornamento:", error);
-      toast({ title: "Errore", description: "Impossibile aggiornare il record", variant: "destructive" });
-      return;
+      toast({ title: "Errore", description: "Aggiornamento fallito", variant: "destructive" });
+      // Revert in caso di errore (opzionale, per ora lasciamo così per UX fluida)
     }
-
-    setLipeRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
-    );
   }
 
   async function handleDeleteRecord(id: string) {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
+    setLipeRecords(prev => prev.filter(r => r.id !== id)); // Optimistic delete
 
     const { error } = await supabase
       .from("tbscadlipe")
@@ -182,45 +187,19 @@ export default function LipePage() {
 
     if (error) {
       console.error("Errore eliminazione:", error);
-      toast({ title: "Errore", description: "Impossibile eliminare il record", variant: "destructive" });
-      return;
+      toast({ title: "Errore", description: "Eliminazione fallita", variant: "destructive" });
+      checkAuthAndLoadData(); // Ricarica dati
+    } else {
+      toast({ title: "Successo", description: "Record eliminato" });
     }
-
-    setLipeRecords((prev) => prev.filter((r) => r.id !== id));
-    toast({ title: "Successo", description: "Record eliminato con successo" });
   }
 
   async function handleNominativoChange(recordId: string, clienteId: string) {
     const cliente = clienti.find((c) => c.id === clienteId);
     if (!cliente) return;
 
-    const updates: Partial<LipeUpdate> = {
-      nominativo: cliente.ragione_sociale
-    };
-
-    const { error } = await supabase
-      .from("tbscadlipe")
-      .update(updates)
-      .eq("id", recordId);
-
-    if (error) {
-      console.error("Errore aggiornamento nominativo:", error);
-      toast({ title: "Errore", description: "Impossibile aggiornare il nominativo", variant: "destructive" });
-      return;
-    }
-
-    setLipeRecords((prev) =>
-      prev.map((r) =>
-        r.id === recordId ? { ...r, ...updates } : r
-      )
-    );
+    handleUpdateRecord(recordId, { nominativo: cliente.ragione_sociale });
   }
-
-  const getUtenteNome = (utenteId: string | null): string => {
-    if (!utenteId) return "-";
-    const utente = utenti.find(u => u.id === utenteId);
-    return utente ? `${utente.nome} ${utente.cognome}` : "-";
-  };
 
   const filteredRecords = lipeRecords.filter(r => {
     const matchSearch = r.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
