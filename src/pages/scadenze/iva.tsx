@@ -356,14 +356,13 @@ export default function ScadenzeIvaPage() {
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r">Nominativo</TableHead>
+                  <TableHead className="sticky left-0 bg-white z-20 min-w-[200px] border-r shadow-r">Nominativo</TableHead>
                   <TableHead className="min-w-[150px]">Professionista</TableHead>
                   <TableHead className="min-w-[150px]">Operatore</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Predisposto</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Definitivo</TableHead>
                   <TableHead className="text-center min-w-[120px]">Asseverazione</TableHead>
                   <TableHead className="text-center min-w-[140px]">Importo Credito</TableHead>
-                  <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
                   <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
                   <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
                   <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
@@ -390,7 +389,7 @@ export default function ScadenzeIvaPage() {
                         key={scadenza.id}
                         className={isRicevuta ? "bg-green-50" : "bg-white hover:bg-gray-50"}
                       >
-                        <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r">
+                        <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r shadow-r">
                           {scadenza.nominativo}
                         </TableCell>
                         <TableCell className="text-sm">
