@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -120,7 +120,9 @@ export type Database = {
           data_fine: string
           data_inizio: string
           descrizione: string | null
+          durata_giorni: number | null
           evento_generico: boolean | null
+          frequenza_giorni: number | null
           id: string
           in_sede: boolean | null
           link_teams: string | null
@@ -128,6 +130,7 @@ export type Database = {
           ora_fine: string | null
           ora_inizio: string | null
           partecipanti: Json | null
+          ricorrente: boolean | null
           riunione_teams: boolean | null
           sala: string | null
           studio_id: string | null
@@ -143,7 +146,9 @@ export type Database = {
           data_fine: string
           data_inizio: string
           descrizione?: string | null
+          durata_giorni?: number | null
           evento_generico?: boolean | null
+          frequenza_giorni?: number | null
           id?: string
           in_sede?: boolean | null
           link_teams?: string | null
@@ -151,6 +156,7 @@ export type Database = {
           ora_fine?: string | null
           ora_inizio?: string | null
           partecipanti?: Json | null
+          ricorrente?: boolean | null
           riunione_teams?: boolean | null
           sala?: string | null
           studio_id?: string | null
@@ -166,7 +172,9 @@ export type Database = {
           data_fine?: string
           data_inizio?: string
           descrizione?: string | null
+          durata_giorni?: number | null
           evento_generico?: boolean | null
+          frequenza_giorni?: number | null
           id?: string
           in_sede?: boolean | null
           link_teams?: string | null
@@ -174,6 +182,7 @@ export type Database = {
           ora_fine?: string | null
           ora_inizio?: string | null
           partecipanti?: Json | null
+          ricorrente?: boolean | null
           riunione_teams?: boolean | null
           sala?: string | null
           studio_id?: string | null
