@@ -236,14 +236,14 @@ export const promemoriaService = {
     }
   },
 
-  async createPromemoria(promemoria: {
+  async createPromemoria(nuovoPromemoria: {
     titolo: string;
     descrizione?: string;
     data_inserimento: string;
     giorni_scadenza: number;
     data_scadenza: string;
     priorita: string;
-    stato: string;
+    working_progress: string;
     operatore_id: string;
     destinatario_id?: string | null;
     settore?: string;
@@ -252,11 +252,28 @@ export const promemoriaService = {
   }) {
     const { data, error } = await supabase
       .from("tbpromemoria")
-      .insert([promemoria])
+      .insert([{
+        titolo: nuovoPromemoria.titolo,
+        descrizione: nuovoPromemoria.descrizione || null,
+        data_inserimento: nuovoPromemoria.data_inserimento,
+        giorni_scadenza: nuovoPromemoria.giorni_scadenza,
+        data_scadenza: nuovoPromemoria.data_scadenza,
+        priorita: nuovoPromemoria.priorita,
+        working_progress: nuovoPromemoria.working_progress,
+        operatore_id: nuovoPromemoria.operatore_id,
+        destinatario_id: nuovoPromemoria.destinatario_id || null,
+        settore: nuovoPromemoria.settore || null,
+        tipo_promemoria_id: nuovoPromemoria.tipo_promemoria_id || null,
+        studio_id: nuovoPromemoria.studio_id || null
+      }])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Errore creazione promemoria:", error);
+      throw error;
+    }
+
     return data;
   },
 
