@@ -351,7 +351,8 @@ export default function PromemoriaPage() {
         operatore_id: currentUser?.id ?? "",
         destinatario_id: invioMultiplo ? null : (formData.destinatario_id || null),
         settore: formData.settore || "",
-        tipo_promemoria_id: formData.tipo_promemoria_id || null
+        tipo_promemoria_id: formData.tipo_promemoria_id || null,
+        studio_id: currentUser?.studio_id
       });
 
       if (filesToUpload.length > 0 && newPromemoria) {
