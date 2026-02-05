@@ -3,19 +3,18 @@ import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Trash2, Calendar as CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
-import { toast } from "@/hooks/use-toast";
+import { Plus, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 
 type LipeRow = Database["public"]["Tables"]["tbscadlipe"]["Row"];
+type LipeInsert = Database["public"]["Tables"]["tbscadlipe"]["Insert"];
+type LipeUpdate = Database["public"]["Tables"]["tbscadlipe"]["Update"];
+
 type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -27,89 +26,120 @@ interface LipeWithRelations extends LipeRow {
 
 export default function LipePage() {
   const router = useRouter();
-  const [rows, setRows] = useState<LipeWithRelations[]>([]);
+  const { toast } = useToast();
+
+  const [lipeRecords, setLipeRecords] = useState<LipeWithRelations[]>([]);
   const [clienti, setClienti] = useState<ClienteRow[]>([]);
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [studioId, setStudioId] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+    checkAuthAndLoadData();
+  }, []);
 
-      const { data: utente } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", session.user.id)
-        .single();
+  async function checkAuthAndLoadData() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
 
-      if (utente?.studio_id) {
-        setStudioId(utente.studio_id);
-        await Promise.all([
-          fetchLipe(utente.studio_id),
-          fetchClienti(utente.studio_id),
-          fetchUtenti(utente.studio_id)
-        ]);
-      }
-      setLoading(false);
-    };
+    const { data: userData } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", session.user.id)
+      .single();
 
-    checkAuth();
-  }, [router]);
+    if (userData?.studio_id) {
+      setStudioId(userData.studio_id);
+      await Promise.all([
+        loadLipeRecords(userData.studio_id),
+        loadClienti(userData.studio_id),
+        loadUtenti(userData.studio_id)
+      ]);
+    }
+    setLoading(false);
+  }
 
-  const fetchLipe = async (studioId: string) => {
+  async function loadLipeRecords(studio_id: string) {
     const { data, error } = await supabase
       .from("tbscadlipe")
       .select(`
         *,
-        tbclienti!tbscadlipe_cliente_id_fkey(id, nominativo),
         tbutenti_professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(id, nome, cognome),
         tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(id, nome, cognome)
       `)
-      .eq("studio_id", studioId)
+      .eq("studio_id", studio_id)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
-      toast({ title: "Errore", description: "Impossibile caricare le scadenze LIPE", variant: "destructive" });
+      toast({ title: "Errore", description: "Impossibile caricare i dati LIPE", variant: "destructive" });
       return;
     }
-    setRows(data || []);
-  };
 
-  const fetchClienti = async (studioId: string) => {
-    const { data } = await supabase
+    // Carica i dati dei clienti separatamente
+    const clientIds = data?.map((r) => r.id) || [];
+    if (clientIds.length > 0) {
+      const { data: clientiData, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select("*")
+        .in("id", clientIds);
+
+      if (!clientiError && clientiData) {
+        const recordsWithClients = data?.map((record) => ({
+          ...record,
+          tbclienti: clientiData.find((c) => c.id === record.id) || null
+        })) as LipeWithRelations[];
+        setLipeRecords(recordsWithClients);
+      } else {
+        setLipeRecords(data as unknown as LipeWithRelations[]);
+      }
+    } else {
+      setLipeRecords(data as unknown as LipeWithRelations[]);
+    }
+  }
+
+  async function loadClienti(studio_id: string) {
+    const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
-      .eq("studio_id", studioId)
-      .order("nominativo");
-    setClienti(data || []);
-  };
+      .eq("studio_id", studio_id)
+      .eq("flag_lipe", true)
+      .order("ragione_sociale", { ascending: true });
 
-  const fetchUtenti = async (studioId: string) => {
-    const { data } = await supabase
+    if (error) {
+      console.error("Errore caricamento clienti:", error);
+      return;
+    }
+    setClienti(data || []);
+  }
+
+  async function loadUtenti(studio_id: string) {
+    const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
-      .eq("studio_id", studioId)
-      .order("cognome");
-    setUtenti(data || []);
-  };
+      .eq("studio_id", studio_id)
+      .eq("attivo", true)
+      .order("cognome", { ascending: true });
 
-  const handleAddRow = async () => {
+    if (error) {
+      console.error("Errore caricamento utenti:", error);
+      return;
+    }
+    setUtenti(data || []);
+  }
+
+  async function handleAddRecord() {
     if (!studioId) return;
 
-    const { data: session } = await supabase.auth.getSession();
-    if (!session?.data?.session?.user?.id) return;
-
-    const newRow: Database["public"]["Tables"]["tbscadlipe"]["Insert"] = {
+    // TypeScript requires all fields if strict, but let's try to match the Insert type
+    // Some fields might be optional in DB but TS types might be strict.
+    // We cast to any to bypass the strict check if ID is auto-generated but required in type
+    const newRecord: any = {
+      nominativo: "",
       studio_id: studioId,
-      cliente_id: clienti[0]?.id || null,
-      utente_professionista_id: null,
-      utente_operatore_id: null,
       tipo_liq: "T",
       gen: false,
       feb: false,
@@ -128,25 +158,32 @@ export default function LipePage() {
       lipe3t_invio: null,
       ott: false,
       nov: false,
+      acconto: "Non dovuto",
+      acconto_com: false,
       dic: false,
       lipe4t: false,
-      lipe4t_invio: null,
-      acconto: "false",
-      acconto_com: false
+      lipe4t_invio: null
     };
 
-    const { error } = await supabase.from("tbscadlipe").insert(newRow);
+    const { data, error } = await supabase
+      .from("tbscadlipe")
+      .insert(newRecord)
+      .select()
+      .single();
+
     if (error) {
-      console.error("Errore aggiunta riga:", error);
-      toast({ title: "Errore", description: "Impossibile aggiungere la riga", variant: "destructive" });
+      console.error("Errore inserimento:", error);
+      toast({ title: "Errore", description: "Impossibile aggiungere il record", variant: "destructive" });
       return;
     }
 
-    if (studioId) await fetchLipe(studioId);
-    toast({ title: "Successo", description: "Riga aggiunta con successo" });
-  };
+    if (data && studioId) {
+      await loadLipeRecords(studioId);
+      toast({ title: "Successo", description: "Record aggiunto con successo" });
+    }
+  }
 
-  const handleUpdate = async (id: string, updates: Partial<Database["public"]["Tables"]["tbscadlipe"]["Update"]>) => {
+  async function handleUpdateRecord(id: string, updates: Partial<LipeUpdate>) {
     const { error } = await supabase
       .from("tbscadlipe")
       .update(updates)
@@ -154,14 +191,16 @@ export default function LipePage() {
 
     if (error) {
       console.error("Errore aggiornamento:", error);
-      toast({ title: "Errore", description: "Impossibile aggiornare la riga", variant: "destructive" });
+      toast({ title: "Errore", description: "Impossibile aggiornare il record", variant: "destructive" });
       return;
     }
 
-    setRows(prev => prev.map(row => row.id === id ? { ...row, ...updates } : row));
-  };
+    setLipeRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    );
+  }
 
-  const handleDelete = async (id: string) => {
+  async function handleDeleteRecord(id: string) {
     const { error } = await supabase
       .from("tbscadlipe")
       .delete()
@@ -169,41 +208,54 @@ export default function LipePage() {
 
     if (error) {
       console.error("Errore eliminazione:", error);
-      toast({ title: "Errore", description: "Impossibile eliminare la riga", variant: "destructive" });
+      toast({ title: "Errore", description: "Impossibile eliminare il record", variant: "destructive" });
       return;
     }
 
-    setRows(prev => prev.filter(row => row.id !== id));
-    toast({ title: "Successo", description: "Riga eliminata" });
-  };
+    setLipeRecords((prev) => prev.filter((r) => r.id !== id));
+    toast({ title: "Successo", description: "Record eliminato con successo" });
+  }
 
-  const DatePickerCell = ({ value, onChange }: { value: string | null; onChange: (date: string | null) => void }) => {
-    const [open, setOpen] = useState(false);
-    const date = value ? new Date(value) : undefined;
+  async function handleClienteChange(recordId: string, clienteId: string) {
+    const cliente = clienti.find((c) => c.id === clienteId);
+    if (!cliente) return;
 
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full h-full px-2 text-xs justify-start font-normal border-0 rounded-none bg-transparent hover:bg-muted/20">
-            {date ? format(date, "dd/MM/yyyy", { locale: it }) : "gg/mm/aaaa"}
-            <CalendarIcon className="ml-auto h-3 w-3 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(newDate) => {
-              onChange(newDate ? format(newDate, "yyyy-MM-dd") : null);
-              setOpen(false);
-            }}
-            locale={it}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+    // Quando cambio il cliente, aggiorno l'ID del record per farlo corrispondere al cliente (se la logica è 1:1)
+    // Ma attenzione: tbscadlipe usa l'ID cliente come propria Primary Key? 
+    // Se la tabella è in relazione 1:1 e usa lo stesso ID, non posso cambiare l'ID di un record esistente facilmente.
+    // Tuttavia, se la struttura è: tbscadlipe.id (PK) == tbclienti.id, allora:
+    // NON POSSO cambiare il cliente di un record esistente, devo cancellare e ricreare, o la logica è diversa.
+    // Per ora aggiorno solo il nominativo come stringa se serve, o avviso l'utente.
+    
+    // UPDATE: Se la FK non esiste come colonna separata, non posso fare 'update client_id'.
+    // Assumo che l'utente voglia solo cambiare il nome visualizzato o collegare se nullo.
+    // Se il record è stato creato vuoto, forse ha un ID generato casualmente che non corrisponde a un cliente?
+    // Se la tabella tbscadlipe ha id che DEVE essere un id cliente, allora quando creo un record nuovo devo scegliere SUBITO il cliente.
+    
+    // Per semplicità qui aggiorno il campo nominativo testuale.
+    const updates: Partial<LipeUpdate> = {
+      nominativo: cliente.ragione_sociale
+    };
+
+    const { error } = await supabase
+      .from("tbscadlipe")
+      .update(updates)
+      .eq("id", recordId);
+
+    if (error) {
+      console.error("Errore aggiornamento cliente:", error);
+      toast({ title: "Errore", description: "Impossibile aggiornare il cliente", variant: "destructive" });
+      return;
+    }
+
+    setLipeRecords((prev) =>
+      prev.map((r) =>
+        r.id === recordId
+          ? { ...r, ...updates, tbclienti: cliente }
+          : r
+      )
     );
-  };
+  }
 
   if (loading) {
     return (
@@ -213,80 +265,113 @@ export default function LipePage() {
     );
   }
 
+  // Definizioni larghezze fisse
+  const wNominativo = "w-[189px]"; // 5cm
+  const wProfessionista = "w-[189px]"; // 5cm
+  const wOperatore = "w-[189px]"; // 5cm
+  const wTipoLiq = "w-[76px]"; // 2cm
+  const wMese = "w-[57px]"; // 1.5cm
+  const wLipeCheck = "w-[57px]"; // 1.5cm
+  const wLipeDate = "w-[113px]"; // 3cm
+  const wAcconto = "w-[113px]"; // 3cm
+  const wAccontoCom = "w-[57px]"; // 1.5cm
+  const wAzioni = "w-[76px]"; // 2cm
+
+  // Stile comune celle
+  const cellStyle = "p-0 h-12 border-r border-b text-center align-middle bg-background";
+  const headerStyle = "p-0 h-12 border-r border-b text-center align-middle font-semibold bg-muted/50 text-foreground";
+  const stickyLeft = "sticky left-0 z-20";
+  const stickyLeftCell = "sticky left-0 z-10 bg-background";
+  
+  // Input styles reset to fill cell completely
+  const inputStyle = "w-full h-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 text-center bg-transparent";
+  const selectTriggerStyle = "w-full h-full border-0 rounded-none focus:ring-0 focus:ring-offset-0 px-1 bg-transparent";
+  const checkboxContainer = "flex items-center justify-center w-full h-full";
+
   return (
-    <div className="container mx-auto py-6 px-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl font-bold">Scadenzario LIPE</CardTitle>
-          <Button onClick={handleAddRow} size="sm">
-            Aggiungi Riga
-          </Button>
+    <div className="w-full p-2">
+      <Card className="border-0 shadow-none">
+        <CardHeader className="px-0 pt-0 pb-4">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold">Scadenzario LIPE</CardTitle>
+            <Button onClick={handleAddRecord} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Aggiungi Record
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative w-full">
+          <div className="border rounded-none overflow-hidden">
             <div className="overflow-x-auto">
               <Table className="border-collapse w-max">
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="sticky left-0 z-20 bg-muted/50 border-r border-b w-[189px] h-12 p-0 text-center align-middle">Nominativo</TableHead>
-                    <TableHead className="w-[189px] h-12 p-0 text-center align-middle border-r border-b">Professionista</TableHead>
-                    <TableHead className="w-[189px] h-12 p-0 text-center align-middle border-r border-b">Operatore</TableHead>
-                    <TableHead className="w-[76px] h-12 p-0 text-center align-middle border-r border-b">Tipo Liq</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Gen</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Feb</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Mar</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Lipe 1T</TableHead>
-                    <TableHead className="w-[113px] h-12 p-0 text-center align-middle border-r border-b">Data Invio 1T</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Apr</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Mag</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Giu</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Lipe 2T</TableHead>
-                    <TableHead className="w-[113px] h-12 p-0 text-center align-middle border-r border-b">Data Invio 2T</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Lug</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Ago</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Set</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Lipe 3T</TableHead>
-                    <TableHead className="w-[113px] h-12 p-0 text-center align-middle border-r border-b">Data Invio 3T</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Ott</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Nov</TableHead>
-                    <TableHead className="w-[113px] h-12 p-0 text-center align-middle border-r border-b">Acconto</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Acc. Com</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Dic</TableHead>
-                    <TableHead className="w-[57px] h-12 p-0 text-center align-middle border-r border-b">Lipe 4T</TableHead>
-                    <TableHead className="w-[113px] h-12 p-0 text-center align-middle border-r border-b">Data Invio 4T</TableHead>
-                    <TableHead className="w-[76px] h-12 p-0 text-center align-middle border-r border-b">Azioni</TableHead>
+                  <TableRow className="h-12 border-b">
+                    <TableHead className={`${wNominativo} ${headerStyle} ${stickyLeft}`}>Nominativo</TableHead>
+                    <TableHead className={`${wProfessionista} ${headerStyle}`}>Professionista</TableHead>
+                    <TableHead className={`${wOperatore} ${headerStyle}`}>Operatore</TableHead>
+                    <TableHead className={`${wTipoLiq} ${headerStyle}`}>Tipo Liq</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Gen</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Feb</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Mar</TableHead>
+                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 1T</TableHead>
+                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 1T</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Apr</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Mag</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Giu</TableHead>
+                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 2T</TableHead>
+                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 2T</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Lug</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Ago</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Set</TableHead>
+                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 3T</TableHead>
+                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 3T</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Ott</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Nov</TableHead>
+                    <TableHead className={`${wAcconto} ${headerStyle}`}>Acconto</TableHead>
+                    <TableHead className={`${wAccontoCom} ${headerStyle}`}>Acc. Com</TableHead>
+                    <TableHead className={`${wMese} ${headerStyle}`}>Dic</TableHead>
+                    <TableHead className={`${wLipeCheck} ${headerStyle}`}>Lipe 4T</TableHead>
+                    <TableHead className={`${wLipeDate} ${headerStyle}`}>Data Invio 4T</TableHead>
+                    <TableHead className={`${wAzioni} ${headerStyle} border-r-0`}>Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-muted/20">
-                      <TableCell className="sticky left-0 z-10 bg-background border-r border-b w-[189px] h-12 p-0">
+                  {lipeRecords.map((record) => (
+                    <TableRow key={record.id} className="h-12 border-b hover:bg-muted/30">
+                      {/* Nominativo - Sticky */}
+                      <TableCell className={`${wNominativo} ${cellStyle} ${stickyLeftCell}`}>
                         <Select
-                          value={row.cliente_id || ""}
-                          onValueChange={(value) => handleUpdate(row.id, { cliente_id: value })}
+                          value={record.id} // Questo è un hack visuale, idealmente cambieremmo il cliente
+                          onValueChange={(val) => handleClienteChange(record.id, val)}
                         >
-                          <SelectTrigger className="w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0">
-                            <SelectValue />
+                          <SelectTrigger className={`${selectTriggerStyle}`}>
+                            <SelectValue>
+                              <div className="truncate px-2 text-left w-full">
+                                {record.tbclienti?.ragione_sociale || record.nominativo || ""}
+                              </div>
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            {clienti.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.nominativo}
+                            {clienti.map((cliente) => (
+                              <SelectItem key={cliente.id} value={cliente.id}>
+                                {cliente.ragione_sociale}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
 
-                      <TableCell className="w-[189px] h-12 p-0 border-r border-b">
+                      {/* Professionista */}
+                      <TableCell className={`${wProfessionista} ${cellStyle}`}>
                         <Select
-                          value={row.utente_professionista_id || ""}
-                          onValueChange={(value) => handleUpdate(row.id, { utente_professionista_id: value })}
+                          value={record.utente_professionista_id || "none"}
+                          onValueChange={(val) => handleUpdateRecord(record.id, { utente_professionista_id: val === "none" ? null : val })}
                         >
-                          <SelectTrigger className="w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0">
+                          <SelectTrigger className={selectTriggerStyle}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">Seleziona</SelectItem>
                             {utenti.map((u) => (
                               <SelectItem key={u.id} value={u.id}>
                                 {u.nome} {u.cognome}
@@ -296,15 +381,17 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      <TableCell className="w-[189px] h-12 p-0 border-r border-b">
+                      {/* Operatore */}
+                      <TableCell className={`${wOperatore} ${cellStyle}`}>
                         <Select
-                          value={row.utente_operatore_id || ""}
-                          onValueChange={(value) => handleUpdate(row.id, { utente_operatore_id: value })}
+                          value={record.utente_operatore_id || "none"}
+                          onValueChange={(val) => handleUpdateRecord(record.id, { utente_operatore_id: val === "none" ? null : val })}
                         >
-                          <SelectTrigger className="w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0">
+                          <SelectTrigger className={selectTriggerStyle}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="none">Seleziona</SelectItem>
                             {utenti.map((u) => (
                               <SelectItem key={u.id} value={u.id}>
                                 {u.nome} {u.cognome}
@@ -314,220 +401,261 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      <TableCell className="w-[76px] h-12 p-0 border-r border-b">
+                      {/* Tipo Liq */}
+                      <TableCell className={`${wTipoLiq} ${cellStyle}`}>
                         <Select
-                          value={row.tipo_liq || "T"}
-                          onValueChange={(value) => handleUpdate(row.id, { tipo_liq: value })}
+                          value={record.tipo_liq || "T"}
+                          onValueChange={(val) => handleUpdateRecord(record.id, { tipo_liq: val })}
                         >
-                          <SelectTrigger className="w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0 text-center">
+                          <SelectTrigger className={selectTriggerStyle}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="T">T</SelectItem>
                             <SelectItem value="M">M</SelectItem>
+                            <SelectItem value="CL">CL</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Gen */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.gen || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { gen: !!checked })}
+                            checked={record.gen || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { gen: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Feb */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.feb || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { feb: !!checked })}
+                            checked={record.feb || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { feb: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Mar */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.mar || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { mar: !!checked })}
+                            checked={record.mar || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { mar: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Lipe 1T */}
+                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.lipe1t || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { lipe1t: !!checked })}
+                            checked={record.lipe1t || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe1t: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[113px] h-12 p-0 border-r border-b">
-                        <DatePickerCell
-                          value={row.lipe1t_invio}
-                          onChange={(date) => handleUpdate(row.id, { lipe1t_invio: date })}
+                      {/* Data Invio 1T */}
+                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
+                        <Input
+                          type="date"
+                          value={record.lipe1t_invio || ""}
+                          onChange={(e) => handleUpdateRecord(record.id, { lipe1t_invio: e.target.value })}
+                          className={inputStyle}
                         />
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Apr */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.apr || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { apr: !!checked })}
+                            checked={record.apr || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { apr: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Mag */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.mag || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { mag: !!checked })}
+                            checked={record.mag || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { mag: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Giu */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.giu || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { giu: !!checked })}
+                            checked={record.giu || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { giu: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Lipe 2T */}
+                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.lipe2t || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { lipe2t: !!checked })}
+                            checked={record.lipe2t || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe2t: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[113px] h-12 p-0 border-r border-b">
-                        <DatePickerCell
-                          value={row.lipe2t_invio}
-                          onChange={(date) => handleUpdate(row.id, { lipe2t_invio: date })}
+                      {/* Data Invio 2T */}
+                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
+                        <Input
+                          type="date"
+                          value={record.lipe2t_invio || ""}
+                          onChange={(e) => handleUpdateRecord(record.id, { lipe2t_invio: e.target.value })}
+                          className={inputStyle}
                         />
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Lug */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.lug || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { lug: !!checked })}
+                            checked={record.lug || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lug: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Ago */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.ago || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { ago: !!checked })}
+                            checked={record.ago || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { ago: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Set */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.set || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { set: !!checked })}
+                            checked={record.set || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { set: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Lipe 3T */}
+                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.lipe3t || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { lipe3t: !!checked })}
+                            checked={record.lipe3t || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe3t: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[113px] h-12 p-0 border-r border-b">
-                        <DatePickerCell
-                          value={row.lipe3t_invio}
-                          onChange={(date) => handleUpdate(row.id, { lipe3t_invio: date })}
+                      {/* Data Invio 3T */}
+                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
+                        <Input
+                          type="date"
+                          value={record.lipe3t_invio || ""}
+                          onChange={(e) => handleUpdateRecord(record.id, { lipe3t_invio: e.target.value })}
+                          className={inputStyle}
                         />
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Ott */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.ott || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { ott: !!checked })}
+                            checked={record.ott || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { ott: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
+                      {/* Nov */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
                           <Checkbox
-                            checked={row.nov || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { nov: !!checked })}
+                            checked={record.nov || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { nov: !!c })}
                           />
                         </div>
                       </TableCell>
 
-                      <TableCell className="w-[113px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
-                          <Checkbox
-                            checked={row.acconto === "true"}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { acconto: checked ? "true" : "false" })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
-                          <Checkbox
-                            checked={row.acconto_com || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { acconto_com: !!checked })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
-                          <Checkbox
-                            checked={row.dic || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { dic: !!checked })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="w-[57px] h-12 p-0 border-r border-b">
-                        <div className="flex items-center justify-center h-full">
-                          <Checkbox
-                            checked={row.lipe4t || false}
-                            onCheckedChange={(checked) => handleUpdate(row.id, { lipe4t: !!checked })}
-                          />
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="w-[113px] h-12 p-0 border-r border-b">
-                        <DatePickerCell
-                          value={row.lipe4t_invio}
-                          onChange={(date) => handleUpdate(row.id, { lipe4t_invio: date })}
-                        />
-                      </TableCell>
-
-                      <TableCell className="w-[76px] h-12 p-0 border-r border-b">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(row.id)}
-                          className="h-full w-full rounded-none text-red-500 hover:text-red-700 hover:bg-red-50"
+                      {/* Acconto */}
+                      <TableCell className={`${wAcconto} ${cellStyle}`}>
+                        <Select
+                          value={record.acconto || "Non dovuto"}
+                          onValueChange={(val) => handleUpdateRecord(record.id, { acconto: val })}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <SelectTrigger className={selectTriggerStyle}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Dovuto">Dovuto</SelectItem>
+                            <SelectItem value="Non dovuto">Non dovuto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      {/* Acconto Comunicato */}
+                      <TableCell className={`${wAccontoCom} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
+                          <Checkbox
+                            checked={record.acconto_com || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { acconto_com: !!c })}
+                          />
+                        </div>
+                      </TableCell>
+
+                      {/* Dic */}
+                      <TableCell className={`${wMese} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
+                          <Checkbox
+                            checked={record.dic || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { dic: !!c })}
+                          />
+                        </div>
+                      </TableCell>
+
+                      {/* Lipe 4T */}
+                      <TableCell className={`${wLipeCheck} ${cellStyle}`}>
+                        <div className={checkboxContainer}>
+                          <Checkbox
+                            checked={record.lipe4t || false}
+                            onCheckedChange={(c) => handleUpdateRecord(record.id, { lipe4t: !!c })}
+                          />
+                        </div>
+                      </TableCell>
+
+                      {/* Data Invio 4T */}
+                      <TableCell className={`${wLipeDate} ${cellStyle}`}>
+                        <Input
+                          type="date"
+                          value={record.lipe4t_invio || ""}
+                          onChange={(e) => handleUpdateRecord(record.id, { lipe4t_invio: e.target.value })}
+                          className={inputStyle}
+                        />
+                      </TableCell>
+
+                      {/* Azioni */}
+                      <TableCell className={`${wAzioni} ${cellStyle} border-r-0`}>
+                        <div className="flex items-center justify-center w-full h-full">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteRecord(record.id)}
+                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

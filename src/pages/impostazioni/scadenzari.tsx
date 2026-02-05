@@ -145,11 +145,40 @@ export default function GenerazioneScadenzariPage() {
     try {
       setProcessing(true);
 
-      // Carica tutti i clienti attivi
+      // Recupera lo studio_id dell'utente corrente
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Errore",
+          description: "Sessione non valida",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { data: utenteData, error: utenteError } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", session.user.id)
+        .single();
+
+      if (utenteError || !utenteData?.studio_id) {
+        toast({
+          title: "Errore",
+          description: "Impossibile recuperare lo studio_id",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const currentStudioId = utenteData.studio_id;
+
+      // Carica tutti i clienti attivi dello stesso studio
       const { data: clienti, error: clientiError } = await supabase
         .from("tbclienti")
         .select("*")
-        .eq("attivo", true);
+        .eq("attivo", true)
+        .eq("studio_id", currentStudioId);
 
       if (clientiError) throw clientiError;
 
@@ -179,6 +208,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadiva")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
@@ -205,6 +235,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadccgg")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
@@ -228,6 +259,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadcu")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
@@ -251,10 +283,11 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadfiscali")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
-                  tipo_redditi: cliente.tipo_redditi, // Prendo il valore direttamente dal cliente
+                  tipo_redditi: cliente.tipo_redditi,
                   conferma_riga: false
                 });
               if (!error) generati++;
@@ -275,6 +308,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadbilanci")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
@@ -298,6 +332,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscad770")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id,
@@ -321,6 +356,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadlipe")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id
@@ -343,6 +379,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadestero")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id
@@ -365,6 +402,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadproforma")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   utente_operatore_id: cliente.utente_operatore_id,
                   utente_professionista_id: cliente.utente_professionista_id
@@ -413,6 +451,7 @@ export default function GenerazioneScadenzariPage() {
                 .from("tbscadimu")
                 .insert({
                   id: cliente.id,
+                  studio_id: currentStudioId,
                   nominativo: cliente.ragione_sociale,
                   operatore: operatoreNome,
                   professionista: professionistaNome,
