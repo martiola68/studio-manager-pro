@@ -65,7 +65,7 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true);
   
   // Stati UI
-  const [view, setView] = useState<"list" | "month" | "week">("week");
+  const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [filtroUtente, setFiltroUtente] = useState<string>("tutti");
   
@@ -92,7 +92,10 @@ export default function AgendaPage() {
     evento_generico: false,
     riunione_teams: false,
     link_teams: "",
-    partecipanti: [] as string[]
+    partecipanti: [] as string[],
+    ricorrente: false,
+    frequenza_giorni: 7,
+    durata_giorni: 180
   });
 
   // Stato per ricerca partecipanti
@@ -189,7 +192,10 @@ export default function AgendaPage() {
       evento_generico: false,
       riunione_teams: false,
       link_teams: "",
-      partecipanti: []
+      partecipanti: [],
+      ricorrente: false,
+      frequenza_giorni: 7,
+      durata_giorni: 180
     });
   };
 
@@ -238,12 +244,15 @@ export default function AgendaPage() {
       cliente_id: evento.cliente_id || "",
       utente_id: evento.utente_id,
       in_sede: evento.in_sede || false,
-      sala: evento.sala || "",
-      luogo: evento.luogo || "",
+      sala: evento.in_sede ? evento.sala : "",
+      luogo: !evento.in_sede ? evento.luogo : "",
       evento_generico: evento.evento_generico || false,
       riunione_teams: evento.riunione_teams || false,
       link_teams: evento.link_teams || "",
-      partecipanti: partecipanti
+      partecipanti: partecipanti,
+      ricorrente: (evento as any).ricorrente || false,
+      frequenza_giorni: (evento as any).frequenza_giorni || 7,
+      durata_giorni: (evento as any).durata_giorni || 180
     });
     setDialogOpen(true);
   };
@@ -259,6 +268,18 @@ export default function AgendaPage() {
         return;
       }
 
+      // Validazione eventi ricorrenti
+      if (formData.ricorrente) {
+        if (!formData.frequenza_giorni || formData.frequenza_giorni <= 0) {
+          toast({ title: "Errore", description: "Frequenza obbligatoria per eventi ricorrenti (> 0)", variant: "destructive" });
+          return;
+        }
+        if (!formData.durata_giorni || formData.durata_giorni <= 0) {
+          toast({ title: "Errore", description: "Durata obbligatoria per eventi ricorrenti (> 0)", variant: "destructive" });
+          return;
+        }
+      }
+
       const startDateTime = formData.tutto_giorno 
         ? `${formData.data_inizio}T00:00:00+00:00` 
         : `${formData.data_inizio}T${formData.ora_inizio}:00+00:00`;
@@ -267,7 +288,7 @@ export default function AgendaPage() {
         ? `${formData.data_fine || formData.data_inizio}T23:59:59+00:00` 
         : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00+00:00`;
 
-      const payload = {
+      const basePayload = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
         data_inizio: startDateTime,
@@ -283,27 +304,74 @@ export default function AgendaPage() {
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
         link_teams: formData.link_teams || null,
-        partecipanti: formData.partecipanti.length ? formData.partecipanti : null
+        partecipanti: formData.partecipanti.length ? formData.partecipanti : null,
+        ricorrente: formData.ricorrente,
+        frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
+        durata_giorni: formData.ricorrente ? formData.durata_giorni : null
       };
 
-      let eventoSalvato;
-
       if (editingEventoId) {
-        const { data, error } = await supabase.from("tbagenda").update(payload).eq("id", editingEventoId).select().single();
+        // Update existing event
+        const { data, error } = await supabase.from("tbagenda").update(basePayload).eq("id", editingEventoId).select().single();
         if (error) throw error;
-        eventoSalvato = data;
+        
+        const { eventoService } = await import("@/services/eventoService");
+        await eventoService.sendEventNotification(data);
+        
         toast({ title: "Successo", description: "Evento aggiornato" });
       } else {
-        const { data, error } = await supabase.from("tbagenda").insert([payload]).select().single();
-        if (error) throw error;
-        eventoSalvato = data;
-        toast({ title: "Successo", description: "Evento creato" });
-      }
-
-      // INVIO NOTIFICA EMAIL
-      if (eventoSalvato) {
-         const { eventoService } = await import("@/services/eventoService");
-         await eventoService.sendEventNotification(eventoSalvato);
+        // Create new event(s)
+        if (formData.ricorrente) {
+          // Generate recurring occurrences
+          const startDate = new Date(formData.data_inizio);
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + formData.durata_giorni);
+          
+          const occurrences = [];
+          let currentDate = new Date(startDate);
+          
+          while (currentDate <= endDate) {
+            const occurrenceStartDateTime = formData.tutto_giorno
+              ? `${format(currentDate, "yyyy-MM-dd")}T00:00:00+00:00`
+              : `${format(currentDate, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+            
+            const occurrenceEndDateTime = formData.tutto_giorno
+              ? `${format(currentDate, "yyyy-MM-dd")}T23:59:59+00:00`
+              : `${format(currentDate, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+            
+            occurrences.push({
+              ...basePayload,
+              data_inizio: occurrenceStartDateTime,
+              data_fine: occurrenceEndDateTime
+            });
+            
+            currentDate = new Date(currentDate);
+            currentDate.setDate(currentDate.getDate() + formData.frequenza_giorni);
+          }
+          
+          const { data, error } = await supabase.from("tbagenda").insert(occurrences).select();
+          if (error) throw error;
+          
+          // Send notifications for all occurrences
+          const { eventoService } = await import("@/services/eventoService");
+          for (const occurrence of data) {
+            await eventoService.sendEventNotification(occurrence);
+          }
+          
+          toast({ 
+            title: "Successo", 
+            description: `${occurrences.length} eventi ricorrenti creati` 
+          });
+        } else {
+          // Single event
+          const { data, error } = await supabase.from("tbagenda").insert([basePayload]).select().single();
+          if (error) throw error;
+          
+          const { eventoService } = await import("@/services/eventoService");
+          await eventoService.sendEventNotification(data);
+          
+          toast({ title: "Successo", description: "Evento creato" });
+        }
       }
 
       setDialogOpen(false);
@@ -612,6 +680,31 @@ export default function AgendaPage() {
     return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((evento) => renderEventCard(evento, false))}</div>;
   };
 
+  const renderRicorrentiView = () => {
+    const now = new Date();
+    const ricorrentiEvents = filteredEvents.filter(evento => {
+      const isRecurring = (evento as any).ricorrente === true;
+      const eventDate = parseISO(evento.data_inizio);
+      const isActive = eventDate >= now;
+      return isRecurring && isActive;
+    });
+    
+    if (ricorrentiEvents.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+        {ricorrentiEvents.map((evento) => renderEventCard(evento, false))}
+      </div>
+    );
+  };
+
   if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
 
   return (
@@ -635,6 +728,7 @@ export default function AgendaPage() {
           </div>
           <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
             <div className="flex gap-2">
+              <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}><List className="h-4 w-4 mr-2" /> Eventi ricorrenti</Button>
               <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}><List className="h-4 w-4 mr-2" /> Scaduti</Button>
               <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}><Calendar className="h-4 w-4 mr-2" /> Mese</Button>
               <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}><CalendarDays className="h-4 w-4 mr-2" /> Settimana</Button>
@@ -644,6 +738,7 @@ export default function AgendaPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm">
+        {view === "ricorrenti" && renderRicorrentiView()}
         {view === "list" && renderListView()}
         {view === "month" && renderMonthView()}
         {view === "week" && renderWeekView()}
@@ -654,13 +749,73 @@ export default function AgendaPage() {
           <DialogHeader><DialogTitle>{editingEventoId ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div><Label>Titolo Evento *</Label><Input value={formData.titolo} onChange={e => setFormData({...formData, titolo: e.target.value})} placeholder="Es. Riunione Cliente" /></div>
+            
+            <div className="space-y-3 border p-3 rounded-md bg-blue-50">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="ricorrente" 
+                  checked={formData.ricorrente} 
+                  onCheckedChange={c => setFormData({...formData, ricorrente: !!c})} 
+                />
+                <Label htmlFor="ricorrente" className="font-semibold">Evento ricorrente</Label>
+              </div>
+              
+              {formData.ricorrente && (
+                <div className="ml-6 space-y-3">
+                  <div>
+                    <Label htmlFor="frequenza">Frequenza (giorni) *</Label>
+                    <Input 
+                      id="frequenza"
+                      type="number" 
+                      min="1"
+                      value={formData.frequenza_giorni} 
+                      onChange={e => setFormData({...formData, frequenza_giorni: parseInt(e.target.value) || 1})} 
+                      placeholder="Es. 7 per settimanale"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Numero di giorni tra un evento e il successivo</p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="durata">Durata (giorni) *</Label>
+                    <Input 
+                      id="durata"
+                      type="number" 
+                      min="1"
+                      value={formData.durata_giorni} 
+                      onChange={e => setFormData({...formData, durata_giorni: parseInt(e.target.value) || 1})} 
+                      placeholder="Es. 180 per 6 mesi"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Durata complessiva della ricorrenza in giorni dalla data inizio</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Data Inizio</Label><Input type="date" value={formData.data_inizio} onChange={e => setFormData({...formData, data_inizio: e.target.value})} /></div>
               <div><Label>Ora Inizio</Label><Input type="time" disabled={formData.tutto_giorno} value={formData.ora_inizio} onChange={e => setFormData({...formData, ora_inizio: e.target.value})} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Data Fine</Label><Input type="date" value={formData.data_fine} onChange={e => setFormData({...formData, data_fine: e.target.value})} /></div>
-              <div><Label>Ora Fine</Label><Input type="time" disabled={formData.tutto_giorno} value={formData.ora_fine} onChange={e => setFormData({...formData, ora_fine: e.target.value})} /></div>
+              <div>
+                <Label>Data Fine</Label>
+                <Input 
+                  type="date" 
+                  disabled={formData.ricorrente}
+                  value={formData.data_fine} 
+                  onChange={e => setFormData({...formData, data_fine: e.target.value})} 
+                />
+                {formData.ricorrente && <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente dalla durata</p>}
+              </div>
+              <div>
+                <Label>Ora Fine</Label>
+                <Input 
+                  type="time" 
+                  disabled={formData.tutto_giorno || formData.ricorrente} 
+                  value={formData.ora_fine} 
+                  onChange={e => setFormData({...formData, ora_fine: e.target.value})} 
+                />
+                {formData.ricorrente && <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente</p>}
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="allday" checked={formData.tutto_giorno} onCheckedChange={c => setFormData({...formData, tutto_giorno: !!c})} />
@@ -682,68 +837,6 @@ export default function AgendaPage() {
                 </Select>
               </div>
             )}
-            <div className="space-y-3 border p-3 rounded-md bg-gray-50">
-              <div className="flex items-center space-x-2">
-                <Checkbox id="generico" checked={formData.evento_generico} onCheckedChange={c => setFormData({...formData, evento_generico: !!c})} />
-                <Label htmlFor="generico">Evento Generico (No Cliente)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="sede" checked={formData.in_sede} onCheckedChange={c => setFormData({...formData, in_sede: !!c})} />
-                <Label htmlFor="sede">In Sede</Label>
-              </div>
-              {formData.in_sede && (
-                <div className="ml-6">
-                  <Label>Sala</Label>
-                  <Select value={formData.sala} onValueChange={v => setFormData({...formData, sala: v})}>
-                    <SelectTrigger><SelectValue placeholder="Seleziona Sala" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A">A - Sala riunioni</SelectItem>
-                      <SelectItem value="B">B - Sala Briefing</SelectItem>
-                      <SelectItem value="C">C - Stanza personale</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {!formData.in_sede && (
-                <div className="ml-6 flex gap-2 items-end">
-                   <div className="flex-1">
-                      <Label htmlFor="luogo">Luogo / Indirizzo</Label>
-                      <Input 
-                        id="luogo" 
-                        value={formData.luogo} 
-                        onChange={e => setFormData({...formData, luogo: e.target.value})} 
-                        placeholder="Es. Via Roma 10, Milano" 
-                      />
-                   </div>
-                   <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
-                    title="Apri in Mappa"
-                    disabled={!formData.luogo}
-                    onClick={() => {
-                      if (!formData.luogo) return;
-                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formData.luogo)}`, '_blank');
-                    }}
-                   >
-                     <Map className="h-4 w-4" />
-                   </Button>
-                </div>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <Checkbox id="riunione_teams" checked={formData.riunione_teams} onCheckedChange={(checked) => setFormData({ ...formData, riunione_teams: !!checked })} />
-                <Label htmlFor="riunione_teams">Riunione Teams</Label>
-              </div>
-              {formData.riunione_teams && (
-                <div className="space-y-2">
-                  <Label htmlFor="link_teams">Link Teams</Label>
-                  <Input id="link_teams" type="url" placeholder="https://teams.microsoft.com/..." value={formData.link_teams} onChange={(e) => setFormData({ ...formData, link_teams: e.target.value })} />
-                </div>
-              )}
-            </div>
-
             <div>
                <Label className="mb-2 block">Partecipanti</Label>
                
