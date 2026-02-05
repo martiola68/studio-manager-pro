@@ -36,7 +36,6 @@ export default function ComunicazioniPage() {
   const [multiDestinatari, setMultiDestinatari] = useState(false);
   const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
   const [searchDestinatari, setSearchDestinatari] = useState("");
-  const [settoreFiltro, setSettoreFiltro] = useState<string>("tutti");
 
   const [formData, setFormData] = useState({
     tipo: "newsletter" as "newsletter" | "scadenze" | "singola" | "interna",
@@ -225,7 +224,6 @@ export default function ComunicazioniPage() {
     setMultiDestinatari(false);
     setSelectedDestinatari([]);
     setSearchDestinatari("");
-    setSettoreFiltro("tutti");
   };
 
   const handleDelete = async (id: string) => {
@@ -261,7 +259,18 @@ export default function ComunicazioniPage() {
       if (settore === "tutti") return true;
       return u.settore?.toLowerCase() === settore.toLowerCase();
     });
-    setSelectedDestinatari(utentiFiltrati.map(u => u.id));
+    const nuoviIds = utentiFiltrati.map(u => u.id);
+    
+    // AGGIUNGI invece di sostituire
+    setSelectedDestinatari(prev => {
+      const newSelection = [...prev];
+      nuoviIds.forEach(id => {
+        if (!newSelection.includes(id)) {
+          newSelection.push(id);
+        }
+      });
+      return newSelection;
+    });
   };
 
   const handleDeselezionaTutti = () => {
@@ -269,14 +278,12 @@ export default function ComunicazioniPage() {
   };
 
   const getUtentiFiltrati = () => {
+    // Mostra TUTTI gli utenti, filtra solo per ricerca testuale
     return utenti.filter(u => {
       const matchSearch = searchDestinatari === "" || 
         `${u.nome} ${u.cognome}`.toLowerCase().includes(searchDestinatari.toLowerCase());
       
-      const matchSettore = settoreFiltro === "tutti" || 
-        u.settore?.toLowerCase() === settoreFiltro.toLowerCase();
-      
-      return matchSearch && matchSettore;
+      return matchSearch;
     });
   };
 
@@ -394,45 +401,33 @@ export default function ComunicazioniPage() {
                       <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"
-                          variant={settoreFiltro === "lavoro" ? "default" : "outline"}
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSettoreFiltro("lavoro");
-                            handleSelezionaTuttiSettore("lavoro");
-                          }}
+                          onClick={() => handleSelezionaTuttiSettore("lavoro")}
                         >
                           Settore Lavoro
                         </Button>
                         <Button
                           type="button"
-                          variant={settoreFiltro === "fiscale" ? "default" : "outline"}
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSettoreFiltro("fiscale");
-                            handleSelezionaTuttiSettore("fiscale");
-                          }}
+                          onClick={() => handleSelezionaTuttiSettore("fiscale")}
                         >
                           Settore Fiscale
                         </Button>
                         <Button
                           type="button"
-                          variant={settoreFiltro === "consulenza" ? "default" : "outline"}
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSettoreFiltro("consulenza");
-                            handleSelezionaTuttiSettore("consulenza");
-                          }}
+                          onClick={() => handleSelezionaTuttiSettore("consulenza")}
                         >
                           Settore Consulenza
                         </Button>
                         <Button
                           type="button"
-                          variant={settoreFiltro === "tutti" ? "default" : "outline"}
+                          variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setSettoreFiltro("tutti");
-                            handleSelezionaTuttiSettore("tutti");
-                          }}
+                          onClick={() => handleSelezionaTuttiSettore("tutti")}
                         >
                           Tutti
                         </Button>
