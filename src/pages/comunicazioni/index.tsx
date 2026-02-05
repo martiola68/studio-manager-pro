@@ -205,9 +205,15 @@ export default function ComunicazioniPage() {
       });
 
       if (emailResult.success) {
+        const details = [
+          `${emailResult.sent} inviate`,
+          emailResult.failed > 0 ? `${emailResult.failed} fallite` : null,
+          emailResult.skipped > 0 ? `${emailResult.skipped} escluse (formato invalido)` : null
+        ].filter(Boolean).join(", ");
+
         toast({
-          title: "Inviata con successo",
-          description: `${emailResult.sent} email inviate${emailResult.failed > 0 ? ` (${emailResult.failed} fallite)` : ""}`
+          title: "Comunicazione inviata",
+          description: details
         });
       } else {
         toast({

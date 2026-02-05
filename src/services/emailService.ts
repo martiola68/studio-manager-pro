@@ -33,6 +33,34 @@ export interface EmailData {
   text: string;
 }
 
+// Helper function to add delay between requests (rate limiting)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Strict email validation function
+const isValidEmailFormat = (email: string): boolean => {
+  if (!email || typeof email !== "string") return false;
+  
+  // RFC 5322 compliant email regex (simplified)
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  
+  if (!emailRegex.test(email)) return false;
+  
+  // Additional checks
+  const [localPart, domain] = email.split("@");
+  
+  // Check local part length (max 64 chars)
+  if (localPart.length > 64) return false;
+  
+  // Check domain length (max 255 chars)
+  if (domain.length > 255) return false;
+  
+  // Blacklist test/fake domains
+  const testDomains = ["prova", "test", "example", "xxx", "fake", "temp"];
+  if (testDomains.some(test => domain.toLowerCase().includes(test))) return false;
+  
+  return true;
+};
+
 export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: result, error } = await supabase.functions.invoke("send-email", {
@@ -297,7 +325,7 @@ export async function triggerEventReminders(): Promise<{
 
 export async function sendComunicazioneEmail(
   data: ComunicazioneEmailData
-): Promise<{ success: boolean; sent: number; failed: number; error?: string }> {
+): Promise<{ success: boolean; sent: number; failed: number; skipped: number; error?: string }> {
   try {
     const { supabase } = await import("@/lib/supabase/client");
     
@@ -305,7 +333,6 @@ export async function sendComunicazioneEmail(
 
     // 1. Raccogli destinatari in base al tipo
     if (data.tipo === "singola" && data.destinatarioId) {
-      // Singolo cliente
       const { data: cliente, error } = await supabase
         .from("tbclienti")
         .select("email, ragione_sociale")
@@ -314,13 +341,12 @@ export async function sendComunicazioneEmail(
         .single();
 
       if (error || !cliente?.email) {
-        return { success: false, sent: 0, failed: 0, error: "Cliente non trovato o senza email" };
+        return { success: false, sent: 0, failed: 0, skipped: 0, error: "Cliente non trovato o senza email" };
       }
 
       recipients.push({ email: cliente.email, nome: cliente.ragione_sociale });
 
     } else if (data.tipo === "newsletter") {
-      // Tutti i clienti iscritti alla newsletter
       const { data: clienti, error } = await supabase
         .from("tbclienti")
         .select("email, ragione_sociale")
@@ -329,7 +355,7 @@ export async function sendComunicazioneEmail(
         .eq("flag_mail_newsletter", true);
 
       if (error) {
-        return { success: false, sent: 0, failed: 0, error: error.message };
+        return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
       }
 
       recipients = (clienti || [])
@@ -337,7 +363,6 @@ export async function sendComunicazioneEmail(
         .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
 
     } else if (data.tipo === "scadenze") {
-      // Tutti i clienti iscritti agli avvisi scadenze
       const { data: clienti, error } = await supabase
         .from("tbclienti")
         .select("email, ragione_sociale")
@@ -346,7 +371,7 @@ export async function sendComunicazioneEmail(
         .eq("flag_mail_scadenze", true);
 
       if (error) {
-        return { success: false, sent: 0, failed: 0, error: error.message };
+        return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
       }
 
       recipients = (clienti || [])
@@ -354,9 +379,7 @@ export async function sendComunicazioneEmail(
         .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
 
     } else if (data.tipo === "interna") {
-      // Comunicazione interna agli utenti dello studio
       if (data.destinatariIds && data.destinatariIds.length > 0) {
-        // Destinatari specifici
         const { data: utenti, error } = await supabase
           .from("tbutenti")
           .select("email, nome, cognome")
@@ -364,7 +387,7 @@ export async function sendComunicazioneEmail(
           .eq("attivo", true);
 
         if (error) {
-          return { success: false, sent: 0, failed: 0, error: error.message };
+          return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
         }
 
         recipients = (utenti || [])
@@ -372,14 +395,13 @@ export async function sendComunicazioneEmail(
           .map(u => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
 
       } else {
-        // Tutti gli utenti attivi
         const { data: utenti, error } = await supabase
           .from("tbutenti")
           .select("email, nome, cognome")
           .eq("attivo", true);
 
         if (error) {
-          return { success: false, sent: 0, failed: 0, error: error.message };
+          return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
         }
 
         recipients = (utenti || [])
@@ -389,12 +411,33 @@ export async function sendComunicazioneEmail(
     }
 
     if (recipients.length === 0) {
-      return { success: false, sent: 0, failed: 0, error: "Nessun destinatario valido trovato" };
+      return { success: false, sent: 0, failed: 0, skipped: 0, error: "Nessun destinatario valido trovato" };
     }
 
-    console.log(`📧 Invio comunicazione a ${recipients.length} destinatari`);
+    console.log(`📧 Tentativo invio comunicazione a ${recipients.length} destinatari`);
 
-    // 2. Prepara il contenuto HTML
+    // 2. Valida email e separa valide/invalide
+    const validRecipients = recipients.filter(r => isValidEmailFormat(r.email));
+    const invalidRecipients = recipients.filter(r => !isValidEmailFormat(r.email));
+
+    if (invalidRecipients.length > 0) {
+      console.warn(`⚠️ ${invalidRecipients.length} email con formato invalido escluse:`, 
+        invalidRecipients.map(r => `${r.nome} <${r.email}>`));
+    }
+
+    if (validRecipients.length === 0) {
+      return { 
+        success: false, 
+        sent: 0, 
+        failed: 0, 
+        skipped: invalidRecipients.length,
+        error: "Nessuna email valida trovata" 
+      };
+    }
+
+    console.log(`✅ ${validRecipients.length} email valide, ${invalidRecipients.length} escluse`);
+
+    // 3. Prepara il contenuto HTML
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -410,7 +453,6 @@ export async function sendComunicazioneEmail(
     .message { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; white-space: pre-wrap; }
     .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
     .footer p { margin: 5px 0; }
-    .cta-button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
   </style>
 </head>
 <body>
@@ -447,11 +489,15 @@ Powered by ProWork Studio M
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
 
-    // 3. Invia email a tutti i destinatari
+    // 4. Invia email con rate limiting (2 req/sec = 500ms delay)
     let sent = 0;
     let failed = 0;
 
-    for (const recipient of recipients) {
+    console.log(`📤 Inizio invio con rate limiting (2 req/sec)...`);
+
+    for (let i = 0; i < validRecipients.length; i++) {
+      const recipient = validRecipients[i];
+      
       try {
         const result = await sendEmail({
           to: recipient.email,
@@ -462,23 +508,29 @@ Questa è una email automatica, non rispondere a questo messaggio
 
         if (result.success) {
           sent++;
-          console.log(`✅ Email inviata a ${recipient.email}`);
+          console.log(`✅ [${i + 1}/${validRecipients.length}] Email inviata a ${recipient.email}`);
         } else {
           failed++;
-          console.error(`❌ Errore invio a ${recipient.email}:`, result.error);
+          console.error(`❌ [${i + 1}/${validRecipients.length}] Errore invio a ${recipient.email}:`, result.error);
         }
       } catch (error) {
         failed++;
-        console.error(`❌ Errore invio a ${recipient.email}:`, error);
+        console.error(`❌ [${i + 1}/${validRecipients.length}] Errore invio a ${recipient.email}:`, error);
+      }
+
+      // Rate limiting: 500ms delay between requests (2 req/sec safe)
+      if (i < validRecipients.length - 1) {
+        await sleep(500);
       }
     }
 
-    console.log(`📊 Risultato invio: ${sent} inviate, ${failed} fallite su ${recipients.length} totali`);
+    console.log(`📊 Risultato finale: ${sent} inviate, ${failed} fallite, ${invalidRecipients.length} escluse su ${recipients.length} totali`);
 
     return {
       success: sent > 0,
       sent,
       failed,
+      skipped: invalidRecipients.length,
       error: failed > 0 ? `${failed} email non inviate` : undefined
     };
 
@@ -488,6 +540,7 @@ Questa è una email automatica, non rispondere a questo messaggio
       success: false,
       sent: 0,
       failed: 0,
+      skipped: 0,
       error: error instanceof Error ? error.message : "Errore sconosciuto"
     };
   }
