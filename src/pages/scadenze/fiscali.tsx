@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -27,6 +28,8 @@ export default function ScadenzeFiscaliPage() {
   
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
+  const [localImporti, setLocalImporti] = useState<Record<string, string>>({});
+  const [importoTimers, setImportoTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -100,7 +103,7 @@ export default function ScadenzeFiscaliPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaFiscale, currentValue: any) => {
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
       const newValue = !currentValue;
       
@@ -134,12 +137,8 @@ export default function ScadenzeFiscaliPage() {
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaFiscale, value: any) => {
+  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
     try {
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
-
       const updates: any = { [field]: value || null };
       
       const { error } = await supabase
@@ -148,6 +147,10 @@ export default function ScadenzeFiscaliPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
+
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -156,6 +159,39 @@ export default function ScadenzeFiscaliPage() {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleImportoChange = (scadenzaId: string, value: string) => {
+    setLocalImporti(prev => ({ ...prev, [scadenzaId]: value }));
+    
+    if (importoTimers[scadenzaId]) {
+      clearTimeout(importoTimers[scadenzaId]);
+    }
+    
+    const timer = setTimeout(async () => {
+      try {
+        const numericValue = value ? parseFloat(value) : null;
+        const { error } = await supabase
+          .from("tbscadfiscali")
+          .update({ importo_saldo: numericValue })
+          .eq("id", scadenzaId);
+
+        if (error) throw error;
+        
+        setScadenze(prev => prev.map(s => 
+          s.id === scadenzaId ? { ...s, importo_saldo: numericValue } : s
+        ));
+      } catch (error) {
+        console.error("Errore salvataggio importo:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile salvare l'importo",
+          variant: "destructive"
+        });
+      }
+    }, 1000);
+    
+    setImportoTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
   
   const handleNoteChange = (scadenzaId: string, value: string) => {
@@ -339,7 +375,6 @@ export default function ScadenzeFiscaliPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
-              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -347,15 +382,14 @@ export default function ScadenzeFiscaliPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. R Compilato</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. R Definitivo</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. R Inviato</TableHead>
-                      <TableHead className="min-w-[150px]">Data Invio R</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Con IRAP</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. I Compilato</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. I Definitivo</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. I Inviato</TableHead>
-                      <TableHead className="min-w-[150px]">Data Invio I</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Visto Conformità</TableHead>
+                      <TableHead className="min-w-[150px]">Data Invio</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
+                      <TableHead className="min-w-[150px]">Importo Saldo</TableHead>
+                      <TableHead className="min-w-[150px]">Data Saldo</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Pagato</TableHead>
                       <TableHead className="min-w-[300px]">Note</TableHead>
                       <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
                       <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
@@ -364,13 +398,12 @@ export default function ScadenzeFiscaliPage() {
                 </Table>
               </div>
 
-              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={15} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={14} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -383,75 +416,59 @@ export default function ScadenzeFiscaliPage() {
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_r_compilato || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_r_compilato", scadenza.mod_r_compilato)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                            <Checkbox
+                              checked={scadenza.modello_predisposto || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_r_definitivo || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_r_definitivo", scadenza.mod_r_definitivo)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                            <Checkbox
+                              checked={scadenza.modello_definitivo || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_r_inviato || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_r_inviato", scadenza.mod_r_inviato)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                            <Checkbox
+                              checked={scadenza.visto_conformita || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "visto_conformita", scadenza.visto_conformita)}
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
                             <Input
                               type="date"
-                              value={scadenza.data_r_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_r_invio", e.target.value)}
+                              value={scadenza.data_invio || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
                               className="w-full"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.con_irap || false}
-                              onChange={() => handleToggleField(scadenza.id, "con_irap", scadenza.con_irap)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                            <Checkbox
+                              checked={scadenza.modello_inviato || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
                             />
                           </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_i_compilato || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_i_compilato", scadenza.mod_i_compilato)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_i_definitivo || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_i_definitivo", scadenza.mod_i_definitivo)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_i_inviato || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_i_inviato", scadenza.mod_i_inviato)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                          <TableCell className="min-w-[150px]">
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={localImporti[scadenza.id] ?? scadenza.importo_saldo ?? ""}
+                              onChange={(e) => handleImportoChange(scadenza.id, e.target.value)}
+                              placeholder="0.00"
+                              className="w-full"
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
                             <Input
                               type="date"
-                              value={scadenza.data_i_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_i_invio", e.target.value)}
+                              value={scadenza.data_saldo || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_saldo", e.target.value)}
                               className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <Checkbox
+                              checked={scadenza.pagato || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "pagato", scadenza.pagato)}
                             />
                           </TableCell>
                           <TableCell className="min-w-[300px]">
@@ -463,11 +480,9 @@ export default function ScadenzeFiscaliPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={scadenza.conferma_riga || false}
-                              onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                              className="rounded w-4 h-4 cursor-pointer"
+                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[100px]">

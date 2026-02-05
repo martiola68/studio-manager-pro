@@ -7,6 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
@@ -103,85 +112,66 @@ export default function ScadenzeIvaPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaIva, currentValue: boolean | null) => {
     try {
       const newValue = !currentValue;
       
-      // Aggiorna lo stato locale IMMEDIATAMENTE senza refresh
       setScadenze(prev => prev.map(s => 
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
       
-      // Aggiorna le stats se è conferma_riga
       if (field === "conferma_riga") {
         setStats(prev => ({
           ...prev,
-          confermate: prev.confermate + (newValue ? 1 : -1),
-          nonConfermate: prev.nonConfermate + (newValue ? -1 : 1)
+          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
         }));
       }
       
-      // Salva in background
-      const updates: any = {};
-      updates[field] = newValue;
-      
       const { error } = await supabase
         .from("tbscadiva")
-        .update(updates)
+        .update({ [field]: newValue })
         .eq("id", scadenzaId);
 
       if (error) throw error;
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
+    } catch (error: any) {
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il campo",
+        title: "Errore aggiornamento",
+        description: error.message,
         variant: "destructive"
       });
-      // Ripristina lo stato precedente in caso di errore
       await loadData();
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaIva, value: any) => {
     try {
-      // Aggiorna lo stato locale IMMEDIATAMENTE
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value || null } : s
-      ));
-      
-      const updates: any = {};
-      updates[field] = value || null;
-      
       const { error } = await supabase
         .from("tbscadiva")
-        .update(updates)
+        .update({ [field]: value || null })
         .eq("id", scadenzaId);
-
+      
       if (error) throw error;
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
+      
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
+    } catch (error: any) {
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il campo",
+        title: "Errore aggiornamento",
+        description: error.message,
         variant: "destructive"
       });
     }
   };
   
   const handleImportoChange = (scadenzaId: string, value: string) => {
-    // Aggiorna lo stato locale immediatamente
-    setLocalImporti(prev => ({
-      ...prev,
-      [scadenzaId]: value
-    }));
+    setLocalImporti(prev => ({ ...prev, [scadenzaId]: value }));
     
-    // Cancella il timer esistente
     if (importoTimers[scadenzaId]) {
       clearTimeout(importoTimers[scadenzaId]);
     }
     
-    // Imposta un nuovo timer per salvare dopo 1 secondo
     const timer = setTimeout(async () => {
       try {
         const numericValue = value ? parseFloat(value) : null;
@@ -193,7 +183,6 @@ export default function ScadenzeIvaPage() {
 
         if (error) throw error;
         
-        // Aggiorna lo stato delle scadenze senza refresh
         setScadenze(prev => prev.map(s => 
           s.id === scadenzaId ? { ...s, importo_credito: numericValue } : s
         ));
@@ -207,17 +196,11 @@ export default function ScadenzeIvaPage() {
       }
     }, 1000);
     
-    setImportoTimers(prev => ({
-      ...prev,
-      [scadenzaId]: timer
-    }));
+    setImportoTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
   
   const handleNoteChange = (scadenzaId: string, value: string) => {
-    setLocalNotes(prev => ({
-      ...prev,
-      [scadenzaId]: value
-    }));
+    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
     
     if (noteTimers[scadenzaId]) {
       clearTimeout(noteTimers[scadenzaId]);
@@ -245,10 +228,7 @@ export default function ScadenzeIvaPage() {
       }
     }, 1000);
     
-    setNoteTimers(prev => ({
-      ...prev,
-      [scadenzaId]: timer
-    }));
+    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
 
   const handleDelete = async (id: string) => {
@@ -339,8 +319,8 @@ export default function ScadenzeIvaPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Cerca Nominativo</Label>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -352,8 +332,8 @@ export default function ScadenzeIvaPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Utente Operatore</Label>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
@@ -369,8 +349,8 @@ export default function ScadenzeIvaPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Utente Professionista</Label>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Utente Professionista</label>
               <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
@@ -386,8 +366,8 @@ export default function ScadenzeIvaPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Stato Conferma</Label>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
               <Select value={filterConferma} onValueChange={setFilterConferma}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
@@ -406,161 +386,145 @@ export default function ScadenzeIvaPage() {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            {/* Header fisso separato */}
-            <div className="sticky top-0 z-10 bg-white border-b">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px] border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
-                      Nominativo
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[150px]">Professionista</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[150px]">Operatore</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Predisposto</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Definitivo</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Asseverazione</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[140px]">Importo Credito</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Inviato</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[140px]">Data Invio</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px]">Ricevuta</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px]">Note</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Conferma</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px]">Azioni</th>
-                  </tr>
-                </thead>
-              </table>
-            </div>
+            <div className="inline-block min-w-full align-middle">
+              <div className="sticky top-0 z-20 bg-white border-b">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
+                      <TableHead className="min-w-[150px]">Professionista</TableHead>
+                      <TableHead className="min-w-[150px]">Operatore</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Mod. Predisposto</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Mod. Definitivo</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Asseverazione</TableHead>
+                      <TableHead className="text-center min-w-[140px]">Importo Credito</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
+                      <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
+                      <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
+                      <TableHead className="min-w-[300px]">Note</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
+                      <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                </Table>
+              </div>
 
-            {/* Body scrollabile */}
-            <div className="max-h-[600px] overflow-y-auto">
-              <table className="w-full">
-                <tbody>
-                  {filteredScadenze.length === 0 ? (
-                    <tr>
-                      <td colSpan={13} className="text-center py-8 text-gray-500">
-                        Nessuna scadenza trovata
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredScadenze.map((scadenza) => {
-                      const isRicevuta = scadenza.ricevuta || false;
-                      const isConfermata = scadenza.conferma_riga || false;
-                      const isModInviato = scadenza.mod_inviato || false;
-                      
-                      return (
-                        <tr 
-                          key={scadenza.id}
-                          className={`border-b ${isRicevuta ? "bg-green-50" : "bg-white hover:bg-gray-50"}`}
-                        >
-                          <td className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium text-sm min-w-[200px] border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
-                            {scadenza.nominativo}
-                          </td>
-                          <td className="px-4 py-3 text-sm min-w-[150px]">
-                            {getUtenteNome(scadenza.utente_professionista_id)}
-                          </td>
-                          <td className="px-4 py-3 text-sm min-w-[150px]">
-                            {getUtenteNome(scadenza.utente_operatore_id)}
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_predisposto || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_predisposto", scadenza.mod_predisposto)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                              disabled={isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.mod_definitivo || false}
-                              onChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                              disabled={isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.asseverazione || false}
-                              onChange={() => handleToggleField(scadenza.id, "asseverazione", scadenza.asseverazione)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                              disabled={isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[140px]">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={localImporti[scadenza.id] !== undefined ? localImporti[scadenza.id] : (scadenza.importo_credito || "")}
-                              onChange={(e) => handleImportoChange(scadenza.id, e.target.value)}
-                              className="w-32 text-xs"
-                              disabled={!scadenza.asseverazione || isConfermata}
-                              placeholder="€ 0.00"
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={isModInviato}
-                              onChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                              disabled={isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[140px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                              className="w-36 text-xs"
-                              disabled={!isModInviato || isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[100px]">
-                            <input
-                              type="checkbox"
-                              checked={isRicevuta}
-                              onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
-                              className="rounded w-4 h-4 cursor-pointer"
-                              disabled={isConfermata}
-                            />
-                          </td>
-                          <td className="px-4 py-3 min-w-[200px]">
-                            <Textarea
-                              value={localNotes[scadenza.id] !== undefined ? localNotes[scadenza.id] : (scadenza.note || "")}
-                              onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                              className="min-h-[60px] text-xs"
-                              disabled={isConfermata}
-                              placeholder="Note..."
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[120px]">
-                            <Button
-                              variant={isConfermata ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                              className="w-full"
-                            >
-                              {isConfermata ? "✓ Chiusa" : "○ Aperta"}
-                            </Button>
-                          </td>
-                          <td className="px-4 py-3 text-center min-w-[100px]">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(scadenza.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+              <div className="max-h-[600px] overflow-y-auto">
+                <Table>
+                  <TableBody>
+                    {filteredScadenze.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                          Nessuna scadenza trovata
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredScadenze.map((scadenza) => {
+                        const isRicevuta = scadenza.ricevuta || false;
+                        const isConfermata = scadenza.conferma_riga || false;
+                        const isModInviato = scadenza.mod_inviato || false;
+                        
+                        return (
+                          <TableRow 
+                            key={scadenza.id}
+                            className={isRicevuta ? "bg-green-50" : ""}
+                          >
+                            <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[200px]">
+                              {scadenza.nominativo}
+                            </TableCell>
+                            <TableCell className="min-w-[150px]">
+                              {getUtenteNome(scadenza.utente_professionista_id)}
+                            </TableCell>
+                            <TableCell className="min-w-[150px]">
+                              {getUtenteNome(scadenza.utente_operatore_id)}
+                            </TableCell>
+                            <TableCell className="text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.mod_predisposto || false}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "mod_predisposto", scadenza.mod_predisposto)}
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.mod_definitivo || false}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[120px]">
+                              <Checkbox
+                                checked={scadenza.asseverazione || false}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "asseverazione", scadenza.asseverazione)}
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[140px]">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={localImporti[scadenza.id] !== undefined ? localImporti[scadenza.id] : (scadenza.importo_credito || "")}
+                                onChange={(e) => handleImportoChange(scadenza.id, e.target.value)}
+                                className="w-32"
+                                disabled={!scadenza.asseverazione || isConfermata}
+                                placeholder="€ 0.00"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[120px]">
+                              <Checkbox
+                                checked={isModInviato}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[140px]">
+                              <Input
+                                type="date"
+                                value={scadenza.data_invio || ""}
+                                onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                                className="w-full"
+                                disabled={!isModInviato || isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[100px]">
+                              <Checkbox
+                                checked={isRicevuta}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="min-w-[300px]">
+                              <Textarea
+                                value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                                onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
+                                placeholder="Aggiungi note..."
+                                className="min-h-[60px] resize-none"
+                                disabled={isConfermata}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[120px]">
+                              <Checkbox
+                                checked={isConfermata}
+                                onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center min-w-[100px]">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(scadenza.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
         </CardContent>

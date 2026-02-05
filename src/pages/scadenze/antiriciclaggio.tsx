@@ -2,33 +2,37 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
-// Usiamo tbclienti perché tbscadantiriciclaggio non esiste
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type ScadenzaAntiriciclaggio = Database["public"]["Tables"]["tbscadantiriciclaggio"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function ScadenzeAntiriciclaggioPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [scadenze, setScadenze] = useState<Cliente[]>([]);
+  const [scadenze, setScadenze] = useState<ScadenzaAntiriciclaggio[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+  const [filterConferma, setFilterConferma] = useState("__all__");
   
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
-    totale: 0
+    totale: 0,
+    confermate: 0,
+    nonConfermate: 0
   });
 
   useEffect(() => {
@@ -59,8 +63,11 @@ export default function ScadenzeAntiriciclaggioPage() {
       setScadenze(scadenzeData);
       setUtenti(utentiData);
       
+      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
       setStats({
-        totale: scadenzeData.length
+        totale: scadenzeData.length,
+        confermate,
+        nonConfermate: scadenzeData.length - confermate
       });
     } catch (error) {
       console.error("Errore caricamento:", error);
@@ -74,13 +81,11 @@ export default function ScadenzeAntiriciclaggioPage() {
     }
   };
 
-  const loadScadenze = async (): Promise<Cliente[]> => {
-    // Carichiamo i clienti che hanno gestione_antiriciclaggio attiva
+  const loadScadenze = async (): Promise<ScadenzaAntiriciclaggio[]> => {
     const { data, error } = await supabase
-      .from("tbclienti")
+      .from("tbscadantiriciclaggio")
       .select("*")
-      .eq("gestione_antiriciclaggio", true)
-      .order("ragione_sociale", { ascending: true });
+      .order("nominativo", { ascending: true });
     
     if (error) throw error;
     return data || [];
@@ -96,21 +101,54 @@ export default function ScadenzeAntiriciclaggioPage() {
     return data || [];
   };
 
-  const handleUpdateField = async (clientId: string, field: keyof Cliente, value: any) => {
+  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
-      // Aggiornamento ottimistico locale
+      const newValue = !currentValue;
+      
       setScadenze(prev => prev.map(s => 
-        s.id === clientId ? { ...s, [field]: value } : s
+        s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
+      
+      if (field === "conferma_riga") {
+        setStats(prev => ({
+          ...prev,
+          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
+        }));
+      }
+      
+      const updates: any = { [field]: newValue };
+      const { error } = await supabase
+        .from("tbscadantiriciclaggio")
+        .update(updates)
+        .eq("id", scadenzaId);
 
+      if (error) throw error;
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il campo",
+        variant: "destructive"
+      });
+      await loadData();
+    }
+  };
+
+  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+    try {
       const updates: any = { [field]: value || null };
       
       const { error } = await supabase
-        .from("tbclienti")
+        .from("tbscadantiriciclaggio")
         .update(updates)
-        .eq("id", clientId);
+        .eq("id", scadenzaId);
 
       if (error) throw error;
+
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -121,24 +159,24 @@ export default function ScadenzeAntiriciclaggioPage() {
     }
   };
   
-  const handleNoteChange = (clientId: string, value: string) => {
-    setLocalNotes(prev => ({ ...prev, [clientId]: value }));
+  const handleNoteChange = (scadenzaId: string, value: string) => {
+    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
     
-    if (noteTimers[clientId]) {
-      clearTimeout(noteTimers[clientId]);
+    if (noteTimers[scadenzaId]) {
+      clearTimeout(noteTimers[scadenzaId]);
     }
     
     const timer = setTimeout(async () => {
       try {
         const { error } = await supabase
-          .from("tbclienti")
-          .update({ note_antiriciclaggio: value || null })
-          .eq("id", clientId);
+          .from("tbscadantiriciclaggio")
+          .update({ note: value || null })
+          .eq("id", scadenzaId);
 
         if (error) throw error;
         
         setScadenze(prev => prev.map(s => 
-          s.id === clientId ? { ...s, note_antiriciclaggio: value } : s
+          s.id === scadenzaId ? { ...s, note: value } : s
         ));
       } catch (error) {
         console.error("Errore salvataggio nota:", error);
@@ -150,14 +188,42 @@ export default function ScadenzeAntiriciclaggioPage() {
       }
     }, 1000);
     
-    setNoteTimers(prev => ({ ...prev, [clientId]: timer }));
+    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tbscadantiriciclaggio")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Record eliminato"
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il record",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredScadenze = scadenze.filter(s => {
-    const matchSearch = (s.ragione_sociale || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    return matchSearch && matchOperatore && matchProfessionista;
+    const matchConferma = filterConferma === "__all__" || 
+      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
@@ -182,15 +248,27 @@ export default function ScadenzeAntiriciclaggioPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario Antiriciclaggio</h1>
-          <p className="text-gray-500 mt-1">Gestione adeguata verifica clientela</p>
+          <p className="text-gray-500 mt-1">Gestione adeguata verifica clientela e adempimenti antiriciclaggio</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Totale Clienti Gestiti</div>
+            <div className="text-sm text-gray-600 mb-1">Totale Adeguate Verifiche</div>
             <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Confermate</div>
+            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
+            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
           </CardContent>
         </Card>
       </div>
@@ -200,7 +278,7 @@ export default function ScadenzeAntiriciclaggioPage() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
               <div className="relative">
@@ -241,6 +319,19 @@ export default function ScadenzeAntiriciclaggioPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
+              <Select value={filterConferma} onValueChange={setFilterConferma}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti</SelectItem>
+                  <SelectItem value="true">Confermate</SelectItem>
+                  <SelectItem value="false">Non Confermate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -256,13 +347,13 @@ export default function ScadenzeAntiriciclaggioPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[150px]">Scadenza A</TableHead>
-                      <TableHead className="min-w-[150px]">Ultima Ver. A</TableHead>
-                      <TableHead className="min-w-[100px]">Rischio A</TableHead>
-                      <TableHead className="min-w-[150px]">Scadenza B</TableHead>
-                      <TableHead className="min-w-[150px]">Ultima Ver. B</TableHead>
-                      <TableHead className="min-w-[100px]">Rischio B</TableHead>
-                      <TableHead className="min-w-[300px]">Note Antiriciclaggio</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
+                      <TableHead className="min-w-[150px]">Data Invio</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
+                      <TableHead className="min-w-[300px]">Note</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
+                      <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                 </Table>
@@ -281,70 +372,59 @@ export default function ScadenzeAntiriciclaggioPage() {
                       filteredScadenze.map((scadenza) => (
                         <TableRow key={scadenza.id}>
                           <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[200px]">
-                            {scadenza.ragione_sociale}
+                            {scadenza.nominativo}
                           </TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
-                          
-                          {/* Verifica A */}
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.scadenza_antiric || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "scadenza_antiric", e.target.value)}
-                              className="w-full"
+                          <TableCell className="text-center min-w-[120px]">
+                            <Checkbox
+                              checked={scadenza.modello_predisposto || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <Checkbox
+                              checked={scadenza.modello_definitivo || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
                             <Input
                               type="date"
-                              value={scadenza.data_ultima_verifica_antiric || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica_antiric", e.target.value)}
+                              value={scadenza.data_invio || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
                               className="w-full"
                             />
                           </TableCell>
-                          <TableCell className="min-w-[100px]">
-                            <Input
-                              type="text"
-                              value={scadenza.rischio_ver_a || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "rischio_ver_a", e.target.value)}
-                              className="w-full"
+                          <TableCell className="text-center min-w-[120px]">
+                            <Checkbox
+                              checked={scadenza.modello_inviato || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
                             />
                           </TableCell>
-
-                          {/* Verifica B */}
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.scadenza_antiric_b || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "scadenza_antiric_b", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_ultima_verifica_b || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_ultima_verifica_b", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[100px]">
-                            <Input
-                              type="text"
-                              value={scadenza.rischio_ver_b || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "rischio_ver_b", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-
                           <TableCell className="min-w-[300px]">
                             <Textarea
-                              value={localNotes[scadenza.id] ?? scadenza.note_antiriciclaggio ?? ""}
+                              value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                               onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                              placeholder="Note antiriciclaggio..."
+                              placeholder="Aggiungi note..."
                               className="min-h-[60px] resize-none"
                             />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <Checkbox
+                              checked={scadenza.conferma_riga || false}
+                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[100px]">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(scadenza.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))

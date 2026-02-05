@@ -1273,11 +1273,11 @@ export default function ClientiPage() {
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-background z-20 shadow-r">Cod. Cliente</TableHead>
-                    <TableHead className="sticky left-[120px] bg-background z-20 shadow-r">Ragione Sociale</TableHead>
-                    <TableHead>Utente Fiscale</TableHead>
-                    <TableHead>Utente Payroll</TableHead>
-                    <TableHead>Stato</TableHead>
+                    <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[120px] min-w-[120px] max-w-[120px]">Cod. Cliente</TableHead>
+                    <TableHead className="sticky left-[120px] bg-background z-20 shadow-r w-[250px] min-w-[250px] max-w-[250px]">Ragione Sociale</TableHead>
+                    <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
+                    <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
+                    <TableHead className="min-w-[100px]">Stato</TableHead>
                     <TableHead className="text-center">Scadenzari</TableHead>
                     <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">Azioni</TableHead>
                   </TableRow>
@@ -1285,14 +1285,16 @@ export default function ClientiPage() {
                 <TableBody>
                   {filteredClienti.map((cliente) => (
                     <TableRow key={cliente.id}>
-                      <TableCell className="sticky left-0 bg-background z-10 font-mono text-sm">
+                      <TableCell className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] min-w-[120px] max-w-[120px] truncate" title={cliente.cod_cliente || cliente.id}>
                         {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                       </TableCell>
-                      <TableCell className="sticky left-[120px] bg-background z-10 font-medium">
+                      <TableCell className="sticky left-[120px] bg-background z-10 font-medium w-[250px] min-w-[250px] max-w-[250px] truncate" title={cliente.ragione_sociale || ""}>
                         {cliente.ragione_sociale}
                       </TableCell>
-                      <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-                      <TableCell>{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
+                      <TableCell className="min-w-[220px] pl-6">
+                        {getUtenteNome(cliente.utente_operatore_id)}
+                      </TableCell>
+                      <TableCell className="min-w-[200px]">{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
                       <TableCell>
                         {cliente.attivo ? (
                           <Badge variant="default" className="bg-green-600">
