@@ -12,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Mail, Send, Plus, Paperclip, Search, Trash2, Eye, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type Comunicazione = Database["public"]["Tables"]["tbcomunicazioni"]["Row"];
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function ComunicazioniPage() {
   const router = useRouter();
@@ -26,13 +28,19 @@ export default function ComunicazioniPage() {
   const [sending, setSending] = useState(false);
   const [comunicazioni, setComunicazioni] = useState<Comunicazione[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const [multiDestinatari, setMultiDestinatari] = useState(false);
+  const [selectedDestinatari, setSelectedDestinatari] = useState<string[]>([]);
+  const [searchDestinatari, setSearchDestinatari] = useState("");
+  const [settoreFiltro, setSettoreFiltro] = useState<string>("tutti");
+
   const [formData, setFormData] = useState({
-    tipo: "newsletter" as "newsletter" | "scadenze" | "singola",
-    destinatario_id: "", // Per invio singolo
+    tipo: "newsletter" as "newsletter" | "scadenze" | "singola" | "interna",
+    destinatario_id: "",
     oggetto: "",
     messaggio: ""
   });
@@ -58,12 +66,14 @@ export default function ComunicazioniPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [comunicazioniData, clientiData] = await Promise.all([
+      const [comunicazioniData, clientiData, utentiData] = await Promise.all([
         comunicazioneService.getComunicazioni(),
-        clienteService.getClienti()
+        clienteService.getClienti(),
+        loadUtenti()
       ]);
       setComunicazioni(comunicazioniData);
       setClienti(clientiData);
+      setUtenti(utentiData);
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
@@ -74,6 +84,17 @@ export default function ComunicazioniPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadUtenti = async (): Promise<Utente[]> => {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .eq("attivo", true)
+      .order("cognome", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,17 +154,24 @@ export default function ComunicazioniPage() {
       return;
     }
 
+    if (formData.tipo === "interna" && multiDestinatari && selectedDestinatari.length === 0) {
+      toast({
+        title: "Errore",
+        description: "Seleziona almeno un destinatario",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setSending(true);
 
-      // 1. Upload allegato se presente
       let allegati = null;
       if (selectedFile) {
         const fileData = await uploadAllegato();
-        allegati = [fileData]; // Salviamo come array JSON
+        allegati = [fileData];
       }
 
-      // 2. Determina destinatari
       let destinatariCount = 0;
       if (formData.tipo === "singola") {
         destinatariCount = 1;
@@ -151,21 +179,19 @@ export default function ComunicazioniPage() {
         destinatariCount = clienti.filter(c => c.attivo && c.flag_mail_attivo && c.flag_mail_newsletter).length;
       } else if (formData.tipo === "scadenze") {
         destinatariCount = clienti.filter(c => c.attivo && c.flag_mail_attivo && c.flag_mail_scadenze).length;
+      } else if (formData.tipo === "interna") {
+        destinatariCount = multiDestinatari ? selectedDestinatari.length : utenti.filter(u => u.attivo).length;
       }
 
-      // 3. Salva comunicazione nel DB
       await comunicazioneService.createComunicazione({
         tipo: formData.tipo,
         oggetto: formData.oggetto,
         messaggio: formData.messaggio,
-        allegati: allegati, // JSON field
+        allegati: allegati,
         destinatari_count: destinatariCount,
-        stato: "Inviata", // Simuliamo l'invio immediato
+        stato: "Inviata",
         data_invio: new Date().toISOString()
       });
-
-      // TODO: Qui andrebbe integrato l'invio reale delle email (es. SendGrid, AWS SES)
-      // Per ora simuliamo solo il salvataggio
 
       toast({
         title: "Inviata con successo",
@@ -173,13 +199,7 @@ export default function ComunicazioniPage() {
       });
 
       setDialogOpen(false);
-      setFormData({
-        tipo: "newsletter",
-        destinatario_id: "",
-        oggetto: "",
-        messaggio: ""
-      });
-      setSelectedFile(null);
+      resetForm();
       await loadData();
 
     } catch (error) {
@@ -192,6 +212,20 @@ export default function ComunicazioniPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      tipo: "newsletter",
+      destinatario_id: "",
+      oggetto: "",
+      messaggio: ""
+    });
+    setSelectedFile(null);
+    setMultiDestinatari(false);
+    setSelectedDestinatari([]);
+    setSearchDestinatari("");
+    setSettoreFiltro("tutti");
   };
 
   const handleDelete = async (id: string) => {
@@ -212,6 +246,38 @@ export default function ComunicazioniPage() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleDestinatarioToggle = (utenteId: string) => {
+    setSelectedDestinatari(prev =>
+      prev.includes(utenteId)
+        ? prev.filter(id => id !== utenteId)
+        : [...prev, utenteId]
+    );
+  };
+
+  const handleSelezionaTuttiSettore = (settore: string) => {
+    const utentiFiltrati = utenti.filter(u => {
+      if (settore === "tutti") return true;
+      return u.settore?.toLowerCase() === settore.toLowerCase();
+    });
+    setSelectedDestinatari(utentiFiltrati.map(u => u.id));
+  };
+
+  const handleDeselezionaTutti = () => {
+    setSelectedDestinatari([]);
+  };
+
+  const getUtentiFiltrati = () => {
+    return utenti.filter(u => {
+      const matchSearch = searchDestinatari === "" || 
+        `${u.nome} ${u.cognome}`.toLowerCase().includes(searchDestinatari.toLowerCase());
+      
+      const matchSettore = settoreFiltro === "tutti" || 
+        u.settore?.toLowerCase() === settoreFiltro.toLowerCase();
+      
+      return matchSearch && matchSettore;
+    });
   };
 
   const filteredComunicazioni = comunicazioni.filter(c =>
@@ -237,14 +303,17 @@ export default function ComunicazioniPage() {
           <h1 className="text-3xl font-bold text-gray-900">Comunicazioni</h1>
           <p className="text-gray-500 mt-1">Gestione invio email e comunicazioni massive</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => setDialogOpen(open)}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Nuova Comunicazione
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nuova Comunicazione</DialogTitle>
               <DialogDescription>
@@ -252,45 +321,164 @@ export default function ComunicazioniPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tipo">Tipo Invio</Label>
+                <Select
+                  value={formData.tipo}
+                  onValueChange={(value: any) => {
+                    setFormData({ ...formData, tipo: value });
+                    setMultiDestinatari(false);
+                    setSelectedDestinatari([]);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newsletter">Newsletter (Tutti iscritti)</SelectItem>
+                    <SelectItem value="scadenze">Avviso Scadenze</SelectItem>
+                    <SelectItem value="singola">Singolo Cliente</SelectItem>
+                    <SelectItem value="interna">Comunicazione Interna</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.tipo === "singola" && (
                 <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo Invio</Label>
+                  <Label htmlFor="destinatario">Destinatario</Label>
                   <Select
-                    value={formData.tipo}
-                    onValueChange={(value: any) => setFormData({ ...formData, tipo: value })}
+                    value={formData.destinatario_id}
+                    onValueChange={(value) => setFormData({ ...formData, destinatario_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Seleziona cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="newsletter">Newsletter (Tutti iscritti)</SelectItem>
-                      <SelectItem value="scadenze">Avviso Scadenze</SelectItem>
-                      <SelectItem value="singola">Singolo Cliente</SelectItem>
+                      {clienti.filter(c => c.attivo).map((cliente) => (
+                        <SelectItem key={cliente.id} value={cliente.id}>
+                          {cliente.ragione_sociale}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
+              )}
 
-                {formData.tipo === "singola" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="destinatario">Destinatario</Label>
-                    <Select
-                      value={formData.destinatario_id}
-                      onValueChange={(value) => setFormData({ ...formData, destinatario_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clienti.filter(c => c.attivo).map((cliente) => (
-                          <SelectItem key={cliente.id} value={cliente.id}>
-                            {cliente.ragione_sociale}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {formData.tipo === "interna" && (
+                <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="multiDestinatari"
+                      checked={multiDestinatari}
+                      onCheckedChange={(checked) => {
+                        setMultiDestinatari(!!checked);
+                        if (!checked) setSelectedDestinatari([]);
+                      }}
+                    />
+                    <Label htmlFor="multiDestinatari" className="font-medium cursor-pointer">
+                      Invio a più destinatari
+                    </Label>
                   </div>
-                )}
-              </div>
+
+                  {multiDestinatari && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Destinatari Multipli</Label>
+                        <Input
+                          placeholder="Cerca destinatari..."
+                          value={searchDestinatari}
+                          onChange={(e) => setSearchDestinatari(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant={settoreFiltro === "lavoro" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSettoreFiltro("lavoro");
+                            handleSelezionaTuttiSettore("lavoro");
+                          }}
+                        >
+                          Settore Lavoro
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={settoreFiltro === "fiscale" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSettoreFiltro("fiscale");
+                            handleSelezionaTuttiSettore("fiscale");
+                          }}
+                        >
+                          Settore Fiscale
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={settoreFiltro === "consulenza" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSettoreFiltro("consulenza");
+                            handleSelezionaTuttiSettore("consulenza");
+                          }}
+                        >
+                          Settore Consulenza
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={settoreFiltro === "tutti" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSettoreFiltro("tutti");
+                            handleSelezionaTuttiSettore("tutti");
+                          }}
+                        >
+                          Tutti
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeselezionaTutti}
+                        >
+                          Deseleziona Tutti
+                        </Button>
+                      </div>
+
+                      <div className="border rounded-md max-h-[300px] overflow-y-auto p-2 bg-white">
+                        {getUtentiFiltrati().map((utente) => (
+                          <div
+                            key={utente.id}
+                            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
+                          >
+                            <Checkbox
+                              id={`utente-${utente.id}`}
+                              checked={selectedDestinatari.includes(utente.id)}
+                              onCheckedChange={() => handleDestinatarioToggle(utente.id)}
+                            />
+                            <Label
+                              htmlFor={`utente-${utente.id}`}
+                              className="flex-1 cursor-pointer"
+                            >
+                              {utente.nome} {utente.cognome} 
+                              {utente.settore && (
+                                <span className="text-gray-500 text-sm ml-1">
+                                  ({utente.settore})
+                                </span>
+                              )}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="text-sm text-gray-600">
+                        Selezionati: <span className="font-medium">{selectedDestinatari.length}</span> utenti
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="oggetto">Oggetto</Label>
@@ -400,9 +588,10 @@ export default function ComunicazioniPage() {
                     <TableCell>
                       <Badge variant={
                         comm.tipo === "newsletter" ? "default" : 
-                        comm.tipo === "scadenze" ? "destructive" : "secondary"
+                        comm.tipo === "scadenze" ? "destructive" :
+                        comm.tipo === "interna" ? "outline" : "secondary"
                       }>
-                        {comm.tipo.toUpperCase()}
+                        {comm.tipo === "interna" ? "INTERNA" : comm.tipo.toUpperCase()}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{comm.oggetto}</TableCell>
