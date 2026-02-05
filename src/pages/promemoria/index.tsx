@@ -425,7 +425,8 @@ export default function PromemoriaPage() {
           data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
           priorita: formData.priorita,
           working_progress: formData.working_progress,
-          destinatario_id: formData.destinatario_id || null,
+          operatore_id: currentUser?.id ?? "",
+          destinatario_id: invioMultiplo ? null : (formData.destinatario_id || null),
           settore: formData.settore || undefined,
           tipo_promemoria_id: formData.tipo_promemoria_id || null
         });

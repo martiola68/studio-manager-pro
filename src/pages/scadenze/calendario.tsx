@@ -32,6 +32,7 @@ import { utenteService } from "@/services/utenteService";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 type TipoScadenza = Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
 
@@ -452,17 +453,16 @@ export default function CalendarioScadenzePage() {
           console.warn(`📝 Creazione promemoria per: ${utente.nome} ${utente.cognome} (${utente.settore})`);
           
           await promemoriaService.createPromemoria({
-            tipo_promemoria_id: "059347f7-f02f-4d93-89ec-b3af410e5766",
-            titolo: tipoScadenza.nome,
-            descrizione: tipoScadenza.descrizione || `Scadenza: ${tipoScadenza.nome}`,
+            titolo: `Promemoria scadenza: ${tipoScadenza.descrizione}`,
+            descrizione: `Promemoria automatico per scadenza del ${format(new Date(tipoScadenza.data_scadenza), "dd/MM/yyyy")}`,
             data_inserimento: new Date().toISOString().split("T")[0],
+            giorni_scadenza: 0,
             data_scadenza: tipoScadenza.data_scadenza,
-            giorni_scadenza: giorniScadenza,
-            stato: "Aperto",
             priorita: "Alta",
-            operatore_id: currentUser?.id || "",
-            destinatario_id: utente.id,
-            settore: utente.settore || "Lavoro",
+            working_progress: "In lavorazione",
+            operatore_id: currentUser.id,
+            destinatario_id: currentUser.id, // Assegna a se stesso
+            studio_id: currentUser.studio_id
           });
           
           promemoriaCreati++;
