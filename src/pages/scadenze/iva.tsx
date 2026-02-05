@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -29,6 +27,9 @@ export default function ScadenzeIvaPage() {
   
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
+  
+  const [localImporti, setLocalImporti] = useState<Record<string, string>>({});
+  const [importoTimers, setImportoTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -104,8 +105,25 @@ export default function ScadenzeIvaPage() {
 
   const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
     try {
+      const newValue = !currentValue;
+      
+      // Aggiorna lo stato locale IMMEDIATAMENTE senza refresh
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: newValue } : s
+      ));
+      
+      // Aggiorna le stats se è conferma_riga
+      if (field === "conferma_riga") {
+        setStats(prev => ({
+          ...prev,
+          confermate: prev.confermate + (newValue ? 1 : -1),
+          nonConfermate: prev.nonConfermate + (newValue ? -1 : 1)
+        }));
+      }
+      
+      // Salva in background
       const updates: any = {};
-      updates[field] = !currentValue;
+      updates[field] = newValue;
       
       const { error } = await supabase
         .from("tbscadiva")
@@ -113,12 +131,6 @@ export default function ScadenzeIvaPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      await loadData();
-      toast({
-        title: "Successo",
-        description: "Campo aggiornato"
-      });
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -126,11 +138,18 @@ export default function ScadenzeIvaPage() {
         description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
+      // Ripristina lo stato precedente in caso di errore
+      await loadData();
     }
   };
 
   const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
     try {
+      // Aggiorna lo stato locale IMMEDIATAMENTE
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value || null } : s
+      ));
+      
       const updates: any = {};
       updates[field] = value || null;
       
@@ -140,8 +159,6 @@ export default function ScadenzeIvaPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      await loadData();
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -150,6 +167,50 @@ export default function ScadenzeIvaPage() {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleImportoChange = (scadenzaId: string, value: string) => {
+    // Aggiorna lo stato locale immediatamente
+    setLocalImporti(prev => ({
+      ...prev,
+      [scadenzaId]: value
+    }));
+    
+    // Cancella il timer esistente
+    if (importoTimers[scadenzaId]) {
+      clearTimeout(importoTimers[scadenzaId]);
+    }
+    
+    // Imposta un nuovo timer per salvare dopo 1 secondo
+    const timer = setTimeout(async () => {
+      try {
+        const numericValue = value ? parseFloat(value) : null;
+        
+        const { error } = await supabase
+          .from("tbscadiva")
+          .update({ importo_credito: numericValue })
+          .eq("id", scadenzaId);
+
+        if (error) throw error;
+        
+        // Aggiorna lo stato delle scadenze senza refresh
+        setScadenze(prev => prev.map(s => 
+          s.id === scadenzaId ? { ...s, importo_credito: numericValue } : s
+        ));
+      } catch (error) {
+        console.error("Errore salvataggio importo:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile salvare l'importo",
+          variant: "destructive"
+        });
+      }
+    }, 1000);
+    
+    setImportoTimers(prev => ({
+      ...prev,
+      [scadenzaId]: timer
+    }));
   };
   
   const handleNoteChange = (scadenzaId: string, value: string) => {
@@ -344,35 +405,42 @@ export default function ScadenzeIvaPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto border rounded-lg">
-            <div className="max-h-[600px] overflow-y-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-20 shadow-sm">
-                  <TableRow>
-                    <TableHead className="sticky left-0 bg-white z-30 min-w-[200px] border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+          <div className="overflow-x-auto">
+            {/* Header fisso separato */}
+            <div className="sticky top-0 z-10 bg-white border-b">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="sticky left-0 z-20 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px] border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                       Nominativo
-                    </TableHead>
-                    <TableHead className="min-w-[150px]">Professionista</TableHead>
-                    <TableHead className="min-w-[150px]">Operatore</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Mod. Predisposto</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Mod. Definitivo</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Asseverazione</TableHead>
-                    <TableHead className="text-center min-w-[140px]">Importo Credito</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Mod. Inviato</TableHead>
-                    <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
-                    <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
-                    <TableHead className="min-w-[200px]">Note</TableHead>
-                    <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
-                    <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[150px]">Professionista</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[150px]">Operatore</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Predisposto</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Definitivo</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Asseverazione</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[140px]">Importo Credito</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Mod. Inviato</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[140px]">Data Invio</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px]">Ricevuta</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 min-w-[200px]">Note</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[120px]">Conferma</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-900 min-w-[100px]">Azioni</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+
+            {/* Body scrollabile */}
+            <div className="max-h-[600px] overflow-y-auto">
+              <table className="w-full">
+                <tbody>
                   {filteredScadenze.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={13} className="text-center py-8 text-gray-500">
+                    <tr>
+                      <td colSpan={13} className="text-center py-8 text-gray-500">
                         Nessuna scadenza trovata
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (
                     filteredScadenze.map((scadenza) => {
                       const isRicevuta = scadenza.ricevuta || false;
@@ -380,20 +448,20 @@ export default function ScadenzeIvaPage() {
                       const isModInviato = scadenza.mod_inviato || false;
                       
                       return (
-                        <TableRow 
+                        <tr 
                           key={scadenza.id}
-                          className={isRicevuta ? "bg-green-50" : "bg-white hover:bg-gray-50"}
+                          className={`border-b ${isRicevuta ? "bg-green-50" : "bg-white hover:bg-gray-50"}`}
                         >
-                          <TableCell className="font-medium sticky left-0 bg-inherit z-10 border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                          <td className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium text-sm min-w-[200px] border-r shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                             {scadenza.nominativo}
-                          </TableCell>
-                          <TableCell className="text-sm">
+                          </td>
+                          <td className="px-4 py-3 text-sm min-w-[150px]">
                             {getUtenteNome(scadenza.utente_professionista_id)}
-                          </TableCell>
-                          <TableCell className="text-sm">
+                          </td>
+                          <td className="px-4 py-3 text-sm min-w-[150px]">
                             {getUtenteNome(scadenza.utente_operatore_id)}
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[120px]">
                             <input
                               type="checkbox"
                               checked={scadenza.mod_predisposto || false}
@@ -401,8 +469,8 @@ export default function ScadenzeIvaPage() {
                               className="rounded w-4 h-4 cursor-pointer"
                               disabled={isConfermata}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[120px]">
                             <input
                               type="checkbox"
                               checked={scadenza.mod_definitivo || false}
@@ -410,8 +478,8 @@ export default function ScadenzeIvaPage() {
                               className="rounded w-4 h-4 cursor-pointer"
                               disabled={isConfermata}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[120px]">
                             <input
                               type="checkbox"
                               checked={scadenza.asseverazione || false}
@@ -419,19 +487,19 @@ export default function ScadenzeIvaPage() {
                               className="rounded w-4 h-4 cursor-pointer"
                               disabled={isConfermata}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[140px]">
                             <Input
                               type="number"
                               step="0.01"
-                              value={scadenza.importo_credito || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "importo_credito", e.target.value ? parseFloat(e.target.value) : null)}
+                              value={localImporti[scadenza.id] !== undefined ? localImporti[scadenza.id] : (scadenza.importo_credito || "")}
+                              onChange={(e) => handleImportoChange(scadenza.id, e.target.value)}
                               className="w-32 text-xs"
                               disabled={!scadenza.asseverazione || isConfermata}
                               placeholder="€ 0.00"
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[120px]">
                             <input
                               type="checkbox"
                               checked={isModInviato}
@@ -439,8 +507,8 @@ export default function ScadenzeIvaPage() {
                               className="rounded w-4 h-4 cursor-pointer"
                               disabled={isConfermata}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[140px]">
                             <Input
                               type="date"
                               value={scadenza.data_invio || ""}
@@ -448,8 +516,8 @@ export default function ScadenzeIvaPage() {
                               className="w-36 text-xs"
                               disabled={!isModInviato || isConfermata}
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[100px]">
                             <input
                               type="checkbox"
                               checked={isRicevuta}
@@ -457,8 +525,8 @@ export default function ScadenzeIvaPage() {
                               className="rounded w-4 h-4 cursor-pointer"
                               disabled={isConfermata}
                             />
-                          </TableCell>
-                          <TableCell>
+                          </td>
+                          <td className="px-4 py-3 min-w-[200px]">
                             <Textarea
                               value={localNotes[scadenza.id] !== undefined ? localNotes[scadenza.id] : (scadenza.note || "")}
                               onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
@@ -466,8 +534,8 @@ export default function ScadenzeIvaPage() {
                               disabled={isConfermata}
                               placeholder="Note..."
                             />
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[120px]">
                             <Button
                               variant={isConfermata ? "default" : "outline"}
                               size="sm"
@@ -476,8 +544,8 @@ export default function ScadenzeIvaPage() {
                             >
                               {isConfermata ? "✓ Chiusa" : "○ Aperta"}
                             </Button>
-                          </TableCell>
-                          <TableCell className="text-center">
+                          </td>
+                          <td className="px-4 py-3 text-center min-w-[100px]">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -486,13 +554,13 @@ export default function ScadenzeIvaPage() {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>
