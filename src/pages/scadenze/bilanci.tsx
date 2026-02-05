@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -26,7 +25,7 @@ export default function ScadenzeBilanciPage() {
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
   
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({]);
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
@@ -101,16 +100,14 @@ export default function ScadenzeBilanciPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaBilancio, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
-      // Update local state immediately
       setScadenze(prev => prev.map(s => 
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
       
-      // Update stats if it's conferma_riga
       if (field === "conferma_riga") {
         setStats(prev => ({
           ...prev,
@@ -119,7 +116,6 @@ export default function ScadenzeBilanciPage() {
         }));
       }
       
-      // Save to database in background
       const updates: any = { [field]: newValue };
       const { error } = await supabase
         .from("tbscadbilanci")
@@ -134,13 +130,16 @@ export default function ScadenzeBilanciPage() {
         description: "Impossibile aggiornare il campo",
         variant: "destructive"
       });
-      // Revert on error
       await loadData();
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaBilancio, value: any) => {
     try {
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
+
       const updates: any = { [field]: value || null };
       
       const { error } = await supabase
@@ -149,10 +148,6 @@ export default function ScadenzeBilanciPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -344,7 +339,7 @@ export default function ScadenzeBilanciPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
-              {/* Fixed Header */}
+              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -352,11 +347,17 @@ export default function ScadenzeBilanciPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Asseverazione</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Bilancio Def.</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Verbale App.</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Rel. Gestione</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Rel. Sindaci</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Rel. Revisore</TableHead>
+                      <TableHead className="min-w-[150px]">Data Appr.</TableHead>
+                      <TableHead className="min-w-[150px]">Data Scad.</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Approvato</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Invio Bil.</TableHead>
                       <TableHead className="min-w-[150px]">Data Invio</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Ricevuta</TableHead>
                       <TableHead className="min-w-[300px]">Note</TableHead>
                       <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
                       <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
@@ -365,13 +366,13 @@ export default function ScadenzeBilanciPage() {
                 </Table>
               </div>
 
-              {/* Scrollable Body */}
+              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={17} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -384,21 +385,75 @@ export default function ScadenzeBilanciPage() {
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_predisposto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.bilancio_def || false}
+                              onChange={() => handleToggleField(scadenza.id, "bilancio_def", scadenza.bilancio_def)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_definitivo || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.verbale_app || false}
+                              onChange={() => handleToggleField(scadenza.id, "verbale_app", scadenza.verbale_app)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.asseverazione || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "asseverazione", scadenza.asseverazione)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.relazione_gest || false}
+                              onChange={() => handleToggleField(scadenza.id, "relazione_gest", scadenza.relazione_gest)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.relazione_sindaci || false}
+                              onChange={() => handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.relazione_revisore || false}
+                              onChange={() => handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            <Input
+                              type="date"
+                              value={scadenza.data_approvazione || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+                              className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            <Input
+                              type="date"
+                              value={scadenza.data_scad_pres || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_scad_pres", e.target.value)}
+                              className="w-full"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.bil_approvato || false}
+                              onChange={() => handleToggleField(scadenza.id, "bil_approvato", scadenza.bil_approvato)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.invio_bil || false}
+                              onChange={() => handleToggleField(scadenza.id, "invio_bil", scadenza.invio_bil)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
@@ -410,9 +465,11 @@ export default function ScadenzeBilanciPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_inviato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.ricevuta || false}
+                              onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[300px]">
@@ -424,9 +481,11 @@ export default function ScadenzeBilanciPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[100px]">

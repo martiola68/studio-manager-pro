@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -26,7 +25,7 @@ export default function ScadenzeCCGGPage() {
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
   
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({]);
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
@@ -137,6 +136,10 @@ export default function ScadenzeCCGGPage() {
 
   const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
     try {
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
+
       const updates: any = { [field]: value || null };
       
       const { error } = await supabase
@@ -145,10 +148,6 @@ export default function ScadenzeCCGGPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -340,6 +339,7 @@ export default function ScadenzeCCGGPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
+              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -359,6 +359,7 @@ export default function ScadenzeCCGGPage() {
                 </Table>
               </div>
 
+              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
@@ -377,15 +378,19 @@ export default function ScadenzeCCGGPage() {
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.modello_predisposto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                              onChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.modello_definitivo || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
+                              onChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
@@ -397,9 +402,11 @@ export default function ScadenzeCCGGPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.modello_inviato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
+                              onChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[300px]">
@@ -411,9 +418,11 @@ export default function ScadenzeCCGGPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[100px]">
