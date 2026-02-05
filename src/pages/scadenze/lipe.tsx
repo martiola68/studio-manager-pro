@@ -63,6 +63,8 @@ export default function LipePage() {
   }
 
   async function loadLipeRecords(studio_id: string) {
+    console.log("Caricamento LIPE per studio:", studio_id);
+    
     const { data, error } = await supabase
       .from("tbscadlipe")
       .select(`
@@ -73,19 +75,21 @@ export default function LipePage() {
       .eq("studio_id", studio_id)
       .order("created_at", { ascending: false });
 
+    console.log("LIPE Query result:", { data, error });
+
     if (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({ title: "Errore", description: "Impossibile caricare i dati LIPE", variant: "destructive" });
       return;
     }
 
-    // Carica i dati dei clienti separatamente
     const clientIds = data?.map((r) => r.id) || [];
     if (clientIds.length > 0) {
       const { data: clientiData, error: clientiError } = await supabase
         .from("tbclienti")
         .select("*")
-        .in("id", clientIds);
+        .in("id", clientIds)
+        .eq("studio_id", studio_id);
 
       if (!clientiError && clientiData) {
         const recordsWithClients = data?.map((record) => ({
@@ -134,9 +138,6 @@ export default function LipePage() {
   async function handleAddRecord() {
     if (!studioId) return;
 
-    // TypeScript requires all fields if strict, but let's try to match the Insert type
-    // Some fields might be optional in DB but TS types might be strict.
-    // We cast to any to bypass the strict check if ID is auto-generated but required in type
     const newRecord: any = {
       nominativo: "",
       studio_id: studioId,
@@ -220,19 +221,6 @@ export default function LipePage() {
     const cliente = clienti.find((c) => c.id === clienteId);
     if (!cliente) return;
 
-    // Quando cambio il cliente, aggiorno l'ID del record per farlo corrispondere al cliente (se la logica è 1:1)
-    // Ma attenzione: tbscadlipe usa l'ID cliente come propria Primary Key? 
-    // Se la tabella è in relazione 1:1 e usa lo stesso ID, non posso cambiare l'ID di un record esistente facilmente.
-    // Tuttavia, se la struttura è: tbscadlipe.id (PK) == tbclienti.id, allora:
-    // NON POSSO cambiare il cliente di un record esistente, devo cancellare e ricreare, o la logica è diversa.
-    // Per ora aggiorno solo il nominativo come stringa se serve, o avviso l'utente.
-    
-    // UPDATE: Se la FK non esiste come colonna separata, non posso fare 'update client_id'.
-    // Assumo che l'utente voglia solo cambiare il nome visualizzato o collegare se nullo.
-    // Se il record è stato creato vuoto, forse ha un ID generato casualmente che non corrisponde a un cliente?
-    // Se la tabella tbscadlipe ha id che DEVE essere un id cliente, allora quando creo un record nuovo devo scegliere SUBITO il cliente.
-    
-    // Per semplicità qui aggiorno il campo nominativo testuale.
     const updates: Partial<LipeUpdate> = {
       nominativo: cliente.ragione_sociale
     };
@@ -260,30 +248,30 @@ export default function LipePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Caricamento...</div>
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
       </div>
     );
   }
 
-  // Definizioni larghezze fisse
-  const wNominativo = "w-[189px]"; // 5cm
-  const wProfessionista = "w-[189px]"; // 5cm
-  const wOperatore = "w-[189px]"; // 5cm
-  const wTipoLiq = "w-[76px]"; // 2cm
-  const wMese = "w-[57px]"; // 1.5cm
-  const wLipeCheck = "w-[57px]"; // 1.5cm
-  const wLipeDate = "w-[113px]"; // 3cm
-  const wAcconto = "w-[113px]"; // 3cm
-  const wAccontoCom = "w-[57px]"; // 1.5cm
-  const wAzioni = "w-[76px]"; // 2cm
+  const wNominativo = "w-[189px]";
+  const wProfessionista = "w-[189px]";
+  const wOperatore = "w-[189px]";
+  const wTipoLiq = "w-[76px]";
+  const wMese = "w-[57px]";
+  const wLipeCheck = "w-[57px]";
+  const wLipeDate = "w-[113px]";
+  const wAcconto = "w-[113px]";
+  const wAccontoCom = "w-[57px]";
+  const wAzioni = "w-[76px]";
 
-  // Stile comune celle
   const cellStyle = "p-0 h-12 border-r border-b text-center align-middle bg-background";
   const headerStyle = "p-0 h-12 border-r border-b text-center align-middle font-semibold bg-muted/50 text-foreground";
   const stickyLeft = "sticky left-0 z-20";
   const stickyLeftCell = "sticky left-0 z-10 bg-background";
   
-  // Input styles reset to fill cell completely
   const inputStyle = "w-full h-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 text-center bg-transparent";
   const selectTriggerStyle = "w-full h-full border-0 rounded-none focus:ring-0 focus:ring-offset-0 px-1 bg-transparent";
   const checkboxContainer = "flex items-center justify-center w-full h-full";
@@ -338,10 +326,9 @@ export default function LipePage() {
                 <TableBody>
                   {lipeRecords.map((record) => (
                     <TableRow key={record.id} className="h-12 border-b hover:bg-muted/30">
-                      {/* Nominativo - Sticky */}
                       <TableCell className={`${wNominativo} ${cellStyle} ${stickyLeftCell}`}>
                         <Select
-                          value={record.id} // Questo è un hack visuale, idealmente cambieremmo il cliente
+                          value={record.id}
                           onValueChange={(val) => handleClienteChange(record.id, val)}
                         >
                           <SelectTrigger className={`${selectTriggerStyle}`}>
@@ -361,7 +348,6 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      {/* Professionista */}
                       <TableCell className={`${wProfessionista} ${cellStyle}`}>
                         <Select
                           value={record.utente_professionista_id || "none"}
@@ -381,7 +367,6 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      {/* Operatore */}
                       <TableCell className={`${wOperatore} ${cellStyle}`}>
                         <Select
                           value={record.utente_operatore_id || "none"}
@@ -401,7 +386,6 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      {/* Tipo Liq */}
                       <TableCell className={`${wTipoLiq} ${cellStyle}`}>
                         <Select
                           value={record.tipo_liq || "T"}
@@ -418,7 +402,6 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      {/* Gen */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -428,7 +411,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Feb */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -438,7 +420,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Mar */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -448,7 +429,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Lipe 1T */}
                       <TableCell className={`${wLipeCheck} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -458,7 +438,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Data Invio 1T */}
                       <TableCell className={`${wLipeDate} ${cellStyle}`}>
                         <Input
                           type="date"
@@ -468,7 +447,6 @@ export default function LipePage() {
                         />
                       </TableCell>
 
-                      {/* Apr */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -478,7 +456,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Mag */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -488,7 +465,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Giu */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -498,7 +474,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Lipe 2T */}
                       <TableCell className={`${wLipeCheck} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -508,7 +483,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Data Invio 2T */}
                       <TableCell className={`${wLipeDate} ${cellStyle}`}>
                         <Input
                           type="date"
@@ -518,7 +492,6 @@ export default function LipePage() {
                         />
                       </TableCell>
 
-                      {/* Lug */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -528,7 +501,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Ago */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -538,7 +510,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Set */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -548,7 +519,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Lipe 3T */}
                       <TableCell className={`${wLipeCheck} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -558,7 +528,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Data Invio 3T */}
                       <TableCell className={`${wLipeDate} ${cellStyle}`}>
                         <Input
                           type="date"
@@ -568,7 +537,6 @@ export default function LipePage() {
                         />
                       </TableCell>
 
-                      {/* Ott */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -578,7 +546,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Nov */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -588,7 +555,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Acconto */}
                       <TableCell className={`${wAcconto} ${cellStyle}`}>
                         <Select
                           value={record.acconto || "Non dovuto"}
@@ -604,7 +570,6 @@ export default function LipePage() {
                         </Select>
                       </TableCell>
 
-                      {/* Acconto Comunicato */}
                       <TableCell className={`${wAccontoCom} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -614,7 +579,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Dic */}
                       <TableCell className={`${wMese} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -624,7 +588,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Lipe 4T */}
                       <TableCell className={`${wLipeCheck} ${cellStyle}`}>
                         <div className={checkboxContainer}>
                           <Checkbox
@@ -634,7 +597,6 @@ export default function LipePage() {
                         </div>
                       </TableCell>
 
-                      {/* Data Invio 4T */}
                       <TableCell className={`${wLipeDate} ${cellStyle}`}>
                         <Input
                           type="date"
@@ -644,7 +606,6 @@ export default function LipePage() {
                         />
                       </TableCell>
 
-                      {/* Azioni */}
                       <TableCell className={`${wAzioni} ${cellStyle} border-r-0`}>
                         <div className="flex items-center justify-center w-full h-full">
                           <Button
