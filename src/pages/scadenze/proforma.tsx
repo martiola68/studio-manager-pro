@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -24,16 +22,25 @@ export default function ScadenzeProformaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
-  const [filterConferma, setFilterConferma] = useState("__all__");
-  
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
-    totale: 0,
-    confermate: 0,
-    nonConfermate: 0
+    totale: 0
   });
+
+  const mesi = [
+    { key: "gennaio", label: "Gen" },
+    { key: "febbraio", label: "Feb" },
+    { key: "marzo", label: "Mar" },
+    { key: "aprile", label: "Apr" },
+    { key: "maggio", label: "Mag" },
+    { key: "giugno", label: "Giu" },
+    { key: "luglio", label: "Lug" },
+    { key: "agosto", label: "Ago" },
+    { key: "settembre", label: "Set" },
+    { key: "ottobre", label: "Ott" },
+    { key: "novembre", label: "Nov" },
+    { key: "dicembre", label: "Dic" }
+  ];
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -63,11 +70,8 @@ export default function ScadenzeProformaPage() {
       setScadenze(scadenzeData);
       setUtenti(utentiData);
       
-      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
       setStats({
-        totale: scadenzeData.length,
-        confermate,
-        nonConfermate: scadenzeData.length - confermate
+        totale: scadenzeData.length
       });
     } catch (error) {
       console.error("Errore caricamento:", error);
@@ -101,21 +105,13 @@ export default function ScadenzeProformaPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaProforma, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
       setScadenze(prev => prev.map(s => 
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
-      
-      if (field === "conferma_riga") {
-        setStats(prev => ({
-          ...prev,
-          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
-          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
-        }));
-      }
       
       const updates: any = { [field]: newValue };
       const { error } = await supabase
@@ -133,62 +129,6 @@ export default function ScadenzeProformaPage() {
       });
       await loadData();
     }
-  };
-
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
-    try {
-      const updates: any = { [field]: value || null };
-      
-      const { error } = await supabase
-        .from("tbscadproforma")
-        .update(updates)
-        .eq("id", scadenzaId);
-
-      if (error) throw error;
-
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il campo",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleNoteChange = (scadenzaId: string, value: string) => {
-    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
-    
-    if (noteTimers[scadenzaId]) {
-      clearTimeout(noteTimers[scadenzaId]);
-    }
-    
-    const timer = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from("tbscadproforma")
-          .update({ note: value || null })
-          .eq("id", scadenzaId);
-
-        if (error) throw error;
-        
-        setScadenze(prev => prev.map(s => 
-          s.id === scadenzaId ? { ...s, note: value } : s
-        ));
-      } catch (error) {
-        console.error("Errore salvataggio nota:", error);
-        toast({
-          title: "Errore",
-          description: "Impossibile salvare la nota",
-          variant: "destructive"
-        });
-      }
-    }, 1000);
-    
-    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
 
   const handleDelete = async (id: string) => {
@@ -221,9 +161,7 @@ export default function ScadenzeProformaPage() {
     const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    const matchConferma = filterConferma === "__all__" || 
-      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
-    return matchSearch && matchOperatore && matchProfessionista && matchConferma;
+    return matchSearch && matchOperatore && matchProfessionista;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
@@ -248,27 +186,15 @@ export default function ScadenzeProformaPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Scadenzario Proforma</h1>
-          <p className="text-gray-500 mt-1">Gestione fatture proforma e documenti preliminari</p>
+          <p className="text-gray-500 mt-1">Gestione fatture proforma mensili</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Totale Proforma</div>
+            <div className="text-sm text-gray-600 mb-1">Totale Clienti</div>
             <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Confermate</div>
-            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
-            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
           </CardContent>
         </Card>
       </div>
@@ -278,7 +204,7 @@ export default function ScadenzeProformaPage() {
           <CardTitle>Filtri e Ricerca</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
               <div className="relative">
@@ -319,19 +245,6 @@ export default function ScadenzeProformaPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Stato Conferma</label>
-              <Select value={filterConferma} onValueChange={setFilterConferma}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Tutti</SelectItem>
-                  <SelectItem value="true">Confermate</SelectItem>
-                  <SelectItem value="false">Non Confermate</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -340,6 +253,7 @@ export default function ScadenzeProformaPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
+              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -347,24 +261,22 @@ export default function ScadenzeProformaPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
-                      <TableHead className="min-w-[150px]">Data Invio</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
-                      <TableHead className="min-w-[300px]">Note</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
+                      {mesi.map(mese => (
+                        <TableHead key={mese.key} className="min-w-[80px] text-center">{mese.label}</TableHead>
+                      ))}
                       <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                 </Table>
               </div>
 
+              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={16} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -376,46 +288,16 @@ export default function ScadenzeProformaPage() {
                           </TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_predisposto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_definitivo || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_inviato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[300px]">
-                            <Textarea
-                              value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                              onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                              placeholder="Aggiungi note..."
-                              className="min-h-[60px] resize-none"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                            />
-                          </TableCell>
+                          {mesi.map(mese => (
+                            <TableCell key={mese.key} className="text-center min-w-[80px]">
+                              <input
+                                type="checkbox"
+                                checked={scadenza[mese.key as keyof ScadenzaProforma] || false}
+                                onChange={() => handleToggleField(scadenza.id, mese.key as keyof ScadenzaProforma, scadenza[mese.key as keyof ScadenzaProforma])}
+                                className="rounded w-4 h-4 cursor-pointer"
+                              />
+                            </TableCell>
+                          ))}
                           <TableCell className="text-center min-w-[100px]">
                             <Button
                               variant="ghost"

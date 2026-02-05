@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -101,7 +100,7 @@ export default function ScadenzeCUPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaCU, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
@@ -135,8 +134,12 @@ export default function ScadenzeCUPage() {
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaCU, value: any) => {
     try {
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
+
       const updates: any = { [field]: value || null };
       
       const { error } = await supabase
@@ -145,10 +148,6 @@ export default function ScadenzeCUPage() {
         .eq("id", scadenzaId);
 
       if (error) throw error;
-
-      setScadenze(prev => prev.map(s => 
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
     } catch (error) {
       console.error("Errore aggiornamento:", error);
       toast({
@@ -340,6 +339,7 @@ export default function ScadenzeCUPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
+              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -347,10 +347,12 @@ export default function ScadenzeCUPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
+                      <TableHead className="min-w-[120px] text-center">CU Autonomi</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Inserite</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Generate</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Inviate</TableHead>
                       <TableHead className="min-w-[150px]">Data Invio</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
+                      <TableHead className="min-w-[120px]">Num. CU</TableHead>
                       <TableHead className="min-w-[300px]">Note</TableHead>
                       <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
                       <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
@@ -359,12 +361,13 @@ export default function ScadenzeCUPage() {
                 </Table>
               </div>
 
+              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
                     {filteredScadenze.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
@@ -377,15 +380,35 @@ export default function ScadenzeCUPage() {
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</TableCell>
                           <TableCell className="min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_predisposto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.cu_autonomi || false}
+                              onChange={() => handleToggleField(scadenza.id, "cu_autonomi", scadenza.cu_autonomi)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_definitivo || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
+                            <input
+                              type="checkbox"
+                              checked={scadenza.inserite || false}
+                              onChange={() => handleToggleField(scadenza.id, "inserite", scadenza.inserite)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.generate || false}
+                              onChange={() => handleToggleField(scadenza.id, "generate", scadenza.generate)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.inviate || false}
+                              onChange={() => handleToggleField(scadenza.id, "inviate", scadenza.inviate)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
@@ -396,10 +419,12 @@ export default function ScadenzeCUPage() {
                               className="w-full"
                             />
                           </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.modello_inviato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
+                          <TableCell className="min-w-[120px]">
+                            <Input
+                              type="text"
+                              value={scadenza.num_cu || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "num_cu", e.target.value)}
+                              className="w-full"
                             />
                           </TableCell>
                           <TableCell className="min-w-[300px]">
@@ -411,9 +436,11 @@ export default function ScadenzeCUPage() {
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
+                            <input
+                              type="checkbox"
                               checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[100px]">

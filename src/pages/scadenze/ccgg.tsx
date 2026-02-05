@@ -100,7 +100,7 @@ export default function ScadenzeCCGGPage() {
     return data || [];
   };
 
-  const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaCCGG, currentValue: any) => {
     try {
       const newValue = !currentValue;
       
@@ -134,7 +134,7 @@ export default function ScadenzeCCGGPage() {
     }
   };
 
-  const handleUpdateField = async (scadenzaId: string, field: string, value: any) => {
+  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaCCGG, value: any) => {
     try {
       setScadenze(prev => prev.map(s => 
         s.id === scadenzaId ? { ...s, [field]: value } : s
@@ -347,10 +347,10 @@ export default function ScadenzeCCGGPage() {
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[180px]">Professionista</TableHead>
                       <TableHead className="min-w-[180px]">Operatore</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Predisposto</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Definitivo</TableHead>
-                      <TableHead className="min-w-[150px]">Data Invio</TableHead>
-                      <TableHead className="min-w-[120px] text-center">Mod. Inviato</TableHead>
+                      <TableHead className="min-w-[120px] text-center">Importo Calc.</TableHead>
+                      <TableHead className="min-w-[120px] text-center">F24 Generato</TableHead>
+                      <TableHead className="min-w-[120px] text-center">F24 Comunicato</TableHead>
+                      <TableHead className="min-w-[150px]">Data Comunicato</TableHead>
                       <TableHead className="min-w-[300px]">Note</TableHead>
                       <TableHead className="min-w-[120px] text-center">Conferma</TableHead>
                       <TableHead className="min-w-[100px] text-center">Azioni</TableHead>
@@ -380,33 +380,33 @@ export default function ScadenzeCCGGPage() {
                           <TableCell className="text-center min-w-[120px]">
                             <input
                               type="checkbox"
-                              checked={scadenza.modello_predisposto || false}
-                              onChange={() => handleToggleField(scadenza.id, "modello_predisposto", scadenza.modello_predisposto)}
+                              checked={scadenza.importo_calcolato || false}
+                              onChange={() => handleToggleField(scadenza.id, "importo_calcolato", scadenza.importo_calcolato)}
                               className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="text-center min-w-[120px]">
                             <input
                               type="checkbox"
-                              checked={scadenza.modello_definitivo || false}
-                              onChange={() => handleToggleField(scadenza.id, "modello_definitivo", scadenza.modello_definitivo)}
+                              checked={scadenza.f24_generato || false}
+                              onChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
+                              className="rounded w-4 h-4 cursor-pointer"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center min-w-[120px]">
+                            <input
+                              type="checkbox"
+                              checked={scadenza.f24_comunicato || false}
+                              onChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
                               className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[150px]">
                             <Input
                               type="date"
-                              value={scadenza.data_invio || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                              value={scadenza.data_comunicato || ""}
+                              onChange={(e) => handleUpdateField(scadenza.id, "data_comunicato", e.target.value)}
                               className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <input
-                              type="checkbox"
-                              checked={scadenza.modello_inviato || false}
-                              onChange={() => handleToggleField(scadenza.id, "modello_inviato", scadenza.modello_inviato)}
-                              className="rounded w-4 h-4 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell className="min-w-[300px]">
