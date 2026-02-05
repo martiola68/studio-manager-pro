@@ -836,6 +836,69 @@ export default function AgendaPage() {
                 </Select>
               </div>
             )}
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="evento_generico" 
+                  checked={formData.evento_generico} 
+                  onCheckedChange={c => setFormData({...formData, evento_generico: !!c, cliente_id: c ? "" : formData.cliente_id})} 
+                />
+                <Label htmlFor="evento_generico">Evento Generico (No Cliente)</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="in_sede" 
+                  checked={formData.in_sede} 
+                  onCheckedChange={c => setFormData({...formData, in_sede: !!c, luogo: c ? "" : formData.luogo, sala: !c ? "" : formData.sala})} 
+                />
+                <Label htmlFor="in_sede">In Sede</Label>
+              </div>
+              
+              {formData.in_sede && (
+                <div>
+                  <Label>Sala</Label>
+                  <Input 
+                    value={formData.sala} 
+                    onChange={e => setFormData({...formData, sala: e.target.value})} 
+                    placeholder="Es. A, B, Riunioni..."
+                  />
+                </div>
+              )}
+              
+              {!formData.in_sede && (
+                <div>
+                  <Label>Luogo / Indirizzo</Label>
+                  <Input 
+                    value={formData.luogo} 
+                    onChange={e => setFormData({...formData, luogo: e.target.value})} 
+                    placeholder="Es. Via Roma 10, Milano"
+                  />
+                </div>
+              )}
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="riunione_teams" 
+                  checked={formData.riunione_teams} 
+                  onCheckedChange={c => setFormData({...formData, riunione_teams: !!c, link_teams: !c ? "" : formData.link_teams})} 
+                />
+                <Label htmlFor="riunione_teams">Riunione Teams</Label>
+              </div>
+              
+              {formData.riunione_teams && (
+                <div>
+                  <Label>Link Teams</Label>
+                  <Input 
+                    value={formData.link_teams} 
+                    onChange={e => setFormData({...formData, link_teams: e.target.value})} 
+                    placeholder="https://teams.microsoft.com/..."
+                  />
+                </div>
+              )}
+            </div>
+            
             <div>
                <Label className="mb-2 block">Partecipanti</Label>
                
@@ -880,6 +943,7 @@ export default function AgendaPage() {
                  ))}
                </ScrollArea>
             </div>
+            
             <div>
               <Label>Descrizione</Label>
               <Textarea value={formData.descrizione} onChange={e => setFormData({...formData, descrizione: e.target.value})} />
