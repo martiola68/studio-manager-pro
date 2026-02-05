@@ -305,32 +305,32 @@ export default function ScadenzeLipePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white min-w-[200px] border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nominativo</TableHead>
+                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[150px]">Professionista</TableHead>
                       <TableHead className="min-w-[150px]">Operatore</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Tipo Liq</TableHead>
+                      <TableHead className="text-center min-w-[120px]">Tipo Liq</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-blue-50">Gen</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-blue-50">Feb</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-blue-50">Mar</TableHead>
                       <TableHead className="text-center min-w-[100px] bg-blue-100">Lipe 1T</TableHead>
-                      <TableHead className="text-center min-w-[140px] bg-blue-100">Data Invio 1T</TableHead>
+                      <TableHead className="text-center min-w-[150px] bg-blue-100">Data Invio 1T</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-green-50">Apr</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-green-50">Mag</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-green-50">Giu</TableHead>
                       <TableHead className="text-center min-w-[100px] bg-green-100">Lipe 2T</TableHead>
-                      <TableHead className="text-center min-w-[140px] bg-green-100">Data Invio 2T</TableHead>
+                      <TableHead className="text-center min-w-[150px] bg-green-100">Data Invio 2T</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-yellow-50">Lug</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-yellow-50">Ago</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-yellow-50">Set</TableHead>
                       <TableHead className="text-center min-w-[100px] bg-yellow-100">Lipe 3T</TableHead>
-                      <TableHead className="text-center min-w-[140px] bg-yellow-100">Data Invio 3T</TableHead>
+                      <TableHead className="text-center min-w-[150px] bg-yellow-100">Data Invio 3T</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-red-50">Ott</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-red-50">Nov</TableHead>
                       <TableHead className="text-center min-w-[120px] bg-orange-100">Acconto</TableHead>
                       <TableHead className="text-center min-w-[120px] bg-orange-100">Acc. Com</TableHead>
                       <TableHead className="text-center min-w-[80px] bg-red-50">Dic</TableHead>
                       <TableHead className="text-center min-w-[100px] bg-red-100">Lipe 4T</TableHead>
-                      <TableHead className="text-center min-w-[140px] bg-red-100">Data Invio 4T</TableHead>
+                      <TableHead className="text-center min-w-[150px] bg-red-100">Data Invio 4T</TableHead>
                       <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -354,7 +354,7 @@ export default function ScadenzeLipePage() {
                         
                         return (
                           <TableRow key={scadenza.id}>
-                            <TableCell className="font-medium sticky left-0 z-10 bg-white min-w-[200px] border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                            <TableCell className="font-medium sticky left-0 z-10 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">
                               {scadenza.nominativo}
                             </TableCell>
                             <TableCell className="min-w-[150px]">
@@ -363,12 +363,12 @@ export default function ScadenzeLipePage() {
                             <TableCell className="min-w-[150px]">
                               {getUtenteNome(scadenza.utente_operatore_id)}
                             </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
+                            <TableCell className="text-center min-w-[120px]">
                               <Select
                                 value={tipoLiq}
                                 onValueChange={(value) => handleUpdateField(scadenza.id, "tipo_liq", value)}
                               >
-                                <SelectTrigger className="w-20">
+                                <SelectTrigger className="w-full">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -379,33 +379,41 @@ export default function ScadenzeLipePage() {
                               </Select>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-blue-50">
-                              <Checkbox
-                                checked={scadenza.gen || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "gen", scadenza.gen)}
-                                disabled={!isMeseEnabled(scadenza, "gen")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.gen || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "gen", scadenza.gen)}
+                                  disabled={!isMeseEnabled(scadenza, "gen")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-blue-50">
-                              <Checkbox
-                                checked={scadenza.feb || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "feb", scadenza.feb)}
-                                disabled={!isMeseEnabled(scadenza, "feb")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.feb || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "feb", scadenza.feb)}
+                                  disabled={!isMeseEnabled(scadenza, "feb")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-blue-50">
-                              <Checkbox
-                                checked={scadenza.mar || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "mar", scadenza.mar)}
-                                disabled={!isMeseEnabled(scadenza, "mar")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.mar || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "mar", scadenza.mar)}
+                                  disabled={!isMeseEnabled(scadenza, "mar")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[100px] bg-blue-100">
-                              <Checkbox
-                                checked={scadenza.lipe1t || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "lipe1t", scadenza.lipe1t)}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.lipe1t || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "lipe1t", scadenza.lipe1t)}
+                                />
+                              </div>
                             </TableCell>
-                            <TableCell className="text-center min-w-[140px] bg-blue-100">
+                            <TableCell className="text-center min-w-[150px] bg-blue-100">
                               <Input
                                 type="date"
                                 value={scadenza.lipe1t_invio || ""}
@@ -414,33 +422,41 @@ export default function ScadenzeLipePage() {
                               />
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-green-50">
-                              <Checkbox
-                                checked={scadenza.apr || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "apr", scadenza.apr)}
-                                disabled={!isMeseEnabled(scadenza, "apr")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.apr || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "apr", scadenza.apr)}
+                                  disabled={!isMeseEnabled(scadenza, "apr")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-green-50">
-                              <Checkbox
-                                checked={scadenza.mag || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "mag", scadenza.mag)}
-                                disabled={!isMeseEnabled(scadenza, "mag")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.mag || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "mag", scadenza.mag)}
+                                  disabled={!isMeseEnabled(scadenza, "mag")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-green-50">
-                              <Checkbox
-                                checked={scadenza.giu || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "giu", scadenza.giu)}
-                                disabled={!isMeseEnabled(scadenza, "giu")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.giu || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "giu", scadenza.giu)}
+                                  disabled={!isMeseEnabled(scadenza, "giu")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[100px] bg-green-100">
-                              <Checkbox
-                                checked={scadenza.lipe2t || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "lipe2t", scadenza.lipe2t)}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.lipe2t || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "lipe2t", scadenza.lipe2t)}
+                                />
+                              </div>
                             </TableCell>
-                            <TableCell className="text-center min-w-[140px] bg-green-100">
+                            <TableCell className="text-center min-w-[150px] bg-green-100">
                               <Input
                                 type="date"
                                 value={scadenza.lipe2t_invio || ""}
@@ -449,33 +465,41 @@ export default function ScadenzeLipePage() {
                               />
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-yellow-50">
-                              <Checkbox
-                                checked={scadenza.lug || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "lug", scadenza.lug)}
-                                disabled={!isMeseEnabled(scadenza, "lug")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.lug || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "lug", scadenza.lug)}
+                                  disabled={!isMeseEnabled(scadenza, "lug")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-yellow-50">
-                              <Checkbox
-                                checked={scadenza.ago || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "ago", scadenza.ago)}
-                                disabled={!isMeseEnabled(scadenza, "ago")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.ago || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "ago", scadenza.ago)}
+                                  disabled={!isMeseEnabled(scadenza, "ago")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-yellow-50">
-                              <Checkbox
-                                checked={scadenza.set || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "set", scadenza.set)}
-                                disabled={!isMeseEnabled(scadenza, "set")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.set || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "set", scadenza.set)}
+                                  disabled={!isMeseEnabled(scadenza, "set")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[100px] bg-yellow-100">
-                              <Checkbox
-                                checked={scadenza.lipe3t || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "lipe3t", scadenza.lipe3t)}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.lipe3t || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "lipe3t", scadenza.lipe3t)}
+                                />
+                              </div>
                             </TableCell>
-                            <TableCell className="text-center min-w-[140px] bg-yellow-100">
+                            <TableCell className="text-center min-w-[150px] bg-yellow-100">
                               <Input
                                 type="date"
                                 value={scadenza.lipe3t_invio || ""}
@@ -484,18 +508,22 @@ export default function ScadenzeLipePage() {
                               />
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-red-50">
-                              <Checkbox
-                                checked={scadenza.ott || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "ott", scadenza.ott)}
-                                disabled={!isMeseEnabled(scadenza, "ott")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.ott || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "ott", scadenza.ott)}
+                                  disabled={!isMeseEnabled(scadenza, "ott")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-red-50">
-                              <Checkbox
-                                checked={scadenza.nov || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "nov", scadenza.nov)}
-                                disabled={!isMeseEnabled(scadenza, "nov")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.nov || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "nov", scadenza.nov)}
+                                  disabled={!isMeseEnabled(scadenza, "nov")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[120px] bg-orange-100">
                               <Select
@@ -512,26 +540,32 @@ export default function ScadenzeLipePage() {
                               </Select>
                             </TableCell>
                             <TableCell className="text-center min-w-[120px] bg-orange-100">
-                              <Checkbox
-                                checked={scadenza.acconto_com || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "acconto_com", scadenza.acconto_com)}
-                                disabled={!isAccontoComEnabled}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.acconto_com || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "acconto_com", scadenza.acconto_com)}
+                                  disabled={!isAccontoComEnabled}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[80px] bg-red-50">
-                              <Checkbox
-                                checked={scadenza.dic || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "dic", scadenza.dic)}
-                                disabled={!isMeseEnabled(scadenza, "dic")}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.dic || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "dic", scadenza.dic)}
+                                  disabled={!isMeseEnabled(scadenza, "dic")}
+                                />
+                              </div>
                             </TableCell>
                             <TableCell className="text-center min-w-[100px] bg-red-100">
-                              <Checkbox
-                                checked={scadenza.lipe4t || false}
-                                onCheckedChange={() => handleToggleField(scadenza.id, "lipe4t", scadenza.lipe4t)}
-                              />
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={scadenza.lipe4t || false}
+                                  onCheckedChange={() => handleToggleField(scadenza.id, "lipe4t", scadenza.lipe4t)}
+                                />
+                              </div>
                             </TableCell>
-                            <TableCell className="text-center min-w-[140px] bg-red-100">
+                            <TableCell className="text-center min-w-[150px] bg-red-100">
                               <Input
                                 type="date"
                                 value={scadenza.lipe4t_invio || ""}
@@ -540,14 +574,16 @@ export default function ScadenzeLipePage() {
                               />
                             </TableCell>
                             <TableCell className="text-center min-w-[100px]">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(scadenza.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(scadenza.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
