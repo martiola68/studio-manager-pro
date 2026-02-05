@@ -46,6 +46,7 @@ export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
+  const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
   const [eventiImminenti, setEventiImminenti] = useState(0);
 
@@ -53,10 +54,12 @@ export function TopNavBar() {
     if (currentUser) {
       loadMessaggiNonLetti();
       loadPromemoriaAttivi();
+      loadPromemoriaRicevuti();
       loadEventiImminenti();
       const interval = setInterval(() => {
         loadMessaggiNonLetti();
         loadPromemoriaAttivi();
+        loadPromemoriaRicevuti();
         loadEventiImminenti();
       }, 60000);
       return () => clearInterval(interval);
@@ -142,6 +145,32 @@ export function TopNavBar() {
       console.warn("⚠️ Errore caricamento promemoria attivi (gestito):", error);
       setPromemoriaAttivi(0);
     }
+  };
+
+  const loadPromemoriaRicevuti = async () => {
+    if (!currentUser) return;
+
+    try {
+      const { count, error } = await supabase
+        .from("tbpromemoria")
+        .select("*", { count: 'exact', head: true })
+        .eq("destinatario_id", currentUser.id)
+        .eq("working_progress", "da_fare");
+
+      if (error) {
+        console.warn("⚠️ Errore query promemoria ricevuti:", error);
+        return;
+      }
+
+      setPromemoriaRicevuti(count || 0);
+    } catch (error) {
+      console.warn("⚠️ Errore caricamento promemoria ricevuti:", error);
+      setPromemoriaRicevuti(0);
+    }
+  };
+
+  const handlePromemoriaClick = () => {
+    setPromemoriaRicevuti(0);
   };
 
   const loadCurrentUser = async () => {
@@ -255,6 +284,7 @@ export function TopNavBar() {
 
     const hasChildren = item.children && item.children.length > 0;
     const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
+    const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
     const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
     const hasNotification = showMessaggiBadge || showPromemoriaAlert;
@@ -299,6 +329,7 @@ export function TopNavBar() {
       <Link
         key={item.label}
         href={item.href || "#"}
+        onClick={item.label === "Promemoria" ? handlePromemoriaClick : undefined}
         className={cn(
           "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative",
           isActive(item.href || "")
@@ -311,6 +342,11 @@ export function TopNavBar() {
         {showMessaggiBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
+          </Badge>
+        )}
+        {showPromemoriaRicevutiBadge && (
+          <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
+            {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
           </Badge>
         )}
         {showPromemoriaAlert && (
