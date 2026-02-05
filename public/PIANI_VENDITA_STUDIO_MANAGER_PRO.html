@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piani di Vendita - Studio Manager Pro</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #1e40af;
+            font-size: 32px;
+            margin: 10px 0;
+        }
+        
+        .header .subtitle {
+            color: #64748b;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .header .company {
+            color: #2563eb;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        h2 {
+            color: #1e40af;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        
+        h3 {
+            color: #2563eb;
+            margin-top: 20px;
+        }
+        
+        .plan-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .plan-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            background: #fff;
+        }
+        
+        .plan-card.popular {
+            border-color: #2563eb;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.1);
+        }
+        
+        .plan-card .badge {
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: #2563eb;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .plan-card h3 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+        
+        .plan-card .price {
+            font-size: 36px;
+            font-weight: bold;
+            color: #1e40af;
+            margin: 10px 0;
+        }
+        
+        .plan-card .price span {
+            font-size: 16px;
+            color: #64748b;
+        }
+        
+        .plan-card .description {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .plan-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .plan-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+        
+        .plan-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .plan-card li.included::before {
+            content: "✓ ";
+            color: #22c55e;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .plan-card li.excluded::before {
+            content: "✗ ";
+            color: #ef4444;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        table thead {
+            background: #f8fafc;
+        }
+        
+        table th {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e2e8f0;
+            color: #1e40af;
+            font-weight: 600;
+        }
+        
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .highlight-box {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .highlight-box h4 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+        
+        .financial-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .financial-section .total-row {
+            border-top: 2px solid #2563eb;
+            font-weight: bold;
+            font-size: 16px;
+            color: #1e40af;
+        }
+        
+        .addon-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .addon-item {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        
+        .addon-item h4 {
+            margin: 0 0 8px 0;
+            color: #2563eb;
+            font-size: 16px;
+        }
+        
+        .addon-item .price {
+            color: #1e40af;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        @media print {
+            .plan-container {
+                page-break-inside: avoid;
+            }
+            
+            .financial-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="header">
+        <h1>📊 PIANI DI VENDITA</h1>
+        <div class="subtitle">Studio Manager Pro</div>
+        <div class="subtitle">Sistema Gestionale Integrato</div>
+        <div class="company">Powered by ProWork Studio M</div>
+    </div>
+
+    <!-- INTRODUZIONE -->
+    <h2>📋 Panoramica dei Piani</h2>
+    <p>Studio Manager Pro offre tre piani scalabili per soddisfare le esigenze di studi professionali di ogni dimensione. Ogni piano include funzionalità essenziali per la gestione dello studio, con limiti e caratteristiche progressivi.</p>
+
+    <!-- CARDS PIANI -->
+    <div class="plan-container">
+        <!-- BASIC -->
+        <div class="plan-card">
+            <h3>💼 BASIC</h3>
+            <div class="price">€49<span>/mese</span></div>
+            <div class="description">Ideale per professionisti individuali o piccoli studi</div>
+            <ul>
+                <li class="included"><strong>Max 50 clienti</strong></li>
+                <li class="included"><strong>1-2 utenti</strong></li>
+                <li class="included">5 GB storage</li>
+                <li class="included">Gestione clienti</li>
+                <li class="included">Agenda e calendario</li>
+                <li class="included">Scadenzari fiscali</li>
+                <li class="included">Promemoria illimitati</li>
+                <li class="included">Rubrica contatti</li>
+                <li class="included">Accesso portali base</li>
+                <li class="included">Cassetti fiscali</li>
+                <li class="excluded">Comunicazioni massive</li>
+                <li class="excluded">Chat interna</li>
+                <li class="excluded">API access</li>
+            </ul>
+        </div>
+
+        <!-- PRO -->
+        <div class="plan-card popular">
+            <span class="badge">⭐ PIÙ POPOLARE</span>
+            <h3>🚀 PRO</h3>
+            <div class="price">€129<span>/mese</span></div>
+            <div class="description">Per studi commerciali con team strutturato</div>
+            <ul>
+                <li class="included"><strong>Max 150 clienti</strong></li>
+                <li class="included"><strong>Max 5 utenti</strong></li>
+                <li class="included">50 GB storage</li>
+                <li class="included">Tutto del piano BASIC</li>
+                <li class="included">Comunicazioni massive</li>
+                <li class="included">Chat interna team</li>
+                <li class="included">Report avanzati</li>
+                <li class="included">Export dati completo</li>
+                <li class="included">Gestione password avanzata</li>
+                <li class="included">Multi-studio</li>
+                <li class="included">Backup automatico</li>
+                <li class="included">Formazione 2h inclusa</li>
+                <li class="excluded">API access</li>
+            </ul>
+        </div>
+
+        <!-- ENTERPRISE -->
+        <div class="plan-card">
+            <h3>👑 ENTERPRISE</h3>
+            <div class="price">€399<span>/mese</span></div>
+            <div class="description">Soluzione completa per grandi organizzazioni</div>
+            <ul>
+                <li class="included"><strong>Clienti ILLIMITATI</strong></li>
+                <li class="included"><strong>Utenti ILLIMITATI</strong></li>
+                <li class="included">500+ GB storage</li>
+                <li class="included">Tutto del piano PRO</li>
+                <li class="included">Istanza dedicata</li>
+                <li class="included">White label</li>
+                <li class="included">API REST completa</li>
+                <li class="included">Integrazioni custom</li>
+                <li class="included">SSO / SAML</li>
+                <li class="included">SLA 99.9% uptime</li>
+                <li class="included">Supporto 24/7</li>
+                <li class="included">Account manager dedicato</li>
+                <li class="included">Formazione illimitata</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- TABELLA COMPARATIVA DETTAGLIATA -->
+    <h2>📊 Confronto Dettagliato</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Caratteristica</th>
+                <th>BASIC</th>
+                <th>PRO</th>
+                <th>ENTERPRISE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Prezzo mensile</strong></td>
+                <td>€49</td>
+                <td>€129</td>
+                <td>€399</td>
+            </tr>
+            <tr>
+                <td><strong>Max Clienti</strong></td>
+                <td>50</td>
+                <td>150</td>
+                <td>∞ Illimitati</td>
+            </tr>
+            <tr>
+                <td><strong>Max Utenti</strong></td>
+                <td>2</td>
+                <td>5</td>
+                <td>∞ Illimitati</td>
+            </tr>
+            <tr>
+                <td><strong>Storage Documenti</strong></td>
+                <td>5 GB</td>
+                <td>50 GB</td>
+                <td>500+ GB</td>
+            </tr>
+            <tr>
+                <td>Gestione Clienti</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Agenda e Calendario</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Scadenzari Fiscali</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Promemoria</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Rubrica Contatti</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Accesso Portali</td>
+                <td>✓ Base</td>
+                <td>✓ Avanzato</td>
+                <td>✓ Enterprise</td>
+            </tr>
+            <tr>
+                <td>Cassetti Fiscali</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Comunicazioni Massive</td>
+                <td>✗</td>
+                <td>✓ Email/SMS</td>
+                <td>✓ Completo</td>
+            </tr>
+            <tr>
+                <td>Chat Interna Team</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Report e Analytics</td>
+                <td>Base</td>
+                <td>Avanzati</td>
+                <td>Completi + Custom</td>
+            </tr>
+            <tr>
+                <td>Export Dati</td>
+                <td>Base</td>
+                <td>Completo</td>
+                <td>Completo + API</td>
+            </tr>
+            <tr>
+                <td>Multi-Studio</td>
+                <td>✗</td>
+                <td>✓</td>
+                <td>✓</td>
+            </tr>
+            <tr>
+                <td>Backup</td>
+                <td>Settimanale</td>
+                <td>Giornaliero</td>
+                <td>Orario + DR</td>
+            </tr>
+            <tr>
+                <td>API Access</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✓ REST completa</td>
+            </tr>
+            <tr>
+                <td>White Label</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✓ Personalizzabile</td>
+            </tr>
+            <tr>
+                <td>Istanza Dedicata</td>
+                <td>✗</td>
+                <td>✗</td>
+                <td>✓ Opzionale</td>
+            </tr>
+            <tr>
+                <td>SLA Uptime</td>
+                <td>99%</td>
+                <td>99.5%</td>
+                <td>99.9%</td>
+            </tr>
+            <tr>
+                <td><strong>Supporto</strong></td>
+                <td>Email 48h</td>
+                <td>Email 24h + Tel</td>
+                <td>24/7 Dedicato</td>
+            </tr>
+            <tr>
+                <td><strong>Formazione</strong></td>
+                <td>Documentazione</td>
+                <td>2h incluse</td>
+                <td>Illimitata</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ANALISI ECONOMICA -->
+    <h2>💰 Analisi Economica</h2>
+    
+    <div class="financial-section">
+        <h3>Scenario con 50 clienti acquisiti</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Piano</th>
+                    <th>N. Clienti</th>
+                    <th>Prezzo/mese</th>
+                    <th>Revenue Mensile</th>
+                    <th>Revenue Annuale</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>BASIC</td>
+                    <td>10</td>
+                    <td>€49</td>
+                    <td>€490</td>
+                    <td>€5.880</td>
+                </tr>
+                <tr>
+                    <td>PRO</td>
+                    <td>35</td>
+                    <td>€129</td>
+                    <td>€4.515</td>
+                    <td>€54.180</td>
+                </tr>
+                <tr>
+                    <td>ENTERPRISE</td>
+                    <td>5</td>
+                    <td>€399</td>
+                    <td>€1.995</td>
+                    <td>€23.940</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3"><strong>TOTALE REVENUE</strong></td>
+                    <td><strong>€7.000</strong></td>
+                    <td><strong>€84.000</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="3">Costi infrastruttura (stimati)</td>
+                    <td>-€300</td>
+                    <td>-€3.600</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3"><strong>PROFITTO NETTO</strong></td>
+                    <td><strong>€6.700</strong></td>
+                    <td><strong>€80.400</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><strong>MARGINE DI PROFITTO</strong></td>
+                    <td colspan="2"><strong>95.7%</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="highlight-box">
+        <h4>💡 Lifetime Value (LTV) medio per cliente</h4>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li><strong>Cliente BASIC:</strong> €49 × 36 mesi = €1.764</li>
+            <li><strong>Cliente PRO:</strong> €129 × 48 mesi = €6.192</li>
+            <li><strong>Cliente ENTERPRISE:</strong> €399 × 60 mesi = €23.940</li>
+        </ul>
+    </div>
+
+    <!-- ADD-ONS -->
+    <h2>🎁 Servizi Aggiuntivi (Add-Ons)</h2>
+    <p>Revenue addizionale da servizi opzionali disponibili per tutti i piani:</p>
+
+    <div class="addon-grid">
+        <div class="addon-item">
+            <h4>👤 Utente Extra</h4>
+            <div class="price">€10/mese</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Per superare il limite utenti del piano</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>💾 Storage Extra</h4>
+            <div class="price">€5/mese</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">10 GB aggiuntivi di spazio</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>📊 Clienti Extra</h4>
+            <div class="price">€20/mese</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Pacchetto 50 clienti aggiuntivi</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>🎓 Formazione Personalizzata</h4>
+            <div class="price">€150/ora</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Sessioni di training su misura</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>🔄 Migrazione Dati</h4>
+            <div class="price">€300-1000</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Import da altri software gestionali</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>⚙️ Sviluppo Custom</h4>
+            <div class="price">€80/ora</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Funzionalità personalizzate</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>📱 SMS Pack</h4>
+            <div class="price">€30</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">1000 SMS per comunicazioni clienti</p>
+        </div>
+        
+        <div class="addon-item">
+            <h4>🔐 Audit & Compliance</h4>
+            <div class="price">€200/mese</div>
+            <p style="margin: 5px 0 0 0; font-size: 13px; color: #64748b;">Log dettagliati e report conformità</p>
+        </div>
+    </div>
+
+    <!-- STRATEGIE DI LANCIO -->
+    <h2>🚀 Offerte di Lancio (Opzionali)</h2>
+    
+    <div class="highlight-box">
+        <h4>Per i primi 100 clienti - Offerta Limitata</h4>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>✅ <strong>Sconto 30%</strong> sui primi 6 mesi di abbonamento</li>
+            <li>✅ <strong>Setup e migrazione dati</strong> completamente gratuiti (valore €500)</li>
+            <li>✅ <strong>2 mesi omaggio</strong> con sottoscrizione annuale anticipata</li>
+            <li>✅ <strong>Formazione 1h gratuita</strong> per ogni utente del team</li>
+            <li>✅ <strong>Supporto prioritario</strong> nei primi 30 giorni</li>
+        </ul>
+    </div>
+
+    <!-- STRATEGIE ALTERNATIVE -->
+    <h2>💡 Strategie di Pricing Alternative</h2>
+
+    <h3>Opzione A: Pricing Aggressivo (Penetrazione Mercato)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Piano</th>
+                <th>Prezzo Standard</th>
+                <th>Prezzo Aggressivo</th>
+                <th>Obiettivo</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>BASIC</td>
+                <td>€49/mese</td>
+                <td><strong>€29/mese</strong></td>
+                <td>Volume alto clienti</td>
+            </tr>
+            <tr>
+                <td>PRO</td>
+                <td>€129/mese</td>
+                <td><strong>€99/mese</strong></td>
+                <td>Acquisizione rapida</td>
+            </tr>
+            <tr>
+                <td>ENTERPRISE</td>
+                <td>€399/mese</td>
+                <td><strong>€299/mese</strong></td>
+                <td>Competitor switching</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Opzione B: Modello Freemium</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Piano</th>
+                <th>Prezzo</th>
+                <th>Limiti</th>
+                <th>Strategia</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>FREE</td>
+                <td><strong>€0/mese</strong></td>
+                <td>10 clienti, 1 utente</td>
+                <td>Acquisizione massiva</td>
+            </tr>
+            <tr>
+                <td>BASIC</td>
+                <td>€39/mese</td>
+                <td>30 clienti, 2 utenti</td>
+                <td>Conversion da FREE</td>
+            </tr>
+            <tr>
+                <td>PRO</td>
+                <td>€119/mese</td>
+                <td>150 clienti, 5 utenti</td>
+                <td>Piano standard</td>
+            </tr>
+            <tr>
+                <td>ENTERPRISE</td>
+                <td>Custom</td>
+                <td>Illimitato</td>
+                <td>Grandi organizzazioni</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- RACCOMANDAZIONI -->
+    <h2>🎯 Raccomandazioni Strategiche</h2>
+    
+    <div class="highlight-box">
+        <h4>🏆 Strategia Consigliata: Pricing Medio-Alto</h4>
+        <p><strong>Perché:</strong></p>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>✅ Posizionamento come soluzione <strong>premium e professionale</strong></li>
+            <li>✅ Target: studi commerciali strutturati con budget dedicato</li>
+            <li>✅ <strong>Margine alto</strong> (95%+) permette investimenti in sviluppo</li>
+            <li>✅ Piano PRO a €129/mese è il <strong>sweet spot</strong> valore/prezzo</li>
+            <li>✅ Evita guerra di prezzi con competitor low-cost</li>
+            <li>✅ Clienti disposti a pagare valorizzano qualità e supporto</li>
+        </ul>
+    </div>
+
+    <div class="highlight-box" style="background: #fef3c7; border-left-color: #f59e0b;">
+        <h4 style="color: #92400e;">⚠️ Da Evitare</h4>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>❌ <strong>Pricing troppo basso</strong>: svaluta il prodotto e attira clienti problematici</li>
+            <li>❌ <strong>Troppi piani</strong>: confonde i clienti (max 3-4 opzioni)</li>
+            <li>❌ <strong>Feature troppo limitate</strong> nel piano base: frustrazione clienti</li>
+            <li>❌ <strong>Limiti artificiali</strong> che non hanno costo reale (es. numero report)</li>
+        </ul>
+    </div>
+
+    <!-- PROSSIMI PASSI -->
+    <h2>📋 Implementazione e Prossimi Passi</h2>
+    
+    <h3>1. Setup Tecnico Necessario</h3>
+    <ul>
+        <li>✅ Sistema multi-tenancy (database con <code>studio_id</code>)</li>
+        <li>✅ Tabella <code>piani</code> con limiti configurabili</li>
+        <li>✅ Pagina pubblica pricing sul sito</li>
+        <li>✅ Processo registrazione con scelta piano</li>
+        <li>✅ Integrazione gateway pagamenti (Stripe consigliato)</li>
+        <li>✅ Dashboard admin per gestione abbonamenti</li>
+        <li>✅ Sistema upgrade/downgrade piano</li>
+        <li>✅ Fatturazione automatica mensile</li>
+        <li>✅ Email transazionali (conferma, rinnovo, scadenza)</li>
+    </ul>
+
+    <h3>2. Materiale Marketing Necessario</h3>
+    <ul>
+        <li>📄 Landing page professionale con CTA chiare</li>
+        <li>📹 Video demo per ogni piano</li>
+        <li>📊 Case study e testimonianze clienti</li>
+        <li>📧 Email drip campaign per trial/conversione</li>
+        <li>🎯 Materiale sales (PDF, presentazioni)</li>
+    </ul>
+
+    <h3>3. Timeline Implementazione Stimata</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Fase</th>
+                <th>Durata</th>
+                <th>Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Setup multi-tenancy</td>
+                <td>1 settimana</td>
+                <td>Database pronto per SaaS</td>
+            </tr>
+            <tr>
+                <td>Sistema piani + billing</td>
+                <td>1 settimana</td>
+                <td>Stripe integrato, fatturazione OK</td>
+            </tr>
+            <tr>
+                <td>Landing page + marketing</td>
+                <td>1 settimana</td>
+                <td>Sito pronto per vendite</td>
+            </tr>
+            <tr>
+                <td>Testing + soft launch</td>
+                <td>1 settimana</td>
+                <td>Prime 5-10 beta clienti</td>
+            </tr>
+            <tr class="total-row">
+                <td><strong>TOTALE</strong></td>
+                <td><strong>4 settimane</strong></td>
+                <td><strong>Prodotto pronto per vendita</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+        <p>Powered by ProWork Studio M</p>
+        <p>Documento generato il: <script>document.write(new Date().toLocaleDateString('it-IT'));</script></p>
+        <p style="margin-top: 20px; font-size: 11px; color: #94a3b8;">
+            © 2026 ProWork Studio M. Tutti i diritti riservati.<br>
+            Questo documento è confidenziale e destinato esclusivamente all'uso interno.
+        </p>
+    </div>
+
+</body>
+</html>
