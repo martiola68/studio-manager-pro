@@ -14,62 +14,41 @@ export interface Allegato {
 
 export const promemoriaService = {
   async getPromemoria(studioId?: string | null, userId?: string, isResponsabile?: boolean, userSettore?: string | null) {
-    let query = supabase
+    const query = supabase
       .from("tbpromemoria")
       .select(`
         *,
-        operatore:tbutenti!tbpromemoria_operatore_id_fkey (
-          id, nome, cognome, settore, responsabile
-        ),
-        destinatario:tbutenti!tbpromemoria_destinatario_id_fkey (
-          id, nome, cognome, settore, responsabile
-        )
+        operatore:tbutenti!tbpromemoria_operatore_id_fkey(id, nome, cognome, settore, responsabile),
+        destinatario:tbutenti!tbpromemoria_destinatario_id_fkey(id, nome, cognome, settore, responsabile)
       `)
+      .eq("studio_id", studioId ?? null)
       .order("data_scadenza", { ascending: true, nullsFirst: false });
-
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
 
     const { data, error } = await query;
 
     if (error) throw error;
+    
+    // Filtro lato client per logica complessa Responsabile/Settore
+    let filteredData = data || [];
 
-    // Applica filtro lato client basato su ruolo utente
-    if (userId && isResponsabile !== undefined) {
-      let filteredData = data || [];
-
-      if (isResponsabile && userSettore) {
-        // RESPONSABILE: vede tutti i promemoria ricevuti da utenti NON responsabili del suo settore
-        // + i propri promemoria (come operatore o destinatario)
-        filteredData = filteredData.filter(p => {
-          const destinatario = p.destinatario as any;
-          
-          // Promemoria dove l'utente è operatore o destinatario
-          if (p.operatore_id === userId || p.destinatario_id === userId) {
-            return true;
-          }
-          
-          // Promemoria destinati a utenti NON responsabili dello stesso settore
-          if (destinatario && 
-              destinatario.settore === userSettore && 
-              destinatario.responsabile === false) {
-            return true;
-          }
-          
-          return false;
-        });
-      } else if (!isResponsabile) {
-        // NON RESPONSABILE: vede solo promemoria dove è destinatario O operatore
-        filteredData = filteredData.filter(p => 
-          p.destinatario_id === userId || p.operatore_id === userId
-        );
-      }
-
-      return filteredData;
+    if (isResponsabile && userSettore) {
+      filteredData = filteredData.filter(p => {
+        const dest = p.destinatario;
+        // 1. Promemoria dove l'utente è operatore o destinatario
+        if (p.operatore_id === userId || p.destinatario_id === userId) return true;
+        // 2. Promemoria destinati a NON responsabili dello stesso settore
+        if (dest?.settore === userSettore && dest?.responsabile === false) return true;
+        
+        return false;
+      });
+    } else {
+      // Non responsabile: vede solo dove è destinatario o operatore
+      filteredData = filteredData.filter(p => 
+        p.destinatario_id === userId || p.operatore_id === userId
+      );
     }
 
-    return data;
+    return filteredData as Promemoria[];
   },
 
   async getAllegati(promemoriaId: string) {
@@ -265,29 +244,15 @@ export const promemoriaService = {
     destinatario_id?: string | null;
     settore?: string;
     tipo_promemoria_id?: string | null;
+    studio_id?: string | null;
   }) {
     const { data, error } = await supabase
       .from("tbpromemoria")
-      .insert({
-        titolo: promemoria.titolo,
-        descrizione: promemoria.descrizione,
-        data_inserimento: promemoria.data_inserimento,
-        giorni_scadenza: promemoria.giorni_scadenza,
-        data_scadenza: promemoria.data_scadenza,
-        priorita: promemoria.priorita,
-        working_progress: promemoria.stato,
-        operatore_id: promemoria.operatore_id,
-        destinatario_id: promemoria.destinatario_id,
-        settore: promemoria.settore,
-        tipo_promemoria_id: promemoria.tipo_promemoria_id
-      })
+      .insert([promemoria])
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     return data;
   },
 

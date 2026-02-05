@@ -52,6 +52,7 @@ interface Utente {
   email: string;
   settore: string | null;
   responsabile: boolean | null;
+  studio_id: string | null;
 }
 
 interface TipoPromemoria {
