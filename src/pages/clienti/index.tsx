@@ -334,7 +334,7 @@ export default function ClientiPage() {
   const getUtenteNome = (utenteId: string | null): string => {
     if (!utenteId) return "-";
     const utente = utenti.find(u => u.id === utenteId);
-    return utente ? `${utente.nome} ${utente.cognome}` : "-";
+    return utente ? `${utente.nome || ""} ${utente.cognome || ""}`.trim() : "-";
   };
 
   useEffect(() => {
@@ -1592,43 +1592,47 @@ export default function ClientiPage() {
             <TabsContent value="riferimenti" className="space-y-6 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="utente_fiscale_id">Utente Fiscale</Label>
+                  <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
                   <Select
-                    value={formData.utente_operatore_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, utente_operatore_id: value })
+                    value={formData.utente_operatore_id || "none"}
+                    onValueChange={(value) => 
+                      setFormData({ 
+                        ...formData, 
+                        utente_operatore_id: value === "none" ? "" : value 
+                      })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente fiscale" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti
-                        .filter((u) => u.tipo_utente === "Operatore")
+                        .filter(u => u.attivo)
                         .sort((a, b) => {
-                          const cognomeA = (a.cognome || "").toLowerCase();
-                          const cognomeB = (b.cognome || "").toLowerCase();
-                          return cognomeA.localeCompare(cognomeB);
+                          const nomeA = `${a.nome || ''} ${a.cognome || ''}`.trim().toLowerCase();
+                          const nomeB = `${b.nome || ''} ${b.cognome || ''}`.trim().toLowerCase();
+                          return nomeA.localeCompare(nomeB);
                         })
-                        .map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                        .map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="professionista_fiscale_id">
+                  <Label htmlFor="utente_professionista_id">
                     Professionista Fiscale
                   </Label>
                   <Select
-                    value={formData.utente_professionista_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        utente_professionista_id: value,
+                    value={formData.utente_professionista_id || "none"}
+                    onValueChange={(value) => 
+                      setFormData({ 
+                        ...formData, 
+                        utente_professionista_id: value === "none" ? "" : value 
                       })
                     }
                   >
@@ -1636,18 +1640,19 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona professionista fiscale" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti
-                        .filter((u) => u.tipo_utente === "Professionista")
+                        .filter(u => u.attivo)
                         .sort((a, b) => {
-                          const cognomeA = (a.cognome || "").toLowerCase();
-                          const cognomeB = (b.cognome || "").toLowerCase();
-                          return cognomeA.localeCompare(cognomeB);
+                          const nomeA = `${a.nome || ''} ${a.cognome || ''}`.trim().toLowerCase();
+                          const nomeB = `${b.nome || ''} ${b.cognome || ''}`.trim().toLowerCase();
+                          return nomeA.localeCompare(nomeB);
                         })
-                        .map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                        .map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1655,27 +1660,31 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
                   <Select
-                    value={formData.utente_payroll_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, utente_payroll_id: value })
+                    value={formData.utente_payroll_id || "none"}
+                    onValueChange={(value) => 
+                      setFormData({ 
+                        ...formData, 
+                        utente_payroll_id: value === "none" ? "" : value 
+                      })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti
-                        .filter((u) => u.tipo_utente === "Operatore")
+                        .filter(u => u.attivo)
                         .sort((a, b) => {
-                          const cognomeA = (a.cognome || "").toLowerCase();
-                          const cognomeB = (b.cognome || "").toLowerCase();
-                          return cognomeA.localeCompare(cognomeB);
+                          const nomeA = `${a.nome || ''} ${a.cognome || ''}`.trim().toLowerCase();
+                          const nomeB = `${b.nome || ''} ${b.cognome || ''}`.trim().toLowerCase();
+                          return nomeA.localeCompare(nomeB);
                         })
-                        .map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                        .map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1685,11 +1694,11 @@ export default function ClientiPage() {
                     Professionista Payroll
                   </Label>
                   <Select
-                    value={formData.professionista_payroll_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        professionista_payroll_id: value,
+                    value={formData.professionista_payroll_id || "none"}
+                    onValueChange={(value) => 
+                      setFormData({ 
+                        ...formData, 
+                        professionista_payroll_id: value === "none" ? "" : value 
                       })
                     }
                   >
@@ -1697,18 +1706,19 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti
-                        .filter((u) => u.tipo_utente === "Professionista")
+                        .filter(u => u.attivo)
                         .sort((a, b) => {
-                          const cognomeA = (a.cognome || "").toLowerCase();
-                          const cognomeB = (b.cognome || "").toLowerCase();
-                          return cognomeA.localeCompare(cognomeB);
+                          const nomeA = `${a.nome || ''} ${a.cognome || ''}`.trim().toLowerCase();
+                          const nomeB = `${b.nome || ''} ${b.cognome || ''}`.trim().toLowerCase();
+                          return nomeA.localeCompare(nomeB);
                         })
-                        .map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                        .map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.nome} {u.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1717,9 +1727,7 @@ export default function ClientiPage() {
                   <Label htmlFor="contatto1_id">Contatto 1</Label>
                   <Select
                     value={formData.contatto1_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona contatto" />
@@ -1746,9 +1754,7 @@ export default function ClientiPage() {
                   <Input
                     id="referente_esterno"
                     value={formData.referente_esterno}
-                    onChange={(e) =>
-                      setFormData({ ...formData, referente_esterno: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, referente_esterno: e.target.value })}
                     placeholder="Nome referente esterno"
                   />
                 </div>
@@ -1757,9 +1763,7 @@ export default function ClientiPage() {
                   <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
                   <Select
                     value={formData.tipo_prestazione_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona prestazione" />
@@ -1779,9 +1783,7 @@ export default function ClientiPage() {
                   <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
                   <Select
                     value={formData.tipo_redditi || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value as any })
-                    }
+                    onValueChange={(value: string) => setFormData({ ...formData, tipo_redditi: value as any })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona tipo" />
@@ -1800,9 +1802,7 @@ export default function ClientiPage() {
                   <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
                   <Select
                     value={formData.cassetto_fiscale_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona referente" />
@@ -1893,9 +1893,7 @@ export default function ClientiPage() {
                       <Label>Tipo Prestazione A</Label>
                       <Select
                         value={formData.tipo_prestazione_a || ""}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, tipo_prestazione_a: value })
-                        }
+                        onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_a: value })}
                         disabled={!formData.gestione_antiriciclaggio}
                       >
                         <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
@@ -1916,12 +1914,7 @@ export default function ClientiPage() {
                         <Label>Rischio Verifica A</Label>
                         <Select
                           value={formData.rischio_ver_a || ""}
-                          onValueChange={(value) =>
-                            handleRiskChange(
-                              value,
-                              "rischio_ver_a"
-                            )
-                          }
+                          onValueChange={(value) => handleRiskChange(value, "rischio_ver_a")}
                           disabled={!formData.gestione_antiriciclaggio}
                         >
                           <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
@@ -2008,9 +2001,7 @@ export default function ClientiPage() {
                       <Label>Tipo Prestazione B</Label>
                       <Select
                         value={formData.tipo_prestazione_b || ""}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, tipo_prestazione_b: value })
-                        }
+                        onValueChange={(value) => setFormData({ ...formData, tipo_prestazione_b: value })}
                         disabled={!formData.gestione_antiriciclaggio}
                       >
                         <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
@@ -2031,12 +2022,7 @@ export default function ClientiPage() {
                         <Label>Rischio Verifica B</Label>
                         <Select
                           value={formData.rischio_ver_b || ""}
-                          onValueChange={(value) =>
-                            handleRiskChange(
-                              value,
-                              "rischio_ver_b"
-                            )
-                          }
+                          onValueChange={(value) => handleRiskChange(value, "rischio_ver_b")}
                           disabled={!formData.gestione_antiriciclaggio}
                         >
                           <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
