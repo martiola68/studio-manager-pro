@@ -40,6 +40,7 @@ import {
   encryptCassettoPasswords,
   decryptCassettoPasswords,
   migrateAllCassettiToEncrypted,
+  isEncryptionEnabled,
 } from "@/services/encryptionService";
 import { isEncrypted, updateLastActivity, shouldAutoLock } from "@/lib/encryption";
 
