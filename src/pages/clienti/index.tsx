@@ -733,7 +733,7 @@ export default function ClientiPage() {
       cod_cliente: cliente.cod_cliente || "",
       tipo_cliente: cliente.tipo_cliente || "Persona fisica",
       tipologia_cliente: cliente.tipologia_cliente || undefined,
-      settore: cliente.settore || undefined,
+      settore: (cliente as any).settore || undefined,
       ragione_sociale: cliente.ragione_sociale || "",
       partita_iva: cliente.partita_iva || "",
       codice_fiscale: cliente.codice_fiscale || "",
