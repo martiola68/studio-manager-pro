@@ -42,7 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
@@ -50,6 +50,16 @@ import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
 import { useStudio } from "@/contexts/StudioContext";
+import { 
+  isEncryptionEnabled, 
+  isEncryptionLocked,
+  encryptClienteSensitiveData,
+  decryptClienteSensitiveData,
+  getStoredEncryptionKey,
+  unlockCassetti,
+  lockCassetti,
+  migrateAllClientiToEncrypted
+} from "@/services/encryptionService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -106,22 +116,27 @@ function addMonths(date: Date, months: number): Date {
 export default function ClientiPage() {
   const { toast } = useToast();
   const { studioId } = useStudio();
-
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [selectedUtenteFiscale, setSelectedUtenteFiscale] = useState<string>("all");
   const [selectedUtentePayroll, setSelectedUtentePayroll] = useState<string>("all");
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
+
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [encryptionLocked, setEncryptionLocked] = useState(true);
+  const [showSensitiveData, setShowSensitiveData] = useState<{[key: string]: boolean}>({});
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
@@ -140,7 +155,9 @@ export default function ClientiPage() {
     cod_cliente: string;
     tipo_cliente: string;
     tipologia_cliente?: string;
-    settore?: string;
+    settore_fiscale: boolean;
+    settore_lavoro: boolean;
+    settore_consulenza: boolean;
     ragione_sociale: string;
     partita_iva: string;
     codice_fiscale: string;
@@ -181,7 +198,9 @@ export default function ClientiPage() {
     cod_cliente: "",
     tipo_cliente: "Persona fisica",
     tipologia_cliente: "Interno",
-    settore: "Fiscale",
+    settore_fiscale: true,
+    settore_lavoro: false,
+    settore_consulenza: false,
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -339,33 +358,12 @@ export default function ClientiPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     filterClienti();
   }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
-
-  useEffect(() => {
-    if (formData.settore === "Fiscale") {
-      setFormData(prev => ({
-        ...prev,
-        utente_payroll_id: "",
-        professionista_payroll_id: ""
-      }));
-    } else if (formData.settore === "Lavoro") {
-      setFormData(prev => ({
-        ...prev,
-        utente_operatore_id: "",
-        utente_professionista_id: ""
-      }));
-    }
-  }, [formData.settore]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-
       const [
         clientiData,
         contattiData,
@@ -380,27 +378,7 @@ export default function ClientiPage() {
         supabase.from("tbprestazioni").select("*").order("descrizione")
       ]);
 
-      // Mappo i 3 flag booleani a stringa 'settore' per compatibilità con form originale
-      const clientiMappati = (clientiData || []).map((cliente: any) => {
-        let settore = "Fiscale"; // Default
-        const flags = [];
-        if (cliente.settore_fiscale) flags.push("Fiscale");
-        if (cliente.settore_lavoro) flags.push("Lavoro");
-        if (cliente.settore_consulenza) flags.push("Consulenza");
-
-        if (flags.includes("Fiscale") && flags.includes("Lavoro")) {
-          settore = "Fiscale & Lavoro";
-        } else if (flags.length > 0) {
-          settore = flags.join(" & ");
-        } else if (cliente.settore) {
-          // Fallback per vecchi record se esiste ancora la colonna (raro)
-          settore = cliente.settore;
-        }
-
-        return { ...cliente, settore };
-      });
-
-      setClienti(clientiMappati);
+      setClienti(clientiData);
       setContatti(contattiData);
       setUtenti(utentiData);
       setCassettiFiscali(cassettiData);
@@ -460,44 +438,37 @@ export default function ClientiPage() {
         return;
       }
 
-      const dataToSave = {
+      let dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-        utente_operatore_id: formData.utente_operatore_id || null,
-        utente_professionista_id: formData.utente_professionista_id || null,
-        utente_payroll_id: formData.utente_payroll_id || null,
-        professionista_payroll_id: formData.professionista_payroll_id || null,
-        contatto1_id: formData.contatto1_id || null,
-        referente_esterno: formData.referente_esterno || null,
-        tipo_prestazione_id: formData.tipo_prestazione_id || null,
-        tipo_redditi: formData.tipo_redditi || null,
-        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
-
-        // Mappatura Settore Stringa -> Flags DB
-        settore_fiscale: formData.settore?.includes("Fiscale") || false,
-        settore_lavoro: formData.settore?.includes("Lavoro") || false,
-        settore_consulenza: formData.settore?.includes("Consulenza") || false,
+        utente_operatore_id: (formData.settore_fiscale && formData.utente_operatore_id) || undefined,
+        utente_professionista_id: (formData.settore_fiscale && formData.utente_professionista_id) || undefined,
+        utente_payroll_id: (formData.settore_lavoro && formData.utente_payroll_id) || undefined,
+        professionista_payroll_id: (formData.settore_lavoro && formData.professionista_payroll_id) || undefined,
+        contatto1_id: formData.contatto1_id || undefined,
+        referente_esterno: formData.referente_esterno || undefined,
+        tipo_prestazione_id: formData.tipo_prestazione_id || undefined,
+        tipo_redditi: formData.tipo_redditi || undefined,
+        cassetto_fiscale_id: formData.cassetto_fiscale_id || undefined,
         tipologia_cliente: formData.tipologia_cliente || "Interno",
-
-        matricola_inps: formData.matricola_inps || null,
-        pat_inail: formData.pat_inail || null,
-        codice_ditta_ce: formData.codice_ditta_ce || null,
-
-        tipo_prestazione_a: formData.tipo_prestazione_a || null,
-        tipo_prestazione_b: formData.tipo_prestazione_b || null,
-        rischio_ver_a: formData.rischio_ver_a || null,
-        rischio_ver_b: formData.rischio_ver_b || null,
-        gg_ver_a: formData.gg_ver_a ?? null,
-        gg_ver_b: formData.gg_ver_b ?? null,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || null,
-        scadenza_antiric: formData.scadenza_antiric?.toISOString() || null,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || null,
-        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || null,
+        matricola_inps: formData.matricola_inps || undefined,
+        pat_inail: formData.pat_inail || undefined,
+        codice_ditta_ce: formData.codice_ditta_ce || undefined,
+        tipo_prestazione_a: formData.tipo_prestazione_a || undefined,
+        tipo_prestazione_b: formData.tipo_prestazione_b || undefined,
+        rischio_ver_a: formData.rischio_ver_a || undefined,
+        rischio_ver_b: formData.rischio_ver_b || undefined,
+        gg_ver_a: formData.gg_ver_a ?? undefined,
+        gg_ver_b: formData.gg_ver_b ?? undefined,
+        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || undefined,
+        scadenza_antiric: formData.scadenza_antiric?.toISOString() || undefined,
+        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || undefined,
+        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || undefined,
         gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
         note_antiriciclaggio: formData.note_antiriciclaggio,
-        giorni_scad_ver_a: formData.giorni_scad_ver_a ?? null,
-        giorni_scad_ver_b: formData.giorni_scad_ver_b ?? null,
-
+        giorni_scad_ver_a: formData.giorni_scad_ver_a ?? undefined,
+        giorni_scad_ver_b: formData.giorni_scad_ver_b ?? undefined,
+        
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
         flag_bilancio: scadenzari.bilancio,
@@ -510,8 +481,38 @@ export default function ClientiPage() {
         flag_imu: scadenzari.imu,
       };
 
-      // Rimuovo il campo 'settore' che non esiste nel DB
-      delete (dataToSave as any).settore;
+      // Encrypt sensitive fields if encryption is enabled and unlocked
+      if (encryptionEnabled && !encryptionLocked) {
+        try {
+          const encrypted = await encryptClienteSensitiveData({
+            codice_fiscale: dataToSave.codice_fiscale,
+            partita_iva: dataToSave.partita_iva,
+            matricola_inps: dataToSave.matricola_inps,
+            pat_inail: dataToSave.pat_inail,
+            codice_ditta_ce: dataToSave.codice_ditta_ce,
+            note: dataToSave.note,
+            note_antiriciclaggio: dataToSave.note_antiriciclaggio,
+          });
+          
+          // Merge encrypted data, converting nulls to undefined to satisfy strict types if needed, 
+          // or cast to any if the service accepts nulls (which Supabase does)
+          dataToSave = { 
+            ...dataToSave, 
+            ...encrypted,
+            // Ensure compatibility with types that strictly want undefined for "empty"
+            codice_fiscale: encrypted.codice_fiscale || dataToSave.codice_fiscale,
+            partita_iva: encrypted.partita_iva || dataToSave.partita_iva,
+          } as any;
+        } catch (error: any) {
+          console.error("Encryption error:", error);
+          toast({
+            title: "Errore Encryption",
+            description: "Impossibile cifrare i dati. Verifica di aver sbloccato la protezione.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
       if (editingCliente) {
         await clienteService.updateCliente(editingCliente.id, dataToSave);
@@ -664,10 +665,10 @@ export default function ClientiPage() {
 
       if (cliente.flag_imu) {
         scadenzariAttivi.push("IMU");
-
+        
         const professionista = utenti.find(u => u.id === cliente.utente_professionista_id);
         const operatore = utenti.find(u => u.id === cliente.utente_operatore_id);
-
+        
         const promises = [
           supabase.from("tbscadimu").upsert({
             id: cliente.id,
@@ -690,7 +691,7 @@ export default function ClientiPage() {
             conferma_riga: false
           }, { onConflict: "id" }).then()
         ];
-
+        
         inserimenti.push(...promises);
       }
 
@@ -723,72 +724,137 @@ export default function ClientiPage() {
     }
   };
 
+  const handleUnlockCassetti = () => {
+    setShowUnlockDialog(true);
+  };
+
+  const handleConfirmUnlock = async () => {
+    try {
+      const result = await unlockCassetti(studioId || "", unlockPassword);
+      if (result.success) {
+        setEncryptionLocked(false);
+        setShowUnlockDialog(false);
+        setUnlockPassword("");
+        toast({
+          title: "Sbloccato",
+          description: "Dati sensibili sbloccati con successo",
+        });
+        loadData(); // Reload to decrypt data
+      } else {
+        toast({
+          title: "Errore",
+          description: result.error || "Password errata",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante lo sblocco",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLockCassetti = () => {
+    lockCassetti();
+    setEncryptionLocked(true);
+    setShowSensitiveData({});
+    toast({
+      title: "Bloccato",
+      description: "Dati sensibili bloccati",
+    });
+    loadData(); // Reload to hide decrypted data
+  };
+
   const handleAddNew = () => {
     resetForm();
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (cliente: Cliente) => {
+  const handleEdit = async (cliente: Cliente) => {
     setEditingCliente(cliente);
-
+    
+    let clienteData = { ...cliente };
+    
+    // Decrypt sensitive fields if encryption is enabled and unlocked
+    if (encryptionEnabled && !encryptionLocked) {
+      try {
+        const decrypted = await decryptClienteSensitiveData({
+          codice_fiscale: cliente.codice_fiscale,
+          partita_iva: cliente.partita_iva,
+          matricola_inps: cliente.matricola_inps,
+          pat_inail: cliente.pat_inail,
+          codice_ditta_ce: cliente.codice_ditta_ce,
+          note: cliente.note,
+          note_antiriciclaggio: cliente.note_antiriciclaggio,
+        });
+        
+        clienteData = { ...clienteData, ...decrypted };
+      } catch (error) {
+        console.error("Decryption error:", error);
+      }
+    }
+    
     setFormData({
       ...formData,
-      ...cliente,
-      cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: cliente.tipo_cliente || "Persona fisica",
-      tipologia_cliente: cliente.tipologia_cliente || undefined,
-      settore: (cliente as any).settore || undefined,
-      ragione_sociale: cliente.ragione_sociale || "",
-      partita_iva: cliente.partita_iva || "",
-      codice_fiscale: cliente.codice_fiscale || "",
-      indirizzo: cliente.indirizzo || "",
-      cap: cliente.cap || "",
-      citta: cliente.citta || "",
-      provincia: cliente.provincia || "",
-      email: cliente.email || "",
-      attivo: cliente.attivo ?? false,
-      tipo_redditi: (cliente.tipo_redditi as any) || undefined,
-      utente_operatore_id: cliente.utente_operatore_id || "",
-      utente_professionista_id: cliente.utente_professionista_id || "",
-      utente_payroll_id: cliente.utente_payroll_id || "",
-      professionista_payroll_id: cliente.professionista_payroll_id || "",
-      contatto1_id: cliente.contatto1_id || "",
-      referente_esterno: cliente.referente_esterno || "",
-      tipo_prestazione_id: cliente.tipo_prestazione_id || "",
-      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      matricola_inps: cliente.matricola_inps || "",
-      pat_inail: cliente.pat_inail || "",
-      codice_ditta_ce: cliente.codice_ditta_ce || "",
-      note_antiriciclaggio: cliente.note_antiriciclaggio || "",
-      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
-      gg_ver_a: cliente.gg_ver_a ?? null,
-      gg_ver_b: cliente.gg_ver_b ?? null,
-      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : null,
-      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : null,
-      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : null,
-      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : null,
-      rischio_ver_a: cliente.rischio_ver_a || "",
-      rischio_ver_b: cliente.rischio_ver_b || "",
-      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
-      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
-      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
-      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
-      note: cliente.note || "",
+      ...clienteData,
+      cod_cliente: clienteData.cod_cliente || "",
+      tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
+      tipologia_cliente: clienteData.tipologia_cliente || undefined,
+      settore_fiscale: clienteData.settore_fiscale ?? true,
+      settore_lavoro: clienteData.settore_lavoro ?? false,
+      settore_consulenza: clienteData.settore_consulenza ?? false,
+      ragione_sociale: clienteData.ragione_sociale || "",
+      partita_iva: clienteData.partita_iva || "",
+      codice_fiscale: clienteData.codice_fiscale || "",
+      indirizzo: clienteData.indirizzo || "",
+      cap: clienteData.cap || "",
+      citta: clienteData.citta || "",
+      provincia: clienteData.provincia || "",
+      email: clienteData.email || "",
+      attivo: clienteData.attivo ?? false,
+      tipo_redditi: (clienteData.tipo_redditi as any) || undefined,
+      utente_operatore_id: clienteData.utente_operatore_id || "",
+      utente_professionista_id: clienteData.utente_professionista_id || "",
+      utente_payroll_id: clienteData.utente_payroll_id || "",
+      professionista_payroll_id: clienteData.professionista_payroll_id || "",
+      contatto1_id: clienteData.contatto1_id || "",
+      referente_esterno: clienteData.referente_esterno || "",
+      tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
+      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
+      matricola_inps: clienteData.matricola_inps || "",
+      pat_inail: clienteData.pat_inail || "",
+      codice_ditta_ce: clienteData.codice_ditta_ce || "",
+      note_antiriciclaggio: clienteData.note_antiriciclaggio || "",
+      gestione_antiriciclaggio: clienteData.gestione_antiriciclaggio ?? false,
+      gg_ver_a: clienteData.gg_ver_a ?? null,
+      gg_ver_b: clienteData.gg_ver_b ?? null,
+      data_ultima_verifica_antiric: clienteData.data_ultima_verifica_antiric ? new Date(clienteData.data_ultima_verifica_antiric) : null,
+      data_ultima_verifica_b: clienteData.data_ultima_verifica_b ? new Date(clienteData.data_ultima_verifica_b) : null,
+      scadenza_antiric: clienteData.scadenza_antiric ? new Date(clienteData.scadenza_antiric) : null,
+      scadenza_antiric_b: clienteData.scadenza_antiric_b ? new Date(clienteData.scadenza_antiric_b) : null,
+      rischio_ver_a: clienteData.rischio_ver_a || "",
+      rischio_ver_b: clienteData.rischio_ver_b || "",
+      tipo_prestazione_a: clienteData.tipo_prestazione_a || "",
+      tipo_prestazione_b: clienteData.tipo_prestazione_b || "",
+      giorni_scad_ver_a: clienteData.giorni_scad_ver_a ?? null,
+      giorni_scad_ver_b: clienteData.giorni_scad_ver_b ?? null,
+      note: clienteData.note || "",
     });
-
+    
     setScadenzari({
-      iva: cliente.flag_iva ?? false,
-      cu: cliente.flag_cu ?? false,
-      bilancio: cliente.flag_bilancio ?? false,
-      fiscali: cliente.flag_fiscali ?? false,
-      lipe: cliente.flag_lipe ?? false,
-      modello_770: cliente.flag_770 ?? false,
-      esterometro: cliente.flag_esterometro ?? false,
-      ccgg: cliente.flag_ccgg ?? false,
-      proforma: cliente.flag_proforma ?? false,
-      imu: cliente.flag_imu ?? false,
+      iva: clienteData.flag_iva ?? false,
+      cu: clienteData.flag_cu ?? false,
+      bilancio: clienteData.flag_bilancio ?? false,
+      fiscali: clienteData.flag_fiscali ?? false,
+      lipe: clienteData.flag_lipe ?? false,
+      modello_770: clienteData.flag_770 ?? false,
+      esterometro: clienteData.flag_esterometro ?? false,
+      ccgg: clienteData.flag_ccgg ?? false,
+      proforma: clienteData.flag_proforma ?? false,
+      imu: clienteData.flag_imu ?? false,
     });
-
     setIsDialogOpen(true);
   };
 
@@ -798,7 +864,9 @@ export default function ClientiPage() {
       cod_cliente: "",
       tipo_cliente: "Persona fisica",
       tipologia_cliente: "Interno",
-      settore: "Fiscale",
+      settore_fiscale: true,
+      settore_lavoro: false,
+      settore_consulenza: false,
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -854,7 +922,9 @@ export default function ClientiPage() {
     const headers = [
       "Tipo Cliente",
       "Tipologia Cliente",
-      "Settore",
+      "Settore Fiscale (VERO/FALSO)",
+      "Settore Lavoro (VERO/FALSO)",
+      "Settore Consulenza (VERO/FALSO)",
       "Ragione Sociale",
       "Partita IVA",
       "Codice Fiscale",
@@ -879,7 +949,9 @@ export default function ClientiPage() {
       [
         "Persona fisica",
         "Interno",
-        "Fiscale",
+        "VERO",
+        "FALSO",
+        "FALSO",
         "ESEMPIO SRL",
         "01234567890",
         "01234567890",
@@ -902,203 +974,361 @@ export default function ClientiPage() {
     ];
 
     const csvContent = [
-      headers.join(";"),
-      ...exampleRows.map(row => row.join(";"))
+      headers.join(","),
+      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "template_importazione_clienti.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
+    link.href = URL.createObjectURL(blob);
+    link.download = "template_importazione_clienti.csv";
     link.click();
-    document.body.removeChild(link);
+
+    toast({
+      title: "Template scaricato",
+      description: "Compila il file CSV seguendo l'esempio fornito. Lascia vuoti i campi non obbligatori se non disponibili."
+    });
   };
 
-  const handleImportExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      let rows: any[] = [];
+
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        rows = jsonData.slice(1).map((row: any) => {
+          if (Array.isArray(row)) {
+            return row;
+          }
+          return [];
+        });
+      } else {
+        const text = await file.text();
+        const lines = text.split("\n");
+        rows = lines.slice(1).map(line => {
+          const delimiter = line.includes(";") ? ";" : ",";
+          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+        });
+      }
 
       let successCount = 0;
       let errorCount = 0;
+      const errors: string[] = [];
 
-      for (const row of jsonData) {
+      for (let i = 0; i < rows.length; i++) {
+        const values = rows[i];
+        
+        if (!values || values.length === 0 || !values[0]) continue;
+
+        const tipoCliente = (values[0] || "").toString().trim();
+        const tipologiaCliente = (values[1] || "").toString().trim();
+        const settoreFiscaleRaw = (values[2] || "VERO").toString().trim().toUpperCase();
+        const settoreLavoroRaw = (values[3] || "FALSO").toString().trim().toUpperCase();
+        const settoreConsulenzaRaw = (values[4] || "FALSO").toString().trim().toUpperCase();
+        const ragioneSociale = (values[5] || "").toString().trim();
+
+        if (!tipoCliente || !tipologiaCliente || !ragioneSociale) {
+          errors.push(`Riga ${i + 2}: Campi obbligatori mancanti`);
+          errorCount++;
+          continue;
+        }
+
+        const findUserId = (name: string) => {
+          if (!name) return null;
+          const user = utenti.find(u => 
+            `${u.nome} ${u.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
+          );
+          return user?.id || null;
+        };
+
+        const findContattoId = (name: string) => {
+          if (!name) return null;
+          const contatto = contatti.find(c => 
+            `${c.nome} ${c.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
+          );
+          return contatto?.id || null;
+        };
+
+        const findPrestazioneId = (desc: string) => {
+          if (!desc) return null;
+          const prestazione = prestazioni.find(p => 
+            p.descrizione?.toLowerCase().trim() === desc.toLowerCase().trim()
+          );
+          return prestazione?.id || null;
+        };
+
+        const attivoRaw = (values[13] || "VERO").toString().trim().toUpperCase();
+        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
+        
+        const settoreFiscale = settoreFiscaleRaw === "VERO" || settoreFiscaleRaw === "TRUE" || settoreFiscaleRaw === "SI" || settoreFiscaleRaw === "1";
+        const settoreLavoro = settoreLavoroRaw === "VERO" || settoreLavoroRaw === "TRUE" || settoreLavoroRaw === "SI" || settoreLavoroRaw === "1";
+        const settoreConsulenza = settoreConsulenzaRaw === "VERO" || settoreConsulenzaRaw === "TRUE" || settoreConsulenzaRaw === "SI" || settoreConsulenzaRaw === "1";
+
+        const clienteData: any = {
+          tipo_cliente: tipoCliente,
+          tipologia_cliente: tipologiaCliente,
+          settore_fiscale: settoreFiscale,
+          settore_lavoro: settoreLavoro,
+          settore_consulenza: settoreConsulenza,
+          ragione_sociale: ragioneSociale,
+          attivo: attivo,
+        };
+
+        if (values[6]) clienteData.partita_iva = values[6].toString().trim();
+        if (values[7]) clienteData.codice_fiscale = values[7].toString().trim();
+        if (values[8]) clienteData.indirizzo = values[8].toString().trim();
+        if (values[9]) clienteData.cap = values[9].toString().trim();
+        if (values[10]) clienteData.citta = values[10].toString().trim();
+        if (values[11]) clienteData.provincia = values[11].toString().trim();
+        if (values[12]) clienteData.email = values[12].toString().trim();
+        if (values[14]) clienteData.note = values[14].toString().trim();
+        
+        const utenteFiscale = findUserId(values[15]?.toString().trim());
+        if (utenteFiscale && settoreFiscale) clienteData.utente_operatore_id = utenteFiscale;
+        
+        const profFiscale = findUserId(values[16]?.toString().trim());
+        if (profFiscale && settoreFiscale) clienteData.utente_professionista_id = profFiscale;
+        
+        const utentePayroll = findUserId(values[17]?.toString().trim());
+        if (utentePayroll && settoreLavoro) clienteData.utente_payroll_id = utentePayroll;
+        
+        const profPayroll = findUserId(values[18]?.toString().trim());
+        if (profPayroll && settoreLavoro) clienteData.professionista_payroll_id = profPayroll;
+        
+        const contatto1 = findContattoId(values[19]?.toString().trim());
+        if (contatto1) clienteData.contatto1_id = contatto1;
+        
+        const contatto2 = findContattoId(values[20]?.toString().trim());
+        if (contatto2) clienteData.contatto2_id = contatto2;
+        
+        const prestazione = findPrestazioneId(values[21]?.toString().trim());
+        if (prestazione) clienteData.tipo_prestazione_id = prestazione;
+        
+        if (values[22]) clienteData.tipo_redditi = values[22].toString().trim();
+
         try {
-          const rowData = row as any;
-
-          const utenteOperatore = utenti.find(
-            u => `${u.nome} ${u.cognome}` === rowData["Utente Fiscale"]
-          );
-          const utenteProfessionista = utenti.find(
-            u => `${u.nome} ${u.cognome}` === rowData["Professionista Fiscale"]
-          );
-          const utentePayroll = utenti.find(
-            u => `${u.nome} ${u.cognome}` === rowData["Utente Payroll"]
-          );
-          const professionistaPayroll = utenti.find(
-            u => `${u.nome} ${u.cognome}` === rowData["Professionista Payroll"]
-          );
-
-          const clienteData = {
-            cod_cliente: rowData["Codice Cliente"] || `CL-${Date.now().toString().slice(-6)}`,
-            tipo_cliente: rowData["Tipo Cliente"] || "Persona fisica",
-            tipologia_cliente: rowData["Tipologia Cliente"] || "Interno",
-            settore_fiscale: rowData["Settore"]?.includes("Fiscale") || false,
-            settore_lavoro: rowData["Settore"]?.includes("Lavoro") || false,
-            settore_consulenza: rowData["Settore"]?.includes("Consulenza") || false,
-            ragione_sociale: rowData["Ragione Sociale"],
-            partita_iva: rowData["Partita IVA"] || null,
-            codice_fiscale: rowData["Codice Fiscale"] || null,
-            indirizzo: rowData["Indirizzo"] || null,
-            cap: rowData["CAP"] || null,
-            citta: rowData["Città"] || null,
-            provincia: rowData["Provincia"] || null,
-            email: rowData["Email"],
-            attivo: rowData["Attivo"]?.toString().toLowerCase() === "vero" || true,
-            note: rowData["Note"] || null,
-            utente_operatore_id: utenteOperatore?.id || null,
-            utente_professionista_id: utenteProfessionista?.id || null,
-            utente_payroll_id: utentePayroll?.id || null,
-            professionista_payroll_id: professionistaPayroll?.id || null,
-            tipo_redditi: rowData["Tipo Redditi"] || null,
-            flag_iva: true,
-            flag_cu: true,
-            flag_bilancio: true,
-            flag_fiscali: true,
-            flag_lipe: true,
-            flag_770: true,
-            flag_esterometro: true,
-            flag_ccgg: true,
-            flag_proforma: true,
-            flag_imu: true,
-          };
-
           await clienteService.createCliente(clienteData);
           successCount++;
-        } catch (error) {
-          console.error("Errore importazione riga:", error);
+        } catch (error: any) {
           errorCount++;
+          const errorMsg = error.message || "Errore sconosciuto";
+          errors.push(`Riga ${i + 2}: ${errorMsg}`);
+          console.error(`Errore importazione riga ${i + 2}:`, error);
         }
+      }
+
+      if (errors.length > 0 && errors.length <= 10) {
+        console.error("Primi 10 errori importazione:", errors.slice(0, 10));
       }
 
       toast({
         title: "Importazione completata",
-        description: `${successCount} clienti importati con successo${errorCount > 0 ? `, ${errorCount} errori` : ""}`,
+        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
+        variant: successCount > 0 ? "default" : "destructive",
       });
 
-      setImportDialogOpen(false);
       loadData();
+      setImportDialogOpen(false);
+      event.target.value = "";
     } catch (error) {
       console.error("Errore importazione file:", error);
       toast({
         title: "Errore",
-        description: "Impossibile importare il file",
+        description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
         variant: "destructive",
       });
     }
-
-    event.target.value = "";
   };
 
-  const handleExportExcel = () => {
-    const exportData = filteredClienti.map((cliente) => ({
-      "Codice Cliente": cliente.cod_cliente,
-      "Tipo Cliente": cliente.tipo_cliente,
-      "Tipologia Cliente": cliente.tipologia_cliente,
-      "Settore": (cliente as any).settore,
-      "Ragione Sociale": cliente.ragione_sociale,
-      "Partita IVA": cliente.partita_iva,
-      "Codice Fiscale": cliente.codice_fiscale,
-      "Indirizzo": cliente.indirizzo,
-      "CAP": cliente.cap,
-      "Città": cliente.citta,
-      "Provincia": cliente.provincia,
-      "Email": cliente.email,
-      "Utente Fiscale": getUtenteNome(cliente.utente_operatore_id),
-      "Professionista Fiscale": getUtenteNome(cliente.utente_professionista_id),
-      "Utente Payroll": getUtenteNome(cliente.utente_payroll_id),
-      "Professionista Payroll": getUtenteNome(cliente.professionista_payroll_id),
-      "Tipo Redditi": cliente.tipo_redditi,
-      "Attivo": cliente.attivo ? "SI" : "NO",
-      "Note": cliente.note,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Clienti");
-    XLSX.writeFile(workbook, `clienti_${new Date().toISOString().split("T")[0]}.xlsx`);
-  };
+  const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
+  const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Caricamento in corso...</p>
+          <p className="text-muted-foreground">Caricamento clienti...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="flex items-center space-x-2">
-            <Users className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl font-bold">Gestione Clienti</CardTitle>
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-3xl font-bold">Gestione Clienti</h1>
+            <p className="text-muted-foreground mt-1">
+              Anagrafica completa e gestione scadenzari
+            </p>
           </div>
           <div className="flex gap-2">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              id="import-file"
-              onChange={handleImportExcel}
-            />
-            <Button variant="outline" onClick={() => document.getElementById("import-file")?.click()}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importa
-            </Button>
-            <Button variant="outline" onClick={downloadTemplate}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Template
-            </Button>
-            <Button variant="outline" onClick={handleExportExcel}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Esporta
-            </Button>
-            <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
+            {encryptionEnabled && (
+              <Button
+                variant="outline"
+                onClick={encryptionLocked ? handleUnlockCassetti : handleLockCassetti}
+                className={encryptionLocked ? "border-orange-600 text-orange-600" : "border-green-600 text-green-600"}
+              >
+                {encryptionLocked ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Sblocca Dati
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="h-4 w-4 mr-2" />
+                    Blocca Dati
+                  </>
+                )}
+              </Button>
+            )}
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Importa Excel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+                <DialogHeader>
+                  <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-2">📋 Colonne richieste (in ordine):</p>
+                        <ol className="list-decimal list-inside space-y-1 text-xs">
+                          <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Altro)</li>
+                          <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
+                          <li><strong>Settore Fiscale</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
+                          <li><strong>Settore Lavoro</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
+                          <li><strong>Settore Consulenza</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
+                          <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
+                          <li><strong>Partita IVA</strong> - Opzionale</li>
+                          <li><strong>Codice Fiscale</strong> - Opzionale</li>
+                          <li><strong>Indirizzo</strong> - Opzionale</li>
+                          <li><strong>CAP</strong> - Opzionale</li>
+                          <li><strong>Città</strong> - Opzionale</li>
+                          <li><strong>Provincia</strong> - Opzionale</li>
+                          <li><strong>Email</strong> - Opzionale</li>
+                          <li><strong>Attivo</strong> - Opzionale (VERO/FALSO, default: VERO)</li>
+                          <li><strong>Note</strong> - Opzionale</li>
+                          <li><strong>Utente Fiscale</strong> - Opzionale (nome utente dal sistema)</li>
+                          <li><strong>Professionista Fiscale</strong> - Opzionale (nome professionista dal sistema)</li>
+                          <li><strong>Utente Payroll</strong> - Opzionale (nome utente dal sistema)</li>
+                          <li><strong>Professionista Payroll</strong> - Opzionale (nome professionista dal sistema)</li>
+                          <li><strong>Contatto 1</strong> - Opzionale (nome contatto dalla rubrica)</li>
+                          <li><strong>Contatto 2</strong> - Opzionale (nome contatto dalla rubrica)</li>
+                          <li><strong>Tipo Prestazione</strong> - Opzionale (descrizione dalla tabella prestazioni)</li>
+                          <li><strong>Tipo Redditi</strong> - Opzionale (USC/USP/ENC/UPF/730)</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={downloadTemplate}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Scarica Template CSV
+                  </Button>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="csv-file-clienti">Carica File Excel/CSV</Label>
+                    <Input
+                      id="csv-file-clienti"
+                      type="file"
+                      accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                      onChange={handleImportCSV}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleAddNew} className="gap-2">
+              <Plus className="h-4 w-4" />
               Nuovo Cliente
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Totale Contatti
+            </CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold">{clienti.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Con Cassetto Fiscale
+            </CardTitle>
+            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-blue-600">{clientiConCassetto}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Percentuale
+            </CardTitle>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-green-600">{percentualeCassetto}%</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 items-center">
+        <CardContent className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
               <Input
-                placeholder="Cerca per denominazione, codice, P.IVA o codice fiscale..."
+                placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-10 h-12 text-base"
               />
             </div>
+            
             <Select value={selectedUtenteFiscale} onValueChange={setSelectedUtenteFiscale}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] h-12">
                 <SelectValue placeholder="Utente Fiscale" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli Utenti</SelectItem>
+                <SelectItem value="all">Tutti (Fiscale)</SelectItem>
                 {utenti.map((utente) => (
                   <SelectItem key={utente.id} value={utente.id}>
                     {utente.nome} {utente.cognome}
@@ -1106,12 +1336,13 @@ export default function ClientiPage() {
                 ))}
               </SelectContent>
             </Select>
+
             <Select value={selectedUtentePayroll} onValueChange={setSelectedUtentePayroll}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] h-12">
                 <SelectValue placeholder="Utente Payroll" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tutti gli Utenti</SelectItem>
+                <SelectItem value="all">Tutti (Payroll)</SelectItem>
                 {utenti.map((utente) => (
                   <SelectItem key={utente.id} value={utente.id}>
                     {utente.nome} {utente.cognome}
@@ -1121,102 +1352,1057 @@ export default function ClientiPage() {
             </Select>
           </div>
 
-          <div className="flex gap-1 flex-wrap">
-            <Button
-              variant={selectedLetter === "Tutti" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedLetter("Tutti")}
-            >
-              Tutti
-            </Button>
-            {alphabet.map((letter) => (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
               <Button
-                key={letter}
-                variant={selectedLetter === letter ? "default" : "outline"}
+                variant={selectedLetter === "Tutti" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedLetter(letter)}
+                onClick={() => setSelectedLetter("Tutti")}
+                className="px-4"
               >
-                {letter}
+                Tutti
               </Button>
-            ))}
+              {alphabet.map((letter) => (
+                <Button
+                  key={letter}
+                  variant={selectedLetter === letter ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedLetter(letter)}
+                  className="w-10 h-10 p-0"
+                >
+                  {letter}
+                </Button>
+              ))}
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Codice</TableHead>
-                  <TableHead>Denominazione</TableHead>
-                  <TableHead>P.IVA</TableHead>
-                  <TableHead>Codice Fiscale</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Tipo Redditi</TableHead>
-                  <TableHead className="min-w-[200px]">Utente Fiscale</TableHead>
-                  <TableHead>Professionista Fiscale</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClienti.length === 0 ? (
+      <Card>
+        <CardContent className="p-0">
+          {filteredClienti.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+              <p className="text-muted-foreground mb-6">
+                {searchTerm || selectedLetter !== "Tutti" || selectedUtenteFiscale !== "all" || selectedUtentePayroll !== "all"
+                  ? "Prova a modificare i filtri di ricerca"
+                  : "Inizia aggiungendo il tuo primo cliente"}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Aggiungi Cliente
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
-                      Nessun cliente trovato
-                    </TableCell>
+                    <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[120px] min-w-[120px] max-w-[120px]">Cod. Cliente</TableHead>
+                    <TableHead className="sticky left-[120px] bg-background z-20 shadow-r w-[250px] min-w-[250px] max-w-[250px]">Ragione Sociale</TableHead>
+                    <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
+                    <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
+                    <TableHead className="min-w-[100px]">Stato</TableHead>
+                    <TableHead className="text-center">Scadenzari</TableHead>
+                    <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">Azioni</TableHead>
                   </TableRow>
-                ) : (
-                  filteredClienti.map((cliente) => (
+                </TableHeader>
+                <TableBody>
+                  {filteredClienti.map((cliente) => (
                     <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">{cliente.cod_cliente}</TableCell>
-                      <TableCell>{cliente.ragione_sociale}</TableCell>
-                      <TableCell>{cliente.partita_iva}</TableCell>
-                      <TableCell>{cliente.codice_fiscale}</TableCell>
-                      <TableCell>{cliente.tipo_cliente}</TableCell>
-                      <TableCell>{cliente.tipo_redditi || "-"}</TableCell>
-                      <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-                      <TableCell>{getUtenteNome(cliente.utente_professionista_id)}</TableCell>
-                      <TableCell>{cliente.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.attivo ? "default" : "secondary"}>
-                          {cliente.attivo ? "Attivo" : "Inattivo"}
-                        </Badge>
+                      <TableCell className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] min-w-[120px] max-w-[120px] truncate" title={cliente.cod_cliente || cliente.id}>
+                        {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <TableCell className="sticky left-[120px] bg-background z-10 font-medium w-[250px] min-w-[250px] max-w-[250px] truncate" title={cliente.ragione_sociale || ""}>
+                        {cliente.ragione_sociale}
+                      </TableCell>
+                      <TableCell className="min-w-[220px] pl-6">
+                        {getUtenteNome(cliente.utente_operatore_id)}
+                      </TableCell>
+                      <TableCell className="min-w-[200px]">{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
+                      <TableCell>
+                        {cliente.attivo ? (
+                          <Badge variant="default" className="bg-green-600">
+                            Attivo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Inattivo</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleInsertIntoScadenzari(cliente)}
+                          title="Inserisci negli Scadenzari"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="sticky right-0 bg-background z-10 text-right">
+                        <div className="flex justify-end gap-3">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleEdit(cliente)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => handleInsertIntoScadenzari(cliente)}
-                          >
-                            <Calendar className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => handleDelete(cliente.id)}
+                            className="text-destructive hover:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Resto del codice del Dialog rimane invariato - CONTINUA NEL PROSSIMO MESSAGGIO per non superare il limite */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="anagrafica" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+              <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+              <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+              <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
+              <TabsTrigger value="antiriciclaggio">Antiriciclaggio</TabsTrigger>
+              <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="anagrafica" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
+                  <Input
+                    id="cod_cliente"
+                    value={formData.cod_cliente}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cod_cliente: e.target.value })
+                    }
+                    disabled
+                    placeholder="Generato automaticamente"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+                  <Select
+                    value={formData.tipo_cliente}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, tipo_cliente: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+                      <SelectItem value="Altro">Altro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
+                  <Select
+                    value={formData.tipologia_cliente || undefined}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, tipologia_cliente: value as "Interno" | "Esterno" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipologia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Interno">Interno</SelectItem>
+                      <SelectItem value="Esterno">Esterno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Settori *</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-fiscale"
+                        checked={formData.settore_fiscale}
+                        onCheckedChange={(checked) => {
+                          const newValue = checked as boolean;
+                          setFormData({ 
+                            ...formData, 
+                            settore_fiscale: newValue,
+                            // Svuota campi fiscali se deselezionato
+                            ...((!newValue) && {
+                              utente_operatore_id: "",
+                              utente_professionista_id: ""
+                            })
+                          });
+                        }}
+                      />
+                      <Label htmlFor="settore-fiscale" className="font-medium cursor-pointer">
+                        Settore Fiscale
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-lavoro"
+                        checked={formData.settore_lavoro}
+                        onCheckedChange={(checked) => {
+                          const newValue = checked as boolean;
+                          setFormData({ 
+                            ...formData, 
+                            settore_lavoro: newValue,
+                            // Svuota campi payroll se deselezionato
+                            ...((!newValue) && {
+                              utente_payroll_id: "",
+                              professionista_payroll_id: ""
+                            })
+                          });
+                        }}
+                      />
+                      <Label htmlFor="settore-lavoro" className="font-medium cursor-pointer">
+                        Settore Lavoro
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-consulenza"
+                        checked={formData.settore_consulenza}
+                        onCheckedChange={(checked) => {
+                          setFormData({ ...formData, settore_consulenza: checked as boolean });
+                        }}
+                      />
+                      <Label htmlFor="settore-consulenza" className="font-medium cursor-pointer">
+                        Settore Consulenza
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="ragione_sociale">
+                    Ragione Sociale <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="ragione_sociale"
+                    value={formData.ragione_sociale}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ragione_sociale: e.target.value })
+                    }
+                    placeholder="Es. HAPPY SRL"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="partita_iva">
+                    P.IVA <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="partita_iva"
+                      value={formData.partita_iva}
+                      onChange={(e) =>
+                        setFormData({ ...formData, partita_iva: e.target.value })
+                      }
+                      placeholder="01234567890"
+                    />
+                    {encryptionEnabled && encryptionLocked && formData.partita_iva && (
+                      <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
+                  <div className="relative">
+                    <Input
+                      id="codice_fiscale"
+                      value={formData.codice_fiscale}
+                      onChange={(e) =>
+                        setFormData({ ...formData, codice_fiscale: e.target.value })
+                      }
+                      placeholder="RSSMRA80A01H501U"
+                    />
+                    {encryptionEnabled && encryptionLocked && formData.codice_fiscale && (
+                      <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="indirizzo">Indirizzo</Label>
+                  <Input
+                    id="indirizzo"
+                    value={formData.indirizzo}
+                    onChange={(e) =>
+                      setFormData({ ...formData, indirizzo: e.target.value })
+                    }
+                    placeholder="Via Roma, 123"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="cap">CAP</Label>
+                  <Input
+                    id="cap"
+                    value={formData.cap}
+                    onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+                    placeholder="00100"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="citta">Città</Label>
+                  <Input
+                    id="citta"
+                    value={formData.citta}
+                    onChange={(e) =>
+                      setFormData({ ...formData, citta: e.target.value })
+                    }
+                    placeholder="Roma"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="provincia">Provincia</Label>
+                  <Input
+                    id="provincia"
+                    value={formData.provincia}
+                    onChange={(e) =>
+                      setFormData({ ...formData, provincia: e.target.value })
+                    }
+                    placeholder="RM"
+                    maxLength={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    placeholder="info@happy.it"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="attivo"
+                    checked={formData.attivo}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, attivo: checked })
+                    }
+                  />
+                  <Label htmlFor="attivo">Cliente Attivo</Label>
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="note">Note</Label>
+                  <Textarea
+                    id="note"
+                    value={formData.note}
+                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                    placeholder="Note aggiuntive..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="riferimenti" className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
+                  <Select
+                    value={formData.utente_operatore_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
+                    }
+                    disabled={!formData.settore_fiscale}
+                  >
+                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
+                      <SelectValue placeholder="Seleziona utente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!formData.settore_fiscale && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="utente_professionista_id">Professionista Fiscale</Label>
+                  <Select
+                    value={formData.utente_professionista_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
+                    }
+                    disabled={!formData.settore_fiscale}
+                  >
+                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
+                      <SelectValue placeholder="Seleziona professionista" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!formData.settore_fiscale && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
+                  <Select
+                    value={formData.utente_payroll_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
+                    }
+                    disabled={!formData.settore_lavoro}
+                  >
+                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
+                      <SelectValue placeholder="Seleziona utente payroll" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!formData.settore_lavoro && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
+                  <Select
+                    value={formData.professionista_payroll_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
+                    }
+                    disabled={!formData.settore_lavoro}
+                  >
+                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
+                      <SelectValue placeholder="Seleziona professionista payroll" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {utenti.map((utente) => (
+                        <SelectItem key={utente.id} value={utente.id}>
+                          {utente.nome} {utente.cognome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!formData.settore_lavoro && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="contatto1_id">Contatto 1</Label>
+                  <Select
+                    value={formData.contatto1_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona contatto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {contatti
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((contatto) => (
+                        <SelectItem key={contatto.id} value={contatto.id}>
+                          {contatto.cognome?.toUpperCase()} {contatto.nome?.toUpperCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="referente_esterno">Referente esterno</Label>
+                  <Input
+                    id="referente_esterno"
+                    value={formData.referente_esterno}
+                    onChange={(e) =>
+                      setFormData({ ...formData, referente_esterno: e.target.value })
+                    }
+                    placeholder="Nome referente esterno"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+                  <Select
+                    value={formData.tipo_prestazione_id || "none"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona prestazione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {prestazioni.map((prestazione) => (
+                        <SelectItem key={prestazione.id} value={prestazione.id}>
+                          {prestazione.descrizione}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+                  <Select
+                    value={formData.tipo_redditi || undefined}
+                    onValueChange={(value: string) =>
+                      setFormData({ ...formData, tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USC">USC</SelectItem>
+                      <SelectItem value="USP">USP</SelectItem>
+                      <SelectItem value="ENC">ENC</SelectItem>
+                      <SelectItem value="UPF">UPF</SelectItem>
+                      <SelectItem value="730">730</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
+                  <Select
+                    value={formData.cassetto_fiscale_id || ""}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona referente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nessuno</SelectItem>
+                      {cassettiFiscali.map((cassetto) => (
+                        <SelectItem key={cassetto.id} value={cassetto.id}>
+                          {cassetto.nominativo} ({cassetto.username})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="altri_dati" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
+                  <Textarea
+                    id="matricola_inps"
+                    value={formData.matricola_inps}
+                    onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+                    placeholder="Inserisci matricola INPS..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="pat_inail">Pat INAIL</Label>
+                  <Textarea
+                    id="pat_inail"
+                    value={formData.pat_inail}
+                    onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+                    placeholder="Inserisci Pat INAIL..."
+                    rows={2}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+                  <Textarea
+                    id="codice_ditta_ce"
+                    value={formData.codice_ditta_ce}
+                    onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+                    placeholder="Inserisci codice ditta CE..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="antiriciclaggio" className="space-y-6 pt-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <Label className="flex items-center gap-2 font-medium text-blue-900 cursor-pointer">
+                  <Input
+                    type="checkbox"
+                    checked={formData.gestione_antiriciclaggio}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      gestione_antiriciclaggio: e.target.checked 
+                    })}
+                    className="w-5 h-5"
+                  />
+                  Gestione Antiriciclaggio
+                </Label>
+                <p className="text-sm text-blue-700 mt-2 ml-7">
+                  Attiva questa opzione per abilitare la gestione e includere il cliente nello scadenzario Antiriciclaggio
+                </p>
+              </div>
+
+              <h3 className="font-semibold text-lg mb-4">
+                Adeguata Verifica Clientela (Antiriciclaggio)
+              </h3>
+              
+              <div className="space-y-6">
+                <Card className={`bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Tipo Prestazione A</Label>
+                      <Select
+                        value={formData.tipo_prestazione_a || ""}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, tipo_prestazione_a: value })
+                        }
+                        disabled={!formData.gestione_antiriciclaggio}
+                      >
+                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
+                          <SelectValue placeholder="Seleziona tipo prestazione A" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Rischio Verifica A</Label>
+                        <Select
+                          value={formData.rischio_ver_a || ""}
+                          onValueChange={(value) =>
+                            handleRiskChange(
+                              value,
+                              "rischio_ver_a"
+                            )
+                          }
+                          disabled={!formData.gestione_antiriciclaggio}
+                        >
+                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
+                            <SelectValue placeholder="Seleziona rischio A" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non significativo">Non significativo</SelectItem>
+                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
+                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
+                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Scadenza in mesi</Label>
+                        <Input
+                          type="number"
+                          value={formData.gg_ver_a ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : null;
+                            handleGgVerChange("A", value);
+                          }}
+                          placeholder="36, 12 o 6"
+                          disabled={!formData.gestione_antiriciclaggio}
+                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Data Ultima Verifica A</Label>
+                        <Input
+                          type="date"
+                          value={formData.data_ultima_verifica_antiric ? formData.data_ultima_verifica_antiric.toISOString().split('T')[0] : ""}
+                          onChange={(e) => {
+                            const dateValue = e.target.value ? new Date(e.target.value) : null;
+                            handleVerificaDateChange("A", dateValue);
+                          }}
+                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
+                          disabled={!formData.gestione_antiriciclaggio}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Scadenza Antiriciclaggio A</Label>
+                        <Input
+                          type="date"
+                          value={formData.scadenza_antiric ? formData.scadenza_antiric.toISOString().split('T')[0] : ""}
+                          disabled
+                          className="w-full bg-muted cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Giorni Scad. Ver A</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={formData.giorni_scad_ver_a !== null ? `${formData.giorni_scad_ver_a} giorni` : "N/A"}
+                            disabled
+                            className="w-full bg-muted cursor-not-allowed"
+                          />
+                          {formData.giorni_scad_ver_a !== null && (
+                            <Badge className={getBadgeColor(formData.giorni_scad_ver_a)}>
+                              {formData.giorni_scad_ver_a < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_a < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`bg-green-50 dark:bg-green-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Tipo Prestazione B</Label>
+                      <Select
+                        value={formData.tipo_prestazione_b || ""}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, tipo_prestazione_b: value })
+                        }
+                        disabled={!formData.gestione_antiriciclaggio}
+                      >
+                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
+                          <SelectValue placeholder="Seleziona tipo prestazione B" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Rischio Verifica B</Label>
+                        <Select
+                          value={formData.rischio_ver_b || ""}
+                          onValueChange={(value) =>
+                            handleRiskChange(
+                              value,
+                              "rischio_ver_b"
+                            )
+                          }
+                          disabled={!formData.gestione_antiriciclaggio}
+                        >
+                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
+                            <SelectValue placeholder="Seleziona rischio B" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non significativo">Non significativo</SelectItem>
+                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
+                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
+                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Scadenza in mesi</Label>
+                        <Input
+                          type="number"
+                          value={formData.gg_ver_b ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : null;
+                            handleGgVerChange("B", value);
+                          }}
+                          placeholder="36, 12 o 6"
+                          disabled={!formData.gestione_antiriciclaggio}
+                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Data Ultima Verifica B</Label>
+                        <Input
+                          type="date"
+                          value={formData.data_ultima_verifica_b ? formData.data_ultima_verifica_b.toISOString().split('T')[0] : ""}
+                          onChange={(e) => {
+                            const dateValue = e.target.value ? new Date(e.target.value) : null;
+                            handleVerificaDateChange("B", dateValue);
+                          }}
+                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
+                          disabled={!formData.gestione_antiriciclaggio}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Scadenza Antiriciclaggio B</Label>
+                        <Input
+                          type="date"
+                          value={formData.scadenza_antiric_b ? formData.scadenza_antiric_b.toISOString().split('T')[0] : ""}
+                          disabled
+                          className="w-full bg-muted cursor-not-allowed"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Giorni Scad. Ver B</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            value={formData.giorni_scad_ver_b !== null ? `${formData.giorni_scad_ver_b} giorni` : "N/A"}
+                            disabled
+                            className="w-full bg-muted cursor-not-allowed"
+                          />
+                          {formData.giorni_scad_ver_b !== null && (
+                            <Badge className={getBadgeColor(formData.giorni_scad_ver_b)}>
+                              {formData.giorni_scad_ver_b < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_b < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="scadenzari" className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Seleziona gli scadenzari attivi per questo cliente
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_iva"
+                    checked={scadenzari.iva}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, iva: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_iva">IVA</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_cu"
+                    checked={scadenzari.cu}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, cu: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_cu">CU (Certificazione Unica)</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_bilancio"
+                    checked={scadenzari.bilancio}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, bilancio: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_bilancio">Bilanci</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_fiscali"
+                    checked={scadenzari.fiscali}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, fiscali: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_fiscali">Fiscali</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_lipe"
+                    checked={scadenzari.lipe}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, lipe: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_lipe">Lipe</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_modello_770"
+                    checked={scadenzari.modello_770}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, modello_770: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_modello_770">770</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_esterometro"
+                    checked={scadenzari.esterometro}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, esterometro: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_esterometro">Esterometro</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_ccgg"
+                    checked={scadenzari.ccgg}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, ccgg: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_ccgg">CCGG</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_proforma"
+                    checked={scadenzari.proforma}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, proforma: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_proforma">Proforma</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="scad_imu"
+                    checked={scadenzari.imu}
+                    onCheckedChange={(checked) =>
+                      setScadenzari({ ...scadenzari, imu: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="scad_imu">IMU</Label>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleSave}>
+              {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Inserisci la password principale dello studio per visualizzare e modificare i dati sensibili (CF, P.IVA, ecc).
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="unlock-password">Password Principale</Label>
+              <Input
+                id="unlock-password"
+                type="password"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                placeholder="Inserisci password..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
+                Annulla
+              </Button>
+              <Button onClick={handleConfirmUnlock}>
+                Sblocca
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
