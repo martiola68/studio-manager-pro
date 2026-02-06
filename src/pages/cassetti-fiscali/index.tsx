@@ -38,6 +38,8 @@ import {
   areCassettiUnlocked,
   encryptCassettoPasswords,
   migrateAllCassettiToEncrypted,
+  unlockCassetti,
+  lockCassetti,
 } from "@/services/encryptionService";
 import { 
   isEncrypted, 
