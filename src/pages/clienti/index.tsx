@@ -1592,19 +1592,17 @@ export default function ClientiPage() {
             <TabsContent value="riferimenti" className="space-y-6 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
+                  <Label htmlFor="utente_fiscale_id">Utente Fiscale</Label>
                   <Select
-                    value={formData.utente_operatore_id || "none"}
+                    value={formData.utente_operatore_id || ""}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
+                      setFormData({ ...formData, utente_operatore_id: value })
                     }
-                    disabled={!isFieldEnabled("fiscale")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona utente" />
+                      <SelectValue placeholder="Seleziona utente fiscale" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -1615,19 +1613,22 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="utente_professionista_id">Professionista Fiscale</Label>
+                  <Label htmlFor="professionista_fiscale_id">
+                    Professionista Fiscale
+                  </Label>
                   <Select
-                    value={formData.utente_professionista_id || "none"}
+                    value={formData.utente_professionista_id || ""}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
+                      setFormData({
+                        ...formData,
+                        utente_professionista_id: value,
+                      })
                     }
-                    disabled={!isFieldEnabled("fiscale")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona professionista" />
+                      <SelectValue placeholder="Seleziona professionista fiscale" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -1640,17 +1641,15 @@ export default function ClientiPage() {
                 <div>
                   <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
                   <Select
-                    value={formData.utente_payroll_id || "none"}
+                    value={formData.utente_payroll_id || ""}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
+                      setFormData({ ...formData, utente_payroll_id: value })
                     }
-                    disabled={!isFieldEnabled("payroll")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -1661,19 +1660,22 @@ export default function ClientiPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
+                  <Label htmlFor="professionista_payroll_id">
+                    Professionista Payroll
+                  </Label>
                   <Select
-                    value={formData.professionista_payroll_id || "none"}
+                    value={formData.professionista_payroll_id || ""}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
+                      setFormData({
+                        ...formData,
+                        professionista_payroll_id: value,
+                      })
                     }
-                    disabled={!isFieldEnabled("payroll")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
                       {utenti.map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
@@ -1688,7 +1690,7 @@ export default function ClientiPage() {
                   <Select
                     value={formData.contatto1_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
+                      setFormData({ ...formData, contatto1_id: value })
                     }
                   >
                     <SelectTrigger>
@@ -1728,7 +1730,7 @@ export default function ClientiPage() {
                   <Select
                     value={formData.tipo_prestazione_id || "none"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_prestazione_id: value === "none" ? "" : value })
+                      setFormData({ ...formData, tipo_prestazione_id: value })
                     }
                   >
                     <SelectTrigger>
@@ -1750,7 +1752,7 @@ export default function ClientiPage() {
                   <Select
                     value={formData.tipo_redditi || undefined}
                     onValueChange={(value: string) =>
-                      setFormData({ ...formData, tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730" })
+                      setFormData({ ...formData, tipo_redditi: value as any })
                     }
                   >
                     <SelectTrigger>
@@ -1771,7 +1773,7 @@ export default function ClientiPage() {
                   <Select
                     value={formData.cassetto_fiscale_id || ""}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, cassetto_fiscale_id: value === "none" ? "" : value })
+                      setFormData({ ...formData, cassetto_fiscale_id: value })
                     }
                   >
                     <SelectTrigger>
