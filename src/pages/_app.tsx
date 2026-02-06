@@ -21,7 +21,7 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     // Setup session refresh e gestione errori
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+      if (event === "SIGNED_OUT") {
         // Pulizia completa su logout/cancellazione
         localStorage.clear();
         sessionStorage.clear();
