@@ -2294,9 +2294,11 @@ export type Database = {
           id: string
           indirizzo: string
           logo_url: string | null
+          master_password_hash: string | null
           note: string | null
           partita_iva: string
           pec: string
+          protezione_attiva: boolean | null
           provincia: string
           ragione_sociale: string
           sito_web: string | null
@@ -2316,9 +2318,11 @@ export type Database = {
           id?: string
           indirizzo: string
           logo_url?: string | null
+          master_password_hash?: string | null
           note?: string | null
           partita_iva: string
           pec: string
+          protezione_attiva?: boolean | null
           provincia: string
           ragione_sociale: string
           sito_web?: string | null
@@ -2338,9 +2342,11 @@ export type Database = {
           id?: string
           indirizzo?: string
           logo_url?: string | null
+          master_password_hash?: string | null
           note?: string | null
           partita_iva?: string
           pec?: string
+          protezione_attiva?: boolean | null
           provincia?: string
           ragione_sociale?: string
           sito_web?: string | null
