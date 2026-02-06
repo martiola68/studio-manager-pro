@@ -250,7 +250,7 @@ export default function GestionePasswordPage() {
     setShowPin(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string | null | undefined) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
     toast({
