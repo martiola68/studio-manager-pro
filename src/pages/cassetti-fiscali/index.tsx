@@ -34,15 +34,18 @@ import * as z from "zod";
 import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2, Lock, Unlock } from "lucide-react";
 import { cassettiFiscaliService, type CassettoFiscale } from "@/services/cassettiFiscaliService";
 import {
-  unlockCassetti,
-  lockCassetti,
+  isEncryptionEnabled,
   areCassettiUnlocked,
   encryptCassettoPasswords,
-  decryptCassettoPasswords,
   migrateAllCassettiToEncrypted,
-  isEncryptionEnabled,
 } from "@/services/encryptionService";
-import { isEncrypted, updateLastActivity, shouldAutoLock } from "@/lib/encryption";
+import { 
+  isEncrypted, 
+  updateLastActivity, 
+  shouldAutoLock,
+  decryptData,
+  getStoredEncryptionKey 
+} from "@/lib/encryption";
 
 const formSchema = z.object({
   nominativo: z.string().min(2, "Il nominativo è obbligatorio"),
@@ -103,70 +106,51 @@ export default function CassettiFiscaliPage() {
   // Check encryption status and auto-lock
   useEffect(() => {
     checkEncryptionStatus();
-    
-    // Auto-lock check every minute
-    const autoLockInterval = setInterval(() => {
-      if (isUnlocked && shouldAutoLock()) {
+
+    const lockInterval = setInterval(() => {
+      if (shouldAutoLock()) {
         handleLock();
-        toast({
-          title: "🔒 Cassetti Bloccati",
-          description: "Per inattività, è necessario sbloccare nuovamente i cassetti",
-          variant: "default",
-        });
       }
     }, 60000);
-    
-    // Update activity on user interaction
-    const updateActivity = () => {
-      if (isUnlocked) updateLastActivity();
-    };
-    
-    document.addEventListener("mousemove", updateActivity);
-    document.addEventListener("keypress", updateActivity);
-    document.addEventListener("click", updateActivity);
-    
-    return () => {
-      clearInterval(autoLockInterval);
-      document.removeEventListener("mousemove", updateActivity);
-      document.removeEventListener("keypress", updateActivity);
-      document.removeEventListener("click", updateActivity);
-    };
+
+    return () => clearInterval(lockInterval);
+  }, []);
+
+  // Load cassetti quando isUnlocked cambia a true
+  useEffect(() => {
+    if (isUnlocked) {
+      loadCassetti();
+    }
   }, [isUnlocked]);
 
   const checkEncryptionStatus = async () => {
     try {
       const studioId = localStorage.getItem("studio_id");
       if (!studioId) {
-        loadCassetti();
+        setIsUnlocked(true);
         return;
       }
-      
-      // Verifica se Master Password è configurata
+
+      // Verifica se la cifratura è abilitata
       const enabled = await isEncryptionEnabled(studioId);
       
       if (!enabled) {
-        // Master Password NON configurata - carica cassetti senza protezione
-        setIsUnlocked(true);  // Simula unlock per permettere accesso
-        loadCassetti();
+        // Master Password NON configurata → Accesso libero
+        setIsUnlocked(true);
         return;
       }
-      
-      // Master Password configurata - verifica se è sbloccata
+
+      // Master Password configurata → Verifica se è sbloccata
       const unlocked = areCassettiUnlocked();
       setIsUnlocked(unlocked);
       
       if (!unlocked) {
-        // Master Password configurata ma bloccata - mostra unlock dialog
         setShowUnlockDialog(true);
-      } else {
-        // Master Password configurata e sbloccata - carica cassetti
-        loadCassetti();
       }
     } catch (error) {
       console.error("Error checking encryption:", error);
       // In caso di errore, permetti comunque l'accesso
       setIsUnlocked(true);
-      loadCassetti();
     }
   };
 
@@ -280,26 +264,56 @@ export default function CassettiFiscaliPage() {
   }, [editingCassetto, form]);
 
   const loadCassetti = async () => {
-    if (!isUnlocked) return;
-    
     try {
-      const data = await cassettiFiscaliService.getCassettiFiscali();
+      const studioId = localStorage.getItem("studio_id");
+      setLoading(true);
+
+      const data = await cassettiFiscaliService.getCassettiFiscali(studioId);
+      const key = getStoredEncryptionKey();
       
-      // Decrypt passwords (Master Password system)
-      const decryptedData = await Promise.all(
-        data.map(async (cassetto) => {
-          try {
-            const decrypted = await decryptCassettoPasswords(cassetto);
-            return { ...cassetto, ...decrypted };
-          } catch (error) {
-            console.error("Decrypt error for cassetto:", cassetto.id, error);
-            return cassetto;
-          }
-        })
-      );
+      // Decrypt passwords if encrypted
+      const decryptedData = data.map((item) => {
+        // Se non abbiamo la chiave ma i dati sono criptati, ritorniamo i dati criptati (non dovremmo essere qui se isUnlocked è false)
+        if (!key) return item;
+
+        try {
+          const decryptedUsername = item.username && isEncrypted(item.username) 
+            ? decryptData(item.username, key) 
+            : item.username;
+            
+          const decryptedPassword1 = item.password1 && isEncrypted(item.password1) 
+            ? decryptData(item.password1, key) 
+            : item.password1;
+            
+          const decryptedPassword2 = item.password2 && isEncrypted(item.password2) 
+            ? decryptData(item.password2, key) 
+            : item.password2;
+            
+          const decryptedPin = item.pin && isEncrypted(item.pin) 
+            ? decryptData(item.pin, key) 
+            : item.pin;
+            
+          const decryptedPasswordIniziale = item.pw_iniziale && isEncrypted(item.pw_iniziale) 
+            ? decryptData(item.pw_iniziale, key) 
+            : item.pw_iniziale;
+
+          return {
+            ...item,
+            username: decryptedUsername,
+            password1: decryptedPassword1,
+            password2: decryptedPassword2,
+            pin: decryptedPin,
+            pw_iniziale: decryptedPasswordIniziale,
+          };
+        } catch (e) {
+          console.error("Error decrypting item:", item.id, e);
+          return item;
+        }
+      });
+
       setCassetti(decryptedData);
     } catch (error) {
-      console.error("Errore caricamento cassetti:", error);
+      console.error("Error loading cassetti:", error);
       toast({
         variant: "destructive",
         title: "Errore",
