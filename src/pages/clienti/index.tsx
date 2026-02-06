@@ -369,7 +369,7 @@ export default function ClientiPage() {
       const studioId = localStorage.getItem("studioId") || "";
       console.log("🔍 [DEBUG] Studio ID:", studioId);
 
-      const { data: clientiData, error: clientiError } = await (supabase
+      const { data: clientiData, error: clientiError } = await (supabase as any)
         .from("tbclienti")
         .select(`
           *,
@@ -384,7 +384,7 @@ export default function ClientiPage() {
           tipo_prestazione:tbprestazioni!tbclienti_tipo_prestazione_id_fkey(descrizione)
         `)
         .eq("studio_id", studioId)
-        .order("ragione_sociale") as any);
+        .order("ragione_sociale");
 
       if (clientiError) {
         console.error("❌ [DEBUG] Errore query clienti:", clientiError);
