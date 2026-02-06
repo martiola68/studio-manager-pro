@@ -150,7 +150,7 @@ export default function ClientiPage() {
         
         if (session?.user?.user_metadata?.studio_id) {
           studioId = session.user.user_metadata.studio_id;
-          localStorage.setItem("studioId", studioId);
+          localStorage.setItem("studioId", studioId as string);
           console.log("✅ studioId recuperato dalla sessione:", studioId);
         } else {
           console.error("❌ ERRORE: Impossibile recuperare studioId");
@@ -170,7 +170,7 @@ export default function ClientiPage() {
         supabase
           .from("tbclienti")
           .select("*")
-          .eq("studio_id", studioId)
+          .eq("studio_id", studioId as string)
           .order("ragione_sociale"),
         supabase.from("tbutenti").select("*"),
         supabase.from("tbcontatti").select("*"),
