@@ -134,17 +134,38 @@ export default function CassettiFiscaliPage() {
 
   const checkEncryptionStatus = async () => {
     try {
+      const studioId = localStorage.getItem("studio_id");
+      if (!studioId) {
+        loadCassetti();
+        return;
+      }
+      
+      // Verifica se Master Password è configurata
+      const enabled = await isEncryptionEnabled(studioId);
+      
+      if (!enabled) {
+        // Master Password NON configurata - carica cassetti senza protezione
+        setIsUnlocked(true);  // Simula unlock per permettere accesso
+        loadCassetti();
+        return;
+      }
+      
+      // Master Password configurata - verifica se è sbloccata
       const unlocked = areCassettiUnlocked();
       setIsUnlocked(unlocked);
       
-      // Se non è unlocked, mostra dialog unlock
       if (!unlocked) {
+        // Master Password configurata ma bloccata - mostra unlock dialog
         setShowUnlockDialog(true);
       } else {
+        // Master Password configurata e sbloccata - carica cassetti
         loadCassetti();
       }
     } catch (error) {
       console.error("Error checking encryption:", error);
+      // In caso di errore, permetti comunque l'accesso
+      setIsUnlocked(true);
+      loadCassetti();
     }
   };
 
@@ -404,25 +425,17 @@ export default function CassettiFiscaliPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
-          <p className="text-muted-foreground">Gestione credenziali cassetti fiscali cifrate con Master Password</p>
+          <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
           <div className="flex items-center gap-2 mt-2">
             {isUnlocked ? (
               <>
                 <Unlock className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-600">Sbloccato</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLock}
-                  className="ml-2"
-                >
-                  <Lock className="h-4 w-4 mr-1" /> Blocca
-                </Button>
+                <span className="text-sm text-green-600">Accessibile</span>
               </>
             ) : (
               <>
                 <Lock className="h-4 w-4 text-orange-600" />
-                <span className="text-sm text-orange-600">Bloccato - Inserisci Master Password per accedere</span>
+                <span className="text-sm text-orange-600">Bloccato - Inserisci Master Password</span>
               </>
             )}
           </div>
@@ -496,7 +509,6 @@ export default function CassettiFiscaliPage() {
                   <TableCell colSpan={7} className="text-center py-8">
                     <Lock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
                     <p className="text-muted-foreground mb-2">Cassetti bloccati. Inserisci la Master Password per visualizzare.</p>
-                    <p className="text-sm text-orange-600">💡 Configura la Master Password in: Impostazioni → Dati Studio</p>
                   </TableCell>
                 </TableRow>
               ) : filteredCassetti.length === 0 ? (
