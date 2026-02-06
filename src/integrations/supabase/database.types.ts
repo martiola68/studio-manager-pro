@@ -367,7 +367,9 @@ export type Database = {
           rischio_ver_b: string | null
           scadenza_antiric: string | null
           scadenza_antiric_b: string | null
-          settore: string
+          settore_consulenza: boolean | null
+          settore_fiscale: boolean | null
+          settore_lavoro: boolean | null
           studio_id: string | null
           tipo_cliente: string
           tipo_prestazione_a: string | null
@@ -428,7 +430,9 @@ export type Database = {
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
-          settore: string
+          settore_consulenza?: boolean | null
+          settore_fiscale?: boolean | null
+          settore_lavoro?: boolean | null
           studio_id?: string | null
           tipo_cliente: string
           tipo_prestazione_a?: string | null
@@ -489,7 +493,9 @@ export type Database = {
           rischio_ver_b?: string | null
           scadenza_antiric?: string | null
           scadenza_antiric_b?: string | null
-          settore?: string
+          settore_consulenza?: boolean | null
+          settore_fiscale?: boolean | null
+          settore_lavoro?: boolean | null
           studio_id?: string | null
           tipo_cliente?: string
           tipo_prestazione_a?: string | null

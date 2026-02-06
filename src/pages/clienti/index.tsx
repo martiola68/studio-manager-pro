@@ -155,7 +155,9 @@ export default function ClientiPage() {
     cod_cliente: string;
     tipo_cliente: string;
     tipologia_cliente?: string;
-    settore?: string;
+    settore_fiscale: boolean;
+    settore_lavoro: boolean;
+    settore_consulenza: boolean;
     ragione_sociale: string;
     partita_iva: string;
     codice_fiscale: string;
@@ -196,7 +198,9 @@ export default function ClientiPage() {
     cod_cliente: "",
     tipo_cliente: "Persona fisica",
     tipologia_cliente: "Interno",
-    settore: "Fiscale",
+    settore_fiscale: true,
+    settore_lavoro: false,
+    settore_consulenza: false,
     ragione_sociale: "",
     partita_iva: "",
     codice_fiscale: "",
@@ -354,36 +358,8 @@ export default function ClientiPage() {
   };
 
   useEffect(() => {
-    loadData();
-    checkEncryptionStatus();
-  }, []);
-
-  const checkEncryptionStatus = async () => {
-    const enabled = await isEncryptionEnabled();
-    const locked = await isEncryptionLocked();
-    setEncryptionEnabled(enabled);
-    setEncryptionLocked(locked);
-  };
-
-  useEffect(() => {
     filterClienti();
   }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
-
-  useEffect(() => {
-    if (formData.settore === "Fiscale") {
-      setFormData(prev => ({
-        ...prev,
-        utente_payroll_id: "",
-        professionista_payroll_id: ""
-      }));
-    } else if (formData.settore === "Lavoro") {
-      setFormData(prev => ({
-        ...prev,
-        utente_operatore_id: "",
-        utente_professionista_id: ""
-      }));
-    }
-  }, [formData.settore]);
 
   const loadData = async () => {
     try {
@@ -465,10 +441,10 @@ export default function ClientiPage() {
       let dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-        utente_operatore_id: formData.utente_operatore_id || undefined,
-        utente_professionista_id: formData.utente_professionista_id || undefined,
-        utente_payroll_id: formData.utente_payroll_id || undefined,
-        professionista_payroll_id: formData.professionista_payroll_id || undefined,
+        utente_operatore_id: (formData.settore_fiscale && formData.utente_operatore_id) || undefined,
+        utente_professionista_id: (formData.settore_fiscale && formData.utente_professionista_id) || undefined,
+        utente_payroll_id: (formData.settore_lavoro && formData.utente_payroll_id) || undefined,
+        professionista_payroll_id: (formData.settore_lavoro && formData.professionista_payroll_id) || undefined,
         contatto1_id: formData.contatto1_id || undefined,
         referente_esterno: formData.referente_esterno || undefined,
         tipo_prestazione_id: formData.tipo_prestazione_id || undefined,
@@ -827,7 +803,9 @@ export default function ClientiPage() {
       cod_cliente: clienteData.cod_cliente || "",
       tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
       tipologia_cliente: clienteData.tipologia_cliente || undefined,
-      settore: clienteData.settore || undefined,
+      settore_fiscale: clienteData.settore_fiscale ?? true,
+      settore_lavoro: clienteData.settore_lavoro ?? false,
+      settore_consulenza: clienteData.settore_consulenza ?? false,
       ragione_sociale: clienteData.ragione_sociale || "",
       partita_iva: clienteData.partita_iva || "",
       codice_fiscale: clienteData.codice_fiscale || "",
@@ -887,7 +865,9 @@ export default function ClientiPage() {
       cod_cliente: "",
       tipo_cliente: "Persona fisica",
       tipologia_cliente: "Interno",
-      settore: "Fiscale",
+      settore_fiscale: true,
+      settore_lavoro: false,
+      settore_consulenza: false,
       ragione_sociale: "",
       partita_iva: "",
       codice_fiscale: "",
@@ -943,7 +923,9 @@ export default function ClientiPage() {
     const headers = [
       "Tipo Cliente",
       "Tipologia Cliente",
-      "Settore",
+      "Settore Fiscale (VERO/FALSO)",
+      "Settore Lavoro (VERO/FALSO)",
+      "Settore Consulenza (VERO/FALSO)",
       "Ragione Sociale",
       "Partita IVA",
       "Codice Fiscale",
@@ -968,7 +950,9 @@ export default function ClientiPage() {
       [
         "Persona fisica",
         "Interno",
-        "Fiscale",
+        "VERO",
+        "FALSO",
+        "FALSO",
         "ESEMPIO SRL",
         "01234567890",
         "01234567890",
@@ -1047,10 +1031,12 @@ export default function ClientiPage() {
 
         const tipoCliente = (values[0] || "").toString().trim();
         const tipologiaCliente = (values[1] || "").toString().trim();
-        const settore = (values[2] || "").toString().trim();
-        const ragioneSociale = (values[3] || "").toString().trim();
+        const settoreFiscaleRaw = (values[2] || "VERO").toString().trim().toUpperCase();
+        const settoreLavoroRaw = (values[3] || "FALSO").toString().trim().toUpperCase();
+        const settoreConsulenzaRaw = (values[4] || "FALSO").toString().trim().toUpperCase();
+        const ragioneSociale = (values[5] || "").toString().trim();
 
-        if (!tipoCliente || !tipologiaCliente || !settore || !ragioneSociale) {
+        if (!tipoCliente || !tipologiaCliente || !ragioneSociale) {
           errors.push(`Riga ${i + 2}: Campi obbligatori mancanti`);
           errorCount++;
           continue;
@@ -1080,48 +1066,54 @@ export default function ClientiPage() {
           return prestazione?.id || null;
         };
 
-        const attivoRaw = (values[11] || "VERO").toString().trim().toUpperCase();
+        const attivoRaw = (values[13] || "VERO").toString().trim().toUpperCase();
         const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
+        
+        const settoreFiscale = settoreFiscaleRaw === "VERO" || settoreFiscaleRaw === "TRUE" || settoreFiscaleRaw === "SI" || settoreFiscaleRaw === "1";
+        const settoreLavoro = settoreLavoroRaw === "VERO" || settoreLavoroRaw === "TRUE" || settoreLavoroRaw === "SI" || settoreLavoroRaw === "1";
+        const settoreConsulenza = settoreConsulenzaRaw === "VERO" || settoreConsulenzaRaw === "TRUE" || settoreConsulenzaRaw === "SI" || settoreConsulenzaRaw === "1";
 
         const clienteData: any = {
           tipo_cliente: tipoCliente,
           tipologia_cliente: tipologiaCliente,
-          settore: settore,
+          settore_fiscale: settoreFiscale,
+          settore_lavoro: settoreLavoro,
+          settore_consulenza: settoreConsulenza,
           ragione_sociale: ragioneSociale,
           attivo: attivo,
         };
 
-        if (values[4]) clienteData.partita_iva = values[4].toString().trim();
-        if (values[5]) clienteData.codice_fiscale = values[5].toString().trim();
-        if (values[6]) clienteData.indirizzo = values[6].toString().trim();
-        if (values[7]) clienteData.cap = values[7].toString().trim();
-        if (values[8]) clienteData.citta = values[8].toString().trim();
-        if (values[9]) clienteData.provincia = values[9].toString().trim();
-        if (values[10]) clienteData.email = values[10].toString().trim();
-        if (values[12]) clienteData.note = values[12].toString().trim();
+        if (values[6]) clienteData.partita_iva = values[6].toString().trim();
+        if (values[7]) clienteData.codice_fiscale = values[7].toString().trim();
+        if (values[8]) clienteData.indirizzo = values[8].toString().trim();
+        if (values[9]) clienteData.cap = values[9].toString().trim();
+        if (values[10]) clienteData.citta = values[10].toString().trim();
+        if (values[11]) clienteData.provincia = values[11].toString().trim();
+        if (values[12]) clienteData.email = values[12].toString().trim();
+        if (values[14]) clienteData.note = values[14].toString().trim();
         
-        const utenteFiscale = findUserId(values[13]?.toString().trim());
-        if (utenteFiscale) clienteData.utente_operatore_id = utenteFiscale;
+        const utenteFiscale = findUserId(values[15]?.toString().trim());
+        if (utenteFiscale && settoreFiscale) clienteData.utente_operatore_id = utenteFiscale;
         
-        const profFiscale = findUserId(values[14]?.toString().trim());
-        if (profFiscale) clienteData.utente_professionista_id = profFiscale;
+        const profFiscale = findUserId(values[16]?.toString().trim());
+        if (profFiscale && settoreFiscale) clienteData.utente_professionista_id = profFiscale;
         
-        const utentePayroll = findUserId(values[15]?.toString().trim());
-        if (utentePayroll) clienteData.utente_payroll_id = utentePayroll;
+        const utentePayroll = findUserId(values[17]?.toString().trim());
+        if (utentePayroll && settoreLavoro) clienteData.utente_payroll_id = utentePayroll;
         
-        const profPayroll = findUserId(values[16]?.toString().trim());
-        if (profPayroll) clienteData.professionista_payroll_id = profPayroll;
+        const profPayroll = findUserId(values[18]?.toString().trim());
+        if (profPayroll && settoreLavoro) clienteData.professionista_payroll_id = profPayroll;
         
-        const contatto1 = findContattoId(values[17]?.toString().trim());
+        const contatto1 = findContattoId(values[19]?.toString().trim());
         if (contatto1) clienteData.contatto1_id = contatto1;
         
-        const contatto2 = findContattoId(values[18]?.toString().trim());
+        const contatto2 = findContattoId(values[20]?.toString().trim());
         if (contatto2) clienteData.contatto2_id = contatto2;
         
-        const prestazione = findPrestazioneId(values[19]?.toString().trim());
+        const prestazione = findPrestazioneId(values[21]?.toString().trim());
         if (prestazione) clienteData.tipo_prestazione_id = prestazione;
         
-        if (values[20]) clienteData.tipo_redditi = values[20].toString().trim();
+        if (values[22]) clienteData.tipo_redditi = values[22].toString().trim();
 
         try {
           await clienteService.createCliente(clienteData);
@@ -1159,14 +1151,6 @@ export default function ClientiPage() {
 
   const clientiConCassetto = clienti.filter((c) => c.cassetto_fiscale_id).length;
   const percentualeCassetto = clienti.length > 0 ? Math.round((clientiConCassetto / clienti.length) * 100) : 0;
-
-  const isFieldEnabled = (field: "fiscale" | "payroll") => {
-    if (!formData.settore) return true;
-    if (formData.settore === "Fiscale & Lavoro") return true;
-    if (formData.settore === "Fiscale" && field === "fiscale") return true;
-    if (formData.settore === "Lavoro" && field === "payroll") return true;
-    return false;
-  };
 
   if (loading) {
     return (
@@ -1230,7 +1214,9 @@ export default function ClientiPage() {
                         <ol className="list-decimal list-inside space-y-1 text-xs">
                           <li><strong>Tipo Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Persona fisica/Altro)</li>
                           <li><strong>Tipologia Cliente</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Interno/Esterno)</li>
-                          <li><strong>Settore</strong> - <span className="text-red-600">OBBLIGATORIO</span> (Fiscale/Lavoro/Fiscale & Lavoro)</li>
+                          <li><strong>Settore Fiscale</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
+                          <li><strong>Settore Lavoro</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
+                          <li><strong>Settore Consulenza</strong> - <span className="text-red-600">OBBLIGATORIO</span> (VERO/FALSO)</li>
                           <li><strong>Ragione Sociale</strong> - <span className="text-red-600">OBBLIGATORIO</span></li>
                           <li><strong>Partita IVA</strong> - Opzionale</li>
                           <li><strong>Codice Fiscale</strong> - Opzionale</li>
@@ -1554,27 +1540,62 @@ export default function ClientiPage() {
                 <div className="md:col-span-2 space-y-2">
                   <Label>Settori *</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
-                    {["Fiscale", "Lavoro", "Consulenza"].map((sector) => (
-                      <div key={sector} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`settore-${sector}`}
-                          checked={formData.settore?.includes(sector) || false}
-                          onCheckedChange={(checked) => {
-                            let currentSectors = formData.settore ? formData.settore.split(" & ").filter(s => s.trim() !== "") : [];
-                            
-                            if (checked) {
-                              if (!currentSectors.includes(sector)) currentSectors.push(sector);
-                            } else {
-                              currentSectors = currentSectors.filter(s => s !== sector);
-                            }
-                            setFormData({ ...formData, settore: currentSectors.join(" & ") });
-                          }}
-                        />
-                        <Label htmlFor={`settore-${sector}`} className="font-medium cursor-pointer">
-                          Settore {sector}
-                        </Label>
-                      </div>
-                    ))}
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-fiscale"
+                        checked={formData.settore_fiscale}
+                        onCheckedChange={(checked) => {
+                          const newValue = checked as boolean;
+                          setFormData({ 
+                            ...formData, 
+                            settore_fiscale: newValue,
+                            // Svuota campi fiscali se deselezionato
+                            ...((!newValue) && {
+                              utente_operatore_id: "",
+                              utente_professionista_id: ""
+                            })
+                          });
+                        }}
+                      />
+                      <Label htmlFor="settore-fiscale" className="font-medium cursor-pointer">
+                        Settore Fiscale
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-lavoro"
+                        checked={formData.settore_lavoro}
+                        onCheckedChange={(checked) => {
+                          const newValue = checked as boolean;
+                          setFormData({ 
+                            ...formData, 
+                            settore_lavoro: newValue,
+                            // Svuota campi payroll se deselezionato
+                            ...((!newValue) && {
+                              utente_payroll_id: "",
+                              professionista_payroll_id: ""
+                            })
+                          });
+                        }}
+                      />
+                      <Label htmlFor="settore-lavoro" className="font-medium cursor-pointer">
+                        Settore Lavoro
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="settore-consulenza"
+                        checked={formData.settore_consulenza}
+                        onCheckedChange={(checked) => {
+                          setFormData({ ...formData, settore_consulenza: checked as boolean });
+                        }}
+                      />
+                      <Label htmlFor="settore-consulenza" className="font-medium cursor-pointer">
+                        Settore Consulenza
+                      </Label>
+                    </div>
                   </div>
                 </div>
 
@@ -1727,9 +1748,9 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
                     }
-                    disabled={!isFieldEnabled("fiscale")}
+                    disabled={!formData.settore_fiscale}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1741,6 +1762,9 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!formData.settore_fiscale && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
+                  )}
                 </div>
 
                 <div>
@@ -1750,9 +1774,9 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
                     }
-                    disabled={!isFieldEnabled("fiscale")}
+                    disabled={!formData.settore_fiscale}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
                       <SelectValue placeholder="Seleziona professionista" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1764,6 +1788,9 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!formData.settore_fiscale && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
+                  )}
                 </div>
 
                 <div>
@@ -1773,9 +1800,9 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
                     }
-                    disabled={!isFieldEnabled("payroll")}
+                    disabled={!formData.settore_lavoro}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1787,6 +1814,9 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!formData.settore_lavoro && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
+                  )}
                 </div>
 
                 <div>
@@ -1796,9 +1826,9 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
                     }
-                    disabled={!isFieldEnabled("payroll")}
+                    disabled={!formData.settore_lavoro}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1810,6 +1840,9 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!formData.settore_lavoro && (
+                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
+                  )}
                 </div>
 
                 <div>
