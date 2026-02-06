@@ -63,7 +63,7 @@ interface EmailMessage {
 export const microsoftGraphService = {
   async getStoredTokens(userId: string): Promise<MicrosoftTokens | null> {
     try {
-      // @ts-ignore - Table not yet in types
+      // @ts-expect-error - Table not yet in types
       const { data, error } = await supabase
         .from("tbmicrosoft_tokens" as any)
         .select("*")
@@ -72,10 +72,13 @@ export const microsoftGraphService = {
 
       if (error || !data) return null;
 
+      // Cast data to any to avoid TS errors with dynamic table
+      const tokenData = data as any;
+
       return {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_at: new Date(data.expires_at).getTime(),
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: new Date(tokenData.expires_at).getTime(),
       };
     } catch (error) {
       console.error("Error getting stored tokens:", error);
@@ -92,7 +95,7 @@ export const microsoftGraphService = {
     try {
       const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-      // @ts-ignore - Table not yet in types
+      // @ts-expect-error - Table not yet in types
       await supabase
         .from("tbmicrosoft_tokens" as any)
         .upsert({
@@ -257,7 +260,7 @@ export const microsoftGraphService = {
 
   async disconnectAccount(userId: string): Promise<void> {
     try {
-      // @ts-ignore - Table not yet in types
+      // @ts-expect-error - Table not yet in types
       await supabase
         .from("tbmicrosoft_tokens" as any)
         .delete()
