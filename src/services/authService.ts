@@ -192,5 +192,23 @@ export const authService = {
       return null;
     }
     return data;
+  },
+
+  async logout() {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "global" });
+      
+      if (error) {
+        console.warn("Logout error (ignoring):", error);
+      }
+    } catch (error) {
+      console.warn("Logout failed, clearing local session:", error);
+    } finally {
+      // Pulizia forzata locale in ogni caso
+      if (typeof window !== "undefined") {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+    }
   }
 };
