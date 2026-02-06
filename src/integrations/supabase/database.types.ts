@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -2210,6 +2210,8 @@ export type Database = {
           created_at: string | null
           denominazione_breve: string
           email: string
+          encryption_enabled: boolean | null
+          encryption_salt: string | null
           id: string
           indirizzo: string
           logo_url: string | null
@@ -2230,6 +2232,8 @@ export type Database = {
           created_at?: string | null
           denominazione_breve: string
           email: string
+          encryption_enabled?: boolean | null
+          encryption_salt?: string | null
           id?: string
           indirizzo: string
           logo_url?: string | null
@@ -2250,6 +2254,8 @@ export type Database = {
           created_at?: string | null
           denominazione_breve?: string
           email?: string
+          encryption_enabled?: boolean | null
+          encryption_salt?: string | null
           id?: string
           indirizzo?: string
           logo_url?: string | null
