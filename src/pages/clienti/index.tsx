@@ -1603,7 +1603,14 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona utente fiscale" />
                     </SelectTrigger>
                     <SelectContent>
-                      {utenti.map((utente) => (
+                      {utenti
+                        .filter((u) => u.tipo_utente === "Operatore")
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
                         </SelectItem>
@@ -1629,7 +1636,14 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona professionista fiscale" />
                     </SelectTrigger>
                     <SelectContent>
-                      {utenti.map((utente) => (
+                      {utenti
+                        .filter((u) => u.tipo_utente === "Professionista")
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
                         </SelectItem>
@@ -1650,7 +1664,14 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
-                      {utenti.map((utente) => (
+                      {utenti
+                        .filter((u) => u.tipo_utente === "Operatore")
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
                         </SelectItem>
@@ -1676,7 +1697,14 @@ export default function ClientiPage() {
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
-                      {utenti.map((utente) => (
+                      {utenti
+                        .filter((u) => u.tipo_utente === "Professionista")
+                        .sort((a, b) => {
+                          const cognomeA = (a.cognome || "").toLowerCase();
+                          const cognomeB = (b.cognome || "").toLowerCase();
+                          return cognomeA.localeCompare(cognomeB);
+                        })
+                        .map((utente) => (
                         <SelectItem key={utente.id} value={utente.id}>
                           {utente.nome} {utente.cognome}
                         </SelectItem>
