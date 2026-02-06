@@ -364,27 +364,64 @@ export default function ClientiPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [
-        clientiData,
-        contattiData,
-        utentiData,
-        cassettiData,
-        prestazioniData
-      ] = await Promise.all([
-        clienteService.getClienti(),
-        contattoService.getContatti(),
-        utenteService.getUtenti(),
-        cassettiFiscaliService.getCassettiFiscali(),
-        supabase.from("tbprestazioni").select("*").order("descrizione")
-      ]);
+      console.log("🔍 [DEBUG] Inizio caricamento clienti...");
 
-      setClienti(clientiData);
-      setContatti(contattiData);
-      setUtenti(utentiData);
-      setCassettiFiscali(cassettiData);
-      setPrestazioni(prestazioniData.data || []);
+      const studioId = localStorage.getItem("studioId") || "";
+      console.log("🔍 [DEBUG] Studio ID:", studioId);
+
+      const { data: clientiData, error: clientiError } = await supabase
+        .from("tbclienti")
+        .select(`
+          *,
+          utente_fiscale:tbutenti!tbclienti_utente_fiscale_id_fkey(id, nome, cognome),
+          professionista_fiscale:tbutenti!tbclienti_professionista_fiscale_id_fkey(id, nome, cognome),
+          utente_payroll:tbutenti!tbclienti_utente_payroll_id_fkey(id, nome, cognome),
+          professionista_payroll:tbutenti!tbclienti_professionista_payroll_id_fkey(id, nome, cognome),
+          contatto1:tbcontatti!tbclienti_contatto1_id_fkey(id, cognome, nome),
+          tipo_prestazione:tbprestazioni!tbclienti_tipo_prestazione_id_fkey(descrizione)
+        `)
+        .eq("studio_id", studioId)
+        .order("ragione_sociale");
+
+      if (clientiError) {
+        console.error("❌ [DEBUG] Errore query clienti:", clientiError);
+        throw clientiError;
+      }
+
+      console.log("✅ [DEBUG] Clienti caricati:", clientiData?.length || 0);
+      setClienti((clientiData as any) || []);
+
+      const { data: utentiData } = await supabase
+        .from("tbutenti")
+        .select("id, nome, cognome, settore")
+        .eq("studio_id", studioId)
+        .eq("attivo", true)
+        .order("cognome");
+
+      console.log("✅ [DEBUG] Utenti caricati:", utentiData?.length || 0);
+      setUtenti((utentiData as any) || []);
+
+      const { data: contattiData } = await supabase
+        .from("tbcontatti")
+        .select("id, cognome, nome")
+        .eq("studio_id", studioId)
+        .order("cognome");
+
+      console.log("✅ [DEBUG] Contatti caricati:", contattiData?.length || 0);
+      setContatti((contattiData as any) || []);
+
+      const { data: tipiPrestazioneData } = await supabase
+        .from("tbprestazioni")
+        .select("id, descrizione")
+        .eq("studio_id", studioId)
+        .order("descrizione");
+
+      console.log("✅ [DEBUG] Tipi prestazione caricati:", tipiPrestazioneData?.length || 0);
+      setPrestazioni((tipiPrestazioneData as any) || []);
+
+      console.log("✅ [DEBUG] Caricamento completato!");
     } catch (error) {
-      console.error("Errore caricamento dati:", error);
+      console.error("❌ [DEBUG] Errore fatale:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
@@ -392,6 +429,7 @@ export default function ClientiPage() {
       });
     } finally {
       setLoading(false);
+      console.log("🔍 [DEBUG] setLoading(false) eseguito");
     }
   };
 

@@ -6,19 +6,16 @@ type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
 type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
 
 export const clienteService = {
-  async getClienti(studioId?: string | null) {
-    let query = supabase
+  async getClienti() {
+    const { data, error } = await supabase
       .from("tbclienti")
       .select("*")
       .order("ragione_sociale");
 
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
+    if (error) {
+      console.error("Error fetching clienti:", error);
+      throw error;
     }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
     return data || [];
   },
 
