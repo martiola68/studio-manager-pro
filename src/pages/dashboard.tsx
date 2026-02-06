@@ -5,7 +5,7 @@ import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail, BookOpen } from "lucide-react";
+import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail, BookOpen, Lock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/supabase/types";
@@ -316,7 +316,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <Card className="mt-8 border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-600 rounded-lg">
@@ -370,6 +370,65 @@ export default function DashboardPage() {
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               <BookOpen className="h-5 w-5 mr-2" />
               Apri Manuale Completo
+            </Button>
+          </a>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8 border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-amber-500 rounded-lg">
+              <Lock className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-amber-900">🔐 Guida Master Password - Gestione Sicura Dati</CardTitle>
+              <CardDescription className="text-amber-700">Impara a configurare e utilizzare la Master Password per proteggere i dati sensibili dello studio</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-700 mb-4">
+            Guida completa per configurare, utilizzare e gestire la Master Password in modo sicuro e autonomo. Ogni membro del team potrà lavorare senza dipendere da altri.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Setup iniziale</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Uso quotidiano</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Condivisione sicura</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Best practices</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Troubleshooting</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>FAQ complete</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Checklist operative</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <CheckCircle className="h-4 w-4 text-amber-600" />
+              <span>Regole team</span>
+            </div>
+          </div>
+          <a href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html" target="_blank" rel="noopener noreferrer">
+            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
+              <Lock className="h-5 w-5 mr-2" />
+              Apri Guida Master Password
             </Button>
           </a>
         </CardContent>
