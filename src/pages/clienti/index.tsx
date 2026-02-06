@@ -334,6 +334,7 @@ export default function ClientiPage() {
   const getUtenteNome = (utenteId: string | null): string => {
     if (!utenteId) return "-";
     const utente = utenti.find(u => u.id === utenteId);
+    console.log("DEBUG getUtenteNome:", { utenteId, utente, nome: utente?.nome, cognome: utente?.cognome });
     return utente ? `${utente.nome || ""} ${utente.cognome || ""}`.trim() : "-";
   };
 
@@ -1303,8 +1304,10 @@ export default function ClientiPage() {
                   <TableRow>
                     <TableHead className="sticky left-0 bg-background z-20 shadow-r">Cod. Cliente</TableHead>
                     <TableHead className="sticky left-[120px] bg-background z-20 shadow-r">Ragione Sociale</TableHead>
+                    <TableHead>Codice</TableHead>
+                    <TableHead>Denominazione</TableHead>
                     <TableHead>Utente Fiscale</TableHead>
-                    <TableHead>Utente Payroll</TableHead>
+                    <TableHead>Professionista Fiscale</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead className="text-center">Scadenzari</TableHead>
                     <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">Azioni</TableHead>
@@ -1320,7 +1323,7 @@ export default function ClientiPage() {
                         {cliente.ragione_sociale}
                       </TableCell>
                       <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-                      <TableCell>{getUtenteNome(cliente.utente_payroll_id)}</TableCell>
+                      <TableCell>{getUtenteNome(cliente.professionista_operatore_id)}</TableCell>
                       <TableCell>
                         {cliente.attivo ? (
                           <Badge variant="default" className="bg-green-600">
