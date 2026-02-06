@@ -369,10 +369,13 @@ export default function ClientiPage() {
       const studioId = localStorage.getItem("studioId") || "";
       console.log("🔍 [DEBUG] Studio ID:", studioId);
 
-      const { data: clientiData, error: clientiError } = await supabase
+      const { data: clientiData, error: clientiError } = await (supabase
         .from("tbclienti")
         .select(`
           *,
+          settore_fiscale,
+          settore_lavoro,
+          settore_consulenza,
           utente_fiscale:tbutenti!tbclienti_utente_fiscale_id_fkey(id, nome, cognome),
           professionista_fiscale:tbutenti!tbclienti_professionista_fiscale_id_fkey(id, nome, cognome),
           utente_payroll:tbutenti!tbclienti_utente_payroll_id_fkey(id, nome, cognome),
@@ -381,7 +384,7 @@ export default function ClientiPage() {
           tipo_prestazione:tbprestazioni!tbclienti_tipo_prestazione_id_fkey(descrizione)
         `)
         .eq("studio_id", studioId)
-        .order("ragione_sociale");
+        .order("ragione_sociale") as any);
 
       if (clientiError) {
         console.error("❌ [DEBUG] Errore query clienti:", clientiError);
