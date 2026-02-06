@@ -312,3 +312,272 @@ export async function migrateAllCassettiToEncrypted(
     return { success: false, migrated: 0, errors: 0 };
   }
 }
+
+/**
+ * Encrypt cliente sensitive data (CF, P.IVA, matricole, note)
+ */
+export async function encryptClienteSensitiveData(cliente: {
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+  matricola_inps?: string | null;
+  pat_inail?: string | null;
+  codice_ditta_ce?: string | null;
+  note?: string | null;
+  note_antiriciclaggio?: string | null;
+}): Promise<{
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+  matricola_inps?: string | null;
+  pat_inail?: string | null;
+  codice_ditta_ce?: string | null;
+  note?: string | null;
+  note_antiriciclaggio?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    codice_fiscale: cliente.codice_fiscale
+      ? encryptData(cliente.codice_fiscale, key)
+      : null,
+    partita_iva: cliente.partita_iva
+      ? encryptData(cliente.partita_iva, key)
+      : null,
+    matricola_inps: cliente.matricola_inps
+      ? encryptData(cliente.matricola_inps, key)
+      : null,
+    pat_inail: cliente.pat_inail ? encryptData(cliente.pat_inail, key) : null,
+    codice_ditta_ce: cliente.codice_ditta_ce
+      ? encryptData(cliente.codice_ditta_ce, key)
+      : null,
+    note: cliente.note ? encryptData(cliente.note, key) : null,
+    note_antiriciclaggio: cliente.note_antiriciclaggio
+      ? encryptData(cliente.note_antiriciclaggio, key)
+      : null,
+  };
+}
+
+/**
+ * Decrypt cliente sensitive data
+ */
+export async function decryptClienteSensitiveData(cliente: {
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+  matricola_inps?: string | null;
+  pat_inail?: string | null;
+  codice_ditta_ce?: string | null;
+  note?: string | null;
+  note_antiriciclaggio?: string | null;
+}): Promise<{
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
+  matricola_inps?: string | null;
+  pat_inail?: string | null;
+  codice_ditta_ce?: string | null;
+  note?: string | null;
+  note_antiriciclaggio?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    codice_fiscale:
+      cliente.codice_fiscale && isEncrypted(cliente.codice_fiscale)
+        ? decryptData(cliente.codice_fiscale, key)
+        : cliente.codice_fiscale,
+    partita_iva:
+      cliente.partita_iva && isEncrypted(cliente.partita_iva)
+        ? decryptData(cliente.partita_iva, key)
+        : cliente.partita_iva,
+    matricola_inps:
+      cliente.matricola_inps && isEncrypted(cliente.matricola_inps)
+        ? decryptData(cliente.matricola_inps, key)
+        : cliente.matricola_inps,
+    pat_inail:
+      cliente.pat_inail && isEncrypted(cliente.pat_inail)
+        ? decryptData(cliente.pat_inail, key)
+        : cliente.pat_inail,
+    codice_ditta_ce:
+      cliente.codice_ditta_ce && isEncrypted(cliente.codice_ditta_ce)
+        ? decryptData(cliente.codice_ditta_ce, key)
+        : cliente.codice_ditta_ce,
+    note:
+      cliente.note && isEncrypted(cliente.note)
+        ? decryptData(cliente.note, key)
+        : cliente.note,
+    note_antiriciclaggio:
+      cliente.note_antiriciclaggio && isEncrypted(cliente.note_antiriciclaggio)
+        ? decryptData(cliente.note_antiriciclaggio, key)
+        : cliente.note_antiriciclaggio,
+  };
+}
+
+/**
+ * Migrate all clienti for studio
+ */
+export async function migrateAllClientiToEncrypted(
+  studioId: string
+): Promise<{ success: boolean; migrated: number; errors: number }> {
+  try {
+    const key = getStoredEncryptionKey();
+    if (!key) {
+      throw new Error("Cassetti locked - unlock first");
+    }
+
+    // Get all clienti
+    const { data: clienti, error: fetchError } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("studio_id", studioId);
+
+    if (fetchError) throw fetchError;
+    if (!clienti) return { success: true, migrated: 0, errors: 0 };
+
+    let migrated = 0;
+    let errors = 0;
+
+    for (const cliente of clienti) {
+      // Skip if already encrypted
+      if (cliente.codice_fiscale && isEncrypted(cliente.codice_fiscale)) {
+        continue;
+      }
+
+      try {
+        const encrypted = await encryptClienteSensitiveData(cliente);
+
+        const { error: updateError } = await supabase
+          .from("tbclienti")
+          .update({
+            ...encrypted,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cliente.id)
+          .eq("studio_id", studioId);
+
+        if (updateError) throw updateError;
+        migrated++;
+      } catch (error) {
+        errors++;
+        console.error(`Failed to migrate cliente ${cliente.id}:`, error);
+      }
+    }
+
+    return { success: true, migrated, errors };
+  } catch (error) {
+    console.error("Migrate all clienti error:", error);
+    return { success: false, migrated: 0, errors: 0 };
+  }
+}
+
+/**
+ * Encrypt credenziali accesso passwords
+ */
+export async function encryptCredenzialiAccesso(credenziali: {
+  login_pw?: string | null;
+  login_pin?: string | null;
+}): Promise<{
+  login_pw?: string | null;
+  login_pin?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    login_pw: credenziali.login_pw
+      ? encryptData(credenziali.login_pw, key)
+      : null,
+    login_pin: credenziali.login_pin
+      ? encryptData(credenziali.login_pin, key)
+      : null,
+  };
+}
+
+/**
+ * Decrypt credenziali accesso passwords
+ */
+export async function decryptCredenzialiAccesso(credenziali: {
+  login_pw?: string | null;
+  login_pin?: string | null;
+}): Promise<{
+  login_pw?: string | null;
+  login_pin?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    login_pw:
+      credenziali.login_pw && isEncrypted(credenziali.login_pw)
+        ? decryptData(credenziali.login_pw, key)
+        : credenziali.login_pw,
+    login_pin:
+      credenziali.login_pin && isEncrypted(credenziali.login_pin)
+        ? decryptData(credenziali.login_pin, key)
+        : credenziali.login_pin,
+  };
+}
+
+/**
+ * Migrate all credenziali accesso for studio
+ */
+export async function migrateAllCredenzialiToEncrypted(
+  studioId: string
+): Promise<{ success: boolean; migrated: number; errors: number }> {
+  try {
+    const key = getStoredEncryptionKey();
+    if (!key) {
+      throw new Error("Cassetti locked - unlock first");
+    }
+
+    // Get all credenziali
+    const { data: credenziali, error: fetchError } = await supabase
+      .from("tbcredenziali_accesso")
+      .select("*")
+      .eq("studio_id", studioId);
+
+    if (fetchError) throw fetchError;
+    if (!credenziali) return { success: true, migrated: 0, errors: 0 };
+
+    let migrated = 0;
+    let errors = 0;
+
+    for (const cred of credenziali) {
+      // Skip if already encrypted
+      if (cred.login_pw && isEncrypted(cred.login_pw)) {
+        continue;
+      }
+
+      try {
+        const encrypted = await encryptCredenzialiAccesso(cred);
+
+        const { error: updateError } = await supabase
+          .from("tbcredenziali_accesso")
+          .update({
+            ...encrypted,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cred.id)
+          .eq("studio_id", studioId);
+
+        if (updateError) throw updateError;
+        migrated++;
+      } catch (error) {
+        errors++;
+        console.error(`Failed to migrate credenziale ${cred.id}:`, error);
+      }
+    }
+
+    return { success: true, migrated, errors };
+  } catch (error) {
+    console.error("Migrate all credenziali error:", error);
+    return { success: false, migrated: 0, errors: 0 };
+  }
+}

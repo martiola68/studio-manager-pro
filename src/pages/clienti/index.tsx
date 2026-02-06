@@ -42,7 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar } from "lucide-react";
+import { Users, Edit, Trash2, Search, Plus, Upload, FileSpreadsheet, CheckCircle2, Calendar, Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { clienteService } from "@/services/clienteService";
 import { contattoService } from "@/services/contattoService";
 import { utenteService } from "@/services/utenteService";
@@ -50,6 +50,16 @@ import { cassettiFiscaliService } from "@/services/cassettiFiscaliService";
 import { Switch } from "@/components/ui/switch";
 import * as XLSX from "xlsx";
 import { useStudio } from "@/contexts/StudioContext";
+import { 
+  isEncryptionEnabled, 
+  isEncryptionLocked,
+  encryptClienteSensitiveData,
+  decryptClienteSensitiveData,
+  getStoredEncryptionKey,
+  unlockCassetti,
+  lockCassetti,
+  migrateAllClientiToEncrypted
+} from "@/services/encryptionService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
@@ -121,6 +131,10 @@ export default function ClientiPage() {
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
   const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
+
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [encryptionLocked, setEncryptionLocked] = useState(true);
+  const [showSensitiveData, setShowSensitiveData] = useState<{[key: string]: boolean}>({});
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
@@ -339,7 +353,15 @@ export default function ClientiPage() {
 
   useEffect(() => {
     loadData();
+    checkEncryptionStatus();
   }, []);
+
+  const checkEncryptionStatus = async () => {
+    const enabled = await isEncryptionEnabled();
+    const locked = await isEncryptionLocked();
+    setEncryptionEnabled(enabled);
+    setEncryptionLocked(locked);
+  };
 
   useEffect(() => {
     filterClienti();
@@ -438,7 +460,7 @@ export default function ClientiPage() {
         return;
       }
 
-      const dataToSave = {
+      let dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         utente_operatore_id: formData.utente_operatore_id || undefined,
@@ -481,6 +503,31 @@ export default function ClientiPage() {
         flag_proforma: scadenzari.proforma,
         flag_imu: scadenzari.imu,
       };
+
+      // Encrypt sensitive fields if encryption is enabled and unlocked
+      if (encryptionEnabled && !encryptionLocked) {
+        try {
+          const encrypted = await encryptClienteSensitiveData({
+            codice_fiscale: dataToSave.codice_fiscale,
+            partita_iva: dataToSave.partita_iva,
+            matricola_inps: dataToSave.matricola_inps,
+            pat_inail: dataToSave.pat_inail,
+            codice_ditta_ce: dataToSave.codice_ditta_ce,
+            note: dataToSave.note,
+            note_antiriciclaggio: dataToSave.note_antiriciclaggio,
+          });
+          
+          dataToSave = { ...dataToSave, ...encrypted };
+        } catch (error: any) {
+          console.error("Encryption error:", error);
+          toast({
+            title: "Errore Encryption",
+            description: "Impossibile cifrare i dati. Verifica di aver sbloccato la protezione.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
 
       if (editingCliente) {
         await clienteService.updateCliente(editingCliente.id, dataToSave);
@@ -692,69 +739,122 @@ export default function ClientiPage() {
     }
   };
 
+  const handleUnlockCassetti = async () => {
+    try {
+      const success = await unlockCassetti(studioId || "");
+      if (success) {
+        setEncryptionLocked(false);
+        toast({
+          title: "Sbloccato",
+          description: "Dati sensibili sbloccati con successo",
+        });
+        loadData(); // Reload to decrypt data
+      }
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Password errata",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLockCassetti = () => {
+    lockCassetti();
+    setEncryptionLocked(true);
+    setShowSensitiveData({});
+    toast({
+      title: "Bloccato",
+      description: "Dati sensibili bloccati",
+    });
+    loadData(); // Reload to hide decrypted data
+  };
+
   const handleAddNew = () => {
     resetForm();
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (cliente: Cliente) => {
+  const handleEdit = async (cliente: Cliente) => {
     setEditingCliente(cliente);
+    
+    let clienteData = { ...cliente };
+    
+    // Decrypt sensitive fields if encryption is enabled and unlocked
+    if (encryptionEnabled && !encryptionLocked) {
+      try {
+        const decrypted = await decryptClienteSensitiveData({
+          codice_fiscale: cliente.codice_fiscale,
+          partita_iva: cliente.partita_iva,
+          matricola_inps: cliente.matricola_inps,
+          pat_inail: cliente.pat_inail,
+          codice_ditta_ce: cliente.codice_ditta_ce,
+          note: cliente.note,
+          note_antiriciclaggio: cliente.note_antiriciclaggio,
+        });
+        
+        clienteData = { ...clienteData, ...decrypted };
+      } catch (error) {
+        console.error("Decryption error:", error);
+      }
+    }
+    
     setFormData({
       ...formData,
-      ...cliente,
-      cod_cliente: cliente.cod_cliente || "",
-      tipo_cliente: cliente.tipo_cliente || "Persona fisica",
-      tipologia_cliente: cliente.tipologia_cliente || undefined,
-      settore: cliente.settore || undefined,
-      ragione_sociale: cliente.ragione_sociale || "",
-      partita_iva: cliente.partita_iva || "",
-      codice_fiscale: cliente.codice_fiscale || "",
-      indirizzo: cliente.indirizzo || "",
-      cap: cliente.cap || "",
-      citta: cliente.citta || "",
-      provincia: cliente.provincia || "",
-      email: cliente.email || "",
-      attivo: cliente.attivo ?? false,
-      tipo_redditi: (cliente.tipo_redditi as any) || undefined,
-      utente_operatore_id: cliente.utente_operatore_id || "",
-      utente_professionista_id: cliente.utente_professionista_id || "",
-      utente_payroll_id: cliente.utente_payroll_id || "",
-      professionista_payroll_id: cliente.professionista_payroll_id || "",
-      contatto1_id: cliente.contatto1_id || "",
-      referente_esterno: cliente.referente_esterno || "",
-      tipo_prestazione_id: cliente.tipo_prestazione_id || "",
-      cassetto_fiscale_id: cliente.cassetto_fiscale_id || "",
-      matricola_inps: cliente.matricola_inps || "",
-      pat_inail: cliente.pat_inail || "",
-      codice_ditta_ce: cliente.codice_ditta_ce || "",
-      note_antiriciclaggio: cliente.note_antiriciclaggio || "",
-      gestione_antiriciclaggio: cliente.gestione_antiriciclaggio ?? false,
-      gg_ver_a: cliente.gg_ver_a ?? null,
-      gg_ver_b: cliente.gg_ver_b ?? null,
-      data_ultima_verifica_antiric: cliente.data_ultima_verifica_antiric ? new Date(cliente.data_ultima_verifica_antiric) : null,
-      data_ultima_verifica_b: cliente.data_ultima_verifica_b ? new Date(cliente.data_ultima_verifica_b) : null,
-      scadenza_antiric: cliente.scadenza_antiric ? new Date(cliente.scadenza_antiric) : null,
-      scadenza_antiric_b: cliente.scadenza_antiric_b ? new Date(cliente.scadenza_antiric_b) : null,
-      rischio_ver_a: cliente.rischio_ver_a || "",
-      rischio_ver_b: cliente.rischio_ver_b || "",
-      tipo_prestazione_a: cliente.tipo_prestazione_a || "",
-      tipo_prestazione_b: cliente.tipo_prestazione_b || "",
-      giorni_scad_ver_a: cliente.giorni_scad_ver_a ?? null,
-      giorni_scad_ver_b: cliente.giorni_scad_ver_b ?? null,
-      note: cliente.note || "",
+      ...clienteData,
+      cod_cliente: clienteData.cod_cliente || "",
+      tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
+      tipologia_cliente: clienteData.tipologia_cliente || undefined,
+      settore: clienteData.settore || undefined,
+      ragione_sociale: clienteData.ragione_sociale || "",
+      partita_iva: clienteData.partita_iva || "",
+      codice_fiscale: clienteData.codice_fiscale || "",
+      indirizzo: clienteData.indirizzo || "",
+      cap: clienteData.cap || "",
+      citta: clienteData.citta || "",
+      provincia: clienteData.provincia || "",
+      email: clienteData.email || "",
+      attivo: clienteData.attivo ?? false,
+      tipo_redditi: (clienteData.tipo_redditi as any) || undefined,
+      utente_operatore_id: clienteData.utente_operatore_id || "",
+      utente_professionista_id: clienteData.utente_professionista_id || "",
+      utente_payroll_id: clienteData.utente_payroll_id || "",
+      professionista_payroll_id: clienteData.professionista_payroll_id || "",
+      contatto1_id: clienteData.contatto1_id || "",
+      referente_esterno: clienteData.referente_esterno || "",
+      tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
+      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
+      matricola_inps: clienteData.matricola_inps || "",
+      pat_inail: clienteData.pat_inail || "",
+      codice_ditta_ce: clienteData.codice_ditta_ce || "",
+      note_antiriciclaggio: clienteData.note_antiriciclaggio || "",
+      gestione_antiriciclaggio: clienteData.gestione_antiriciclaggio ?? false,
+      gg_ver_a: clienteData.gg_ver_a ?? null,
+      gg_ver_b: clienteData.gg_ver_b ?? null,
+      data_ultima_verifica_antiric: clienteData.data_ultima_verifica_antiric ? new Date(clienteData.data_ultima_verifica_antiric) : null,
+      data_ultima_verifica_b: clienteData.data_ultima_verifica_b ? new Date(clienteData.data_ultima_verifica_b) : null,
+      scadenza_antiric: clienteData.scadenza_antiric ? new Date(clienteData.scadenza_antiric) : null,
+      scadenza_antiric_b: clienteData.scadenza_antiric_b ? new Date(clienteData.scadenza_antiric_b) : null,
+      rischio_ver_a: clienteData.rischio_ver_a || "",
+      rischio_ver_b: clienteData.rischio_ver_b || "",
+      tipo_prestazione_a: clienteData.tipo_prestazione_a || "",
+      tipo_prestazione_b: clienteData.tipo_prestazione_b || "",
+      giorni_scad_ver_a: clienteData.giorni_scad_ver_a ?? null,
+      giorni_scad_ver_b: clienteData.giorni_scad_ver_b ?? null,
+      note: clienteData.note || "",
     });
     
     setScadenzari({
-      iva: cliente.flag_iva ?? false,
-      cu: cliente.flag_cu ?? false,
-      bilancio: cliente.flag_bilancio ?? false,
-      fiscali: cliente.flag_fiscali ?? false,
-      lipe: cliente.flag_lipe ?? false,
-      modello_770: cliente.flag_770 ?? false,
-      esterometro: cliente.flag_esterometro ?? false,
-      ccgg: cliente.flag_ccgg ?? false,
-      proforma: cliente.flag_proforma ?? false,
-      imu: cliente.flag_imu ?? false,
+      iva: clienteData.flag_iva ?? false,
+      cu: clienteData.flag_cu ?? false,
+      bilancio: clienteData.flag_bilancio ?? false,
+      fiscali: clienteData.flag_fiscali ?? false,
+      lipe: clienteData.flag_lipe ?? false,
+      modello_770: clienteData.flag_770 ?? false,
+      esterometro: clienteData.flag_esterometro ?? false,
+      ccgg: clienteData.flag_ccgg ?? false,
+      proforma: clienteData.flag_proforma ?? false,
+      imu: clienteData.flag_imu ?? false,
     });
     setIsDialogOpen(true);
   };
@@ -1068,6 +1168,25 @@ export default function ClientiPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            {encryptionEnabled && (
+              <Button
+                variant="outline"
+                onClick={encryptionLocked ? handleUnlockCassetti : handleLockCassetti}
+                className={encryptionLocked ? "border-orange-600 text-orange-600" : "border-green-600 text-green-600"}
+              >
+                {encryptionLocked ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Sblocca Dati
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="h-4 w-4 mr-2" />
+                    Blocca Dati
+                  </>
+                )}
+              </Button>
+            )}
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
@@ -1315,7 +1434,7 @@ export default function ClientiPage() {
                         </Button>
                       </TableCell>
                       <TableCell className="sticky right-0 bg-background z-10 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-3">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1455,26 +1574,40 @@ export default function ClientiPage() {
                   <Label htmlFor="partita_iva">
                     P.IVA <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="partita_iva"
-                    value={formData.partita_iva}
-                    onChange={(e) =>
-                      setFormData({ ...formData, partita_iva: e.target.value })
-                    }
-                    placeholder="01234567890"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="partita_iva"
+                      value={formData.partita_iva}
+                      onChange={(e) =>
+                        setFormData({ ...formData, partita_iva: e.target.value })
+                      }
+                      placeholder="01234567890"
+                    />
+                    {encryptionEnabled && encryptionLocked && formData.partita_iva && (
+                      <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
-                  <Input
-                    id="codice_fiscale"
-                    value={formData.codice_fiscale}
-                    onChange={(e) =>
-                      setFormData({ ...formData, codice_fiscale: e.target.value })
-                    }
-                    placeholder="RSSMRA80A01H501U"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="codice_fiscale"
+                      value={formData.codice_fiscale}
+                      onChange={(e) =>
+                        setFormData({ ...formData, codice_fiscale: e.target.value })
+                      }
+                      placeholder="RSSMRA80A01H501U"
+                    />
+                    {encryptionEnabled && encryptionLocked && formData.codice_fiscale && (
+                      <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
