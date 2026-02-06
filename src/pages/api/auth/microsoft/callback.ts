@@ -63,7 +63,7 @@ export default async function handler(
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-    // @ts-expect-error - Table not yet in types
+    // Table not yet in types but casted to any
     const { error: saveError } = await supabase
       .from("tbmicrosoft_tokens" as any)
       .upsert({
