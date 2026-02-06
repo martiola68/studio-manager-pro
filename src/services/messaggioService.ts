@@ -15,12 +15,6 @@ export const messaggioService = {
           utente_id,
           ultimo_letto_at,
           tbutenti(id, nome, cognome, email)
-        ),
-        ultimo_messaggio:tbmessaggi(
-          id,
-          testo,
-          created_at,
-          mittente_id
         )
       `)
       .order("updated_at", { ascending: false });
@@ -39,9 +33,19 @@ export const messaggioService = {
       return isPartecipante;
     });
 
-    // Per ogni conversazione, conta i messaggi non letti
-    const conversazioniConNonLetti = await Promise.all(
+    // Per ogni conversazione, ottieni l'ULTIMO messaggio e conta i non letti
+    const conversazioniConDettagli = await Promise.all(
       conversazioniUtente.map(async (conv) => {
+        // Ottieni l'ULTIMO messaggio (ORDER BY created_at DESC + LIMIT 1)
+        const { data: ultimoMessaggio } = await supabase
+          .from("tbmessaggi")
+          .select("*")
+          .eq("conversazione_id", conv.id)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
         const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
         const ultimoLetto = partecipante?.ultimo_letto_at;
 
@@ -52,20 +56,15 @@ export const messaggioService = {
           .neq("mittente_id", userId)
           .gt("created_at", ultimoLetto || "1970-01-01");
 
-        // Prendi solo l'ultimo messaggio (array restituisce tutti)
-        const ultimoMsg = Array.isArray(conv.ultimo_messaggio) 
-          ? conv.ultimo_messaggio[0] 
-          : conv.ultimo_messaggio;
-
         return {
           ...conv,
-          ultimo_messaggio: ultimoMsg || null,
+          ultimo_messaggio: ultimoMessaggio || null,
           non_letti: count || 0,
         };
       })
     );
 
-    return conversazioniConNonLetti;
+    return conversazioniConDettagli;
   },
 
   async getMessaggi(conversazioneId: string) {
@@ -493,12 +492,6 @@ export const messaggioService = {
         `)
         .eq("utente_id", userId);
 
-      // Nota: il filtro studio_id qui è indiretto tramite la join, ma per ora lo gestiamo post-fetch o via RLS
-      // Se volessimo filtrare strettamente:
-      // Purtroppo Supabase non supporta filtro profondo su join in questo modo semplice per delete/update, 
-      // ma per select sì. Tuttavia, per semplicità e visto che RLS protegge, 
-      // possiamo lasciare che RLS filtri le conversazioni accessibili.
-      
       const { data: conversazioni, error: convError } = await convQuery;
 
       if (convError) {
@@ -545,6 +538,16 @@ export const messaggioService = {
     } catch (error) {
       console.error("Errore nel conteggio messaggi non letti:", error);
       return 0;
+    }
+  },
+
+  playNotificationSound() {
+    try {
+      const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZijkIG2m98OObUhALTKXh8LdfGwU7k9n1z3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXz");
+      audio.volume = 0.3;
+      audio.play().catch(err => console.log("Impossibile riprodurre suono notifica:", err));
+    } catch (error) {
+      console.error("Errore riproduzione suono:", error);
     }
   },
 };
