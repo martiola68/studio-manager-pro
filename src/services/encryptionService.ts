@@ -17,10 +17,24 @@ import {
   verifyEncryptionKey,
 } from "@/lib/encryption";
 
+export { getStoredEncryptionKey };
+
+/**
+ * Check if encryption is locally locked (no key in session)
+ */
+export function isEncryptionLocked(): boolean {
+  // If key is present in session, it is unlocked
+  return getStoredEncryptionKey() === null;
+}
+
 /**
  * Check if studio has encryption enabled
  */
-export async function isEncryptionEnabled(studioId: string): Promise<boolean> {
+export async function isEncryptionEnabled(studioId: string = ""): Promise<boolean> {
+  // If studioId is not provided, try to get it from current session or context
+  // For now we rely on the passed studioId, but handle empty case gracefully
+  if (!studioId) return false;
+
   const { data, error } = await supabase
     .from("tbstudio")
     .select("encryption_enabled")

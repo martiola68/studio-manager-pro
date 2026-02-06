@@ -135,6 +135,8 @@ export default function ClientiPage() {
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionLocked, setEncryptionLocked] = useState(true);
   const [showSensitiveData, setShowSensitiveData] = useState<{[key: string]: boolean}>({});
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
 
   const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
     iva: true,
@@ -517,7 +519,15 @@ export default function ClientiPage() {
             note_antiriciclaggio: dataToSave.note_antiriciclaggio,
           });
           
-          dataToSave = { ...dataToSave, ...encrypted };
+          // Merge encrypted data, converting nulls to undefined to satisfy strict types if needed, 
+          // or cast to any if the service accepts nulls (which Supabase does)
+          dataToSave = { 
+            ...dataToSave, 
+            ...encrypted,
+            // Ensure compatibility with types that strictly want undefined for "empty"
+            codice_fiscale: encrypted.codice_fiscale || dataToSave.codice_fiscale,
+            partita_iva: encrypted.partita_iva || dataToSave.partita_iva,
+          } as any;
         } catch (error: any) {
           console.error("Encryption error:", error);
           toast({
@@ -739,21 +749,33 @@ export default function ClientiPage() {
     }
   };
 
-  const handleUnlockCassetti = async () => {
+  const handleUnlockCassetti = () => {
+    setShowUnlockDialog(true);
+  };
+
+  const handleConfirmUnlock = async () => {
     try {
-      const success = await unlockCassetti(studioId || "");
-      if (success) {
+      const result = await unlockCassetti(studioId || "", unlockPassword);
+      if (result.success) {
         setEncryptionLocked(false);
+        setShowUnlockDialog(false);
+        setUnlockPassword("");
         toast({
           title: "Sbloccato",
           description: "Dati sensibili sbloccati con successo",
         });
         loadData(); // Reload to decrypt data
+      } else {
+        toast({
+          title: "Errore",
+          description: result.error || "Password errata",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       toast({
         title: "Errore",
-        description: error.message || "Password errata",
+        description: error.message || "Errore durante lo sblocco",
         variant: "destructive",
       });
     }
@@ -2315,6 +2337,37 @@ export default function ClientiPage() {
             <Button onClick={handleSave}>
               {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Inserisci la password principale dello studio per visualizzare e modificare i dati sensibili (CF, P.IVA, ecc).
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="unlock-password">Password Principale</Label>
+              <Input
+                id="unlock-password"
+                type="password"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                placeholder="Inserisci password..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
+                Annulla
+              </Button>
+              <Button onClick={handleConfirmUnlock}>
+                Sblocca
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
