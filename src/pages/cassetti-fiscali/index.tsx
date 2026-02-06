@@ -370,7 +370,7 @@ export default function CassettiFiscaliPage() {
   const onSubmit = async (values: FormValues) => {
     try {
       // Encrypt passwords if encryption enabled
-      let dataToSave = values;
+      let dataToSave: any = values;
       
       if (encryptionEnabled && isUnlocked) {
         const encrypted = await encryptCassettoPasswords({

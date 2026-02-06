@@ -109,10 +109,13 @@ export async function unlockCassetti(
       .not("password1", "is", null)
       .limit(1);
 
-    if (cassetti && cassetti.length > 0 && isEncrypted(cassetti[0].password1)) {
-      const isValid = await verifyEncryptionKey(key, cassetti[0].password1);
-      if (!isValid) {
-        throw new Error("Password errata");
+    if (cassetti && cassetti.length > 0) {
+      const pwd = cassetti[0].password1;
+      if (pwd && isEncrypted(pwd)) {
+        const isValid = await verifyEncryptionKey(key, pwd);
+        if (!isValid) {
+          throw new Error("Password errata");
+        }
       }
     }
 
