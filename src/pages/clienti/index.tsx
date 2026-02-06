@@ -437,6 +437,10 @@ export default function ClientiPage() {
     setFilteredClienti(filtered);
   };
 
+  useEffect(() => {
+    filterClienti();
+  }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
+
   const handleSave = async () => {
     try {
       if (!formData.ragione_sociale || !formData.email) {
