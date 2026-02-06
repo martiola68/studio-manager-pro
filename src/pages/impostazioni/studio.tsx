@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
 import { studioService } from "@/services/studioService";
+import { passwordResetService } from "@/services/passwordResetService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Upload, Save, Shield, Lock, Eye, EyeOff } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Building2, Upload, Save, Shield, Lock, Eye, EyeOff, Mail, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 import bcrypt from "bcryptjs";
@@ -41,6 +43,19 @@ export default function DatiStudioPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
+  // Password Reset states
+  const [showResetRequestDialog, setShowResetRequestDialog] = useState(false);
+  const [showOTPDialog, setShowOTPDialog] = useState(false);
+  const [showNewPasswordDialog, setShowNewPasswordDialog] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpTokenId, setOtpTokenId] = useState<string | null>(null);
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetNewPassword, setShowResetNewPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     ragione_sociale: "",
@@ -412,6 +427,175 @@ export default function DatiStudioPage() {
     }
   };
 
+  const handleRequestPasswordReset = async () => {
+    if (!studio || !resetEmail) {
+      toast({
+        title: "Errore",
+        description: "Inserisci l'email per continuare",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verifica che l'email corrisponda all'email dello studio
+    if (resetEmail !== studio.email) {
+      toast({
+        title: "Errore",
+        description: "L'email inserita non corrisponde all'email dello studio",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setResettingPassword(true);
+      const result = await passwordResetService.requestPasswordReset(studio.id, resetEmail);
+
+      if (result.success) {
+        setShowResetRequestDialog(false);
+        setShowOTPDialog(true);
+        toast({
+          title: "Email Inviata",
+          description: "Controlla la tua casella email per il codice di verifica"
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: result.error || "Impossibile inviare l'email di reset",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Errore richiesta reset:", error);
+      toast({
+        title: "Errore",
+        description: "Errore durante la richiesta di reset",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!studio || !otpCode) {
+      toast({
+        title: "Errore",
+        description: "Inserisci il codice di verifica",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (otpCode.length !== 6) {
+      toast({
+        title: "Errore",
+        description: "Il codice deve essere di 6 cifre",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setResettingPassword(true);
+      const result = await passwordResetService.verifyOTP(studio.id, otpCode);
+
+      if (result.valid && result.tokenId) {
+        setOtpTokenId(result.tokenId);
+        setShowOTPDialog(false);
+        setShowNewPasswordDialog(true);
+        toast({
+          title: "Successo",
+          description: "Codice verificato! Imposta la nuova password"
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: result.error || "Codice non valido",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Errore verifica OTP:", error);
+      toast({
+        title: "Errore",
+        description: "Errore durante la verifica del codice",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleResetPasswordComplete = async () => {
+    if (!studio || !otpTokenId) {
+      toast({
+        title: "Errore",
+        description: "Sessione non valida",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (resetNewPassword.length < 8) {
+      toast({
+        title: "Errore",
+        description: "La password deve essere di almeno 8 caratteri",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non coincidono",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setResettingPassword(true);
+      const result = await passwordResetService.resetMasterPassword(
+        otpTokenId,
+        studio.id,
+        resetNewPassword
+      );
+
+      if (result.success) {
+        setShowNewPasswordDialog(false);
+        setResetEmail("");
+        setOtpCode("");
+        setOtpTokenId(null);
+        setResetNewPassword("");
+        setResetConfirmPassword("");
+
+        toast({
+          title: "Successo",
+          description: "Master Password resettata con successo!"
+        });
+
+        await loadStudio();
+      } else {
+        toast({
+          title: "Errore",
+          description: result.error || "Impossibile resettare la password",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Errore reset password:", error);
+      toast({
+        title: "Errore",
+        description: "Errore durante il reset della password",
+        variant: "destructive"
+      });
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -663,15 +847,30 @@ export default function DatiStudioPage() {
               </div>
 
               {studio?.master_password_hash && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowChangePasswordDialog(true)}
-                  className="w-full"
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Cambia Master Password
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowChangePasswordDialog(true)}
+                    className="w-full"
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Cambia Master Password
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setResetEmail(studio.email || "");
+                      setShowResetRequestDialog(true);
+                    }}
+                    className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    Password dimenticata? Recuperala
+                  </Button>
+                </div>
               )}
 
               {!studio?.master_password_hash && (
@@ -916,6 +1115,236 @@ export default function DatiStudioPage() {
                 </>
               ) : (
                 "Cambia Password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Richiesta Reset Password */}
+      <Dialog open={showResetRequestDialog} onOpenChange={setShowResetRequestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recupero Master Password</DialogTitle>
+            <DialogDescription>
+              Ti invieremo un codice di verifica via email per resettare la Master Password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert>
+            <Mail className="h-4 w-4" />
+            <AlertDescription>
+              Il codice verrà inviato a: <strong>{studio?.email}</strong>
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Conferma Email Studio *</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="email@studio.it"
+              />
+              <p className="text-xs text-gray-500">
+                Inserisci l'email dello studio per confermare l'identità
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowResetRequestDialog(false);
+                setResetEmail("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRequestPasswordReset}
+              disabled={!resetEmail || resettingPassword}
+            >
+              {resettingPassword ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Invio...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Invia Codice
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Verifica Codice OTP */}
+      <Dialog open={showOTPDialog} onOpenChange={setShowOTPDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Inserisci Codice di Verifica</DialogTitle>
+            <DialogDescription>
+              Abbiamo inviato un codice di 6 cifre alla tua email. Il codice è valido per 15 minuti.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Hai massimo 3 tentativi</strong> per inserire il codice corretto.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="otp-code">Codice di Verifica (6 cifre) *</Label>
+              <Input
+                id="otp-code"
+                type="text"
+                value={otpCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setOtpCode(value);
+                }}
+                placeholder="123456"
+                maxLength={6}
+                className="text-center text-2xl tracking-widest font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowOTPDialog(false);
+                setOtpCode("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleVerifyOTP}
+              disabled={otpCode.length !== 6 || resettingPassword}
+            >
+              {resettingPassword ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Verifica...
+                </>
+              ) : (
+                "Verifica Codice"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Nuova Password dopo OTP */}
+      <Dialog open={showNewPasswordDialog} onOpenChange={setShowNewPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Imposta Nuova Master Password</DialogTitle>
+            <DialogDescription>
+              Codice verificato con successo! Ora imposta una nuova Master Password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-new-password">Nuova Password *</Label>
+              <div className="relative">
+                <Input
+                  id="reset-new-password"
+                  type={showResetNewPassword ? "text" : "password"}
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  placeholder="Minimo 8 caratteri"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowResetNewPassword(!showResetNewPassword)}
+                >
+                  {showResetNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {resetNewPassword && (
+                <p className={`text-sm ${getPasswordStrength(resetNewPassword).color}`}>
+                  Forza password: {getPasswordStrength(resetNewPassword).label}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reset-confirm-password">Conferma Nuova Password *</Label>
+              <div className="relative">
+                <Input
+                  id="reset-confirm-password"
+                  type={showResetConfirmPassword ? "text" : "password"}
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  placeholder="Ripeti la password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowResetConfirmPassword(!showResetConfirmPassword)}
+                >
+                  {showResetConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {resetConfirmPassword && resetNewPassword !== resetConfirmPassword && (
+                <p className="text-sm text-red-600">Le password non coincidono</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowNewPasswordDialog(false);
+                setResetNewPassword("");
+                setResetConfirmPassword("");
+                setOtpTokenId(null);
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleResetPasswordComplete}
+              disabled={
+                !resetNewPassword || 
+                !resetConfirmPassword || 
+                resetNewPassword !== resetConfirmPassword || 
+                resetNewPassword.length < 8 || 
+                resettingPassword
+              }
+            >
+              {resettingPassword ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Salvataggio...
+                </>
+              ) : (
+                "Salva Nuova Password"
               )}
             </Button>
           </DialogFooter>
