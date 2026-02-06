@@ -43,8 +43,6 @@ import {
 } from "@/services/encryptionService";
 import { 
   isEncrypted, 
-  updateLastActivity, 
-  shouldAutoLock,
   decryptData,
   getStoredEncryptionKey 
 } from "@/lib/encryption";
@@ -71,7 +69,7 @@ export default function CassettiFiscaliPage() {
   const [editingCassetto, setEditingCassetto] = useState<CassettoFiscale | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   
-  // Encryption states - SOLO unlock/lock
+  // Encryption states - SOLO unlock iniziale
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
@@ -105,17 +103,9 @@ export default function CassettiFiscaliPage() {
     if (checked) form.setValue("pw_attiva1", false);
   };
 
-  // Check encryption status and auto-lock
+  // Check encryption status - SOLO ALL'INIZIO
   useEffect(() => {
     checkEncryptionStatus();
-
-    const lockInterval = setInterval(() => {
-      if (shouldAutoLock()) {
-        handleLock();
-      }
-    }, 60000);
-
-    return () => clearInterval(lockInterval);
   }, []);
 
   // Load cassetti quando isUnlocked cambia a true
@@ -142,13 +132,9 @@ export default function CassettiFiscaliPage() {
         return;
       }
 
-      // Master Password configurata → Verifica se è sbloccata
-      const unlocked = areCassettiUnlocked();
-      setIsUnlocked(unlocked);
-      
-      if (!unlocked) {
-        setShowUnlockDialog(true);
-      }
+      // Master Password configurata → Mostra dialog per sbloccare
+      setIsUnlocked(false);
+      setShowUnlockDialog(true);
     } catch (error) {
       console.error("Error checking encryption:", error);
       // In caso di errore, permetti comunque l'accesso
@@ -189,13 +175,6 @@ export default function CassettiFiscaliPage() {
         description: "Impossibile sbloccare i cassetti",
       });
     }
-  };
-
-  const handleLock = () => {
-    lockCassetti();
-    setIsUnlocked(false);
-    setShowUnlockDialog(true);
-    setCassetti([]);
   };
 
   const handleMigrate = async () => {
@@ -443,19 +422,6 @@ export default function CassettiFiscaliPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
           <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
-          <div className="flex items-center gap-2 mt-2">
-            {isUnlocked ? (
-              <>
-                <Unlock className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-600">Accessibile</span>
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4 text-orange-600" />
-                <span className="text-sm text-orange-600">Bloccato - Inserisci Master Password</span>
-              </>
-            )}
-          </div>
         </div>
         <Button 
           onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}
