@@ -358,8 +358,18 @@ export default function ClientiPage() {
   };
 
   useEffect(() => {
-    filterClienti();
-  }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
+    loadData();
+    
+    // Check encryption status on mount
+    const checkEncryption = async () => {
+      const enabled = await isEncryptionEnabled(studioId || "");
+      const locked = isEncryptionLocked();
+      setEncryptionEnabled(enabled);
+      setEncryptionLocked(locked);
+    };
+    
+    checkEncryption();
+  }, [studioId]);
 
   const loadData = async () => {
     try {
@@ -955,7 +965,7 @@ export default function ClientiPage() {
         "ESEMPIO SRL",
         "01234567890",
         "01234567890",
-        "Via Roma 1",
+        "Via Roma, 1",
         "00100",
         "Roma",
         "RM",
