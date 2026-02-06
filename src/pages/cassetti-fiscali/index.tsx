@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -30,8 +31,19 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2, Lock, Unlock, ShieldAlert } from "lucide-react";
 import { cassettiFiscaliService, type CassettoFiscale } from "@/services/cassettiFiscaliService";
+import {
+  isEncryptionEnabled,
+  setupStudioEncryption,
+  unlockCassetti,
+  lockCassetti,
+  areCassettiUnlocked,
+  encryptCassettoPasswords,
+  decryptCassettoPasswords,
+  migrateAllCassettiToEncrypted,
+} from "@/services/encryptionService";
+import { isEncrypted, updateLastActivity, shouldAutoLock } from "@/lib/encryption";
 
 const formSchema = z.object({
   nominativo: z.string().min(2, "Il nominativo è obbligatorio"),
@@ -54,6 +66,18 @@ export default function CassettiFiscaliPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCassetto, setEditingCassetto] = useState<CassettoFiscale | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  
+  // Encryption states
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [masterPassword, setMasterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [migrating, setMigrating] = useState(false);
+  
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -79,6 +103,201 @@ export default function CassettiFiscaliPage() {
   const handlePw2Change = (checked: boolean) => {
     form.setValue("pw_attiva2", checked);
     if (checked) form.setValue("pw_attiva1", false);
+  };
+
+  // Check encryption status and auto-lock
+  useEffect(() => {
+    checkEncryptionStatus();
+    
+    // Auto-lock check every minute
+    const autoLockInterval = setInterval(() => {
+      if (isUnlocked && shouldAutoLock()) {
+        handleLock();
+        toast({
+          title: "🔒 Cassetti Bloccati",
+          description: "Per inattività, è necessario sbloccare nuovamente i cassetti",
+          variant: "default",
+        });
+      }
+    }, 60000); // Check every minute
+    
+    // Update activity on user interaction
+    const updateActivity = () => {
+      if (isUnlocked) updateLastActivity();
+    };
+    
+    document.addEventListener("mousemove", updateActivity);
+    document.addEventListener("keypress", updateActivity);
+    document.addEventListener("click", updateActivity);
+    
+    return () => {
+      clearInterval(autoLockInterval);
+      document.removeEventListener("mousemove", updateActivity);
+      document.removeEventListener("keypress", updateActivity);
+      document.removeEventListener("click", updateActivity);
+    };
+  }, [isUnlocked]);
+
+  const checkEncryptionStatus = async () => {
+    try {
+      const studioId = localStorage.getItem("studio_id");
+      if (!studioId) return;
+      
+      const enabled = await isEncryptionEnabled(studioId);
+      setEncryptionEnabled(enabled);
+      
+      const unlocked = areCassettiUnlocked();
+      setIsUnlocked(unlocked);
+      
+      // If encryption enabled but not unlocked, show unlock dialog
+      if (enabled && !unlocked) {
+        setShowUnlockDialog(true);
+      } else {
+        loadCassetti();
+      }
+    } catch (error) {
+      console.error("Error checking encryption:", error);
+    }
+  };
+
+  const handleSetupEncryption = async () => {
+    if (masterPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Le password non coincidono",
+      });
+      return;
+    }
+    
+    if (masterPassword.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "La password deve essere almeno 8 caratteri",
+      });
+      return;
+    }
+    
+    try {
+      const studioId = localStorage.getItem("studio_id");
+      if (!studioId) return;
+      
+      const result = await setupStudioEncryption(studioId, masterPassword);
+      
+      if (result.success) {
+        setEncryptionEnabled(true);
+        setIsUnlocked(true);
+        setShowSetupDialog(false);
+        setMasterPassword("");
+        setConfirmPassword("");
+        
+        toast({
+          title: "✅ Encryption Configurata",
+          description: "I cassetti fiscali sono ora protetti",
+        });
+        
+        // Check if need migration
+        const cassetti = await cassettiFiscaliService.getCassettiFiscali();
+        const needsMigration = cassetti.some(c => c.password1 && !isEncrypted(c.password1));
+        
+        if (needsMigration) {
+          setShowMigrationDialog(true);
+        } else {
+          loadCassetti();
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: result.error || "Impossibile configurare encryption",
+        });
+      }
+    } catch (error) {
+      console.error("Setup encryption error:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Errore durante la configurazione",
+      });
+    }
+  };
+
+  const handleUnlock = async () => {
+    try {
+      const studioId = localStorage.getItem("studio_id");
+      if (!studioId) return;
+      
+      const result = await unlockCassetti(studioId, unlockPassword);
+      
+      if (result.success) {
+        setIsUnlocked(true);
+        setShowUnlockDialog(false);
+        setUnlockPassword("");
+        
+        toast({
+          title: "🔓 Cassetti Sbloccati",
+          description: "Accesso consentito ai cassetti fiscali",
+        });
+        
+        loadCassetti();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: result.error || "Password errata",
+        });
+      }
+    } catch (error) {
+      console.error("Unlock error:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile sbloccare i cassetti",
+      });
+    }
+  };
+
+  const handleLock = () => {
+    lockCassetti();
+    setIsUnlocked(false);
+    setShowUnlockDialog(true);
+    setCassetti([]);
+  };
+
+  const handleMigrate = async () => {
+    try {
+      setMigrating(true);
+      const studioId = localStorage.getItem("studio_id");
+      if (!studioId) return;
+      
+      const result = await migrateAllCassettiToEncrypted(studioId);
+      
+      if (result.success) {
+        toast({
+          title: "✅ Migrazione Completata",
+          description: `${result.migrated} cassetti migrati con successo`,
+        });
+        
+        setShowMigrationDialog(false);
+        loadCassetti();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: "Errore durante la migrazione",
+        });
+      }
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast({
+        variant: "destructive",
+        title: "Errore",
+        description: "Impossibile migrare i cassetti",
+      });
+    } finally {
+      setMigrating(false);
+    }
   };
 
   useEffect(() => {
@@ -114,9 +333,28 @@ export default function CassettiFiscaliPage() {
   }, [editingCassetto, form]);
 
   const loadCassetti = async () => {
+    if (!isUnlocked && encryptionEnabled) return;
+    
     try {
       const data = await cassettiFiscaliService.getCassettiFiscali();
-      setCassetti(data);
+      
+      // Decrypt if encryption enabled
+      if (encryptionEnabled && isUnlocked) {
+        const decryptedData = await Promise.all(
+          data.map(async (cassetto) => {
+            try {
+              const decrypted = await decryptCassettoPasswords(cassetto);
+              return { ...cassetto, ...decrypted };
+            } catch (error) {
+              console.error("Decrypt error for cassetto:", cassetto.id, error);
+              return cassetto;
+            }
+          })
+        );
+        setCassetti(decryptedData);
+      } else {
+        setCassetti(data);
+      }
     } catch (error) {
       console.error("Errore caricamento cassetti:", error);
       toast({
@@ -131,11 +369,25 @@ export default function CassettiFiscaliPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      // Encrypt passwords if encryption enabled
+      let dataToSave = values;
+      
+      if (encryptionEnabled && isUnlocked) {
+        const encrypted = await encryptCassettoPasswords({
+          password1: values.password1,
+          password2: values.password2,
+          pin: values.pin,
+          pw_iniziale: values.pw_iniziale,
+        });
+        
+        dataToSave = { ...values, ...encrypted };
+      }
+      
       if (editingCassetto) {
-        await cassettiFiscaliService.update(editingCassetto.id, values);
+        await cassettiFiscaliService.update(editingCassetto.id, dataToSave);
         toast({ title: "Successo", description: "Cassetto fiscale aggiornato" });
       } else {
-        await cassettiFiscaliService.create(values);
+        await cassettiFiscaliService.create(dataToSave);
         toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
       }
       
@@ -187,6 +439,11 @@ export default function CassettiFiscaliPage() {
       description: `${label} copiata negli appunti`,
       duration: 2000,
     });
+    
+    // Auto-clear clipboard after 10 seconds for security
+    setTimeout(() => {
+      navigator.clipboard.writeText("");
+    }, 10000);
   };
 
   const togglePasswordVisibility = (id: string, field: string) => {
@@ -195,6 +452,16 @@ export default function CassettiFiscaliPage() {
       ...prev,
       [key]: !prev[key]
     }));
+    
+    // Auto-hide after 30 seconds
+    if (!visiblePasswords[key]) {
+      setTimeout(() => {
+        setVisiblePasswords(prev => ({
+          ...prev,
+          [key]: false
+        }));
+      }, 30000);
+    }
   };
 
   const filteredCassetti = cassetti.filter((cassetto) => {
@@ -215,14 +482,116 @@ export default function CassettiFiscaliPage() {
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
+  // Show setup dialog if encryption not enabled
+  if (!encryptionEnabled && !loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 md:p-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
+            <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-2xl mx-auto">
+          <div className="flex items-start gap-4">
+            <ShieldAlert className="h-8 w-8 text-yellow-600 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+                🔐 Protezione Password Non Configurata
+              </h3>
+              <p className="text-yellow-800 mb-4">
+                Per proteggere le credenziali dei cassetti fiscali, è necessario configurare una password principale.
+                Questa password verrà utilizzata per cifrare tutte le password salvate nel database.
+              </p>
+              <Button onClick={() => setShowSetupDialog(true)} className="bg-yellow-600 hover:bg-yellow-700">
+                <Lock className="mr-2 h-4 w-4" /> Configura Protezione
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Setup Dialog */}
+        <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>🔐 Configura Password Principale</DialogTitle>
+              <DialogDescription>
+                Questa password verrà utilizzata per cifrare tutte le credenziali dei cassetti fiscali.
+                <strong className="block mt-2 text-red-600">⚠️ IMPORTANTE: Se perdi questa password, non potrai più accedere alle credenziali salvate!</strong>
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password Principale</label>
+                <Input
+                  type="password"
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                  placeholder="Inserisci password (min. 8 caratteri)"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Conferma Password</label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Conferma password"
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSetupDialog(false)}>
+                Annulla
+              </Button>
+              <Button onClick={handleSetupEncryption}>
+                <Lock className="mr-2 h-4 w-4" /> Configura
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
           <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
+          {encryptionEnabled && (
+            <div className="flex items-center gap-2 mt-2">
+              {isUnlocked ? (
+                <>
+                  <Unlock className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-600">Sbloccato</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLock}
+                    className="ml-2"
+                  >
+                    <Lock className="h-4 w-4 mr-1" /> Blocca
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4 text-red-600" />
+                  <span className="text-sm text-red-600">Bloccato</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
-        <Button onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}>
+        <Button 
+          onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}
+          disabled={!isUnlocked && encryptionEnabled}
+        >
           <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
         </Button>
       </div>
@@ -236,6 +605,7 @@ export default function CassettiFiscaliPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8"
+              disabled={!isUnlocked && encryptionEnabled}
             />
           </div>
           <div className="flex flex-wrap gap-1">
@@ -243,6 +613,7 @@ export default function CassettiFiscaliPage() {
               variant={searchTerm === "" ? "default" : "outline"}
               size="sm"
               onClick={() => setSearchTerm("")}
+              disabled={!isUnlocked && encryptionEnabled}
             >
               Tutti
             </Button>
@@ -253,6 +624,7 @@ export default function CassettiFiscaliPage() {
                 size="sm"
                 className="w-8 px-0"
                 onClick={() => setSearchTerm(letter)}
+                disabled={!isUnlocked && encryptionEnabled}
               >
                 {letter}
               </Button>
@@ -278,6 +650,13 @@ export default function CassettiFiscaliPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                  </TableCell>
+                </TableRow>
+              ) : !isUnlocked && encryptionEnabled ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <Lock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                    <p className="text-muted-foreground">Cassetti bloccati. Sblocca per visualizzare.</p>
                   </TableCell>
                 </TableRow>
               ) : filteredCassetti.length === 0 ? (
@@ -464,6 +843,86 @@ export default function CassettiFiscaliPage() {
         </div>
       </div>
 
+      {/* Unlock Dialog */}
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🔒 Sblocca Cassetti Fiscali</DialogTitle>
+            <DialogDescription>
+              Inserisci la password principale per accedere alle credenziali dei cassetti fiscali.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password Principale</label>
+              <Input
+                type="password"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                placeholder="Inserisci password"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleUnlock();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={handleUnlock}>
+              <Unlock className="mr-2 h-4 w-4" /> Sblocca
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Migration Dialog */}
+      <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🔄 Migrazione Necessaria</DialogTitle>
+            <DialogDescription>
+              Sono presenti cassetti con password non criptate. È necessario migrarle al nuovo sistema di protezione.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Questa operazione cifrerà tutte le password esistenti utilizzando la password principale configurata.
+              L'operazione è sicura e reversibile.
+            </p>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Durante la migrazione, i cassetti potrebbero non essere accessibili per qualche secondo.
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMigrationDialog(false)} disabled={migrating}>
+              Dopo
+            </Button>
+            <Button onClick={handleMigrate} disabled={migrating}>
+              {migrating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Migrazione in corso...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Migra Ora
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
