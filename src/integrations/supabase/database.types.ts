@@ -127,6 +127,7 @@ export type Database = {
           in_sede: boolean | null
           link_teams: string | null
           luogo: string | null
+          microsoft_event_id: string | null
           ora_fine: string | null
           ora_inizio: string | null
           partecipanti: Json | null
@@ -153,6 +154,7 @@ export type Database = {
           in_sede?: boolean | null
           link_teams?: string | null
           luogo?: string | null
+          microsoft_event_id?: string | null
           ora_fine?: string | null
           ora_inizio?: string | null
           partecipanti?: Json | null
@@ -179,6 +181,7 @@ export type Database = {
           in_sede?: boolean | null
           link_teams?: string | null
           luogo?: string | null
+          microsoft_event_id?: string | null
           ora_fine?: string | null
           ora_inizio?: string | null
           partecipanti?: Json | null
@@ -873,6 +876,82 @@ export type Database = {
             columns: ["messaggio_id"]
             isOneToOne: false
             referencedRelation: "tbmessaggi"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbmicrosoft_settings: {
+        Row: {
+          auto_create_teams_meeting: boolean | null
+          created_at: string | null
+          id: string
+          send_email_notifications: boolean | null
+          sync_calendar: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_create_teams_meeting?: boolean | null
+          created_at?: string | null
+          id?: string
+          send_email_notifications?: boolean | null
+          sync_calendar?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_create_teams_meeting?: boolean | null
+          created_at?: string | null
+          id?: string
+          send_email_notifications?: boolean | null
+          sync_calendar?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbmicrosoft_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "tbutenti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbmicrosoft_tokens: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          refresh_token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          refresh_token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbmicrosoft_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "tbutenti"
             referencedColumns: ["id"]
           },
         ]

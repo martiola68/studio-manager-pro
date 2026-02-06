@@ -63,8 +63,9 @@ export default async function handler(
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
+    // @ts-ignore - Table not yet in types
     const { error: saveError } = await supabase
-      .from("tbmicrosoft_tokens")
+      .from("tbmicrosoft_tokens" as any)
       .upsert({
         user_id: session.user.id,
         access_token: tokens.access_token,

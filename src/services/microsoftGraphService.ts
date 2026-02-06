@@ -63,8 +63,9 @@ interface EmailMessage {
 export const microsoftGraphService = {
   async getStoredTokens(userId: string): Promise<MicrosoftTokens | null> {
     try {
+      // @ts-ignore - Table not yet in types
       const { data, error } = await supabase
-        .from("tbmicrosoft_tokens")
+        .from("tbmicrosoft_tokens" as any)
         .select("*")
         .eq("user_id", userId)
         .single();
@@ -91,8 +92,9 @@ export const microsoftGraphService = {
     try {
       const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
+      // @ts-ignore - Table not yet in types
       await supabase
-        .from("tbmicrosoft_tokens")
+        .from("tbmicrosoft_tokens" as any)
         .upsert({
           user_id: userId,
           access_token: accessToken,
@@ -255,8 +257,9 @@ export const microsoftGraphService = {
 
   async disconnectAccount(userId: string): Promise<void> {
     try {
+      // @ts-ignore - Table not yet in types
       await supabase
-        .from("tbmicrosoft_tokens")
+        .from("tbmicrosoft_tokens" as any)
         .delete()
         .eq("user_id", userId);
     } catch (error) {
