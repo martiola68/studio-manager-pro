@@ -9,7 +9,7 @@ export const utenteService = {
   async getUtenti(studioId?: string | null) {
     let query = supabase
       .from("tbutenti")
-      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile, studio_id")
+      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, responsabile, studio_id, settore")
       .order("cognome", { ascending: true });
 
     if (studioId) {
@@ -28,7 +28,7 @@ export const utenteService = {
   async getUtenteById(id: string) {
     const { data, error } = await supabase
       .from("tbutenti")
-      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile, studio_id")
+      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, responsabile, studio_id, settore")
       .eq("id", id)
       .single();
 

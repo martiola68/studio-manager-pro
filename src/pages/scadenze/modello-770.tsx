@@ -14,7 +14,9 @@ import type { Database } from "@/lib/supabase/types";
 
 type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
   cliente?: {
-    settore?: string | null;
+    settore_fiscale?: boolean | null;
+    settore_lavoro?: boolean | null;
+    settore_consulenza?: boolean | null;
   } | null;
 };
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -90,9 +92,13 @@ export default function Scadenze770Page() {
       .from("tbscad770")
       .select(`
         *,
-        cliente:tbclienti!id(settore)
+        cliente:tbclienti!tbscad770_id_fkey(
+          settore_fiscale,
+          settore_lavoro,
+          settore_consulenza
+        )
       `)
-      .order("nominativo", { ascending: true });
+      .order("nominativo");
     
     if (error) throw error;
     return data || [];
@@ -226,10 +232,15 @@ export default function Scadenze770Page() {
 
   const filteredScadenze = scadenze.filter(s => {
     const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
-    const settore = s.cliente?.settore || "";
+    
+    // Logica filtro settori basata sui nuovi campi boolean
+    const hasFiscale = s.cliente?.settore_fiscale === true;
+    const hasLavoro = s.cliente?.settore_lavoro === true;
+    
     const matchSettore = filterSettore === "__all__" || 
-      (filterSettore === "Fiscale" && (settore === "Fiscale" || settore === "Fiscale & Lavoro")) ||
-      (filterSettore === "Lavoro" && (settore === "Lavoro" || settore === "Fiscale & Lavoro"));
+      (filterSettore === "Fiscale" && hasFiscale) ||
+      (filterSettore === "Lavoro" && hasLavoro);
+      
     return matchSearch && matchSettore;
   });
 
@@ -362,7 +373,12 @@ export default function Scadenze770Page() {
                               {scadenza.nominativo}
                             </TableCell>
                             <TableCell className="text-sm min-w-[120px]">
-                              {scadenza.cliente?.settore || "-"}
+                              <div className="flex flex-col gap-1">
+                                {scadenza.cliente?.settore_fiscale && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Fiscale</span>}
+                                {scadenza.cliente?.settore_lavoro && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Lavoro</span>}
+                                {scadenza.cliente?.settore_consulenza && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Consulenza</span>}
+                                {!scadenza.cliente?.settore_fiscale && !scadenza.cliente?.settore_lavoro && !scadenza.cliente?.settore_consulenza && <span className="text-xs text-gray-500">-</span>}
+                              </div>
                             </TableCell>
                             <TableCell className="min-w-[150px]">
                               <Input
