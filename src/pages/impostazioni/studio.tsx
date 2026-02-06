@@ -8,9 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Upload, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Building2, Upload, Save, Shield, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
+import bcrypt from "bcryptjs";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
 
@@ -22,6 +26,21 @@ export default function DatiStudioPage() {
   const [studio, setStudio] = useState<Studio | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // Master Password states
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [masterPassword, setMasterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     ragione_sociale: "",
@@ -76,6 +95,7 @@ export default function DatiStudioPage() {
       
       if (studioData) {
         setStudio(studioData);
+        setIsPasswordProtected(studioData.protezione_attiva || false);
         setFormData({
           ragione_sociale: studioData.ragione_sociale || "",
           denominazione_breve: studioData.denominazione_breve || "",
@@ -213,6 +233,185 @@ export default function DatiStudioPage() {
     }
   };
 
+  const getPasswordStrength = (password: string): { label: string; color: string } => {
+    if (password.length < 8) return { label: "Debole", color: "text-red-600" };
+    if (password.length < 12) return { label: "Media", color: "text-yellow-600" };
+    return { label: "Forte", color: "text-green-600" };
+  };
+
+  const handleToggleProtection = async (enabled: boolean) => {
+    if (!studio) return;
+
+    if (enabled) {
+      // Abilita protezione - mostra dialog per impostare password
+      if (!studio.master_password_hash) {
+        setShowPasswordDialog(true);
+      } else {
+        // Password già esistente, attiva solo il flag
+        try {
+          await studioService.updateStudio(studio.id, {
+            protezione_attiva: true
+          });
+          setIsPasswordProtected(true);
+          toast({
+            title: "Successo",
+            description: "Protezione dati sensibili attivata"
+          });
+          await loadStudio();
+        } catch (error) {
+          console.error("Errore attivazione protezione:", error);
+          toast({
+            title: "Errore",
+            description: "Impossibile attivare la protezione",
+            variant: "destructive"
+          });
+        }
+      }
+    } else {
+      // Disabilita protezione
+      try {
+        await studioService.updateStudio(studio.id, {
+          protezione_attiva: false
+        });
+        setIsPasswordProtected(false);
+        toast({
+          title: "Successo",
+          description: "Protezione dati sensibili disattivata"
+        });
+        await loadStudio();
+      } catch (error) {
+        console.error("Errore disattivazione protezione:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile disattivare la protezione",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const handleSaveMasterPassword = async () => {
+    if (!studio) return;
+
+    if (masterPassword.length < 8) {
+      toast({
+        title: "Errore",
+        description: "La password deve essere di almeno 8 caratteri",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (masterPassword !== confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non coincidono",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Hash della password
+      const hashedPassword = await bcrypt.hash(masterPassword, 10);
+
+      // Salva nel database
+      await studioService.updateStudio(studio.id, {
+        master_password_hash: hashedPassword,
+        protezione_attiva: true
+      });
+
+      setIsPasswordProtected(true);
+      setShowPasswordDialog(false);
+      setMasterPassword("");
+      setConfirmPassword("");
+
+      toast({
+        title: "Successo",
+        description: "Master Password configurata con successo"
+      });
+
+      await loadStudio();
+    } catch (error) {
+      console.error("Errore salvataggio password:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile salvare la Master Password",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangeMasterPassword = async () => {
+    if (!studio || !studio.master_password_hash) return;
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Errore",
+        description: "La nuova password deve essere di almeno 8 caratteri",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: "Errore",
+        description: "Le nuove password non coincidono",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Verifica password attuale
+      const isValid = await bcrypt.compare(currentPassword, studio.master_password_hash);
+      if (!isValid) {
+        toast({
+          title: "Errore",
+          description: "Password attuale non corretta",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Hash nuova password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Aggiorna nel database
+      await studioService.updateStudio(studio.id, {
+        master_password_hash: hashedPassword
+      });
+
+      setShowChangePasswordDialog(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+
+      toast({
+        title: "Successo",
+        description: "Master Password modificata con successo"
+      });
+
+      await loadStudio();
+    } catch (error) {
+      console.error("Errore cambio password:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile modificare la Master Password",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -223,6 +422,9 @@ export default function DatiStudioPage() {
       </div>
     );
   }
+
+  const passwordStrength = getPasswordStrength(masterPassword);
+  const newPasswordStrength = getPasswordStrength(newPassword);
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
@@ -433,6 +635,59 @@ export default function DatiStudioPage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Protezione Dati Sensibili
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="protezione">Abilita Protezione</Label>
+                    <Badge variant={isPasswordProtected ? "default" : "secondary"}>
+                      {isPasswordProtected ? "Attiva" : "Non attiva"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Proteggi l'accesso alle credenziali e ai dati sensibili con una Master Password
+                  </p>
+                </div>
+                <Switch
+                  id="protezione"
+                  checked={isPasswordProtected}
+                  onCheckedChange={handleToggleProtection}
+                />
+              </div>
+
+              {studio?.master_password_hash && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowChangePasswordDialog(true)}
+                  className="w-full"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Cambia Master Password
+                </Button>
+              )}
+
+              {!studio?.master_password_hash && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPasswordDialog(true)}
+                  className="w-full"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Configura Master Password
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
             <Button
               type="submit"
@@ -454,6 +709,218 @@ export default function DatiStudioPage() {
           </div>
         </div>
       </form>
+
+      {/* Dialog Configurazione Master Password */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configura Master Password</DialogTitle>
+            <DialogDescription>
+              Imposta una password sicura per proteggere l'accesso ai dati sensibili dello studio.
+              La password deve essere di almeno 8 caratteri.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="master-password">Master Password *</Label>
+              <div className="relative">
+                <Input
+                  id="master-password"
+                  type={showPassword ? "text" : "password"}
+                  value={masterPassword}
+                  onChange={(e) => setMasterPassword(e.target.value)}
+                  placeholder="Minimo 8 caratteri"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {masterPassword && (
+                <p className={`text-sm ${passwordStrength.color}`}>
+                  Forza password: {passwordStrength.label}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Conferma Password *</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Ripeti la password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {confirmPassword && masterPassword !== confirmPassword && (
+                <p className="text-sm text-red-600">Le password non coincidono</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setMasterPassword("");
+                setConfirmPassword("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveMasterPassword}
+              disabled={!masterPassword || !confirmPassword || masterPassword !== confirmPassword || masterPassword.length < 8 || saving}
+            >
+              {saving ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Salvataggio...
+                </>
+              ) : (
+                "Salva Password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Cambio Master Password */}
+      <Dialog open={showChangePasswordDialog} onOpenChange={setShowChangePasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambia Master Password</DialogTitle>
+            <DialogDescription>
+              Inserisci la password attuale e imposta una nuova Master Password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Password Attuale *</Label>
+              <div className="relative">
+                <Input
+                  id="current-password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Password attuale"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nuova Password *</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimo 8 caratteri"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {newPassword && (
+                <p className={`text-sm ${newPasswordStrength.color}`}>
+                  Forza password: {newPasswordStrength.label}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Conferma Nuova Password *</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-new-password"
+                  type={showConfirmNewPassword ? "text" : "password"}
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Ripeti la nuova password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                >
+                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {confirmNewPassword && newPassword !== confirmNewPassword && (
+                <p className="text-sm text-red-600">Le password non coincidono</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowChangePasswordDialog(false);
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmNewPassword("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleChangeMasterPassword}
+              disabled={!currentPassword || !newPassword || !confirmNewPassword || newPassword !== confirmNewPassword || newPassword.length < 8 || saving}
+            >
+              {saving ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Salvataggio...
+                </>
+              ) : (
+                "Cambia Password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
