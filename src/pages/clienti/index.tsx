@@ -127,6 +127,7 @@ export default function ClientiPage() {
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [importLoading, setImportLoading] = useState(false);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
@@ -1009,6 +1010,9 @@ export default function ClientiPage() {
     if (!file) return;
 
     setImportLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+    let duplicateCount = 0;
     const errors: string[] = [];
 
     try {
@@ -1053,6 +1057,9 @@ export default function ClientiPage() {
           row[h] = values[idx] || "";
         });
 
+        // Skip empty rows
+        if (!row["Ragione Sociale"] && !row["ragione_sociale"]) continue;
+
         try {
           const { error } = await supabase.from("tbclienti").insert({
             ragione_sociale: row["ragione_sociale"] || row["Ragione Sociale"],
@@ -1069,14 +1076,23 @@ export default function ClientiPage() {
           });
 
           if (error) {
-            const errMsg = `Riga ${i + 1}: ${error.message}`;
-            errors.push(errMsg);
-            console.error(`Errore importazione riga ${i + 2}:`, error);
+            // Check for duplicate key error (Postgres error code 23505)
+            if (error.code === '23505') {
+              duplicateCount++;
+            } else {
+              errorCount++;
+              const errMsg = `Riga ${i + 1}: ${error.message}`;
+              errors.push(errMsg);
+              console.error(`Errore importazione riga ${i + 1}:`, error);
+            }
+          } else {
+            successCount++;
           }
         } catch (error: any) {
+          errorCount++;
           const errMsg = `Riga ${i + 1}: ${error.message}`;
           errors.push(errMsg);
-          console.error(`Errore importazione riga ${i + 2}:`, error);
+          console.error(`Errore importazione riga ${i + 1}:`, error);
         }
       }
 
@@ -1098,6 +1114,8 @@ export default function ClientiPage() {
 
       loadData();
       setImportDialogOpen(false);
+      
+      // Reset input value
       event.target.value = "";
     } catch (error) {
       console.error("Errore importazione file:", error);
@@ -1106,6 +1124,8 @@ export default function ClientiPage() {
         description: "Impossibile importare il file. Verifica che sia un file Excel (.xlsx, .xls) o CSV valido.",
         variant: "destructive",
       });
+    } finally {
+      setImportLoading(false);
     }
   };
 
