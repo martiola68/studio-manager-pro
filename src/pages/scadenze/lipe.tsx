@@ -115,12 +115,18 @@ export default function Lipe() {
         query = query.eq("utente_professionista_id", professionistaFilter);
       }
 
-      const { data, error, count } = await query.order("ragione_sociale", { foreignTable: "tbclienti", ascending: true });
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
-      setLipeRecords(data || []);
-      setTotalRecords(count || 0);
+      // Ordino lato client per ragione_sociale
+      const sortedData = (data || []).sort((a, b) => {
+        const nameA = a.tbclienti?.ragione_sociale || "";
+        const nameB = b.tbclienti?.ragione_sociale || "";
+        return nameA.localeCompare(nameB);
+      });
+
+      setLipeRecords(sortedData);
     } catch (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({
