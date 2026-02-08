@@ -1387,11 +1387,17 @@ export default function ClientiPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti (Fiscale)</SelectItem>
-                {utenti.map((utente) => (
-                  <SelectItem key={utente.id} value={utente.id}>
-                    {utente.nome} {utente.cognome}
-                  </SelectItem>
-                ))}
+                {utenti
+                  .sort((a, b) => {
+                    const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                    const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                    return nomeA.localeCompare(nomeB);
+                  })
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {utente.nome} {utente.cognome}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 
@@ -1401,11 +1407,17 @@ export default function ClientiPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tutti (Payroll)</SelectItem>
-                {utenti.map((utente) => (
-                  <SelectItem key={utente.id} value={utente.id}>
-                    {utente.nome} {utente.cognome}
-                  </SelectItem>
-                ))}
+                {utenti
+                  .sort((a, b) => {
+                    const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                    const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                    return nomeA.localeCompare(nomeB);
+                  })
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {utente.nome} {utente.cognome}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -1793,11 +1805,17 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                      {utenti
+                        .sort((a, b) => {
+                          const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                          const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                          return nomeA.localeCompare(nomeB);
+                        })
+                        .map((utente) => (
+                          <SelectItem key={utente.id} value={utente.id}>
+                            {utente.nome} {utente.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1815,11 +1833,17 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                      {utenti
+                        .sort((a, b) => {
+                          const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                          const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                          return nomeA.localeCompare(nomeB);
+                        })
+                        .map((utente) => (
+                          <SelectItem key={utente.id} value={utente.id}>
+                            {utente.nome} {utente.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1837,11 +1861,17 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                      {utenti
+                        .sort((a, b) => {
+                          const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                          const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                          return nomeA.localeCompare(nomeB);
+                        })
+                        .map((utente) => (
+                          <SelectItem key={utente.id} value={utente.id}>
+                            {utente.nome} {utente.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1859,11 +1889,17 @@ export default function ClientiPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti.map((utente) => (
-                        <SelectItem key={utente.id} value={utente.id}>
-                          {utente.nome} {utente.cognome}
-                        </SelectItem>
-                      ))}
+                      {utenti
+                        .sort((a, b) => {
+                          const nomeA = `${a.cognome} ${a.nome}`.toLowerCase();
+                          const nomeB = `${b.cognome} ${b.nome}`.toLowerCase();
+                          return nomeA.localeCompare(nomeB);
+                        })
+                        .map((utente) => (
+                          <SelectItem key={utente.id} value={utente.id}>
+                            {utente.nome} {utente.cognome}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
