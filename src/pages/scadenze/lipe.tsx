@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Trash2 } from "lucide-react";
+import { Trash2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LipeRecord {
@@ -58,8 +57,6 @@ export default function Lipe() {
   const [searchQuery, setSearchQuery] = useState("");
   const [operatoreFilter, setOperatoreFilter] = useState<string>("all");
   const [professionistaFilter, setProfessionistaFilter] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [operatori, setOperatori] = useState<any[]>([]);
   const [professionisti, setProfessionisti] = useState<any[]>([]);
@@ -69,11 +66,9 @@ export default function Lipe() {
     nonInviate: 0,
   });
 
-  const ITEMS_PER_PAGE = 50;
-
   useEffect(() => {
     loadUserAndData();
-  }, [currentPage, operatoreFilter, professionistaFilter, searchQuery]);
+  }, [operatoreFilter, professionistaFilter, searchQuery]);
 
   async function loadUserAndData() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -120,18 +115,12 @@ export default function Lipe() {
         query = query.eq("utente_professionista_id", professionistaFilter);
       }
 
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-
-      const { data, error, count } = await query
-        .order("ragione_sociale", { foreignTable: "tbclienti", ascending: true })
-        .range(from, to);
+      const { data, error, count } = await query.order("ragione_sociale", { foreignTable: "tbclienti", ascending: true });
 
       if (error) throw error;
 
       setLipeRecords(data || []);
       setTotalRecords(count || 0);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
     } catch (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({
@@ -228,6 +217,59 @@ export default function Lipe() {
     }
   }
 
+  async function handleSelectChange(recordId: string, field: string, value: string) {
+    try {
+      const { error } = await supabase
+        .from("tbscadlipe")
+        .update({ [field]: value })
+        .eq("id", recordId);
+
+      if (error) throw error;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (userData?.studio_id) {
+          loadLipeRecords(userData.studio_id);
+        }
+      }
+    } catch (error) {
+      console.error("Errore aggiornamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il dato",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleDateChange(recordId: string, field: string, value: string) {
+    try {
+      const { error } = await supabase
+        .from("tbscadlipe")
+        .update({ [field]: value })
+        .eq("id", recordId);
+
+      if (error) throw error;
+
+      setLipeRecords(prev =>
+        prev.map(r => r.id === recordId ? { ...r, [field]: value } : r)
+      );
+    } catch (error) {
+      console.error("Errore aggiornamento data:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare la data",
+        variant: "destructive",
+      });
+    }
+  }
+
   async function handleDelete(recordId: string) {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
@@ -309,19 +351,13 @@ export default function Lipe() {
               <Input
                 placeholder="Cerca..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
-              <Select value={operatoreFilter} onValueChange={(value) => {
-                setOperatoreFilter(value);
-                setCurrentPage(1);
-              }}>
+              <Select value={operatoreFilter} onValueChange={setOperatoreFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
@@ -338,10 +374,7 @@ export default function Lipe() {
 
             <div>
               <label className="text-sm font-medium mb-2 block">Utente Professionista</label>
-              <Select value={professionistaFilter} onValueChange={(value) => {
-                setProfessionistaFilter(value);
-                setCurrentPage(1);
-              }}>
+              <Select value={professionistaFilter} onValueChange={setProfessionistaFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Tutti" />
                 </SelectTrigger>
@@ -363,9 +396,6 @@ export default function Lipe() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Record LIPE ({totalRecords})</h3>
-            <div className="text-sm text-muted-foreground">
-              Pagina {currentPage} di {totalPages}
-            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -373,32 +403,32 @@ export default function Lipe() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">Nominativo</TableHead>
-                  <TableHead className="min-w-[120px]">Professionista</TableHead>
-                  <TableHead className="min-w-[120px]">Operatore</TableHead>
-                  <TableHead className="min-w-[80px]">Tipo Liq</TableHead>
+                  <TableHead className="min-w-[200px]">Nominativo</TableHead>
+                  <TableHead className="min-w-[150px]">Professionista</TableHead>
+                  <TableHead className="min-w-[150px]">Operatore</TableHead>
+                  <TableHead className="min-w-[100px]">Tipo Liq</TableHead>
                   <TableHead className="text-center">Gen</TableHead>
                   <TableHead className="text-center">Feb</TableHead>
                   <TableHead className="text-center">Mar</TableHead>
                   <TableHead className="text-center">Lipe 1T</TableHead>
-                  <TableHead className="min-w-[110px]">Data Invio 1T</TableHead>
+                  <TableHead className="min-w-[130px]">Data Invio 1T</TableHead>
                   <TableHead className="text-center">Apr</TableHead>
                   <TableHead className="text-center">Mag</TableHead>
                   <TableHead className="text-center">Giu</TableHead>
                   <TableHead className="text-center">Lipe 2T</TableHead>
-                  <TableHead className="min-w-[110px]">Data Invio 2T</TableHead>
+                  <TableHead className="min-w-[130px]">Data Invio 2T</TableHead>
                   <TableHead className="text-center">Lug</TableHead>
                   <TableHead className="text-center">Ago</TableHead>
                   <TableHead className="text-center">Set</TableHead>
                   <TableHead className="text-center">Lipe 3T</TableHead>
-                  <TableHead className="min-w-[110px]">Data Invio 3T</TableHead>
+                  <TableHead className="min-w-[130px]">Data Invio 3T</TableHead>
                   <TableHead className="text-center">Ott</TableHead>
                   <TableHead className="text-center">Nov</TableHead>
-                  <TableHead className="min-w-[100px]">Acconto</TableHead>
+                  <TableHead className="min-w-[130px]">Acconto</TableHead>
                   <TableHead className="text-center">Acc. Com</TableHead>
                   <TableHead className="text-center">Dic</TableHead>
                   <TableHead className="text-center">Lipe 4T</TableHead>
-                  <TableHead className="min-w-[110px]">Data Invio 4T</TableHead>
+                  <TableHead className="min-w-[130px]">Data Invio 4T</TableHead>
                   <TableHead className="text-center">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
@@ -420,16 +450,61 @@ export default function Lipe() {
                     <TableRow key={record.id}>
                       <TableCell className="font-medium">{record.tbclienti?.ragione_sociale || "N/A"}</TableCell>
                       <TableCell>
-                        {record.tbusers_utente_professionista 
-                          ? `${record.tbusers_utente_professionista.cognome} ${record.tbusers_utente_professionista.nome}`
-                          : "Seleziona"}
+                        <Select
+                          value={record.utente_professionista_id || ""}
+                          onValueChange={(value) => handleSelectChange(record.id, "utente_professionista_id", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleziona">
+                              {record.tbusers_utente_professionista 
+                                ? `${record.tbusers_utente_professionista.cognome} ${record.tbusers_utente_professionista.nome}`
+                                : "Seleziona"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {professionisti.map(prof => (
+                              <SelectItem key={prof.id} value={prof.id}>
+                                {prof.cognome} {prof.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
-                        {record.tbusers_utente_operatore 
-                          ? `${record.tbusers_utente_operatore.cognome} ${record.tbusers_utente_operatore.nome}`
-                          : "Seleziona"}
+                        <Select
+                          value={record.utente_operatore_id || ""}
+                          onValueChange={(value) => handleSelectChange(record.id, "utente_operatore_id", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleziona">
+                              {record.tbusers_utente_operatore 
+                                ? `${record.tbusers_utente_operatore.cognome} ${record.tbusers_utente_operatore.nome}`
+                                : "Seleziona"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {operatori.map(op => (
+                              <SelectItem key={op.id} value={op.id}>
+                                {op.cognome} {op.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
-                      <TableCell>{record.tipo_liq || "T"}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={record.tipo_liq || "T"}
+                          onValueChange={(value) => handleSelectChange(record.id, "tipo_liq", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="T">T</SelectItem>
+                            <SelectItem value="M">M</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.gen || false}
@@ -454,7 +529,18 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.lipe1t_invio || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe1t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
+                            className="w-full"
+                            placeholder="gg/mm/aaaa"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.apr || false}
@@ -479,7 +565,18 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.lipe2t_invio || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe2t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
+                            className="w-full"
+                            placeholder="gg/mm/aaaa"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.lug || false}
@@ -504,7 +601,18 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.lipe3t_invio || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe3t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
+                            className="w-full"
+                            placeholder="gg/mm/aaaa"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.ott || false}
@@ -517,7 +625,21 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.acconto || "Non dovuto"}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={record.acconto || "Non dovuto"}
+                          onValueChange={(value) => handleSelectChange(record.id, "acconto", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non dovuto">Non dovuto</SelectItem>
+                            <SelectItem value="Dovuto">Dovuto</SelectItem>
+                            <SelectItem value="Pagato">Pagato</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.acconto_com || false}
@@ -536,7 +658,18 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.lipe4t_invio || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe4t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
+                            className="w-full"
+                            placeholder="gg/mm/aaaa"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Button
                           variant="ghost"
@@ -552,43 +685,6 @@ export default function Lipe() {
               </TableBody>
             </Table>
           </div>
-
-          {totalPages > 1 && (
-            <div className="mt-4">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNumber = i + 1;
-                    return (
-                      <PaginationItem key={pageNumber}>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(pageNumber)}
-                          isActive={currentPage === pageNumber}
-                          className="cursor-pointer"
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
