@@ -7,31 +7,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface LipeRecord {
   id: string;
-  gen: boolean;
-  feb: boolean;
-  mar: boolean;
-  apr: boolean;
-  mag: boolean;
-  giu: boolean;
-  lug: boolean;
-  ago: boolean;
-  set: boolean;
-  ott: boolean;
-  nov: boolean;
-  dic: boolean;
-  lipe1t: boolean;
-  lipe2t: boolean;
-  lipe3t: boolean;
-  lipe4t: boolean;
+  gen: boolean | null;
+  feb: boolean | null;
+  mar: boolean | null;
+  apr: boolean | null;
+  mag: boolean | null;
+  giu: boolean | null;
+  lug: boolean | null;
+  ago: boolean | null;
+  set: boolean | null;
+  ott: boolean | null;
+  nov: boolean | null;
+  dic: boolean | null;
+  acconto: string | null;
+  acconto_com: boolean | null;
+  lipe1t: boolean | null;
+  lipe2t: boolean | null;
+  lipe3t: boolean | null;
+  lipe4t: boolean | null;
+  data_invio_1t: string | null;
+  data_invio_2t: string | null;
+  data_invio_3t: string | null;
+  data_invio_4t: string | null;
+  tipo_liquidazione: string | null;
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
   studio_id: string;
   tbclienti: {
     ragione_sociale: string;
-    codice_fiscale: string | null;
+  } | null;
+  tbusers_utente_operatore: {
+    nome: string;
+    cognome: string;
+  } | null;
+  tbusers_utente_professionista: {
+    nome: string;
+    cognome: string;
   } | null;
 }
 
@@ -50,7 +66,7 @@ export default function Lipe() {
   const [stats, setStats] = useState({
     totale: 0,
     inviate: 0,
-    daCompletare: 0,
+    nonInviate: 0,
   });
 
   const ITEMS_PER_PAGE = 50;
@@ -82,19 +98,16 @@ export default function Lipe() {
   async function loadLipeRecords(studioId: string) {
     setLoading(true);
     try {
-      // Query con JOIN su tbclienti per recuperare ragione_sociale
       let query = supabase
         .from("tbscadlipe")
         .select(`
           *,
-          tbclienti!inner (
-            ragione_sociale,
-            codice_fiscale
-          )
+          tbclienti!inner (ragione_sociale),
+          tbusers_utente_operatore:utente_operatore_id (nome, cognome),
+          tbusers_utente_professionista:utente_professionista_id (nome, cognome)
         `, { count: "exact" })
         .eq("studio_id", studioId);
 
-      // Filtro sulla tabella collegata tbclienti
       if (searchQuery) {
         query = query.ilike("tbclienti.ragione_sociale", `%${searchQuery}%`);
       }
@@ -110,7 +123,6 @@ export default function Lipe() {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
-      // Ordinamento sulla tabella collegata
       const { data, error, count } = await query
         .order("ragione_sociale", { foreignTable: "tbclienti", ascending: true })
         .range(from, to);
@@ -143,9 +155,9 @@ export default function Lipe() {
 
       const totale = data?.length || 0;
       const inviate = data?.filter(r => r.lipe1t && r.lipe2t && r.lipe3t && r.lipe4t).length || 0;
-      const daCompletare = totale - inviate;
+      const nonInviate = totale - inviate;
 
-      setStats({ totale, inviate, daCompletare });
+      setStats({ totale, inviate, nonInviate });
     } catch (error) {
       console.error("Errore caricamento stats:", error);
     }
@@ -183,7 +195,7 @@ export default function Lipe() {
     }
   }
 
-  async function handleCheckboxChange(recordId: string, field: keyof LipeRecord, value: boolean) {
+  async function handleCheckboxChange(recordId: string, field: string, value: boolean) {
     try {
       const { error } = await supabase
         .from("tbscadlipe")
@@ -218,6 +230,45 @@ export default function Lipe() {
     }
   }
 
+  async function handleDelete(recordId: string) {
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tbscadlipe")
+        .delete()
+        .eq("id", recordId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Record eliminato con successo",
+      });
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (userData?.studio_id) {
+          loadLipeRecords(userData.studio_id);
+          loadStats(userData.studio_id);
+        }
+      }
+    } catch (error) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il record",
+        variant: "destructive",
+      });
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
@@ -232,7 +283,7 @@ export default function Lipe() {
 
         <Card>
           <CardHeader className="pb-3">
-            <div className="text-sm font-medium text-muted-foreground">Inviate</div>
+            <div className="text-sm font-medium text-muted-foreground">LIPE Inviate</div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.inviate}</div>
@@ -241,104 +292,128 @@ export default function Lipe() {
 
         <Card>
           <CardHeader className="pb-3">
-            <div className="text-sm font-medium text-muted-foreground">Da Completare</div>
+            <div className="text-sm font-medium text-muted-foreground">LIPE Non Inviate</div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.daCompletare}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.nonInviate}</div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
+          <h3 className="text-lg font-semibold">Filtri e Ricerca</h3>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
+              <Input
+                placeholder="Cerca..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
+              <Select value={operatoreFilter} onValueChange={(value) => {
+                setOperatoreFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  {operatori.map(op => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.cognome} {op.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Utente Professionista</label>
+              <Select value={professionistaFilter} onValueChange={(value) => {
+                setProfessionistaFilter(value);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti</SelectItem>
+                  {professionisti.map(prof => (
+                    <SelectItem key={prof.id} value={prof.id}>
+                      {prof.cognome} {prof.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Gestione LIPE</h2>
+            <h3 className="text-lg font-semibold">Record LIPE ({totalRecords})</h3>
             <div className="text-sm text-muted-foreground">
-              Pagina {currentPage} di {totalPages} - {totalRecords} dichiarazioni
+              Pagina {currentPage} di {totalPages}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 flex-wrap">
-            <Input
-              placeholder="Cerca per Ragione Sociale..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="max-w-xs"
-            />
-
-            <Select value={operatoreFilter} onValueChange={(value) => {
-              setOperatoreFilter(value);
-              setCurrentPage(1);
-            }}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtra per operatore" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti gli operatori</SelectItem>
-                {operatori.map(op => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.cognome} {op.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={professionistaFilter} onValueChange={(value) => {
-              setProfessionistaFilter(value);
-              setCurrentPage(1);
-            }}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtra per professionista" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti i professionisti</SelectItem>
-                {professionisti.map(prof => (
-                  <SelectItem key={prof.id} value={prof.id}>
-                    {prof.cognome} {prof.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
+        <CardContent>
           <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Ragione Sociale</TableHead>
-                  <TableHead className="min-w-[120px]">Codice Fiscale</TableHead>
+                  <TableHead className="min-w-[150px]">Nominativo</TableHead>
+                  <TableHead className="min-w-[120px]">Professionista</TableHead>
+                  <TableHead className="min-w-[120px]">Operatore</TableHead>
+                  <TableHead className="min-w-[80px]">Tipo Liq</TableHead>
                   <TableHead className="text-center">Gen</TableHead>
                   <TableHead className="text-center">Feb</TableHead>
                   <TableHead className="text-center">Mar</TableHead>
+                  <TableHead className="text-center">Lipe 1T</TableHead>
+                  <TableHead className="min-w-[110px]">Data Invio 1T</TableHead>
                   <TableHead className="text-center">Apr</TableHead>
                   <TableHead className="text-center">Mag</TableHead>
                   <TableHead className="text-center">Giu</TableHead>
+                  <TableHead className="text-center">Lipe 2T</TableHead>
+                  <TableHead className="min-w-[110px]">Data Invio 2T</TableHead>
                   <TableHead className="text-center">Lug</TableHead>
                   <TableHead className="text-center">Ago</TableHead>
                   <TableHead className="text-center">Set</TableHead>
+                  <TableHead className="text-center">Lipe 3T</TableHead>
+                  <TableHead className="min-w-[110px]">Data Invio 3T</TableHead>
                   <TableHead className="text-center">Ott</TableHead>
                   <TableHead className="text-center">Nov</TableHead>
+                  <TableHead className="min-w-[100px]">Acconto</TableHead>
+                  <TableHead className="text-center">Acc. Com</TableHead>
                   <TableHead className="text-center">Dic</TableHead>
-                  <TableHead className="text-center">1° Trim</TableHead>
-                  <TableHead className="text-center">2° Trim</TableHead>
-                  <TableHead className="text-center">3° Trim</TableHead>
-                  <TableHead className="text-center">4° Trim</TableHead>
+                  <TableHead className="text-center">Lipe 4T</TableHead>
+                  <TableHead className="min-w-[110px]">Data Invio 4T</TableHead>
+                  <TableHead className="text-center">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={18} className="text-center py-8">
+                    <TableCell colSpan={27} className="text-center py-8">
                       Caricamento in corso...
                     </TableCell>
                   </TableRow>
                 ) : lipeRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={18} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={27} className="text-center py-8 text-muted-foreground">
                       Nessuna dichiarazione trovata
                     </TableCell>
                   </TableRow>
@@ -346,102 +421,132 @@ export default function Lipe() {
                   lipeRecords.map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="font-medium">{record.tbclienti?.ragione_sociale || "N/A"}</TableCell>
-                      <TableCell>{record.tbclienti?.codice_fiscale || "-"}</TableCell>
+                      <TableCell>
+                        {record.tbusers_utente_professionista 
+                          ? `${record.tbusers_utente_professionista.cognome} ${record.tbusers_utente_professionista.nome}`
+                          : "Seleziona"}
+                      </TableCell>
+                      <TableCell>
+                        {record.tbusers_utente_operatore 
+                          ? `${record.tbusers_utente_operatore.cognome} ${record.tbusers_utente_operatore.nome}`
+                          : "Seleziona"}
+                      </TableCell>
+                      <TableCell>{record.tipo_liquidazione || "T"}</TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.gen}
+                          checked={record.gen || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.feb}
+                          checked={record.feb || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.mar}
+                          checked={record.mar || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.apr}
+                          checked={record.lipe1t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{record.data_invio_1t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={record.apr || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.mag}
+                          checked={record.mag || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.giu}
+                          checked={record.giu || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.lug}
+                          checked={record.lipe2t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{record.data_invio_2t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={record.lug || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.ago}
+                          checked={record.ago || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.set}
+                          checked={record.set || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.ott}
+                          checked={record.lipe3t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{record.data_invio_3t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={record.ott || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.nov}
+                          checked={record.nov || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{record.acconto || "Non dovuto"}</TableCell>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={record.acconto_com || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.dic}
+                          checked={record.dic || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
                         />
                       </TableCell>
                       <TableCell className="text-center">
                         <Checkbox
-                          checked={record.lipe1t}
-                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={record.lipe2t}
-                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={record.lipe3t}
-                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Checkbox
-                          checked={record.lipe4t}
+                          checked={record.lipe4t || false}
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
                         />
+                      </TableCell>
+                      <TableCell>{record.data_invio_4t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -451,38 +556,40 @@ export default function Lipe() {
           </div>
 
           {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNumber = i + 1;
-                  return (
-                    <PaginationItem key={pageNumber}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(pageNumber)}
-                        isActive={currentPage === pageNumber}
-                        className="cursor-pointer"
-                      >
-                        {pageNumber}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNumber = i + 1;
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNumber)}
+                          isActive={currentPage === pageNumber}
+                          className="cursor-pointer"
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
 
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>
