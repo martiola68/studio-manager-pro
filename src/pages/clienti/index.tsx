@@ -1008,177 +1008,80 @@ export default function ClientiPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    try {
-      let rows: any[] = [];
+    setImportLoading(true);
+    const errors: string[] = [];
 
-      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
-        rows = jsonData.slice(1).map((row: any) => {
-          if (Array.isArray(row)) {
-            return row;
-          }
-          return [];
+    try {
+      // 🔐 OTTIENI STUDIO_ID DELL'UTENTE LOGGATO
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Errore",
+          description: "Utente non autenticato. Effettua il login.",
+          variant: "destructive",
         });
-      } else {
-        const text = await file.text();
-        const lines = text.split("\n");
-        rows = lines.slice(1).map(line => {
-          const delimiter = line.includes(";") ? ";" : ",";
-          return line.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
-        });
+        setImportLoading(false);
+        return;
       }
 
-      let successCount = 0;
-      let errorCount = 0;
-      let duplicateCount = 0;
-      const errors: string[] = [];
-      const duplicates: string[] = [];
+      const { data: userData, error: userError } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", user.id)
+        .single();
 
-      for (let i = 0; i < rows.length; i++) {
-        const values = rows[i];
-        
-        if (!values || values.length === 0 || !values[0]) continue;
+      if (userError || !userData?.studio_id) {
+        toast({
+          title: "Errore",
+          description: "Impossibile recuperare lo studio dell'utente.",
+          variant: "destructive",
+        });
+        setImportLoading(false);
+        return;
+      }
 
-        const tipoCliente = (values[0] || "").toString().trim();
-        const tipologiaCliente = (values[1] || "").toString().trim();
-        const settoreFiscaleRaw = (values[2] || "VERO").toString().trim().toUpperCase();
-        const settoreLavoroRaw = (values[3] || "FALSO").toString().trim().toUpperCase();
-        const settoreConsulenzaRaw = (values[4] || "FALSO").toString().trim().toUpperCase();
-        const ragioneSociale = (values[5] || "").toString().trim();
-        const partitaIva = (values[6] || "").toString().trim();
-        const codiceFiscale = (values[7] || "").toString().trim();
+      const studioId = userData.studio_id;
 
-        if (!tipoCliente || !tipologiaCliente || !ragioneSociale) {
-          errors.push(`Riga ${i + 2}: Campi obbligatori mancanti`);
-          errorCount++;
-          continue;
-        }
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
 
-        // 🔍 VERIFICA DUPLICATI - Controllo P.IVA e Codice Fiscale
-        let isDuplicate = false;
-        let duplicateField = "";
-
-        if (partitaIva) {
-          const existingByPIva = clienti.find(c => 
-            c.partita_iva?.toLowerCase().trim() === partitaIva.toLowerCase().trim()
-          );
-          if (existingByPIva) {
-            isDuplicate = true;
-            duplicateField = `P.IVA: ${partitaIva}`;
-          }
-        }
-
-        if (!isDuplicate && codiceFiscale) {
-          const existingByCF = clienti.find(c => 
-            c.codice_fiscale?.toLowerCase().trim() === codiceFiscale.toLowerCase().trim()
-          );
-          if (existingByCF) {
-            isDuplicate = true;
-            duplicateField = `CF: ${codiceFiscale}`;
-          }
-        }
-
-        if (isDuplicate) {
-          duplicates.push(`Riga ${i + 2}: ${ragioneSociale} (${duplicateField})`);
-          duplicateCount++;
-          continue;
-        }
-
-        const findUserId = (name: string) => {
-          if (!name) return null;
-          const user = utenti.find(u => 
-            `${u.nome} ${u.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
-          );
-          return user?.id || null;
-        };
-
-        const findContattoId = (name: string) => {
-          if (!name) return null;
-          const contatto = contatti.find(c => 
-            `${c.nome} ${c.cognome}`.toLowerCase().trim() === name.toLowerCase().trim()
-          );
-          return contatto?.id || null;
-        };
-
-        const findPrestazioneId = (desc: string) => {
-          if (!desc) return null;
-          const prestazione = prestazioni.find(p => 
-            p.descrizione?.toLowerCase().trim() === desc.toLowerCase().trim()
-          );
-          return prestazione?.id || null;
-        };
-
-        const attivoRaw = (values[13] || "VERO").toString().trim().toUpperCase();
-        const attivo = attivoRaw === "VERO" || attivoRaw === "TRUE" || attivoRaw === "SI" || attivoRaw === "1";
-        
-        const settoreFiscale = settoreFiscaleRaw === "VERO" || settoreFiscaleRaw === "TRUE" || settoreFiscaleRaw === "SI" || settoreFiscaleRaw === "1";
-        const settoreLavoro = settoreLavoroRaw === "VERO" || settoreLavoroRaw === "TRUE" || settoreLavoroRaw === "SI" || settoreLavoroRaw === "1";
-        const settoreConsulenza = settoreConsulenzaRaw === "VERO" || settoreConsulenzaRaw === "TRUE" || settoreConsulenzaRaw === "SI" || settoreConsulenzaRaw === "1";
-
-        const clienteData: any = {
-          tipo_cliente: tipoCliente,
-          tipologia_cliente: tipologiaCliente,
-          settore_fiscale: settoreFiscale,
-          settore_lavoro: settoreLavoro,
-          settore_consulenza: settoreConsulenza,
-          ragione_sociale: ragioneSociale,
-          attivo: attivo,
-        };
-
-        if (partitaIva) clienteData.partita_iva = partitaIva;
-        if (codiceFiscale) clienteData.codice_fiscale = codiceFiscale;
-        if (values[8]) clienteData.indirizzo = values[8].toString().trim();
-        if (values[9]) clienteData.cap = values[9].toString().trim();
-        if (values[10]) clienteData.citta = values[10].toString().trim();
-        if (values[11]) clienteData.provincia = values[11].toString().trim();
-        if (values[12]) clienteData.email = values[12].toString().trim();
-        if (values[14]) clienteData.note = values[14].toString().trim();
-        
-        const utenteFiscale = findUserId(values[15]?.toString().trim());
-        if (utenteFiscale && settoreFiscale) clienteData.utente_operatore_id = utenteFiscale;
-        
-        const profFiscale = findUserId(values[16]?.toString().trim());
-        if (profFiscale && settoreFiscale) clienteData.utente_professionista_id = profFiscale;
-        
-        const utentePayroll = findUserId(values[17]?.toString().trim());
-        if (utentePayroll && settoreLavoro) clienteData.utente_payroll_id = utentePayroll;
-        
-        const profPayroll = findUserId(values[18]?.toString().trim());
-        if (profPayroll && settoreLavoro) clienteData.professionista_payroll_id = profPayroll;
-        
-        const contatto1 = findContattoId(values[19]?.toString().trim());
-        if (contatto1) clienteData.contatto1_id = contatto1;
-        
-        const contatto2 = findContattoId(values[20]?.toString().trim());
-        if (contatto2) clienteData.contatto2_id = contatto2;
-        
-        const prestazione = findPrestazioneId(values[21]?.toString().trim());
-        if (prestazione) clienteData.tipo_prestazione_id = prestazione;
-        
-        if (values[22]) clienteData.tipo_redditi = values[22].toString().trim();
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map(v => v.trim().replace(/"/g, ""));
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => {
+          row[h] = values[idx] || "";
+        });
 
         try {
-          await clienteService.createCliente(clienteData);
-          successCount++;
+          const { error } = await supabase.from("tbclienti").insert({
+            ragione_sociale: row["ragione_sociale"] || row["Ragione Sociale"],
+            codice_fiscale: row["codice_fiscale"] || row["Codice Fiscale"] || null,
+            partita_iva: row["partita_iva"] || row["Partita IVA"] || null,
+            indirizzo: row["indirizzo"] || row["Indirizzo"] || null,
+            cap: row["cap"] || row["CAP"] || null,
+            citta: row["citta"] || row["Città"] || null,
+            provincia: row["provincia"] || row["Provincia"] || null,
+            email: row["email"] || row["Email"] || null,
+            tipo_cliente: row["tipo_cliente"] || row["Tipo Cliente"] || "Persona fisica",
+            tipologia_cliente: row["tipologia_cliente"] || row["Tipologia Cliente"] || "Interno",
+            studio_id: studioId, // ✅ ASSEGNA AUTOMATICAMENTE STUDIO_ID
+          });
+
+          if (error) {
+            const errMsg = `Riga ${i + 1}: ${error.message}`;
+            errors.push(errMsg);
+            console.error(`Errore importazione riga ${i + 2}:`, error);
+          }
         } catch (error: any) {
-          errorCount++;
-          const errorMsg = error.message || "Errore sconosciuto";
-          errors.push(`Riga ${i + 2}: ${errorMsg}`);
+          const errMsg = `Riga ${i + 1}: ${error.message}`;
+          errors.push(errMsg);
           console.error(`Errore importazione riga ${i + 2}:`, error);
         }
       }
 
       if (errors.length > 0 && errors.length <= 10) {
         console.error("Primi 10 errori importazione:", errors.slice(0, 10));
-      }
-
-      if (duplicates.length > 0 && duplicates.length <= 10) {
-        console.log("Primi 10 duplicati saltati:", duplicates.slice(0, 10));
       }
 
       // 📊 Report dettagliato
