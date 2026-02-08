@@ -37,7 +37,7 @@ interface LipeRecord {
   tipo_liq: string | null;
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
-  studio_id: string;
+  studio_id: string | null;
   tbclienti: {
     ragione_sociale: string;
   } | null;
