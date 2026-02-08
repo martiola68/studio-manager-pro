@@ -30,11 +30,11 @@ interface LipeRecord {
   lipe2t: boolean | null;
   lipe3t: boolean | null;
   lipe4t: boolean | null;
-  data_invio_1t: string | null;
-  data_invio_2t: string | null;
-  data_invio_3t: string | null;
-  data_invio_4t: string | null;
-  tipo_liquidazione: string | null;
+  lipe1t_invio: string | null;
+  lipe2t_invio: string | null;
+  lipe3t_invio: string | null;
+  lipe4t_invio: string | null;
+  tipo_liq: string | null;
   utente_operatore_id: string | null;
   utente_professionista_id: string | null;
   studio_id: string;
@@ -431,7 +431,7 @@ export default function Lipe() {
                           ? `${record.tbusers_utente_operatore.cognome} ${record.tbusers_utente_operatore.nome}`
                           : "Seleziona"}
                       </TableCell>
-                      <TableCell>{record.tipo_liquidazione || "T"}</TableCell>
+                      <TableCell>{record.tipo_liq || "T"}</TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.gen || false}
@@ -456,7 +456,7 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.data_invio_1t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>{record.lipe1t_invio || "gg/mm/aaaa"}</TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.apr || false}
@@ -481,7 +481,7 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.data_invio_2t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>{record.lipe2t_invio || "gg/mm/aaaa"}</TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.lug || false}
@@ -506,7 +506,7 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.data_invio_3t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>{record.lipe3t_invio || "gg/mm/aaaa"}</TableCell>
                       <TableCell className="text-center">
                         <Checkbox
                           checked={record.ott || false}
@@ -538,7 +538,7 @@ export default function Lipe() {
                           onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
                         />
                       </TableCell>
-                      <TableCell>{record.data_invio_4t || "gg/mm/aaaa"}</TableCell>
+                      <TableCell>{record.lipe4t_invio || "gg/mm/aaaa"}</TableCell>
                       <TableCell className="text-center">
                         <Button
                           variant="ghost"
