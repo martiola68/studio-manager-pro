@@ -54,7 +54,7 @@ interface LipeRecord {
   };
 }
 
-export function Lipe() {
+export default function Lipe() {
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -226,7 +226,7 @@ export function Lipe() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Scadenzario LIPE</h1>
