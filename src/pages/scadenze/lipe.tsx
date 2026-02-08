@@ -76,7 +76,6 @@ export default function LipePage() {
   async function loadLipeRecords(studio_id: string, page: number) {
     setLoading(true);
     
-    // Conteggio totale
     const { count, error: countError } = await supabase
       .from("tbscadlipe")
       .select("*", { count: 'exact', head: true })
@@ -86,10 +85,6 @@ export default function LipePage() {
       setTotalRecords(count || 0);
     }
 
-    // Caricamento dati paginati
-    const from = (page - 1) * ITEMS_PER_PAGE;
-    const to = from + ITEMS_PER_PAGE - 1;
-
     const { data, error } = await supabase
       .from("tbscadlipe")
       .select(`
@@ -98,18 +93,13 @@ export default function LipePage() {
         tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(nome, cognome)
       `)
       .eq("studio_id", studio_id)
-      .order("nominativo", { ascending: true })
-      .range(from, to);
+      .order("nominativo", { ascending: true });
 
     if (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({ title: "Errore", description: "Impossibile caricare i dati", variant: "destructive" });
     } else {
       setLipeRecords(data as LipeWithRelations[] || []);
-      
-      // Calcolo statistiche (approssimativo sui dati caricati per performance, o query separata se serve preciso)
-      // Per precisione assoluta servirebbe una query separata di count condizionale, qui usiamo i dati caricati + stima
-      // O facciamo una query leggera solo per le stats
       loadStats(studio_id);
     }
     
@@ -208,7 +198,11 @@ export default function LipePage() {
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
-  const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
+  const paginatedRecords = filteredRecords.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   if (loading && lipeRecords.length === 0) {
     return (
@@ -322,7 +316,7 @@ export default function LipePage() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Record LIPE ({totalRecords})</CardTitle>
+            <CardTitle>Record LIPE ({filteredRecords.length})</CardTitle>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Pagina {currentPage} di {totalPages || 1}</span>
               <div className="flex gap-1">
@@ -391,14 +385,14 @@ export default function LipePage() {
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
-                    {filteredRecords.length === 0 ? (
+                    {paginatedRecords.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={27} className="text-center py-8 text-gray-500">
                           Nessun record trovato
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredRecords.map((record) => (
+                      paginatedRecords.map((record) => (
                         <TableRow key={record.id} className="hover:bg-muted/50 bg-background">
                           <TableCell className={`sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium ${widths.nominativo}`}>
                             <Select
