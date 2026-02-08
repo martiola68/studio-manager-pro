@@ -1805,9 +1805,8 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
                     }
-                    disabled={!formData.settore_fiscale}
                   >
-                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1819,9 +1818,6 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!formData.settore_fiscale && (
-                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
-                  )}
                 </div>
 
                 <div>
@@ -1831,9 +1827,8 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_professionista_id: value === "none" ? "" : value })
                     }
-                    disabled={!formData.settore_fiscale}
                   >
-                    <SelectTrigger className={!formData.settore_fiscale ? "cursor-not-allowed bg-gray-100" : ""}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Seleziona professionista" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1845,9 +1840,6 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!formData.settore_fiscale && (
-                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Fiscale" per attivare questo campo</p>
-                  )}
                 </div>
 
                 <div>
@@ -1857,9 +1849,8 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
                     }
-                    disabled={!formData.settore_lavoro}
                   >
-                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Seleziona utente payroll" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1871,9 +1862,6 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!formData.settore_lavoro && (
-                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
-                  )}
                 </div>
 
                 <div>
@@ -1883,9 +1871,8 @@ export default function ClientiPage() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, professionista_payroll_id: value === "none" ? "" : value })
                     }
-                    disabled={!formData.settore_lavoro}
                   >
-                    <SelectTrigger className={!formData.settore_lavoro ? "cursor-not-allowed bg-gray-100" : ""}>
+                    <SelectTrigger>
                       <SelectValue placeholder="Seleziona professionista payroll" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1897,9 +1884,6 @@ export default function ClientiPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!formData.settore_lavoro && (
-                    <p className="text-xs text-muted-foreground mt-1">Abilita "Settore Lavoro" per attivare questo campo</p>
-                  )}
                 </div>
 
                 <div>
