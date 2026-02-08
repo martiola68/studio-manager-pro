@@ -1035,7 +1035,9 @@ export default function ClientiPage() {
 
       let successCount = 0;
       let errorCount = 0;
+      let duplicateCount = 0;
       const errors: string[] = [];
+      const duplicates: string[] = [];
 
       for (let i = 0; i < rows.length; i++) {
         const values = rows[i];
@@ -1048,10 +1050,42 @@ export default function ClientiPage() {
         const settoreLavoroRaw = (values[3] || "FALSO").toString().trim().toUpperCase();
         const settoreConsulenzaRaw = (values[4] || "FALSO").toString().trim().toUpperCase();
         const ragioneSociale = (values[5] || "").toString().trim();
+        const partitaIva = (values[6] || "").toString().trim();
+        const codiceFiscale = (values[7] || "").toString().trim();
 
         if (!tipoCliente || !tipologiaCliente || !ragioneSociale) {
           errors.push(`Riga ${i + 2}: Campi obbligatori mancanti`);
           errorCount++;
+          continue;
+        }
+
+        // 🔍 VERIFICA DUPLICATI - Controllo P.IVA e Codice Fiscale
+        let isDuplicate = false;
+        let duplicateField = "";
+
+        if (partitaIva) {
+          const existingByPIva = clienti.find(c => 
+            c.partita_iva?.toLowerCase().trim() === partitaIva.toLowerCase().trim()
+          );
+          if (existingByPIva) {
+            isDuplicate = true;
+            duplicateField = `P.IVA: ${partitaIva}`;
+          }
+        }
+
+        if (!isDuplicate && codiceFiscale) {
+          const existingByCF = clienti.find(c => 
+            c.codice_fiscale?.toLowerCase().trim() === codiceFiscale.toLowerCase().trim()
+          );
+          if (existingByCF) {
+            isDuplicate = true;
+            duplicateField = `CF: ${codiceFiscale}`;
+          }
+        }
+
+        if (isDuplicate) {
+          duplicates.push(`Riga ${i + 2}: ${ragioneSociale} (${duplicateField})`);
+          duplicateCount++;
           continue;
         }
 
@@ -1096,8 +1130,8 @@ export default function ClientiPage() {
           attivo: attivo,
         };
 
-        if (values[6]) clienteData.partita_iva = values[6].toString().trim();
-        if (values[7]) clienteData.codice_fiscale = values[7].toString().trim();
+        if (partitaIva) clienteData.partita_iva = partitaIva;
+        if (codiceFiscale) clienteData.codice_fiscale = codiceFiscale;
         if (values[8]) clienteData.indirizzo = values[8].toString().trim();
         if (values[9]) clienteData.cap = values[9].toString().trim();
         if (values[10]) clienteData.citta = values[10].toString().trim();
@@ -1143,9 +1177,19 @@ export default function ClientiPage() {
         console.error("Primi 10 errori importazione:", errors.slice(0, 10));
       }
 
+      if (duplicates.length > 0 && duplicates.length <= 10) {
+        console.log("Primi 10 duplicati saltati:", duplicates.slice(0, 10));
+      }
+
+      // 📊 Report dettagliato
+      const reportParts = [];
+      if (successCount > 0) reportParts.push(`✅ ${successCount} clienti importati`);
+      if (duplicateCount > 0) reportParts.push(`⚠️ ${duplicateCount} duplicati saltati`);
+      if (errorCount > 0) reportParts.push(`❌ ${errorCount} errori`);
+
       toast({
         title: "Importazione completata",
-        description: `✅ ${successCount} clienti importati con successo\n${errorCount > 0 ? `❌ ${errorCount} errori` : ''}`,
+        description: reportParts.join('\n'),
         variant: successCount > 0 ? "default" : "destructive",
       });
 
