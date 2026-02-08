@@ -1602,16 +1602,7 @@ export default function ClientiPage() {
                         id="settore-fiscale"
                         checked={formData.settore_fiscale}
                         onCheckedChange={(checked) => {
-                          const newValue = checked as boolean;
-                          setFormData({ 
-                            ...formData, 
-                            settore_fiscale: newValue,
-                            // Svuota campi fiscali se deselezionato
-                            ...((!newValue) && {
-                              utente_operatore_id: "",
-                              utente_professionista_id: ""
-                            })
-                          });
+                          setFormData({ ...formData, settore_fiscale: checked as boolean });
                         }}
                       />
                       <Label htmlFor="settore-fiscale" className="font-medium cursor-pointer">
@@ -1624,16 +1615,7 @@ export default function ClientiPage() {
                         id="settore-lavoro"
                         checked={formData.settore_lavoro}
                         onCheckedChange={(checked) => {
-                          const newValue = checked as boolean;
-                          setFormData({ 
-                            ...formData, 
-                            settore_lavoro: newValue,
-                            // Svuota campi payroll se deselezionato
-                            ...((!newValue) && {
-                              utente_payroll_id: "",
-                              professionista_payroll_id: ""
-                            })
-                          });
+                          setFormData({ ...formData, settore_lavoro: checked as boolean });
                         }}
                       />
                       <Label htmlFor="settore-lavoro" className="font-medium cursor-pointer">
