@@ -24,17 +24,24 @@ interface LipeWithRelations extends LipeRow {
 
 const ITEMS_PER_PAGE = 50;
 
-export default function LipePage() {
-  const router = useRouter();
+export function Lipe() {
   const { toast } = useToast();
-
+  const { userProfile } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [lipeRecords, setLipeRecords] = useState<LipeWithRelations[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<LipeWithRelations | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [operatoreFilter, setOperatoreFilter] = useState<string>("tutti");
+  const [professionistaFilter, setProfessionistaFilter] = useState<string>("tutti");
+  const [stats, setStats] = useState({ totale: 0, inScadenza: 0, scadute: 0 });
+  const [operatori, setOperatori] = useState<any[]>([]);
+  const [professionisti, setProfessionisti] = useState<any[]>([]);
+
+  const studioId = userProfile?.studio_id;
+
   const [clienti, setClienti] = useState<Pick<ClienteRow, "id" | "ragione_sociale">[]>([]);
   const [utenti, setUtenti] = useState<Pick<UtenteRow, "id" | "nome" | "cognome">[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
@@ -47,8 +54,12 @@ export default function LipePage() {
   });
 
   useEffect(() => {
-    checkAuthAndLoadData();
-  }, [currentPage]);
+    if (studioId) {
+      loadLipeRecords(studioId);
+      loadOperatori(studioId);
+      loadProfessionisti(studioId);
+    }
+  }, [studioId]);
 
   async function checkAuthAndLoadData() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -65,7 +76,7 @@ export default function LipePage() {
 
     if (userData?.studio_id) {
       await Promise.all([
-        loadLipeRecords(userData.studio_id, currentPage),
+        loadLipeRecords(userData.studio_id),
         loadClienti(userData.studio_id),
         loadUtenti(userData.studio_id)
       ]);
@@ -73,34 +84,39 @@ export default function LipePage() {
     setLoading(false);
   }
 
-  async function loadLipeRecords(studio_id: string, page: number) {
+  async function loadLipeRecords(studio_id: string) {
     setLoading(true);
-    
-    const { count, error: countError } = await supabase
-      .from("tbscadlipe")
-      .select("*", { count: 'exact', head: true })
-      .eq("studio_id", studio_id);
 
-    if (!countError) {
-      setTotalRecords(count || 0);
-    }
+    try {
+      const { data, error, count } = await supabase
+        .from("tbclienti")
+        .select(`
+          id,
+          nominativo,
+          codice_fiscale,
+          email,
+          telefono,
+          lipe,
+          utente_operatore_id,
+          utente_professionista_id,
+          tbusers_utente_operatore:utente_operatore_id(id, nome, cognome, email),
+          tbusers_utente_professionista:utente_professionista_id(id, nome, cognome, email)
+        `, { count: "exact" })
+        .eq("studio_id", studio_id)
+        .eq("lipe", true)
+        .order("nominativo", { ascending: true });
 
-    const { data, error } = await supabase
-      .from("tbscadlipe")
-      .select(`
-        *,
-        tbutenti_professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(nome, cognome),
-        tbutenti_operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(nome, cognome)
-      `)
-      .eq("studio_id", studio_id)
-      .order("nominativo", { ascending: true });
+      if (error) throw error;
 
-    if (error) {
-      console.error("Errore caricamento LIPE:", error);
-      toast({ title: "Errore", description: "Impossibile caricare i dati", variant: "destructive" });
-    } else {
       setLipeRecords(data as LipeWithRelations[] || []);
       loadStats(studio_id);
+    } catch (error: any) {
+      console.error("Errore caricamento LIPE:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati LIPE",
+        variant: "destructive",
+      });
     }
     
     setLoading(false);
@@ -192,28 +208,13 @@ export default function LipePage() {
   }
 
   const filteredRecords = lipeRecords.filter(r => {
-    const matchSearch = r.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchOperatore = filterOperatore === "__all__" || r.utente_operatore_id === filterOperatore;
-    const matchProfessionista = filterProfessionista === "__all__" || r.utente_professionista_id === filterProfessionista;
+    const matchSearch = r.nominativo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       r.codice_fiscale?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchOperatore = operatoreFilter === "tutti" || r.utente_operatore_id === operatoreFilter;
+    const matchProfessionista = professionistaFilter === "tutti" || r.utente_professionista_id === professionistaFilter;
+    
     return matchSearch && matchOperatore && matchProfessionista;
   });
-
-  const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
-  const paginatedRecords = filteredRecords.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  if (loading && lipeRecords.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-gray-600">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
 
   const widths = {
     nominativo: "min-w-[250px]",
@@ -316,29 +317,9 @@ export default function LipePage() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Record LIPE ({filteredRecords.length})</CardTitle>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Pagina {currentPage} di {totalPages || 1}</span>
-              <div className="flex gap-1">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+            <CardTitle className="text-2xl font-bold">Scadenzario LIPE</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Totale: {filteredRecords.length} dichiarazioni
             </div>
           </div>
         </CardHeader>
@@ -385,14 +366,14 @@ export default function LipePage() {
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
-                    {paginatedRecords.length === 0 ? (
+                    {filteredRecords.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={27} className="text-center py-8 text-gray-500">
-                          Nessun record trovato
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          {loading ? "Caricamento..." : "Nessuna dichiarazione LIPE trovata"}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedRecords.map((record) => (
+                      filteredRecords.map((record) => (
                         <TableRow key={record.id} className="hover:bg-muted/50 bg-background">
                           <TableCell className={`sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium ${widths.nominativo}`}>
                             <Select
