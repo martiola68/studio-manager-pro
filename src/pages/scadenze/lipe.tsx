@@ -103,8 +103,8 @@ export default function Lipe() {
         .select(`
           *,
           tbclienti!inner (ragione_sociale),
-          tbusers_utente_operatore:utente_operatore_id (nome, cognome),
-          tbusers_utente_professionista:utente_professionista_id (nome, cognome)
+          tbusers_utente_operatore:tbutenti!utente_operatore_id (nome, cognome),
+          tbusers_utente_professionista:tbutenti!utente_professionista_id (nome, cognome)
         `, { count: "exact" })
         .eq("studio_id", studioId);
 
