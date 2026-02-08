@@ -39,6 +39,8 @@ interface LipeRecord {
     id: string;
     ragione_sociale: string;
     codice_fiscale: string | null;
+    utente_operatore_id: string | null;
+    utente_professionista_id: string | null;
     tbusers_utente_operatore: {
       id: string;
       nome: string;
