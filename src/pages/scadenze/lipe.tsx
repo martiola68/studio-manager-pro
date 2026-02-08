@@ -169,7 +169,6 @@ export default function Lipe() {
         .from("tbutenti")
         .select("id, nome, cognome")
         .eq("studio_id", studioId)
-        .eq("ruolo", "operatore")
         .order("cognome");
 
       if (error) throw error;
@@ -185,7 +184,6 @@ export default function Lipe() {
         .from("tbutenti")
         .select("id, nome, cognome")
         .eq("studio_id", studioId)
-        .eq("ruolo", "professionista")
         .order("cognome");
 
       if (error) throw error;
