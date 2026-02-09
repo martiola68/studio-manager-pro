@@ -330,10 +330,14 @@ export default function AgendaPage() {
           const isConnected = await microsoftGraphService.isConnected(formData.utente_id);
 
           if (!isConnected) {
-            // Salva evento per riprenderlo dopo OAuth
+            console.log("❌ UTENTE NON CONNESSO - Avvio procedura OAuth");
+            console.log("💾 Salvati dati evento pendente:", formData);
+            
             setPendingEventData(formData);
             setNeedsMicrosoftAuth(true);
             setPendingTeamsMeeting(true);
+            
+            console.log("🔓 Dialog OAuth dovrebbe aprirsi adesso!");
             return; // Esce e attende OAuth
           }
 
@@ -365,6 +369,17 @@ export default function AgendaPage() {
             description: "Link aggiunto all'evento" 
           });
         } catch (error: any) {
+          console.error("❌ ERRORE creazione meeting Teams:", error);
+          
+          // Verifica se errore è dovuto a mancanza connessione
+          if (error.message?.includes("not connected") || error.message?.includes("User not connected")) {
+            console.log("🔓 Errore connessione rilevato - Apro dialog OAuth");
+            setPendingEventData(formData);
+            setNeedsMicrosoftAuth(true);
+            setPendingTeamsMeeting(true);
+            return;
+          }
+          
           console.error("Errore creazione meeting Teams:", error);
           toast({ 
             title: "Avviso", 
@@ -881,7 +896,7 @@ export default function AgendaPage() {
 
       {/* Dialog OAuth Microsoft 365 */}
       <Dialog open={needsMicrosoftAuth} onOpenChange={setNeedsMicrosoftAuth}>
-        <DialogContent className="sm:max-width-[500px]">
+        <DialogContent className="sm:max-width-[500px] z-index: 9999;">
           <DialogHeader>
             <DialogTitle>🔐 Connessione Microsoft 365 Richiesta</DialogTitle>
             <DialogDescription>
