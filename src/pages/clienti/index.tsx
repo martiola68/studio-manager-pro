@@ -657,8 +657,10 @@ export default function ClientiPage() {
       contatto1_id: clienteData.contatto1_id || "",
       referente_esterno: clienteData.referente_esterno || "",
       tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
-      tipo_redditi: (clienteData.tipo_redditi as any) || undefined,
+      tipo_redditi: (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
       note: clienteData.note || "",
+      gestione_esterometro: clienteData.gestione_esterometro ?? false,
+      note_esterometro: clienteData.note_esterometro || "",
     });
     
     setScadenzari({
@@ -707,6 +709,8 @@ export default function ClientiPage() {
       tipo_prestazione_id: "",
       tipo_redditi: undefined,
       note: "",
+      gestione_esterometro: false,
+      note_esterometro: "",
     });
     setScadenzari({
       iva: true,
