@@ -106,9 +106,12 @@ export default function ElencoGenerale() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Elenco Generale Scadenzari</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Elenco Generale Scadenzari</h1>
+          <p className="text-gray-500 mt-1">Visione completa degli scadenzari per ogni cliente</p>
+        </div>
       </div>
 
       <Card>
@@ -127,58 +130,67 @@ export default function ElencoGenerale() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Ragione Sociale</TableHead>
-                  <TableHead className="w-[150px]">Codice Fiscale</TableHead>
-                  <TableHead className="w-[150px]">P.IVA</TableHead>
-                  {scadenzari.map(scad => (
-                    <TableHead key={scad.field} className="text-center w-[100px]">
-                      {scad.label}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClienti.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={11} className="text-center text-gray-500 py-8">
-                      Nessun cliente trovato
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredClienti.map(cliente => (
-                    <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">
-                        {cliente.ragione_sociale || "-"}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {cliente.codice_fiscale || "-"}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {cliente.partita_iva || "-"}
-                      </TableCell>
+            <div className="inline-block min-w-full align-middle">
+              <div className="sticky top-0 z-20 bg-white border-b">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[300px]">Ragione Sociale</TableHead>
+                      <TableHead className="min-w-[150px]">Codice Fiscale</TableHead>
+                      <TableHead className="min-w-[150px]">P.IVA</TableHead>
                       {scadenzari.map(scad => (
-                        <TableCell key={scad.field} className="text-center">
-                          <div className="flex justify-center">
-                            <Checkbox
-                              checked={cliente[scad.field] as boolean || false}
-                              onCheckedChange={(checked) =>
-                                updateScadenzario(cliente.id, scad.field, checked as boolean)
-                              }
-                              disabled={updating === cliente.id}
-                            />
-                          </div>
-                        </TableCell>
+                        <TableHead key={scad.field} className="text-center min-w-[100px]">
+                          {scad.label}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                </Table>
+              </div>
+
+              <div className="max-h-[600px] overflow-y-auto">
+                <Table>
+                  <TableBody>
+                    {filteredClienti.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+                          Nessun cliente trovato
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredClienti.map(cliente => (
+                        <TableRow key={cliente.id}>
+                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[300px]">
+                            {cliente.ragione_sociale || "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600 min-w-[150px]">
+                            {cliente.codice_fiscale || "-"}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600 min-w-[150px]">
+                            {cliente.partita_iva || "-"}
+                          </TableCell>
+                          {scadenzari.map(scad => (
+                            <TableCell key={scad.field} className="text-center min-w-[100px]">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={cliente[scad.field] as boolean || false}
+                                  onCheckedChange={(checked) =>
+                                    updateScadenzario(cliente.id, scad.field, checked as boolean)
+                                  }
+                                  disabled={updating === cliente.id}
+                                />
+                              </div>
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
