@@ -141,7 +141,7 @@ export default function Microsoft365Page() {
         return;
       }
 
-      if (data && data.access_token) {
+      if (data && (data as any).access_token) {
         setUserOAuthStatus("connected");
       } else {
         setUserOAuthStatus("disconnected");
