@@ -51,6 +51,7 @@ export default function Lipe() {
   const [professionistaFilter, setProfessionistaFilter] = useState<string>("all");
   const [operatori, setOperatori] = useState<any[]>([]);
   const [professionisti, setProfessionisti] = useState<any[]>([]);
+  const [editingDates, setEditingDates] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({
     totale: 0,
     inviate: 0,
@@ -258,25 +259,68 @@ export default function Lipe() {
   }
 
   async function handleDateChange(recordId: string, field: string, value: string) {
+    const key = `${recordId}-${field}`;
+    setEditingDates(prev => ({ ...prev, [key]: value }));
+  }
+
+  async function handleDateBlur(recordId: string, field: string, value: string) {
     try {
+      let dateValue = value.trim();
+      
+      if (dateValue === "") {
+        dateValue = null;
+      } else if (dateValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        const [day, month, year] = dateValue.split("/");
+        dateValue = `${year}-${month}-${day}`;
+      }
+
       const { error } = await supabase
         .from("tbscadlipe")
-        .update({ [field]: value })
+        .update({ [field]: dateValue })
         .eq("id", recordId);
 
       if (error) throw error;
 
       setLipeRecords(prev =>
-        prev.map(r => r.id === recordId ? { ...r, [field]: value } : r)
+        prev.map(r => r.id === recordId ? { ...r, [field]: dateValue } : r)
       );
+
+      const key = `${recordId}-${field}`;
+      setEditingDates(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+
+      toast({
+        title: "Successo",
+        description: "Data aggiornata con successo",
+      });
     } catch (error) {
       console.error("Errore aggiornamento data:", error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la data",
+        description: "Impossibile aggiornare la data. Verifica il formato gg/mm/aaaa",
         variant: "destructive",
       });
     }
+  }
+
+  function getDateDisplayValue(recordId: string, field: string, dbValue: string | null): string {
+    const key = `${recordId}-${field}`;
+    
+    if (editingDates[key] !== undefined) {
+      return editingDates[key];
+    }
+    
+    if (!dbValue) return "";
+    
+    if (dbValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dbValue.split("-");
+      return `${day}/${month}/${year}`;
+    }
+    
+    return dbValue;
   }
 
   async function handleDelete(recordId: string) {
@@ -516,8 +560,9 @@ export default function Lipe() {
                               <Input
                                 type="text"
                                 placeholder="gg/mm/aaaa"
-                                value={record.lipe1t_invio || ""}
+                                value={getDateDisplayValue(record.id, "lipe1t_invio", record.lipe1t_invio)}
                                 onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
+                                onBlur={(e) => handleDateBlur(record.id, "lipe1t_invio", e.target.value)}
                                 className="w-full"
                               />
                             </div>
@@ -551,8 +596,9 @@ export default function Lipe() {
                               <Input
                                 type="text"
                                 placeholder="gg/mm/aaaa"
-                                value={record.lipe2t_invio || ""}
+                                value={getDateDisplayValue(record.id, "lipe2t_invio", record.lipe2t_invio)}
                                 onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
+                                onBlur={(e) => handleDateBlur(record.id, "lipe2t_invio", e.target.value)}
                                 className="w-full"
                               />
                             </div>
@@ -586,8 +632,9 @@ export default function Lipe() {
                               <Input
                                 type="text"
                                 placeholder="gg/mm/aaaa"
-                                value={record.lipe3t_invio || ""}
+                                value={getDateDisplayValue(record.id, "lipe3t_invio", record.lipe3t_invio)}
                                 onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
+                                onBlur={(e) => handleDateBlur(record.id, "lipe3t_invio", e.target.value)}
                                 className="w-full"
                               />
                             </div>
@@ -642,8 +689,9 @@ export default function Lipe() {
                               <Input
                                 type="text"
                                 placeholder="gg/mm/aaaa"
-                                value={record.lipe4t_invio || ""}
+                                value={getDateDisplayValue(record.id, "lipe4t_invio", record.lipe4t_invio)}
                                 onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
+                                onBlur={(e) => handleDateBlur(record.id, "lipe4t_invio", e.target.value)}
                                 className="w-full"
                               />
                             </div>
