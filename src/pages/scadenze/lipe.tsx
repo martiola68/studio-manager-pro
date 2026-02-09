@@ -514,12 +514,12 @@ export default function Lipe() {
                           <TableCell className="bg-blue-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
-                                type="date"
+                                type="text"
+                                placeholder="gg/mm/aaaa"
                                 value={record.lipe1t_invio || ""}
                                 onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
                                 className="w-full"
                               />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
                           <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
@@ -549,12 +549,12 @@ export default function Lipe() {
                           <TableCell className="bg-green-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
-                                type="date"
+                                type="text"
+                                placeholder="gg/mm/aaaa"
                                 value={record.lipe2t_invio || ""}
                                 onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
                                 className="w-full"
                               />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
                           <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
@@ -584,12 +584,12 @@ export default function Lipe() {
                           <TableCell className="bg-yellow-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
-                                type="date"
+                                type="text"
+                                placeholder="gg/mm/aaaa"
                                 value={record.lipe3t_invio || ""}
                                 onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
                                 className="w-full"
                               />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
                           <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
@@ -640,12 +640,12 @@ export default function Lipe() {
                           <TableCell className="bg-orange-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
-                                type="date"
+                                type="text"
+                                placeholder="gg/mm/aaaa"
                                 value={record.lipe4t_invio || ""}
                                 onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
                                 className="w-full"
                               />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
                           <TableCell className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
