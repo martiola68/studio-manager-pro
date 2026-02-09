@@ -301,7 +301,10 @@ export const microsoftGraphService = {
     
     // Verifica che Microsoft 365 sia abilitato E che features.teams sia true
     const isEnabled = configData?.enabled === true;
-    const teamsEnabled = configData?.features?.teams === true;
+    
+    // Fix TypeScript error: cast JSONB features to specific type
+    const features = configData?.features as unknown as { teams?: boolean } | null;
+    const teamsEnabled = features?.teams === true;
     
     return isEnabled && teamsEnabled;
   },
