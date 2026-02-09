@@ -103,6 +103,15 @@ export default function Microsoft365Page() {
         return;
       }
 
+      if (!utente.studio_id) {
+        toast({
+          title: "Errore",
+          description: "Studio non identificato",
+          variant: "destructive"
+        });
+        return;
+      }
+
       setStudioId(utente.studio_id);
       await loadConfiguration(utente.studio_id);
       setLoading(false);
@@ -122,8 +131,8 @@ export default function Microsoft365Page() {
         .maybeSingle();
 
       if (data) {
-        // Cast esplicito per sicurezza
-        const configData = data as Microsoft365ConfigDB;
+        // Cast esplicito con doppio passaggio per soddisfare TypeScript
+        const configData = data as unknown as Microsoft365ConfigDB;
         
         setConfig({
           client_id: configData.client_id || "",
