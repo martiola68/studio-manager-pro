@@ -399,10 +399,9 @@ export default function ClientiPage() {
       
       if (scadenzari.iva) scadenzariAttivi.push("IVA");
       if (scadenzari.lipe) scadenzariAttivi.push("LIPE");
-      if (scadenzari.paghe) scadenzariAttivi.push("Paghe");
       if (scadenzari.cu) scadenzariAttivi.push("CU");
-      if (scadenzari.modello770) scadenzariAttivi.push("770");
-      if (scadenzari.bilanci) scadenzariAttivi.push("Bilanci");
+      if (scadenzari.modello_770) scadenzariAttivi.push("770");
+      if (scadenzari.bilancio) scadenzariAttivi.push("Bilanci");
 
       const baseData = {
         nominativo: cliente.ragione_sociale,
