@@ -137,9 +137,9 @@ export default function ElencoGenerale() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[300px]">Ragione Sociale</TableHead>
-                      <TableHead className="min-w-[150px]">Codice Fiscale</TableHead>
-                      <TableHead className="min-w-[150px]">P.IVA</TableHead>
+                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[300px] min-w-[300px] max-w-[300px]">Ragione Sociale</TableHead>
+                      <TableHead className="min-w-[150px]">Utente Fiscale</TableHead>
+                      <TableHead className="min-w-[150px]">Utente Parola</TableHead>
                       {scadenzari.map(scad => (
                         <TableHead key={scad.field} className="text-center min-w-[100px]">
                           {scad.label}
@@ -162,14 +162,14 @@ export default function ElencoGenerale() {
                     ) : (
                       filteredClienti.map(cliente => (
                         <TableRow key={cliente.id}>
-                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[300px]">
+                          <TableCell className="sticky left-0 z-10 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium w-[300px] min-w-[300px] max-w-[300px]">
                             {cliente.ragione_sociale || "-"}
                           </TableCell>
                           <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.codice_fiscale || "-"}
+                            {cliente.utente_fiscale || "-"}
                           </TableCell>
                           <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.partita_iva || "-"}
+                            {cliente.utente_parola || "-"}
                           </TableCell>
                           {scadenzari.map(scad => (
                             <TableCell key={scad.field} className="text-center min-w-[100px]">
