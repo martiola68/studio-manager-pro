@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate } from "@/lib/emailTemplates";
+import { microsoftGraphService } from "./microsoftGraphService";
 
 export interface EventEmailData {
   eventoId: string;
@@ -61,7 +62,71 @@ const isValidEmailFormat = (email: string): boolean => {
   return true;
 };
 
-export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
+// Check if Microsoft 365 is configured for current studio
+async function isMicrosoft365Enabled(): Promise<{ enabled: boolean; userId?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return { enabled: false };
+
+    const { data: userData } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", session.user.id)
+      .single();
+
+    if (!userData?.studio_id) return { enabled: false };
+
+    const { data: config } = await supabase
+      .from("microsoft365_config" as any)
+      .select("enabled")
+      .eq("studio_id", userData.studio_id)
+      .single();
+
+    return {
+      enabled: config?.enabled === true,
+      userId: session.user.id
+    };
+  } catch (error) {
+    console.error("Error checking Microsoft 365 config:", error);
+    return { enabled: false };
+  }
+}
+
+// Send email via Microsoft Graph API
+async function sendEmailViaMicrosoft(
+  userId: string,
+  data: EmailData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const message = {
+      subject: data.subject,
+      body: {
+        contentType: "HTML" as const,
+        content: data.html
+      },
+      toRecipients: [
+        {
+          emailAddress: {
+            address: data.to
+          }
+        }
+      ]
+    };
+
+    await microsoftGraphService.sendEmail(userId, message);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error sending email via Microsoft:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+// Send email via Edge Function (Resend fallback)
+async function sendEmailViaEdgeFunction(data: EmailData): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: result, error } = await supabase.functions.invoke("send-email", {
       body: data
@@ -74,10 +139,32 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; er
 
     return { success: true, ...result };
   } catch (error) {
-    console.error("Error sending generic email:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Unknown error" 
+    console.error("Error sending email via edge function:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+// Main email sending function with dual mode support
+export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Check if Microsoft 365 is enabled
+    const { enabled, userId } = await isMicrosoft365Enabled();
+
+    if (enabled && userId) {
+      console.log("📧 Sending email via Microsoft 365...");
+      return await sendEmailViaMicrosoft(userId, data);
+    } else {
+      console.log("📧 Sending email via Edge Function (Resend)...");
+      return await sendEmailViaEdgeFunction(data);
+    }
+  } catch (error) {
+    console.error("Error in sendEmail:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error"
     };
   }
 }
