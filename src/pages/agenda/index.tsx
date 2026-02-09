@@ -106,6 +106,7 @@ export default function AgendaPage() {
   // Stato per gestire Microsoft 365 OAuth flow
   const [needsMicrosoftAuth, setNeedsMicrosoftAuth] = useState(false);
   const [pendingTeamsMeeting, setPendingTeamsMeeting] = useState(false);
+  const [pendingEventData, setPendingEventData] = useState<any>(null);
 
   // Helper per formattare orari con timezone italiano
   const formatTimeWithTimezone = (dateString: string): string => {
@@ -124,7 +125,32 @@ export default function AgendaPage() {
   // Caricamento dati
   useEffect(() => {
     loadData();
-  }, []);
+    
+    // Controlla se torniamo da OAuth con un evento pendente
+    const checkPendingEvent = async () => {
+      // Se abbiamo dati pendenti e siamo connessi, riprendiamo
+      if (pendingEventData) {
+        const { microsoftGraphService } = await import("@/services/microsoftGraphService");
+        // Verifica se l'utente attuale è quello dell'evento pendente
+        if (pendingEventData.utente_id) {
+           const isConnected = await microsoftGraphService.isConnected(pendingEventData.utente_id);
+           if (isConnected) {
+             setFormData(pendingEventData);
+             setPendingEventData(null);
+             // Opzionale: potremmo chiamare handleSaveEvento() automaticamente, 
+             // ma è più sicuro riaprire il dialog popolato
+             setDialogOpen(true);
+             toast({
+               title: "Connessione riuscita!",
+               description: "Puoi ora salvare l'evento con il meeting Teams.",
+             });
+           }
+        }
+      }
+    };
+    
+    checkPendingEvent();
+  }, [pendingEventData]);
 
   const loadData = async () => {
     try {
