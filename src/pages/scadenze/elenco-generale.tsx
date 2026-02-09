@@ -7,7 +7,10 @@ import { supabase } from "@/lib/supabase/client";
 import { Search, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
 
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  utente_fiscale?: { nome: string; cognome: string } | null;
+  utente_payroll?: { nome: string; cognome: string } | null;
+};
 
 export default function ElencoGenerale() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -50,7 +53,11 @@ export default function ElencoGenerale() {
 
       const { data, error } = await supabase
         .from("tbclienti")
-        .select("*")
+        .select(`
+          *,
+          utente_fiscale:utente_operatore_id(nome, cognome),
+          utente_payroll:utente_payroll_id(nome, cognome)
+        `)
         .eq("studio_id", userData.studio_id)
         .order("ragione_sociale", { ascending: true });
 
@@ -139,7 +146,7 @@ export default function ElencoGenerale() {
                     <TableRow>
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[300px] min-w-[300px] max-w-[300px]">Ragione Sociale</TableHead>
                       <TableHead className="min-w-[150px]">Utente Fiscale</TableHead>
-                      <TableHead className="min-w-[150px]">Utente Parola</TableHead>
+                      <TableHead className="min-w-[150px]">Utente Payroll</TableHead>
                       {scadenzari.map(scad => (
                         <TableHead key={scad.field} className="text-center min-w-[100px]">
                           {scad.label}
@@ -166,10 +173,10 @@ export default function ElencoGenerale() {
                             {cliente.ragione_sociale || "-"}
                           </TableCell>
                           <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.utente_fiscale || "-"}
+                            {cliente.utente_fiscale ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` : "-"}
                           </TableCell>
                           <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.utente_parola || "-"}
+                            {cliente.utente_payroll ? `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}` : "-"}
                           </TableCell>
                           {scadenzari.map(scad => (
                             <TableCell key={scad.field} className="text-center min-w-[100px]">
