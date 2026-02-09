@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -128,29 +128,35 @@ export default function AgendaPage() {
     
     // Controlla se torniamo da OAuth con un evento pendente
     const checkPendingEvent = async () => {
-      // Se abbiamo dati pendenti e siamo connessi, riprendiamo
       if (pendingEventData) {
         const { microsoftGraphService } = await import("@/services/microsoftGraphService");
-        // Verifica se l'utente attuale è quello dell'evento pendente
+        
         if (pendingEventData.utente_id) {
-           const isConnected = await microsoftGraphService.isConnected(pendingEventData.utente_id);
-           if (isConnected) {
-             setFormData(pendingEventData);
-             setPendingEventData(null);
-             // Opzionale: potremmo chiamare handleSaveEvento() automaticamente, 
-             // ma è più sicuro riaprire il dialog popolato
-             setDialogOpen(true);
-             toast({
-               title: "Connessione riuscita!",
-               description: "Puoi ora salvare l'evento con il meeting Teams.",
-             });
-           }
+          const isConnected = await microsoftGraphService.isConnected(pendingEventData.utente_id);
+          
+          if (isConnected) {
+            console.log("✅ Utente connesso a Microsoft 365! Riapro form con dati salvati");
+            
+            // Ripopolo il form con i dati salvati
+            setFormData(pendingEventData);
+            
+            // ⚡ CRITICO: Pulisco SUBITO per evitare loop
+            setPendingEventData(null);
+            
+            // Riapro il dialog
+            setDialogOpen(true);
+            
+            toast({
+              title: "Connessione riuscita!",
+              description: "Puoi ora salvare l'evento con il meeting Teams.",
+            });
+          }
         }
       }
     };
     
     checkPendingEvent();
-  }, [pendingEventData]);
+  }, [pendingEventData]); // ⚠️ Dipendenza critica
 
   const loadData = async () => {
     try {
