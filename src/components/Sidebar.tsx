@@ -164,6 +164,7 @@ export function Sidebar({
       label: "Scadenzario",
       icon: <FileText className="h-5 w-5" />,
       children: [
+        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
         { label: "Calendario", href: "/scadenze/calendario", icon: null },
         { label: "IVA", href: "/scadenze/iva", icon: null },
         { label: "CCGG", href: "/scadenze/ccgg", icon: null },

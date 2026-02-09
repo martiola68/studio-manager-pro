@@ -225,6 +225,7 @@ export function TopNavBar() {
       label: "Scadenzario",
       icon: <FileText className="h-4 w-4" />,
       children: [
+        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
         { label: "Calendario", href: "/scadenze/calendario", icon: null },
         { label: "IVA", href: "/scadenze/iva", icon: null },
         { label: "CCGG", href: "/scadenze/ccgg", icon: null },
