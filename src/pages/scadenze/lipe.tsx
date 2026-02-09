@@ -88,8 +88,13 @@ export default function Lipe() {
         .from("tbscadlipe")
         .select(`
           *,
-          tbusers_utente_operatore:tbutenti!utente_operatore_id (nome, cognome),
-          tbusers_utente_professionista:tbutenti!utente_professionista_id (nome, cognome)
+          cliente:tbclienti!inner (
+            ragione_sociale,
+            utente_operatore_id,
+            utente_professionista_id,
+            utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome),
+            utente_professionista:tbutenti!tbclienti_utente_professionista_id_fkey (nome, cognome)
+          )
         `)
         .eq("studio_id", studioId);
 
@@ -111,11 +116,11 @@ export default function Lipe() {
 
       const mappedData = (data || []).map(record => ({
         ...record,
-        utente_operatore_nome: record.tbusers_utente_operatore 
-          ? `${record.tbusers_utente_operatore.cognome} ${record.tbusers_utente_operatore.nome}`
+        utente_operatore_nome: record.cliente?.utente_operatore 
+          ? `${record.cliente.utente_operatore.cognome} ${record.cliente.utente_operatore.nome}`
           : "-",
-        utente_professionista_nome: record.tbusers_utente_professionista 
-          ? `${record.tbusers_utente_professionista.cognome} ${record.tbusers_utente_professionista.nome}`
+        utente_professionista_nome: record.cliente?.utente_professionista 
+          ? `${record.cliente.utente_professionista.cognome} ${record.cliente.utente_professionista.nome}`
           : "-"
       }));
 
@@ -416,31 +421,31 @@ export default function Lipe() {
                       <TableHead className="min-w-[150px]">Operatore</TableHead>
                       <TableHead className="min-w-[100px]">Tipo Liq</TableHead>
                       {/* 1° TRIMESTRE - Background celeste chiaro */}
-                      <TableHead className="text-center bg-blue-50">Gen</TableHead>
-                      <TableHead className="text-center bg-blue-50">Feb</TableHead>
-                      <TableHead className="text-center bg-blue-50">Mar</TableHead>
-                      <TableHead className="text-center bg-blue-50">Lipe 1T</TableHead>
-                      <TableHead className="min-w-[130px] bg-blue-50">Data Invio 1T</TableHead>
+                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Gen</TableHead>
+                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Feb</TableHead>
+                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Mar</TableHead>
+                      <TableHead className="text-center bg-blue-50 min-w-[100px]">Lipe 1T</TableHead>
+                      <TableHead className="bg-blue-50 min-w-[130px]">Data Invio 1T</TableHead>
                       {/* 2° TRIMESTRE - Background verde chiaro */}
-                      <TableHead className="text-center bg-green-50">Apr</TableHead>
-                      <TableHead className="text-center bg-green-50">Mag</TableHead>
-                      <TableHead className="text-center bg-green-50">Giu</TableHead>
-                      <TableHead className="text-center bg-green-50">Lipe 2T</TableHead>
-                      <TableHead className="min-w-[130px] bg-green-50">Data Invio 2T</TableHead>
+                      <TableHead className="text-center bg-green-50 min-w-[80px]">Apr</TableHead>
+                      <TableHead className="text-center bg-green-50 min-w-[80px]">Mag</TableHead>
+                      <TableHead className="text-center bg-green-50 min-w-[80px]">Giu</TableHead>
+                      <TableHead className="text-center bg-green-50 min-w-[100px]">Lipe 2T</TableHead>
+                      <TableHead className="bg-green-50 min-w-[130px]">Data Invio 2T</TableHead>
                       {/* 3° TRIMESTRE - Background giallo chiaro */}
-                      <TableHead className="text-center bg-yellow-50">Lug</TableHead>
-                      <TableHead className="text-center bg-yellow-50">Ago</TableHead>
-                      <TableHead className="text-center bg-yellow-50">Set</TableHead>
-                      <TableHead className="text-center bg-yellow-50">Lipe 3T</TableHead>
-                      <TableHead className="min-w-[130px] bg-yellow-50">Data Invio 3T</TableHead>
+                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Lug</TableHead>
+                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Ago</TableHead>
+                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Set</TableHead>
+                      <TableHead className="text-center bg-yellow-50 min-w-[100px]">Lipe 3T</TableHead>
+                      <TableHead className="bg-yellow-50 min-w-[130px]">Data Invio 3T</TableHead>
                       {/* 4° TRIMESTRE - Background arancione chiaro */}
-                      <TableHead className="text-center bg-orange-50">Ott</TableHead>
-                      <TableHead className="text-center bg-orange-50">Nov</TableHead>
-                      <TableHead className="min-w-[130px] bg-orange-50">Acconto</TableHead>
-                      <TableHead className="text-center bg-orange-50">Acc. Com</TableHead>
-                      <TableHead className="text-center bg-orange-50">Dic</TableHead>
-                      <TableHead className="text-center bg-orange-50">Lipe 4T</TableHead>
-                      <TableHead className="min-w-[130px] bg-orange-50">Data Invio 4T</TableHead>
+                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Ott</TableHead>
+                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Nov</TableHead>
+                      <TableHead className="bg-orange-50 min-w-[130px]">Acconto</TableHead>
+                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Acc. Com</TableHead>
+                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Dic</TableHead>
+                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Lipe 4T</TableHead>
+                      <TableHead className="bg-orange-50 min-w-[130px]">Data Invio 4T</TableHead>
                       <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -494,25 +499,25 @@ export default function Lipe() {
                             </Select>
                           </TableCell>
                           {/* 1° TRIMESTRE - Background celeste chiaro */}
-                          <TableCell className="text-center bg-blue-50">
+                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
                             <Checkbox
                               checked={record.gen || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50">
+                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
                             <Checkbox
                               checked={record.feb || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50">
+                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
                             <Checkbox
                               checked={record.mar || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50">
+                          <TableCell className="text-center bg-blue-50 min-w-[100px]">
                             <Checkbox
                               checked={record.lipe1t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
@@ -530,25 +535,25 @@ export default function Lipe() {
                             </div>
                           </TableCell>
                           {/* 2° TRIMESTRE - Background verde chiaro */}
-                          <TableCell className="text-center bg-green-50">
+                          <TableCell className="text-center bg-green-50 min-w-[80px]">
                             <Checkbox
                               checked={record.apr || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50">
+                          <TableCell className="text-center bg-green-50 min-w-[80px]">
                             <Checkbox
                               checked={record.mag || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50">
+                          <TableCell className="text-center bg-green-50 min-w-[80px]">
                             <Checkbox
                               checked={record.giu || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50">
+                          <TableCell className="text-center bg-green-50 min-w-[100px]">
                             <Checkbox
                               checked={record.lipe2t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
@@ -566,25 +571,25 @@ export default function Lipe() {
                             </div>
                           </TableCell>
                           {/* 3° TRIMESTRE - Background giallo chiaro */}
-                          <TableCell className="text-center bg-yellow-50">
+                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
                             <Checkbox
                               checked={record.lug || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50">
+                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
                             <Checkbox
                               checked={record.ago || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50">
+                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
                             <Checkbox
                               checked={record.set || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50">
+                          <TableCell className="text-center bg-yellow-50 min-w-[100px]">
                             <Checkbox
                               checked={record.lipe3t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
@@ -602,13 +607,13 @@ export default function Lipe() {
                             </div>
                           </TableCell>
                           {/* 4° TRIMESTRE - Background arancione chiaro */}
-                          <TableCell className="text-center bg-orange-50">
+                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
                             <Checkbox
                               checked={record.ott || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50">
+                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
                             <Checkbox
                               checked={record.nov || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
@@ -629,19 +634,19 @@ export default function Lipe() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50">
+                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
                             <Checkbox
                               checked={record.acconto_com || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50">
+                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
                             <Checkbox
                               checked={record.dic || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50">
+                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
                             <Checkbox
                               checked={record.lipe4t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
