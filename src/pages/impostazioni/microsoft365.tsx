@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-// Definisco l'interfaccia esplicita per i dati dal DB
 interface Microsoft365ConfigDB {
   id: string;
   studio_id: string;
@@ -36,7 +35,7 @@ interface Microsoft365ConfigDB {
   tenant_id: string | null;
   client_secret: string | null;
   enabled: boolean | null;
-  features: any; // JSONB
+  features: any;
   connected_email: string | null;
   last_sync: string | null;
 }
@@ -123,15 +122,13 @@ export default function Microsoft365Page() {
 
   const loadConfiguration = async (studioId: string) => {
     try {
-      // Uso any per bypassare temporaneamente il check stretto finché i tipi non si aggiornano
       const { data, error } = await supabase
-        .from("microsoft365_config" as any) 
+        .from("microsoft365_config" as any)
         .select("*")
         .eq("studio_id", studioId)
         .maybeSingle();
 
       if (data) {
-        // Cast esplicito con doppio passaggio per soddisfare TypeScript
         const configData = data as unknown as Microsoft365ConfigDB;
         
         setConfig({
@@ -174,20 +171,24 @@ export default function Microsoft365Page() {
 
     setSaving(true);
     try {
-      // Uso any per bypassare il check dei tipi finché non sono rigenerati
-      const { error } = await supabase
-        .from("microsoft365_config" as any)
-        .upsert({
+      const response = await fetch("/api/microsoft365/save-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           studio_id: studioId,
           client_id: config.client_id,
           tenant_id: config.tenant_id,
           client_secret: config.client_secret,
           enabled: config.enabled,
-          features: config.features,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'studio_id' });
+          features: config.features
+        })
+      });
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Errore durante il salvataggio");
+      }
 
       toast({
         title: "Successo",
@@ -195,11 +196,11 @@ export default function Microsoft365Page() {
       });
 
       await loadConfiguration(studioId);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore salvataggio:", error);
       toast({
         title: "Errore",
-        description: "Errore durante il salvataggio della configurazione",
+        description: error.message || "Errore durante il salvataggio della configurazione",
         variant: "destructive"
       });
     } finally {
@@ -219,7 +220,7 @@ export default function Microsoft365Page() {
 
     setTesting(true);
     try {
-      const response = await fetch("/api/auth/microsoft/test-connection", {
+      const response = await fetch("/api/microsoft365/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -235,22 +236,22 @@ export default function Microsoft365Page() {
         setConnectionStatus("connected");
         toast({
           title: "Connessione riuscita",
-          description: "Microsoft 365 configurato correttamente"
+          description: data.organization ? `Connesso a: ${data.organization}` : "Microsoft 365 configurato correttamente"
         });
       } else {
         setConnectionStatus("disconnected");
         toast({
           title: "Connessione fallita",
-          description: data.error || "Verifica le credenziali",
+          description: data.details || data.error || "Verifica le credenziali",
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Errore test connessione:", error);
       setConnectionStatus("disconnected");
       toast({
         title: "Errore",
-        description: "Errore durante il test della connessione",
+        description: error.message || "Errore durante il test della connessione",
         variant: "destructive"
       });
     } finally {
@@ -575,8 +576,8 @@ export default function Microsoft365Page() {
                     <h3 className="font-semibold mb-2">Configura i permessi API</h3>
                     <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
                       <li>Vai su "Autorizzazioni API" → "Aggiungi autorizzazione"</li>
-                      <li>Seleziona "Microsoft Graph" → "Autorizzazioni delegate"</li>
-                      <li>Aggiungi: Mail.Send, Mail.ReadWrite, Calendars.ReadWrite, Contacts.ReadWrite</li>
+                      <li>Seleziona "Microsoft Graph" → "Autorizzazioni applicazione"</li>
+                      <li>Aggiungi: Mail.Send, Calendars.ReadWrite, User.Read.All</li>
                       <li>Clicca "Concedi consenso amministratore"</li>
                     </ul>
                   </div>
