@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { Calendar } from "@/components/ui/calendar";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -23,7 +24,7 @@ import {
   List, 
   CalendarDays,
   Filter,
-  Calendar,
+  Calendar as CalendarIcon,
   Building2,
   FileText,
   Search,
@@ -67,6 +68,7 @@ export default function AgendaPage() {
   // Stati UI
   const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [filtroUtente, setFiltroUtente] = useState<string>("tutti");
   
   // Stati dialog
@@ -765,7 +767,7 @@ export default function AgendaPage() {
   const renderListView = () => {
     const now = new Date();
     const pastEvents = filteredEvents.filter(evento => parseISO(evento.data_inizio) < now);
-    if (pastEvents.length === 0) return <div className="text-center py-12"><Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" /><p className="text-gray-500">Nessun evento scaduto trovato</p></div>;
+    if (pastEvents.length === 0) return <div className="text-center py-12"><CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" /><p className="text-gray-500">Nessun evento scaduto trovato</p></div>;
     return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((evento) => renderEventCard(evento, false))}</div>;
   };
 
@@ -781,7 +783,7 @@ export default function AgendaPage() {
     if (ricorrentiEvents.length === 0) {
       return (
         <div className="text-center py-12">
-          <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
         </div>
       );
@@ -819,7 +821,7 @@ export default function AgendaPage() {
             <div className="flex gap-2">
               <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}><List className="h-4 w-4 mr-2" /> Eventi ricorrenti</Button>
               <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}><List className="h-4 w-4 mr-2" /> Scaduti</Button>
-              <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}><Calendar className="h-4 w-4 mr-2" /> Mese</Button>
+              <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}><CalendarIcon className="h-4 w-4 mr-2" /> Mese</Button>
               <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}><CalendarDays className="h-4 w-4 mr-2" /> Settimana</Button>
             </div>
           </div>
