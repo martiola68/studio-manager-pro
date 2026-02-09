@@ -18,8 +18,8 @@ export default function ElencoGenerale() {
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("");
-  const [filtroUtentePayroll, setFiltroUtentePayroll] = useState<string>("");
+  const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("tutti");
+  const [filtroUtentePayroll, setFiltroUtentePayroll] = useState<string>("tutti");
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function ElencoGenerale() {
       );
     }
 
-    if (filtroUtenteFiscale) {
+    if (filtroUtenteFiscale && filtroUtenteFiscale !== "tutti") {
       filtered = filtered.filter(cliente => {
         const nomeCompleto = cliente.utente_fiscale 
           ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`
@@ -47,7 +47,7 @@ export default function ElencoGenerale() {
       });
     }
 
-    if (filtroUtentePayroll) {
+    if (filtroUtentePayroll && filtroUtentePayroll !== "tutti") {
       filtered = filtered.filter(cliente => {
         const nomeCompleto = cliente.utente_payroll 
           ? `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}`
@@ -179,7 +179,7 @@ export default function ElencoGenerale() {
                   <SelectValue placeholder="Utente Fiscale" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tutti gli utenti fiscali</SelectItem>
+                  <SelectItem value="tutti">Tutti gli utenti fiscali</SelectItem>
                   {utentiFiscaliUnici.map(utente => (
                     <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
                       {utente.nomeCompleto}
@@ -193,7 +193,7 @@ export default function ElencoGenerale() {
                   <SelectValue placeholder="Utente Payroll" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tutti gli utenti payroll</SelectItem>
+                  <SelectItem value="tutti">Tutti gli utenti payroll</SelectItem>
                   {utentiPayrollUnici.map(utente => (
                     <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
                       {utente.nomeCompleto}
