@@ -265,7 +265,7 @@ export default function Lipe() {
 
   async function handleDateBlur(recordId: string, field: string, value: string) {
     try {
-      let dateValue = value.trim();
+      let dateValue: string | null = value.trim();
       
       if (dateValue === "") {
         dateValue = null;
