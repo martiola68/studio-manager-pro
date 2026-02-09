@@ -146,7 +146,8 @@ export default function Microsoft365Page() {
           last_sync: configData.last_sync || undefined
         });
         
-        if (configData.enabled && configData.client_id && configData.tenant_id && configData.client_secret) {
+        // CORREZIONE: Lo stato "connesso" dipende solo dalle credenziali salvate, non dal campo enabled
+        if (configData.client_id && configData.tenant_id && configData.client_secret) {
           setConnectionStatus("connected");
         } else {
           setConnectionStatus("disconnected");
