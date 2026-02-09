@@ -411,43 +411,43 @@ export default function Lipe() {
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
               <div className="sticky top-0 z-20 bg-white border-b">
-                <Table className="w-full" style={{ tableLayout: "fixed", width: "100%" }}>
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
-                      <TableHead className="min-w-[150px]">Professionista</TableHead>
-                      <TableHead className="min-w-[150px]">Operatore</TableHead>
-                      <TableHead className="min-w-[100px]">Tipo Liq</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Gen</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Feb</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Mar</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[100px]">Lipe 1T</TableHead>
-                      <TableHead className="bg-blue-50 min-w-[130px]">Data Invio 1T</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Apr</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Mag</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Giu</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[100px]">Lipe 2T</TableHead>
-                      <TableHead className="bg-green-50 min-w-[130px]">Data Invio 2T</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Lug</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Ago</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Set</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[100px]">Lipe 3T</TableHead>
-                      <TableHead className="bg-yellow-50 min-w-[130px]">Data Invio 3T</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Ott</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Nov</TableHead>
-                      <TableHead className="bg-orange-50 min-w-[130px]">Acconto</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Acc. Com</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Dic</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Lipe 4T</TableHead>
-                      <TableHead className="bg-orange-50 min-w-[130px]">Data Invio 4T</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Nominativo</TableHead>
+                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Professionista</TableHead>
+                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Operatore</TableHead>
+                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Tipo Liq</TableHead>
+                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Gen</TableHead>
+                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Feb</TableHead>
+                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mar</TableHead>
+                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 1T</TableHead>
+                      <TableHead className="bg-blue-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>Data Invio 1T</TableHead>
+                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Apr</TableHead>
+                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mag</TableHead>
+                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Giu</TableHead>
+                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 2T</TableHead>
+                      <TableHead className="bg-green-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>Data Invio 2T</TableHead>
+                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lug</TableHead>
+                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ago</TableHead>
+                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Set</TableHead>
+                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 3T</TableHead>
+                      <TableHead className="bg-yellow-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>Data Invio 3T</TableHead>
+                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ott</TableHead>
+                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Nov</TableHead>
+                      <TableHead className="bg-orange-50" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Acconto</TableHead>
+                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Acc. Com</TableHead>
+                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Dic</TableHead>
+                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 4T</TableHead>
+                      <TableHead className="bg-orange-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>Data Invio 4T</TableHead>
+                      <TableHead className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                 </Table>
               </div>
 
               <div className="max-h-[600px] overflow-y-auto">
-                <Table className="w-full" style={{ tableLayout: "fixed", width: "100%" }}>
+                <Table>
                   <TableBody>
                     {loading ? (
                       <TableRow>
@@ -464,16 +464,16 @@ export default function Lipe() {
                     ) : (
                       lipeRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[200px]">
+                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
                             {record.nominativo}
                           </TableCell>
-                          <TableCell className="min-w-[150px] text-gray-700">
+                          <TableCell className="text-gray-700" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
                             {record.utente_professionista_nome}
                           </TableCell>
-                          <TableCell className="min-w-[150px] text-gray-700">
+                          <TableCell className="text-gray-700" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
                             {record.utente_operatore_nome}
                           </TableCell>
-                          <TableCell className="min-w-[100px]">
+                          <TableCell style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
                             <Select
                               value={record.tipo_liq || "T"}
                               onValueChange={(value) => handleSelectChange(record.id, "tipo_liq", value)}
@@ -487,31 +487,31 @@ export default function Lipe() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
+                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.gen || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
+                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.feb || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
+                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.mar || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[100px]">
+                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.lipe1t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-blue-50 min-w-[130px]">
+                          <TableCell className="bg-blue-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -522,31 +522,31 @@ export default function Lipe() {
                               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
+                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.apr || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
+                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.mag || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
+                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.giu || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[100px]">
+                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.lipe2t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-green-50 min-w-[130px]">
+                          <TableCell className="bg-green-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -557,31 +557,31 @@ export default function Lipe() {
                               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
+                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.lug || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
+                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.ago || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
+                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.set || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[100px]">
+                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.lipe3t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-yellow-50 min-w-[130px]">
+                          <TableCell className="bg-yellow-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -592,19 +592,19 @@ export default function Lipe() {
                               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
+                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.ott || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
+                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.nov || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-orange-50 min-w-[130px]">
+                          <TableCell className="bg-orange-50" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
                             <Select
                               value={record.acconto || "Non dovuto"}
                               onValueChange={(value) => handleSelectChange(record.id, "acconto", value)}
@@ -619,25 +619,25 @@ export default function Lipe() {
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
+                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.acconto_com || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
+                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.dic || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
+                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Checkbox
                               checked={record.lipe4t || false}
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-orange-50 min-w-[130px]">
+                          <TableCell className="bg-orange-50" style={{ width: "76px", minWidth: "76px", maxWidth: "76px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -648,7 +648,7 @@ export default function Lipe() {
                               <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             </div>
                           </TableCell>
-                          <TableCell className="text-center min-w-[100px]">
+                          <TableCell className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
                             <Button
                               variant="ghost"
                               size="icon"
