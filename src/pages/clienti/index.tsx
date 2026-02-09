@@ -943,7 +943,7 @@ export default function ClientiPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -1163,7 +1163,7 @@ export default function ClientiPage() {
           </DialogHeader>
 
           <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-4 overflow-x-auto">
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
