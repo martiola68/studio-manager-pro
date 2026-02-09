@@ -101,6 +101,10 @@ export default function AgendaPage() {
   // Stato per ricerca partecipanti
   const [searchPartecipanti, setSearchPartecipanti] = useState("");
 
+  // Stato per gestire Microsoft 365 OAuth flow
+  const [needsMicrosoftAuth, setNeedsMicrosoftAuth] = useState(false);
+  const [pendingTeamsMeeting, setPendingTeamsMeeting] = useState(false);
+
   // Helper per formattare orari con timezone italiano
   const formatTimeWithTimezone = (dateString: string): string => {
     try {
@@ -829,6 +833,70 @@ export default function AgendaPage() {
         {view === "week" && renderWeekView()}
       </div>
 
+      <Calendar
+        mode="single"
+        selected={selectedDate || undefined}
+      />
+
+      {/* Dialog OAuth Microsoft 365 */}
+      <Dialog open={needsMicrosoftAuth} onOpenChange={setNeedsMicrosoftAuth}>
+        <DialogContent className="sm:max-width-[500px]">
+          <DialogHeader>
+            <DialogTitle>🔐 Connessione Microsoft 365 Richiesta</DialogTitle>
+            <DialogDescription>
+              Per creare meeting Teams, devi connettere il tuo account Microsoft 365.
+              Verrai reindirizzato alla pagina di login Microsoft.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Cosa succede:</strong>
+              </p>
+              <ul className="list-disc list-inside text-sm text-blue-800 dark:text-blue-200 mt-2 space-y-1">
+                <li>Verrai reindirizzato a Microsoft</li>
+                <li>Fai login con il tuo account Microsoft 365</li>
+                <li>Autorizza Studio Manager Pro</li>
+                <li>Verrai riportato qui automaticamente</li>
+                <li>Il meeting Teams verrà creato automaticamente</li>
+              </ul>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+              <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                <strong>⚠️ Importante:</strong> Questa operazione è necessaria solo la prima volta.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNeedsMicrosoftAuth(false);
+                setPendingTeamsMeeting(false);
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={() => {
+                setPendingTeamsMeeting(true);
+                window.location.href = `/api/auth/microsoft/login?redirect=${encodeURIComponent("/agenda")}`;
+              }}
+              className="gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 23 23" fill="none">
+                <path d="M0 0h11v11H0z" fill="#f25022"/>
+                <path d="M12 0h11v11H12z" fill="#00a4ef"/>
+                <path d="M0 12h11v11H0z" fill="#7fba00"/>
+                <path d="M12 12h11v11H12z" fill="#ffb900"/>
+              </svg>
+              Connetti Microsoft 365
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingEventoId ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle></DialogHeader>
