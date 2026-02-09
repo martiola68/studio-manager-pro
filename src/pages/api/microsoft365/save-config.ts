@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,7 +19,61 @@ export default async function handler(
       });
     }
 
-    // Salva configurazione (il client_secret sarà criptato dal database o dal servizio)
+    // Get auth token from request headers
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ 
+        error: "Non autenticato",
+        details: "Token di autenticazione mancante" 
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Create Supabase client with user's JWT token
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
+    );
+
+    // Verify user is admin
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      return res.status(401).json({ 
+        error: "Utente non autenticato",
+        details: userError?.message 
+      });
+    }
+
+    const { data: utente, error: utenteError } = await supabase
+      .from("tbutenti")
+      .select("tipo_utente, studio_id")
+      .eq("id", userData.user.id)
+      .single();
+
+    if (utenteError || !utente || utente.tipo_utente !== "Admin") {
+      return res.status(403).json({ 
+        error: "Accesso negato",
+        details: "Solo gli amministratori possono modificare la configurazione" 
+      });
+    }
+
+    if (utente.studio_id !== studio_id) {
+      return res.status(403).json({ 
+        error: "Accesso negato",
+        details: "Non puoi modificare la configurazione di un altro studio" 
+      });
+    }
+
+    // Salva configurazione
     const { data, error } = await supabase
       .from("microsoft365_config")
       .upsert({
@@ -36,7 +90,7 @@ export default async function handler(
         },
         updated_at: new Date().toISOString()
       }, { 
-        onConflict: 'studio_id',
+        onConflict: "studio_id",
         ignoreDuplicates: false 
       })
       .select()

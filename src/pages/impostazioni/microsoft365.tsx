@@ -171,9 +171,19 @@ export default function Microsoft365Page() {
 
     setSaving(true);
     try {
+      // Get current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error("Sessione non valida");
+      }
+
       const response = await fetch("/api/microsoft365/save-config", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           studio_id: studioId,
           client_id: config.client_id,
