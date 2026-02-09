@@ -76,11 +76,14 @@ async function isMicrosoft365Enabled(): Promise<{ enabled: boolean; userId?: str
 
     if (!userData?.studio_id) return { enabled: false };
 
-    const { data: config } = await supabase
+    const { data: configData } = await supabase
       .from("microsoft365_config" as any)
       .select("enabled")
       .eq("studio_id", userData.studio_id)
       .single();
+
+    // Cast esplicito per evitare errori TS
+    const config = configData as { enabled: boolean } | null;
 
     return {
       enabled: config?.enabled === true,
