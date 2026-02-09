@@ -19,7 +19,12 @@ import {
   FolderOpen,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  User,
+  BookOpen,
+  FolderArchive,
+  Tag,
+  Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -321,6 +326,20 @@ export function TopNavBar() {
                 </Link>
               </DropdownMenuItem>
             ))}
+
+            <DropdownMenuItem asChild>
+              <Link href="/impostazioni/tipo-promemoria">
+                <Bell className="mr-2 h-4 w-4" />
+                Tipo Promemoria
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
+              <Link href="/impostazioni/microsoft365">
+                <Cloud className="mr-2 h-4 w-4" />
+                Microsoft 365
+              </Link>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
