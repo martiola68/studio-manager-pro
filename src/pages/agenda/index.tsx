@@ -64,6 +64,7 @@ export default function AgendaPage() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Stati UI
   const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti">("week");
@@ -125,6 +126,20 @@ export default function AgendaPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // Carica utente corrente
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        const { data: userData } = await supabase
+          .from("tbutenti")
+          .select("id")
+          .eq("email", session.user.email)
+          .single();
+        
+        if (userData) {
+          setCurrentUserId(userData.id);
+        }
+      }
 
       // Carica eventi
       const { data: eventiData, error: eventiError } = await supabase
@@ -297,7 +312,19 @@ export default function AgendaPage() {
           toast({ title: "Verifica connessione Microsoft 365...", description: "Attendere prego" });
           
           const { microsoftGraphService } = await import("@/services/microsoftGraphService");
-          const isConnected = await microsoftGraphService.isConnected(formData.utente_id);
+          
+          // FIX: Controlla connessione dell'utente LOGGATO, non quello assegnato
+          if (!currentUserId) {
+            toast({
+              title: "⚠️ Errore Autenticazione",
+              description: "Impossibile verificare l'utente loggato. Ricarica la pagina.",
+              variant: "destructive",
+              duration: 5000,
+            });
+            return;
+          }
+          
+          const isConnected = await microsoftGraphService.isConnected(currentUserId);
 
           if (!isConnected) {
             console.log("❌ UTENTE NON CONNESSO - Richiesta connessione");
@@ -324,9 +351,9 @@ export default function AgendaPage() {
             })
             .filter(Boolean) as string[];
           
-          // Crea meeting Teams
+          // Crea meeting Teams usando le credenziali dell'utente LOGGATO
           const meeting = await teamsService.createOnlineMeeting(
-            formData.utente_id,
+            currentUserId,
             formData.titolo,
             startDateTime,
             endDateTime,
