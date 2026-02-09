@@ -92,7 +92,9 @@ export default function ElencoGenerale() {
     { label: "IVA", field: "iva" as keyof Cliente },
     { label: "CCGG", field: "ccgg" as keyof Cliente },
     { label: "Esterometro", field: "esterometro" as keyof Cliente },
-    { label: "770", field: "modello_770" as keyof Cliente }
+    { label: "770", field: "modello_770" as keyof Cliente },
+    { label: "Fiscali", field: "fiscali" as keyof Cliente },
+    { label: "IMU", field: "imu" as keyof Cliente }
   ];
 
   if (loading) {
@@ -143,7 +145,7 @@ export default function ElencoGenerale() {
               <TableBody>
                 {filteredClienti.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={11} className="text-center text-gray-500 py-8">
                       Nessun cliente trovato
                     </TableCell>
                   </TableRow>
