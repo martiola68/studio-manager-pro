@@ -116,9 +116,7 @@ export default function Microsoft365Page() {
       setStudioId(utente.studio_id);
       setCurrentUserId(authUser.id);
       
-      // Controlla se l'utente ha token OAuth salvati
       await checkUserOAuthStatus(authUser.id);
-      
       await loadConfiguration(utente.studio_id);
       setLoading(false);
     } catch (error) {
@@ -178,7 +176,6 @@ export default function Microsoft365Page() {
           last_sync: configData.last_sync || undefined
         });
         
-        // CORREZIONE: Lo stato "connesso" dipende solo dalle credenziali salvate, non dal campo enabled
         if (configData.client_id && configData.tenant_id && configData.client_secret) {
           setConnectionStatus("connected");
         } else {
@@ -204,7 +201,6 @@ export default function Microsoft365Page() {
 
     setSaving(true);
     try {
-      // Get current session token
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
@@ -302,7 +298,7 @@ export default function Microsoft365Page() {
     }
   };
 
-  const handleConnectMicrosoft = async () => {
+  const handleConnectMicrosoft = () => {
     if (!currentUserId) {
       toast({
         title: "Errore",
@@ -313,37 +309,32 @@ export default function Microsoft365Page() {
     }
 
     try {
-      // Chiama API per iniziare OAuth flow
-      const response = await fetch("/api/auth/microsoft/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: currentUserId })
-      });
+      const width = 600;
+      const height = 700;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
 
-      const data = await response.json();
+      const popup = window.open(
+        `/api/auth/microsoft/login?user_id=${currentUserId}`,
+        "Microsoft OAuth",
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
 
-      if (data.authUrl) {
-        // Apri popup OAuth
-        const width = 600;
-        const height = 700;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-
-        const popup = window.open(
-          data.authUrl,
-          "Microsoft OAuth",
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        // Monitora chiusura popup
-        const checkPopup = setInterval(() => {
-          if (popup?.closed) {
-            clearInterval(checkPopup);
-            // Ricarica stato OAuth
-            checkUserOAuthStatus(currentUserId);
-          }
-        }, 1000);
+      if (!popup) {
+        toast({
+          title: "Popup bloccato",
+          description: "Il browser ha bloccato il popup. Abilita i popup per questo sito.",
+          variant: "destructive"
+        });
+        return;
       }
+
+      const checkPopup = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkPopup);
+          checkUserOAuthStatus(currentUserId);
+        }
+      }, 1000);
     } catch (error: any) {
       console.error("Errore connessione Microsoft:", error);
       toast({
