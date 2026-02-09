@@ -332,13 +332,22 @@ export default function AgendaPage() {
           if (!isConnected) {
             console.log("❌ UTENTE NON CONNESSO - Avvio procedura OAuth");
             console.log("💾 Salvati dati evento pendente:", formData);
-            
+
             setPendingEventData(formData);
-            setNeedsMicrosoftAuth(true);
-            setPendingTeamsMeeting(true);
-            
-            console.log("🔓 Dialog OAuth dovrebbe aprirsi adesso!");
-            return; // Esce e attende OAuth
+
+            // ⚡ NUOVO: Chiudo il form PRIMA di aprire dialog OAuth
+            console.log("📋 Chiudo form Nuovo Evento...");
+            setDialogOpen(false);
+
+            // ⚡ Aspetto che il form si chiuda completamente
+            setTimeout(() => {
+              console.log("🔓 Apro dialog OAuth Microsoft 365");
+              setNeedsMicrosoftAuth(true);
+              setPendingTeamsMeeting(true);
+            }, 300); // 300ms per animazione chiusura form
+
+            console.log("🔓 Dialog OAuth dovrebbe aprirsi tra 300ms!");
+            return;
           }
 
           toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
@@ -372,11 +381,19 @@ export default function AgendaPage() {
           console.error("❌ ERRORE creazione meeting Teams:", error);
           
           // Verifica se errore è dovuto a mancanza connessione
-          if (error.message?.includes("not connected") || error.message?.includes("User not connected")) {
+          if (error.message?.includes("not connected") || 
+              error.message?.includes("User not connected")) {
             console.log("🔓 Errore connessione rilevato - Apro dialog OAuth");
             setPendingEventData(formData);
-            setNeedsMicrosoftAuth(true);
-            setPendingTeamsMeeting(true);
+
+            // ⚡ NUOVO: Chiudo form prima di aprire OAuth
+            setIsEventDialogOpen(false);
+
+            setTimeout(() => {
+              setNeedsMicrosoftAuth(true);
+              setPendingTeamsMeeting(true);
+            }, 300);
+
             return;
           }
           
