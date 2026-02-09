@@ -80,29 +80,6 @@ type ScadenzariSelezionati = {
   imu: boolean;
 };
 
-const TIPO_PRESTAZIONE_OPTIONS: string[] = [
-  "Amministrazione e liquidazione di aziende, patrimoni, singoli beni",
-  "Amministrazione di società, enti, trust o strutture analoghe",
-  "Assistenza, consulenza e rappresentanza in materia tributaria",
-  "Assistenza per richiesta finanziamenti",
-  "Assistenza e consulenza societaria continuativa e generica",
-  "Attività di valutazione tecnica dell'iniziativa di impresa e di asseverazione dei business plan per l'accesso a finanziamenti pubblici",
-  "Consulenza aziendale",
-  "Consulenza contrattuale",
-  "Consulenza economico-finanziaria",
-  "Tenuta della contabilità",
-  "Consulenza in materia di redazione bilancio",
-  "Revisione legale dei conti",
-  "Valutazioni di aziende, rami di azienda, patrimoni, singoli beni e diritti",
-  "Collegio sindacale",
-  "Apposizione del visto di conformità su dichiarazioni fiscali",
-  "Predisposizione di interpelli",
-  "Risposte di carattere fiscale e societario",
-  "Incarico di curatore, commissario giudiziale e commissario liquidatore",
-  "Liquidatore nominato dal Tribunale",
-  "Invio telematico di Bilanci",
-];
-
 export default function ClientiPage() {
   const { toast } = useToast();
   const { studioId } = useStudio();
@@ -170,147 +147,14 @@ export default function ClientiPage() {
     referente_esterno: "",
     tipo_prestazione_id: "",
     tipo_redditi: undefined,
+    note: "",
     gestione_esterometro: false,
     note_esterometro: "",
-    gestione_antiriciclaggio: false,
-    note_antiriciclaggio: "",
   };
 
-  const [formData, setFormData] = useState<{
-    cod_cliente: string;
-    tipo_cliente: string;
-    tipologia_cliente?: string;
-    settore_fiscale: boolean;
-    settore_lavoro: boolean;
-    settore_consulenza: boolean;
-    ragione_sociale: string;
-    partita_iva: string;
-    codice_fiscale: string;
-    indirizzo: string;
-    cap: string;
-    citta: string;
-    provincia: string;
-    email: string;
-    attivo: boolean;
-    cassetto_fiscale_id: string;
-    matricola_inps: string;
-    pat_inail: string;
-    codice_ditta_ce: string;
-    utente_operatore_id: string;
-    utente_professionista_id: string;
-    utente_payroll_id: string;
-    professionista_payroll_id: string;
-    contatto1_id: string;
-    referente_esterno: string;
-    tipo_prestazione_id: string;
-    tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
-    note: string;
-  }>(initialFormData);
-
-  const handleRiskChange = (
-    value: string,
-    field: "rischio_ver_a" | "rischio_ver_b"
-  ) => {
-    let months = 0;
-    const riskValue = value as "Non significativo" | "Poco significativo" | "Abbastanza significativo" | "Molto significativo";
-
-    switch (riskValue) {
-      case "Non significativo":
-        months = 60;
-        break;
-      case "Poco significativo":
-        months = 36;
-        break;
-      case "Abbastanza significativo":
-        months = 24;
-        break;
-      case "Molto significativo":
-        months = 12;
-        break;
-      default:
-        months = 0;
-    }
-
-    const today = new Date();
-    const scadenza = addMonths(today, months);
-
-    if (field === "rischio_ver_a") {
-      setFormData((prev) => ({
-        ...prev,
-        rischio_ver_a: riskValue,
-        gg_ver_a: months,
-        data_ultima_verifica_antiric: today,
-        scadenza_antiric: scadenza,
-        giorni_scad_ver_a: calcolaGiorniScadenza(scadenza),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        rischio_ver_b: riskValue,
-        gg_ver_b: months,
-        data_ultima_verifica_b: today,
-        scadenza_antiric_b: scadenza,
-        giorni_scad_ver_b: calcolaGiorniScadenza(scadenza),
-      }));
-    }
-  };
-
-  const handleGgVerChange = (blocco: "A" | "B", value: number | null) => {
-    if (blocco === "A") {
-      setFormData(prev => {
-        const updated = { ...prev, gg_ver_a: value };
-        if (updated.data_ultima_verifica_antiric && value) {
-          updated.scadenza_antiric = addMonths(updated.data_ultima_verifica_antiric, value);
-          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
-        }
-        return updated;
-      });
-    } else {
-      setFormData(prev => {
-        const updated = { ...prev, gg_ver_b: value };
-        if (updated.data_ultima_verifica_b && value) {
-          updated.scadenza_antiric_b = addMonths(updated.data_ultima_verifica_b, value);
-          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
-        }
-        return updated;
-      });
-    }
-  };
-
-  const handleVerificaDateChange = (blocco: "A" | "B", date: Date | null) => {
-    if (blocco === "A") {
-      setFormData(prev => {
-        const updated = { ...prev, data_ultima_verifica_antiric: date };
-        if (date && prev.gg_ver_a) {
-          updated.scadenza_antiric = addMonths(date, prev.gg_ver_a);
-          updated.giorni_scad_ver_a = calcolaGiorniScadenza(updated.scadenza_antiric);
-        }
-        return updated;
-      });
-    } else {
-      setFormData(prev => {
-        const updated = { ...prev, data_ultima_verifica_b: date };
-        if (date && prev.gg_ver_b) {
-          updated.scadenza_antiric_b = addMonths(date, prev.gg_ver_b);
-          updated.giorni_scad_ver_b = calcolaGiorniScadenza(updated.scadenza_antiric_b);
-        }
-        return updated;
-      });
-    }
-  };
+  const [formData, setFormData] = useState<ClienteFormData>(initialFormData);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-  const calcolaGiorniScadenza = (scadenza: Date | null): number | null => {
-    if (!scadenza) return null;
-    const oggi = new Date();
-    oggi.setHours(0, 0, 0, 0);
-    const scadenzaDate = new Date(scadenza);
-    scadenzaDate.setHours(0, 0, 0, 0);
-    const diffTime = scadenzaDate.getTime() - oggi.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
 
   const getBadgeColor = (giorni: number | null): string => {
     if (giorni === null) return "bg-gray-200 text-gray-700";
@@ -420,7 +264,7 @@ export default function ClientiPage() {
         return;
       }
 
-      const dataToSave = {
+      let dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         utente_operatore_id: formData.utente_operatore_id || undefined,
@@ -436,33 +280,10 @@ export default function ClientiPage() {
         matricola_inps: formData.matricola_inps || undefined,
         pat_inail: formData.pat_inail || undefined,
         codice_ditta_ce: formData.codice_ditta_ce || undefined,
-        tipo_prestazione_a: formData.tipo_prestazione_a || undefined,
-        tipo_prestazione_b: formData.tipo_prestazione_b || undefined,
-        rischio_ver_a: formData.rischio_ver_a || undefined,
-        rischio_ver_b: formData.rischio_ver_b || undefined,
-        gg_ver_a: formData.gg_ver_a ?? undefined,
-        gg_ver_b: formData.gg_ver_b ?? undefined,
-        data_ultima_verifica_antiric: formData.data_ultima_verifica_antiric?.toISOString() || undefined,
-        scadenza_antiric: formData.scadenza_antiric?.toISOString() || undefined,
-        data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || undefined,
-        scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || undefined,
-        note_antiriciclaggio: formData.note_antiriciclaggio,
         gestione_esterometro: formData.gestione_esterometro,
         note_esterometro: formData.note_esterometro,
-        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
-        giorni_scad_ver_a: formData.giorni_scad_ver_a ?? undefined,
-        giorni_scad_ver_b: formData.giorni_scad_ver_b ?? undefined,
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_fiscali: scadenzari.fiscali,
-        flag_lipe: scadenzari.lipe,
-        flag_770: scadenzari.modello_770,
-        flag_esterometro: scadenzari.esterometro,
-        flag_ccgg: scadenzari.ccgg,
-        flag_proforma: scadenzari.proforma,
-        flag_imu: scadenzari.imu,
-        updated_at: new Date().toISOString(),
       };
 
       // Encrypt sensitive fields if encryption is enabled and unlocked
@@ -678,10 +499,6 @@ export default function ClientiPage() {
         inserimenti.push(...promises);
       }
 
-      if (cliente.gestione_esterometro) {
-        scadenzariAttivi.push("Esterometro");
-      }
-
       if (scadenzariAttivi.length === 0) {
         toast({
           title: "Attenzione",
@@ -796,7 +613,10 @@ export default function ClientiPage() {
       provincia: clienteData.provincia || "",
       email: clienteData.email || "",
       attivo: clienteData.attivo ?? false,
-      tipo_redditi: (clienteData.tipo_redditi as any) || undefined,
+      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
+      matricola_inps: clienteData.matricola_inps || "",
+      pat_inail: clienteData.pat_inail || "",
+      codice_ditta_ce: clienteData.codice_ditta_ce || "",
       utente_operatore_id: clienteData.utente_operatore_id || "",
       utente_professionista_id: clienteData.utente_professionista_id || "",
       utente_payroll_id: clienteData.utente_payroll_id || "",
@@ -804,10 +624,7 @@ export default function ClientiPage() {
       contatto1_id: clienteData.contatto1_id || "",
       referente_esterno: clienteData.referente_esterno || "",
       tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
-      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
-      matricola_inps: clienteData.matricola_inps || "",
-      pat_inail: clienteData.pat_inail || "",
-      codice_ditta_ce: clienteData.codice_ditta_ce || "",
+      tipo_redditi: (clienteData.tipo_redditi as any) || undefined,
       note: clienteData.note || "",
     });
     
