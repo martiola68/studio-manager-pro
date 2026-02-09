@@ -90,8 +90,6 @@ export default function Lipe() {
           *,
           cliente:tbclienti!inner (
             ragione_sociale,
-            utente_operatore_id,
-            utente_professionista_id,
             utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome),
             utente_professionista:tbutenti!tbclienti_utente_professionista_id_fkey (nome, cognome)
           )
@@ -116,6 +114,7 @@ export default function Lipe() {
 
       const mappedData = (data || []).map(record => ({
         ...record,
+        nominativo: record.cliente?.ragione_sociale || record.nominativo || "-",
         utente_operatore_nome: record.cliente?.utente_operatore 
           ? `${record.cliente.utente_operatore.cognome} ${record.cliente.utente_operatore.nome}`
           : "-",
@@ -410,276 +409,252 @@ export default function Lipe() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              {/* Header sticky */}
-              <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
-                      <TableHead className="min-w-[150px]">Professionista</TableHead>
-                      <TableHead className="min-w-[150px]">Operatore</TableHead>
-                      <TableHead className="min-w-[100px]">Tipo Liq</TableHead>
-                      {/* 1° TRIMESTRE - Background celeste chiaro */}
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Gen</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Feb</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[80px]">Mar</TableHead>
-                      <TableHead className="text-center bg-blue-50 min-w-[100px]">Lipe 1T</TableHead>
-                      <TableHead className="bg-blue-50 min-w-[130px]">Data Invio 1T</TableHead>
-                      {/* 2° TRIMESTRE - Background verde chiaro */}
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Apr</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Mag</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[80px]">Giu</TableHead>
-                      <TableHead className="text-center bg-green-50 min-w-[100px]">Lipe 2T</TableHead>
-                      <TableHead className="bg-green-50 min-w-[130px]">Data Invio 2T</TableHead>
-                      {/* 3° TRIMESTRE - Background giallo chiaro */}
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Lug</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Ago</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[80px]">Set</TableHead>
-                      <TableHead className="text-center bg-yellow-50 min-w-[100px]">Lipe 3T</TableHead>
-                      <TableHead className="bg-yellow-50 min-w-[130px]">Data Invio 3T</TableHead>
-                      {/* 4° TRIMESTRE - Background arancione chiaro */}
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Ott</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Nov</TableHead>
-                      <TableHead className="bg-orange-50 min-w-[130px]">Acconto</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Acc. Com</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[80px]">Dic</TableHead>
-                      <TableHead className="text-center bg-orange-50 min-w-[100px]">Lipe 4T</TableHead>
-                      <TableHead className="bg-orange-50 min-w-[130px]">Data Invio 4T</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[200px]">Nominativo</TableHead>
+                  <TableHead className="w-[150px]">Professionista</TableHead>
+                  <TableHead className="w-[150px]">Operatore</TableHead>
+                  <TableHead className="w-[100px]">Tipo Liq</TableHead>
+                  <TableHead className="text-center bg-blue-50 w-[80px]">Gen</TableHead>
+                  <TableHead className="text-center bg-blue-50 w-[80px]">Feb</TableHead>
+                  <TableHead className="text-center bg-blue-50 w-[80px]">Mar</TableHead>
+                  <TableHead className="text-center bg-blue-50 w-[100px]">Lipe 1T</TableHead>
+                  <TableHead className="bg-blue-50 w-[130px]">Data Invio 1T</TableHead>
+                  <TableHead className="text-center bg-green-50 w-[80px]">Apr</TableHead>
+                  <TableHead className="text-center bg-green-50 w-[80px]">Mag</TableHead>
+                  <TableHead className="text-center bg-green-50 w-[80px]">Giu</TableHead>
+                  <TableHead className="text-center bg-green-50 w-[100px]">Lipe 2T</TableHead>
+                  <TableHead className="bg-green-50 w-[130px]">Data Invio 2T</TableHead>
+                  <TableHead className="text-center bg-yellow-50 w-[80px]">Lug</TableHead>
+                  <TableHead className="text-center bg-yellow-50 w-[80px]">Ago</TableHead>
+                  <TableHead className="text-center bg-yellow-50 w-[80px]">Set</TableHead>
+                  <TableHead className="text-center bg-yellow-50 w-[100px]">Lipe 3T</TableHead>
+                  <TableHead className="bg-yellow-50 w-[130px]">Data Invio 3T</TableHead>
+                  <TableHead className="text-center bg-orange-50 w-[80px]">Ott</TableHead>
+                  <TableHead className="text-center bg-orange-50 w-[80px]">Nov</TableHead>
+                  <TableHead className="bg-orange-50 w-[130px]">Acconto</TableHead>
+                  <TableHead className="text-center bg-orange-50 w-[100px]">Acc. Com</TableHead>
+                  <TableHead className="text-center bg-orange-50 w-[80px]">Dic</TableHead>
+                  <TableHead className="text-center bg-orange-50 w-[100px]">Lipe 4T</TableHead>
+                  <TableHead className="bg-orange-50 w-[130px]">Data Invio 4T</TableHead>
+                  <TableHead className="text-center w-[100px]">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={27} className="text-center py-8">
+                      Caricamento in corso...
+                    </TableCell>
+                  </TableRow>
+                ) : lipeRecords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={27} className="text-center py-8 text-muted-foreground">
+                      Nessuna dichiarazione trovata
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  lipeRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium w-[200px]">
+                        {record.nominativo}
+                      </TableCell>
+                      <TableCell className="w-[150px] text-gray-700">
+                        {record.utente_professionista_nome}
+                      </TableCell>
+                      <TableCell className="w-[150px] text-gray-700">
+                        {record.utente_operatore_nome}
+                      </TableCell>
+                      <TableCell className="w-[100px]">
+                        <Select
+                          value={record.tipo_liq || "T"}
+                          onValueChange={(value) => handleSelectChange(record.id, "tipo_liq", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="T">T</SelectItem>
+                            <SelectItem value="M">M</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-center bg-blue-50 w-[80px]">
+                        <Checkbox
+                          checked={record.gen || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-blue-50 w-[80px]">
+                        <Checkbox
+                          checked={record.feb || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-blue-50 w-[80px]">
+                        <Checkbox
+                          checked={record.mar || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-blue-50 w-[100px]">
+                        <Checkbox
+                          checked={record.lipe1t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="bg-blue-50 w-[130px]">
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe1t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
+                            className="w-full"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center bg-green-50 w-[80px]">
+                        <Checkbox
+                          checked={record.apr || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-green-50 w-[80px]">
+                        <Checkbox
+                          checked={record.mag || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-green-50 w-[80px]">
+                        <Checkbox
+                          checked={record.giu || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-green-50 w-[100px]">
+                        <Checkbox
+                          checked={record.lipe2t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="bg-green-50 w-[130px]">
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe2t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
+                            className="w-full"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center bg-yellow-50 w-[80px]">
+                        <Checkbox
+                          checked={record.lug || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-yellow-50 w-[80px]">
+                        <Checkbox
+                          checked={record.ago || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-yellow-50 w-[80px]">
+                        <Checkbox
+                          checked={record.set || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-yellow-50 w-[100px]">
+                        <Checkbox
+                          checked={record.lipe3t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="bg-yellow-50 w-[130px]">
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe3t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
+                            className="w-full"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center bg-orange-50 w-[80px]">
+                        <Checkbox
+                          checked={record.ott || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-orange-50 w-[80px]">
+                        <Checkbox
+                          checked={record.nov || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="bg-orange-50 w-[130px]">
+                        <Select
+                          value={record.acconto || "Non dovuto"}
+                          onValueChange={(value) => handleSelectChange(record.id, "acconto", value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Non dovuto">Non dovuto</SelectItem>
+                            <SelectItem value="Dovuto">Dovuto</SelectItem>
+                            <SelectItem value="Pagato">Pagato</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-center bg-orange-50 w-[100px]">
+                        <Checkbox
+                          checked={record.acconto_com || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-orange-50 w-[80px]">
+                        <Checkbox
+                          checked={record.dic || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-center bg-orange-50 w-[100px]">
+                        <Checkbox
+                          checked={record.lipe4t || false}
+                          onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell className="bg-orange-50 w-[130px]">
+                        <div className="relative">
+                          <Input
+                            type="date"
+                            value={record.lipe4t_invio || ""}
+                            onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
+                            className="w-full"
+                          />
+                          <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center w-[100px]">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(record.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                </Table>
-              </div>
-
-              {/* Body con scroll verticale */}
-              <div className="max-h-[600px] overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={27} className="text-center py-8">
-                          Caricamento in corso...
-                        </TableCell>
-                      </TableRow>
-                    ) : lipeRecords.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={27} className="text-center py-8 text-muted-foreground">
-                          Nessuna dichiarazione trovata
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lipeRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          {/* Nominativo - STICKY + READONLY */}
-                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[200px]">
-                            {record.nominativo}
-                          </TableCell>
-                          {/* Professionista - READONLY */}
-                          <TableCell className="min-w-[150px] text-gray-700">
-                            {record.utente_professionista_nome}
-                          </TableCell>
-                          {/* Operatore - READONLY */}
-                          <TableCell className="min-w-[150px] text-gray-700">
-                            {record.utente_operatore_nome}
-                          </TableCell>
-                          {/* Tipo Liq - EDITABILE */}
-                          <TableCell className="min-w-[100px]">
-                            <Select
-                              value={record.tipo_liq || "T"}
-                              onValueChange={(value) => handleSelectChange(record.id, "tipo_liq", value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="T">T</SelectItem>
-                                <SelectItem value="M">M</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          {/* 1° TRIMESTRE - Background celeste chiaro */}
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.gen || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.feb || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.mar || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50 min-w-[100px]">
-                            <Checkbox
-                              checked={record.lipe1t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-blue-50 min-w-[130px]">
-                            <div className="relative">
-                              <Input
-                                type="date"
-                                value={record.lipe1t_invio || ""}
-                                onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            </div>
-                          </TableCell>
-                          {/* 2° TRIMESTRE - Background verde chiaro */}
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.apr || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.mag || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.giu || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50 min-w-[100px]">
-                            <Checkbox
-                              checked={record.lipe2t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-green-50 min-w-[130px]">
-                            <div className="relative">
-                              <Input
-                                type="date"
-                                value={record.lipe2t_invio || ""}
-                                onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            </div>
-                          </TableCell>
-                          {/* 3° TRIMESTRE - Background giallo chiaro */}
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.lug || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.ago || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.set || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50 min-w-[100px]">
-                            <Checkbox
-                              checked={record.lipe3t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-yellow-50 min-w-[130px]">
-                            <div className="relative">
-                              <Input
-                                type="date"
-                                value={record.lipe3t_invio || ""}
-                                onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            </div>
-                          </TableCell>
-                          {/* 4° TRIMESTRE - Background arancione chiaro */}
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.ott || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.nov || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-orange-50 min-w-[130px]">
-                            <Select
-                              value={record.acconto || "Non dovuto"}
-                              onValueChange={(value) => handleSelectChange(record.id, "acconto", value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Non dovuto">Non dovuto</SelectItem>
-                                <SelectItem value="Dovuto">Dovuto</SelectItem>
-                                <SelectItem value="Pagato">Pagato</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
-                            <Checkbox
-                              checked={record.acconto_com || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[80px]">
-                            <Checkbox
-                              checked={record.dic || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50 min-w-[100px]">
-                            <Checkbox
-                              checked={record.lipe4t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-orange-50 min-w-[130px]">
-                            <div className="relative">
-                              <Input
-                                type="date"
-                                value={record.lipe4t_invio || ""}
-                                onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                              <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            </div>
-                          </TableCell>
-                          {/* Azioni */}
-                          <TableCell className="text-center min-w-[100px]">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(record.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
