@@ -411,7 +411,7 @@ export default function Lipe() {
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
               <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
+                <Table className="w-full" style={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
@@ -447,7 +447,7 @@ export default function Lipe() {
               </div>
 
               <div className="max-h-[600px] overflow-y-auto">
-                <Table>
+                <Table className="w-full" style={{ tableLayout: "fixed", width: "100%" }}>
                   <TableBody>
                     {loading ? (
                       <TableRow>
