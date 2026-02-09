@@ -345,10 +345,12 @@ export type Database = {
           flag_mail_newsletter: boolean | null
           flag_mail_scadenze: boolean | null
           flag_proforma: boolean | null
+          gestione_esterometro: boolean | null
           id: string
           indirizzo: string | null
           matricola_inps: string | null
           note: string | null
+          note_esterometro: string | null
           partita_iva: string | null
           pat_inail: string | null
           professionista_payroll_id: string | null
@@ -394,10 +396,12 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gestione_esterometro?: boolean | null
           id?: string
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
+          note_esterometro?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
@@ -443,10 +447,12 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
+          gestione_esterometro?: boolean | null
           id?: string
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
+          note_esterometro?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null

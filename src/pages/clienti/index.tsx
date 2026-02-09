@@ -90,8 +90,6 @@ interface ClienteFormData {
   tipo_prestazione_id: string;
   tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
   note: string;
-  gestione_esterometro: boolean;
-  note_esterometro: string;
 }
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
@@ -181,8 +179,6 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: undefined,
     note: "",
-    gestione_esterometro: false,
-    note_esterometro: "",
   };
 
   const [formData, setFormData] = useState<ClienteFormData>(initialFormData);
@@ -313,8 +309,6 @@ export default function ClientiPage() {
         matricola_inps: formData.matricola_inps || undefined,
         pat_inail: formData.pat_inail || undefined,
         codice_ditta_ce: formData.codice_ditta_ce || undefined,
-        gestione_esterometro: formData.gestione_esterometro,
-        note_esterometro: formData.note_esterometro,
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
       };
@@ -400,148 +394,61 @@ export default function ClientiPage() {
 
   const handleInsertIntoScadenzari = async (cliente: Cliente) => {
     try {
+      // Gestione scadenze automatiche
       const scadenzariAttivi: string[] = [];
-      const inserimenti: any[] = [];
+      
+      if (scadenzari.iva) scadenzariAttivi.push("IVA");
+      if (scadenzari.lipe) scadenzariAttivi.push("LIPE");
+      if (scadenzari.paghe) scadenzariAttivi.push("Paghe");
+      if (scadenzari.cu) scadenzariAttivi.push("CU");
+      if (scadenzari.modello770) scadenzariAttivi.push("770");
+      if (scadenzari.bilanci) scadenzariAttivi.push("Bilanci");
 
       const baseData = {
         nominativo: cliente.ragione_sociale,
         utente_operatore_id: cliente.utente_operatore_id,
       };
 
-      if (cliente.flag_iva) {
-        scadenzariAttivi.push("IVA");
-        inserimenti.push(
-          supabase.from("tbscadiva").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_cu) {
-        scadenzariAttivi.push("CU");
-        inserimenti.push(
-          supabase.from("tbscadcu").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_bilancio) {
-        scadenzariAttivi.push("Bilanci");
-        inserimenti.push(
-          supabase.from("tbscadbilanci").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_fiscali) {
-        scadenzariAttivi.push("Fiscali");
-        inserimenti.push(
-          supabase.from("tbscadfiscali").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_lipe) {
-        scadenzariAttivi.push("LIPE");
-        inserimenti.push(
-          supabase.from("tbscadlipe").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_770) {
-        scadenzariAttivi.push("770");
-        inserimenti.push(
-          supabase.from("tbscad770").upsert({
-            ...baseData,
-            id: cliente.id,
-            utente_payroll_id: cliente.utente_payroll_id,
-            professionista_payroll_id: cliente.professionista_payroll_id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_esterometro) {
-        scadenzariAttivi.push("Esterometro");
-        inserimenti.push(
-          supabase.from("tbscadestero").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_ccgg) {
-        scadenzariAttivi.push("CCGG");
-        inserimenti.push(
-          supabase.from("tbscadccgg").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_proforma) {
-        scadenzariAttivi.push("Proforma");
-        inserimenti.push(
-          supabase.from("tbscadproforma").upsert({
-            ...baseData,
-            id: cliente.id,
-          }, { onConflict: "id" }).then()
-        );
-      }
-
-      if (cliente.flag_imu) {
-        scadenzariAttivi.push("IMU");
-        
-        const professionista = utenti.find(u => u.id === cliente.utente_professionista_id);
-        const operatore = utenti.find(u => u.id === cliente.utente_operatore_id);
-        
-        const promises = [
-          supabase.from("tbscadimu").upsert({
-            id: cliente.id,
-            nominativo: cliente.ragione_sociale,
-            professionista: professionista ? `${professionista.nome} ${professionista.cognome}` : null,
-            operatore: operatore ? `${operatore.nome} ${operatore.cognome}` : null,
-            acconto_imu: false,
-            acconto_dovuto: false,
-            acconto_comunicato: false,
-            data_com_acconto: null,
-            saldo_imu: false,
-            saldo_dovuto: false,
-            saldo_comunicato: false,
-            data_com_saldo: null,
-            dichiarazione_imu: false,
-            data_scad_dichiarazione: null,
-            dichiarazione_presentata: false,
-            data_presentazione: null,
-            note: null,
-            conferma_riga: false
-          }, { onConflict: "id" }).then()
-        ];
-        
-        inserimenti.push(...promises);
-      }
-
-      if (scadenzariAttivi.length === 0) {
-        toast({
-          title: "Attenzione",
-          description: "Nessuno scadenzario selezionato per questo cliente nell'anagrafica",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      await Promise.all(inserimenti);
+      await Promise.all(
+        scadenzariAttivi.map(scadenzario => {
+          switch (scadenzario) {
+            case "IVA":
+              return supabase.from("tbscadiva").upsert({
+                ...baseData,
+                id: cliente.id,
+              }, { onConflict: "id" }).then();
+            case "CU":
+              return supabase.from("tbscadcu").upsert({
+                ...baseData,
+                id: cliente.id,
+              }, { onConflict: "id" }).then();
+            case "Bilanci":
+              return supabase.from("tbscadbilanci").upsert({
+                ...baseData,
+                id: cliente.id,
+              }, { onConflict: "id" }).then();
+            case "Fiscali":
+              return supabase.from("tbscadfiscali").upsert({
+                ...baseData,
+                id: cliente.id,
+              }, { onConflict: "id" }).then();
+            case "LIPE":
+              return supabase.from("tbscadlipe").upsert({
+                ...baseData,
+                id: cliente.id,
+              }, { onConflict: "id" }).then();
+            case "770":
+              return supabase.from("tbscad770").upsert({
+                ...baseData,
+                id: cliente.id,
+                utente_payroll_id: cliente.utente_payroll_id,
+                professionista_payroll_id: cliente.professionista_payroll_id,
+              }, { onConflict: "id" }).then();
+            default:
+              return Promise.resolve();
+          }
+        })
+      );
 
       toast({
         title: "Successo",
@@ -657,8 +564,6 @@ export default function ClientiPage() {
       tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
       tipo_redditi: (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
       note: clienteData.note || "",
-      gestione_esterometro: (clienteData as any).gestione_esterometro ?? false,
-      note_esterometro: (clienteData as any).note_esterometro || "",
     });
     
     setScadenzari({
@@ -707,8 +612,6 @@ export default function ClientiPage() {
       tipo_prestazione_id: "",
       tipo_redditi: undefined,
       note: "",
-      gestione_esterometro: false,
-      note_esterometro: "",
     });
     setScadenzari({
       iva: true,
@@ -1266,7 +1169,6 @@ export default function ClientiPage() {
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-              <TabsTrigger value="note">Note</TabsTrigger>
             </TabsList>
 
             <TabsContent value="anagrafica" className="space-y-4 pt-4">
