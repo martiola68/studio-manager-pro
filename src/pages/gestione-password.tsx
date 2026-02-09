@@ -183,9 +183,39 @@ export default function GestionePasswordPage() {
           return;
         }
       }
+
+      // Salvataggio effettivo nel database
+      if (editingCredenziale) {
+        // UPDATE: Modifica credenziale esistente
+        await passwordService.updateCredenziale(editingCredenziale.id, dataToSave);
+        toast({ 
+          title: "Aggiornata", 
+          description: "Credenziale aggiornata con successo" 
+        });
+      } else {
+        // CREATE: Nuova credenziale
+        await passwordService.createCredenziale(dataToSave as any);
+        toast({ 
+          title: "Salvata", 
+          description: "Nuova credenziale creata con successo" 
+        });
+      }
+
+      // Ricarica dati
+      await loadData();
+
+      // Reset form e stati
+      resetForm();
+      setEditingCredenziale(null);
+      setIsDialogOpen(false);
+      
     } catch (error) {
       console.error("Errore salvataggio:", error);
-      toast({ title: "Errore", description: "Errore durante il salvataggio", variant: "destructive" });
+      toast({ 
+        title: "Errore", 
+        description: "Errore durante il salvataggio", 
+        variant: "destructive" 
+      });
     } finally {
       setConfirmOpen(false);
     }
