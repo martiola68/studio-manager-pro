@@ -306,6 +306,8 @@ export const microsoftGraphService = {
     const features = configData?.features as unknown as { teams?: boolean } | null;
     const teamsEnabled = features?.teams === true;
     
+    console.log(`isEnabled: ${isEnabled}, teamsEnabled: ${teamsEnabled}`);
+    
     return isEnabled && teamsEnabled;
   },
 
