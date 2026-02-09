@@ -4,17 +4,22 @@ import { supabase } from "@/lib/supabase/client";
 import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
+import { scadenzaAlertService, type ScadenzaAlert } from "@/services/scadenzaAlertService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail, BookOpen, Lock } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { AlertScadenze } from "@/components/AlertScadenze";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [scadenzeAlert, setScadenzeAlert] = useState<ScadenzaAlert[]>([]);
   const [stats, setStats] = useState({
     clientiAttivi: 0,
     appuntamentiProssimi: 0,
@@ -28,6 +33,7 @@ export default function DashboardPage() {
   const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>([]);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isPartner, setIsPartner] = useState(false);
 
   useEffect(() => {
     checkAuthAndLoadData();
@@ -57,12 +63,23 @@ export default function DashboardPage() {
       if (session.user.email) {
         const { data: utente } = await supabase
           .from("tbutenti")
-          .select("id")
+          .select("id, ruolo, studio_id")
           .eq("email", session.user.email)
           .maybeSingle();
         
         if (utente) {
           setCurrentUserId(utente.id);
+          setIsPartner(utente.ruolo === "partner" || utente.ruolo === "admin");
+          
+          // Carica scadenze urgenti
+          if (utente.studio_id) {
+            const alerts = await scadenzaAlertService.getScadenzeInArrivo(
+              utente.id, 
+              utente.ruolo === "partner" || utente.ruolo === "admin", 
+              utente.studio_id
+            );
+            setScadenzeAlert(alerts);
+          }
         }
       }
 
@@ -119,6 +136,26 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDismissAlert = (id: string) => {
+    scadenzaAlertService.dismissAlert(id);
+    setScadenzeAlert(prev => prev.filter(s => s.id !== id));
+    toast({ title: "Notifica rimossa", description: "La scadenza non verrà più mostrata tra gli alert." });
+  };
+
+  const handleNotifyTeams = async (scadenza: ScadenzaAlert) => {
+    if (!currentUserId) return;
+    
+    toast({ title: "Invio in corso...", description: "Sto inviando la notifica su Teams." });
+    
+    const success = await scadenzaAlertService.sendTeamsAlert(scadenza, currentUserId);
+    
+    if (success) {
+      toast({ title: "Inviato!", description: "Notifica Teams inviata con successo." });
+    } else {
+      toast({ title: "Errore", description: "Impossibile inviare notifica Teams. Verifica la configurazione Microsoft 365.", variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -151,6 +188,24 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 mt-1">Panoramica generale dello studio</p>
       </div>
+
+      {scadenzeAlert.length > 0 && (
+        <div className="mb-8">
+          <AlertScadenze 
+            scadenze={scadenzeAlert} 
+            isPartner={isPartner}
+            onDismiss={handleDismissAlert}
+            onViewDetails={(id, tipo) => {
+              // Redirect alla pagina corretta in base al tipo
+              if (tipo === "IVA") router.push(`/scadenze/iva`);
+              else if (tipo === "Fiscale") router.push(`/scadenze/fiscale`);
+              else if (tipo === "Bilancio") router.push(`/scadenze/bilanci`);
+              else router.push(`/scadenze/calendario`);
+            }}
+            onNotifyTeams={handleNotifyTeams}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="border-l-4 border-l-blue-600">

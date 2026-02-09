@@ -15,8 +15,8 @@ export interface ScadenzaAlert {
 const COMPLETION_COLUMNS: Record<string, string | null> = {
   "tbscadiva": "mod_inviato",
   "tbscad770": "mod_inviato",
-  "tbscadfiscali": "mod_dual", // Special case: ha mod_r_inviato E mod_i_inviato
-  "tbscadccgg": null, // No completion column
+  "tbscadfiscali": "mod_dual",
+  "tbscadccgg": null,
   "tbscadbilanci": null,
   "tbscadlipe": null,
   "tbscadcu": null,
@@ -310,5 +310,138 @@ export const scadenzaAlertService = {
   clearDismissed() {
     if (typeof window === "undefined") return;
     localStorage.removeItem("dismissed_alerts");
+  },
+  
+  /**
+   * Invia notifica Teams per una scadenza urgente
+   */
+  async sendTeamsAlert(scadenza: ScadenzaAlert, userId: string): Promise<boolean> {
+    try {
+      const { teamsService } = await import("./teamsService");
+      
+      // Recupera email dell'utente
+      const { data: userData } = await supabase
+        .from("tbutenti")
+        .select("email, nome, cognome")
+        .eq("id", userId)
+        .single();
+      
+      if (!userData?.email) {
+        console.error("Email utente non trovata");
+        return false;
+      }
+      
+      // Determina emoji e priorità in base all'urgenza
+      let emoji = "⚠️";
+      let importanza: "normal" | "high" | "urgent" = "normal";
+      
+      if (scadenza.urgenza === "critica") {
+        emoji = "🚨";
+        importanza = "urgent";
+      } else if (scadenza.urgenza === "urgente") {
+        emoji = "⏰";
+        importanza = "high";
+      }
+      
+      // Invia messaggio diretto su Teams
+      await teamsService.sendDirectMessage(
+        userId,
+        userData.email,
+        {
+          content: `${emoji} <strong>Scadenza ${scadenza.urgenza.toUpperCase()}</strong><br><br>
+            📋 <strong>${scadenza.descrizione}</strong><br>
+            🏢 Cliente: ${scadenza.cliente_nome}<br>
+            📅 Data scadenza: ${new Date(scadenza.data_scadenza).toLocaleDateString("it-IT")}<br>
+            📂 Tipo: ${scadenza.tipo}<br><br>
+            ${scadenza.utente_assegnato ? `👤 Assegnato a: ${scadenza.utente_assegnato}<br><br>` : ""}
+            <em>Accedi a Studio Manager Pro per gestire questa scadenza</em>`,
+          contentType: "html",
+          importance: importanza
+        }
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Errore invio notifica Teams:", error);
+      return false;
+    }
+  },
+  
+  /**
+   * Invia notifiche Teams per tutte le scadenze urgenti di un utente
+   */
+  async sendBulkTeamsAlerts(
+    scadenze: ScadenzaAlert[],
+    userId: string,
+    onlyUrgent: boolean = true
+  ): Promise<{ sent: number; failed: number }> {
+    let sent = 0;
+    let failed = 0;
+    
+    // Filtra solo scadenze urgenti/critiche se richiesto
+    const scadenzeDaNotificare = onlyUrgent
+      ? scadenze.filter(s => s.urgenza === "critica" || s.urgenza === "urgente")
+      : scadenze;
+    
+    for (const scadenza of scadenzeDaNotificare) {
+      const success = await this.sendTeamsAlert(scadenza, userId);
+      if (success) {
+        sent++;
+      } else {
+        failed++;
+      }
+      
+      // Pausa di 500ms tra una notifica e l'altra per evitare rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return { sent, failed };
+  },
+  
+  /**
+   * Invia notifica Teams a un utente specifico per una scadenza
+   */
+  async notifyUserAboutDeadline(
+    scadenza: ScadenzaAlert,
+    targetUserId: string,
+    senderUserId: string
+  ): Promise<boolean> {
+    try {
+      const { teamsService } = await import("./teamsService");
+      
+      // Recupera email destinatario
+      const { data: targetUser } = await supabase
+        .from("tbutenti")
+        .select("email, nome, cognome")
+        .eq("id", targetUserId)
+        .single();
+      
+      if (!targetUser?.email) {
+        console.error("Email destinatario non trovata");
+        return false;
+      }
+      
+      // Invia notifica
+      await teamsService.sendDirectMessage(
+        senderUserId,
+        targetUser.email,
+        {
+          content: `📌 <strong>Promemoria Scadenza</strong><br><br>
+            ${targetUser.nome}, ti segnalo questa scadenza:<br><br>
+            📋 ${scadenza.descrizione}<br>
+            🏢 Cliente: ${scadenza.cliente_nome}<br>
+            📅 Data: ${new Date(scadenza.data_scadenza).toLocaleDateString("it-IT")}<br>
+            📂 Tipo: ${scadenza.tipo}<br><br>
+            <em>Verifica su Studio Manager Pro</em>`,
+          contentType: "html",
+          importance: "high"
+        }
+      );
+      
+      return true;
+    } catch (error) {
+      console.error("Errore invio notifica Teams a utente:", error);
+      return false;
+    }
   }
 };

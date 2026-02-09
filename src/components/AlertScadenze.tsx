@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, AlertTriangle, Info, X, CheckCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, X, CheckCircle, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -22,9 +22,10 @@ interface AlertScadenzeProps {
   isPartner: boolean;
   onDismiss: (id: string) => void;
   onViewDetails: (id: string, tipo: string) => void;
+  onNotifyTeams?: (scadenza: ScadenzaAlert) => void;
 }
 
-export function AlertScadenze({ scadenze, isPartner, onDismiss, onViewDetails }: AlertScadenzeProps) {
+export function AlertScadenze({ scadenze, isPartner, onDismiss, onViewDetails, onNotifyTeams }: AlertScadenzeProps) {
   const [isMinimized, setIsMinimized] = useState(false);
 
   const scadenzeCritiche = scadenze.filter(s => s.urgenza === "critica");
@@ -160,14 +161,27 @@ export function AlertScadenze({ scadenze, isPartner, onDismiss, onViewDetails }:
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="w-full text-xs"
-                    onClick={() => onViewDetails(scadenza.id, scadenza.tipo)}
-                  >
-                    Visualizza Dettagli
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1 text-xs"
+                      onClick={() => onViewDetails(scadenza.id, scadenza.tipo)}
+                    >
+                      Visualizza Dettagli
+                    </Button>
+                    {onNotifyTeams && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-8 px-0 border-red-200 hover:bg-red-100 text-red-700"
+                        onClick={() => onNotifyTeams(scadenza)}
+                        title="Invia notifica su Teams"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
 
@@ -210,14 +224,27 @@ export function AlertScadenze({ scadenze, isPartner, onDismiss, onViewDetails }:
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-xs"
-                    onClick={() => onViewDetails(scadenza.id, scadenza.tipo)}
-                  >
-                    Visualizza Dettagli
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-xs"
+                      onClick={() => onViewDetails(scadenza.id, scadenza.tipo)}
+                    >
+                      Visualizza Dettagli
+                    </Button>
+                    {onNotifyTeams && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-8 px-0 border-yellow-200 hover:bg-yellow-100 text-yellow-700"
+                        onClick={() => onNotifyTeams(scadenza)}
+                        title="Invia notifica su Teams"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
 

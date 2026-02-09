@@ -105,7 +105,8 @@ export default function PromemoriaPage() {
     destinatario_id: "",
     destinatari_multipli: [] as string[],
     settore: "",
-    tipo_promemoria_id: ""
+    tipo_promemoria_id: "",
+    invia_teams: false
   });
 
   const resetForm = () => {
@@ -120,7 +121,8 @@ export default function PromemoriaPage() {
       destinatario_id: "",
       destinatari_multipli: [],
       settore: "",
-      tipo_promemoria_id: ""
+      tipo_promemoria_id: "",
+      invia_teams: false
     });
     setFilesToUpload([]);
     setAttachmentsToDelete([]);
@@ -371,6 +373,30 @@ export default function PromemoriaPage() {
               }
             }
           }
+
+          // Notifica Teams
+          if (formData.invia_teams && newPromemoria && currentUser) {
+            try {
+              const { teamsService } = await import("@/services/teamsService");
+              if (destinatario?.email) {
+                await teamsService.sendDirectMessage(
+                  currentUser.id,
+                  destinatario.email,
+                  {
+                    content: `📝 <strong>Nuovo Promemoria</strong><br><br>
+                      <strong>${formData.titolo}</strong><br>
+                      ${formData.descrizione}<br><br>
+                      📅 Scadenza: ${format(formData.data_scadenza, "dd/MM/yyyy")}<br>
+                      🚨 Priorità: ${formData.priorita}`,
+                    contentType: "html",
+                    importance: formData.priorita === "Alta" ? "high" : "normal"
+                  }
+                );
+              }
+            } catch (err) {
+              console.error("Errore notifica Teams:", err);
+            }
+          }
         }
         
         toast({ 
@@ -401,6 +427,31 @@ export default function PromemoriaPage() {
             } catch (err) {
               console.error(`Errore upload ${file.name}`, err);
             }
+          }
+        }
+
+        // Notifica Teams singolo
+        if (formData.invia_teams && newPromemoria && currentUser && formData.destinatario_id) {
+          try {
+            const destinatario = utenti.find(u => u.id === formData.destinatario_id);
+            if (destinatario?.email) {
+              const { teamsService } = await import("@/services/teamsService");
+              await teamsService.sendDirectMessage(
+                currentUser.id,
+                destinatario.email,
+                {
+                  content: `📝 <strong>Nuovo Promemoria</strong><br><br>
+                    <strong>${formData.titolo}</strong><br>
+                    ${formData.descrizione}<br><br>
+                    📅 Scadenza: ${format(formData.data_scadenza, "dd/MM/yyyy")}<br>
+                    🚨 Priorità: ${formData.priorita}`,
+                  contentType: "html",
+                  importance: formData.priorita === "Alta" ? "high" : "normal"
+                }
+              );
+            }
+          } catch (err) {
+            console.error("Errore notifica Teams:", err);
           }
         }
         
@@ -849,6 +900,20 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="invia-teams" 
+                checked={formData.invia_teams}
+                onCheckedChange={(checked) => setFormData(prev => ({...prev, invia_teams: !!checked}))}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="invia-teams" className="flex items-center gap-1 cursor-pointer">
+                  <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+                  Invia notifica su Teams
+                </Label>
+              </div>
+            </div>
+
             <div>
               <Label>Tipo Promemoria</Label>
               <Select value={formData.tipo_promemoria_id} onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}>
@@ -1000,13 +1065,23 @@ export default function PromemoriaPage() {
               </div>
             </div>
 
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="invia-teams" 
+                checked={formData.invia_teams}
+                onCheckedChange={(checked) => setFormData(prev => ({...prev, invia_teams: !!checked}))}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="invia-teams" className="flex items-center gap-1 cursor-pointer">
+                  <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
+                  Invia notifica su Teams
+                </Label>
+              </div>
+            </div>
+
             <div>
               <Label>Tipo Promemoria</Label>
-              <Select 
-                value={formData.tipo_promemoria_id} 
-                onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}
-                disabled={!!(currentUser && selectedPromemoria && currentUser.id === selectedPromemoria.destinatario_id && currentUser.id !== selectedPromemoria.operatore_id)}
-              >
+              <Select value={formData.tipo_promemoria_id} onValueChange={v => setFormData(prev => ({...prev, tipo_promemoria_id: v}))}>
                 <SelectTrigger><SelectValue placeholder="Seleziona tipo..." /></SelectTrigger>
                 <SelectContent>
                   {tipiPromemoria.map(t => (

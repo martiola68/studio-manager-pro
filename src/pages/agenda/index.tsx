@@ -288,6 +288,47 @@ export default function AgendaPage() {
         ? `${formData.data_fine || formData.data_inizio}T23:59:59+00:00` 
         : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00+00:00`;
 
+      // NUOVO: Genera meeting Teams se richiesto
+      let teamsLink = formData.link_teams;
+      if (formData.riunione_teams && !teamsLink) {
+        try {
+          toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
+          
+          const { teamsService } = await import("@/services/teamsService");
+          
+          // Prepara lista partecipanti email
+          const attendeesEmails = formData.partecipanti
+            .map(pId => {
+              const user = utenti.find(u => u.id === pId);
+              return user?.email;
+            })
+            .filter(Boolean) as string[];
+          
+          // Crea meeting Teams
+          const meeting = await teamsService.createOnlineMeeting(
+            formData.utente_id,
+            formData.titolo,
+            startDateTime,
+            endDateTime,
+            attendeesEmails
+          );
+          
+          teamsLink = meeting.joinUrl || meeting.joinWebUrl;
+          
+          toast({ 
+            title: "Meeting Teams creato!", 
+            description: "Link aggiunto all'evento" 
+          });
+        } catch (error: any) {
+          console.error("Errore creazione meeting Teams:", error);
+          toast({ 
+            title: "Avviso", 
+            description: "Impossibile creare meeting Teams. Puoi inserire il link manualmente.", 
+            variant: "destructive" 
+          });
+        }
+      }
+
       const basePayload = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
@@ -303,7 +344,7 @@ export default function AgendaPage() {
         luogo: !formData.in_sede ? formData.luogo : null,
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
-        link_teams: formData.link_teams || null,
+        link_teams: teamsLink || null,
         partecipanti: formData.partecipanti.length ? formData.partecipanti : null,
         ricorrente: formData.ricorrente,
         frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
@@ -317,6 +358,28 @@ export default function AgendaPage() {
         
         const { eventoService } = await import("@/services/eventoService");
         await eventoService.sendEventNotification(data);
+        
+        // NUOVO: Invia notifica Teams ai partecipanti
+        if (formData.riunione_teams && teamsLink) {
+          try {
+            const { teamsService } = await import("@/services/teamsService");
+            for (const pId of formData.partecipanti) {
+              const user = utenti.find(u => u.id === pId);
+              if (user?.email) {
+                await teamsService.sendDirectMessage(
+                  formData.utente_id,
+                  user.email,
+                  {
+                    content: `<strong>Riunione Teams aggiornata:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+                    contentType: "html"
+                  }
+                );
+              }
+            }
+          } catch (error) {
+            console.error("Errore invio notifiche Teams:", error);
+          }
+        }
         
         toast({ title: "Successo", description: "Evento aggiornato" });
       } else {
@@ -369,6 +432,28 @@ export default function AgendaPage() {
           
           const { eventoService } = await import("@/services/eventoService");
           await eventoService.sendEventNotification(data);
+          
+          // NUOVO: Invia notifica Teams ai partecipanti
+          if (formData.riunione_teams && teamsLink) {
+            try {
+              const { teamsService } = await import("@/services/teamsService");
+              for (const pId of formData.partecipanti) {
+                const user = utenti.find(u => u.id === pId);
+                if (user?.email) {
+                  await teamsService.sendDirectMessage(
+                    formData.utente_id,
+                    user.email,
+                    {
+                      content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+                      contentType: "html"
+                    }
+                  );
+                }
+              }
+            } catch (error) {
+              console.error("Errore invio notifiche Teams:", error);
+            }
+          }
           
           toast({ title: "Successo", description: "Evento creato" });
         }
