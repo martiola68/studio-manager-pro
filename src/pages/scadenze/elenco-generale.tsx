@@ -55,8 +55,8 @@ export default function ElencoGenerale() {
         .from("tbclienti")
         .select(`
           *,
-          utente_fiscale:utente_operatore_id(nome, cognome),
-          utente_payroll:utente_payroll_id(nome, cognome)
+          utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
+          utente_payroll:tbutenti!tbclienti_utente_payroll_id_fkey(nome, cognome)
         `)
         .eq("studio_id", userData.studio_id)
         .order("ragione_sociale", { ascending: true });
