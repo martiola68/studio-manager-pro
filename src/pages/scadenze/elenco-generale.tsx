@@ -87,14 +87,14 @@ export default function ElencoGenerale() {
   }
 
   const scadenzari = [
-    { label: "LIPE", field: "lipe" as keyof Cliente },
-    { label: "Bilancio", field: "bilancio" as keyof Cliente },
-    { label: "IVA", field: "iva" as keyof Cliente },
-    { label: "CCGG", field: "ccgg" as keyof Cliente },
-    { label: "Esterometro", field: "esterometro" as keyof Cliente },
-    { label: "770", field: "modello_770" as keyof Cliente },
-    { label: "Fiscali", field: "fiscali" as keyof Cliente },
-    { label: "IMU", field: "imu" as keyof Cliente }
+    { label: "LIPE", field: "flag_lipe" as keyof Cliente },
+    { label: "Bilancio", field: "flag_bilancio" as keyof Cliente },
+    { label: "IVA", field: "flag_iva" as keyof Cliente },
+    { label: "CCGG", field: "flag_ccgg" as keyof Cliente },
+    { label: "Esterometro", field: "flag_esterometro" as keyof Cliente },
+    { label: "770", field: "flag_modello_770" as keyof Cliente },
+    { label: "Fiscali", field: "flag_fiscali" as keyof Cliente },
+    { label: "IMU", field: "flag_imu" as keyof Cliente }
   ];
 
   if (loading) {
