@@ -271,8 +271,39 @@ export const microsoftGraphService = {
   },
 
   async isConnected(userId: string): Promise<boolean> {
+    // Controlla se esistono i token per l'utente
     const tokens = await this.getStoredTokens(userId);
-    return tokens !== null;
+    if (!tokens) return false;
+    
+    // Recupera lo studio_id dell'utente
+    const { data: userData, error: userError } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", userId)
+      .single();
+    
+    if (userError || !userData?.studio_id) {
+      console.error("Errore recupero studio_id:", userError);
+      return false;
+    }
+    
+    // Controlla se le features Teams sono abilitate per lo studio
+    const { data: configData, error: configError } = await supabase
+      .from("microsoft365_config")
+      .select("enabled, features")
+      .eq("studio_id", userData.studio_id)
+      .single();
+    
+    if (configError) {
+      console.error("Errore recupero config Microsoft 365:", configError);
+      return false;
+    }
+    
+    // Verifica che Microsoft 365 sia abilitato E che features.teams sia true
+    const isEnabled = configData?.enabled === true;
+    const teamsEnabled = configData?.features?.teams === true;
+    
+    return isEnabled && teamsEnabled;
   },
 
   async getUserProfile(userId: string): Promise<any> {
