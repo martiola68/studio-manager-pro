@@ -337,7 +337,6 @@ export async function encryptClienteSensitiveData(cliente: {
   pat_inail?: string | null;
   codice_ditta_ce?: string | null;
   note?: string | null;
-  note_antiriciclaggio?: string | null;
 }): Promise<{
   codice_fiscale?: string | null;
   partita_iva?: string | null;
@@ -345,7 +344,6 @@ export async function encryptClienteSensitiveData(cliente: {
   pat_inail?: string | null;
   codice_ditta_ce?: string | null;
   note?: string | null;
-  note_antiriciclaggio?: string | null;
 }> {
   const key = getStoredEncryptionKey();
   if (!key) {
@@ -367,9 +365,6 @@ export async function encryptClienteSensitiveData(cliente: {
       ? encryptData(cliente.codice_ditta_ce, key)
       : null,
     note: cliente.note ? encryptData(cliente.note, key) : null,
-    note_antiriciclaggio: cliente.note_antiriciclaggio
-      ? encryptData(cliente.note_antiriciclaggio, key)
-      : null,
   };
 }
 
@@ -383,7 +378,6 @@ export async function decryptClienteSensitiveData(cliente: {
   pat_inail?: string | null;
   codice_ditta_ce?: string | null;
   note?: string | null;
-  note_antiriciclaggio?: string | null;
 }): Promise<{
   codice_fiscale?: string | null;
   partita_iva?: string | null;
@@ -391,7 +385,6 @@ export async function decryptClienteSensitiveData(cliente: {
   pat_inail?: string | null;
   codice_ditta_ce?: string | null;
   note?: string | null;
-  note_antiriciclaggio?: string | null;
 }> {
   const key = getStoredEncryptionKey();
   if (!key) {
@@ -423,10 +416,6 @@ export async function decryptClienteSensitiveData(cliente: {
       cliente.note && isEncrypted(cliente.note)
         ? decryptData(cliente.note, key)
         : cliente.note,
-    note_antiriciclaggio:
-      cliente.note_antiriciclaggio && isEncrypted(cliente.note_antiriciclaggio)
-        ? decryptData(cliente.note_antiriciclaggio, key)
-        : cliente.note_antiriciclaggio,
   };
 }
 

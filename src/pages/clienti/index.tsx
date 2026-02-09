@@ -103,16 +103,6 @@ const TIPO_PRESTAZIONE_OPTIONS: string[] = [
   "Invio telematico di Bilanci",
 ];
 
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date.getTime());
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + months);
-  if (d.getDate() < day) {
-    d.setDate(0);
-  }
-  return d;
-}
-
 export default function ClientiPage() {
   const { toast } = useToast();
   const { studioId } = useStudio();
@@ -214,20 +204,6 @@ export default function ClientiPage() {
     referente_esterno: string;
     tipo_prestazione_id: string;
     tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
-    gestione_antiriciclaggio: boolean;
-    note_antiriciclaggio: string;
-    giorni_scad_ver_a: number | null;
-    giorni_scad_ver_b: number | null;
-    tipo_prestazione_a: string;
-    tipo_prestazione_b: string;
-    rischio_ver_a: string;
-    rischio_ver_b: string;
-    gg_ver_a: number | null;
-    gg_ver_b: number | null;
-    data_ultima_verifica_antiric: Date | null;
-    scadenza_antiric: Date | null;
-    data_ultima_verifica_b: Date | null;
-    scadenza_antiric_b: Date | null;
     note: string;
   }>(initialFormData);
 
@@ -499,7 +475,6 @@ export default function ClientiPage() {
             pat_inail: dataToSave.pat_inail,
             codice_ditta_ce: dataToSave.codice_ditta_ce,
             note: dataToSave.note,
-            note_antiriciclaggio: dataToSave.note_antiriciclaggio,
           });
           
           // Merge encrypted data, converting nulls to undefined to satisfy strict types if needed, 
@@ -795,7 +770,6 @@ export default function ClientiPage() {
           pat_inail: cliente.pat_inail,
           codice_ditta_ce: cliente.codice_ditta_ce,
           note: cliente.note,
-          note_antiriciclaggio: cliente.note_antiriciclaggio,
         });
         
         clienteData = { ...clienteData, ...decrypted };
@@ -834,20 +808,6 @@ export default function ClientiPage() {
       matricola_inps: clienteData.matricola_inps || "",
       pat_inail: clienteData.pat_inail || "",
       codice_ditta_ce: clienteData.codice_ditta_ce || "",
-      note_antiriciclaggio: clienteData.note_antiriciclaggio || "",
-      gestione_antiriciclaggio: clienteData.gestione_antiriciclaggio ?? false,
-      gg_ver_a: clienteData.gg_ver_a ?? null,
-      gg_ver_b: clienteData.gg_ver_b ?? null,
-      data_ultima_verifica_antiric: clienteData.data_ultima_verifica_antiric ? new Date(clienteData.data_ultima_verifica_antiric) : null,
-      data_ultima_verifica_b: clienteData.data_ultima_verifica_b ? new Date(clienteData.data_ultima_verifica_b) : null,
-      scadenza_antiric: clienteData.scadenza_antiric ? new Date(clienteData.scadenza_antiric) : null,
-      scadenza_antiric_b: clienteData.scadenza_antiric_b ? new Date(clienteData.scadenza_antiric_b) : null,
-      rischio_ver_a: clienteData.rischio_ver_a || "",
-      rischio_ver_b: clienteData.rischio_ver_b || "",
-      tipo_prestazione_a: clienteData.tipo_prestazione_a || "",
-      tipo_prestazione_b: clienteData.tipo_prestazione_b || "",
-      giorni_scad_ver_a: clienteData.giorni_scad_ver_a ?? null,
-      giorni_scad_ver_b: clienteData.giorni_scad_ver_b ?? null,
       note: clienteData.note || "",
     });
     
@@ -896,20 +856,6 @@ export default function ClientiPage() {
       referente_esterno: "",
       tipo_prestazione_id: "",
       tipo_redditi: undefined,
-      gestione_antiriciclaggio: false,
-      note_antiriciclaggio: "",
-      giorni_scad_ver_a: null,
-      giorni_scad_ver_b: null,
-      tipo_prestazione_a: "",
-      tipo_prestazione_b: "",
-      rischio_ver_a: "",
-      rischio_ver_b: "",
-      gg_ver_a: null,
-      gg_ver_b: null,
-      data_ultima_verifica_antiric: null,
-      scadenza_antiric: null,
-      data_ultima_verifica_b: null,
-      scadenza_antiric_b: null,
       note: "",
     });
     setScadenzari({
