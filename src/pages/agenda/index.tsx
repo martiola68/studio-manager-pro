@@ -298,6 +298,19 @@ export default function AgendaPage() {
       let teamsLink = formData.link_teams;
       if (formData.riunione_teams && !teamsLink) {
         try {
+          toast({ title: "Verifica connessione Microsoft 365...", description: "Attendere prego" });
+          
+          const { microsoftGraphService } = await import("@/services/microsoftGraphService");
+          const isConnected = await microsoftGraphService.isConnected(formData.utente_id);
+
+          if (!isConnected) {
+            // Salva evento per riprenderlo dopo OAuth
+            setPendingEventData(formData);
+            setNeedsMicrosoftAuth(true);
+            setPendingTeamsMeeting(true);
+            return; // Esce e attende OAuth
+          }
+
           toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
           
           const { teamsService } = await import("@/services/teamsService");
