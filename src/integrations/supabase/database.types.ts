@@ -331,8 +331,6 @@ export type Database = {
           contatto2_id: string | null
           created_at: string | null
           data_creazione: string | null
-          data_ultima_verifica_antiric: string | null
-          data_ultima_verifica_b: string | null
           email: string | null
           flag_770: boolean | null
           flag_bilancio: boolean | null
@@ -347,33 +345,21 @@ export type Database = {
           flag_mail_newsletter: boolean | null
           flag_mail_scadenze: boolean | null
           flag_proforma: boolean | null
-          gestione_antiriciclaggio: boolean | null
-          gg_ver_a: number | null
-          gg_ver_b: number | null
-          giorni_scad_ver_a: number | null
-          giorni_scad_ver_b: number | null
           id: string
           indirizzo: string | null
           matricola_inps: string | null
           note: string | null
-          note_antiriciclaggio: string | null
           partita_iva: string | null
           pat_inail: string | null
           professionista_payroll_id: string | null
           provincia: string | null
           ragione_sociale: string
           referente_esterno: string | null
-          rischio_ver_a: string | null
-          rischio_ver_b: string | null
-          scadenza_antiric: string | null
-          scadenza_antiric_b: string | null
           settore_consulenza: boolean | null
           settore_fiscale: boolean | null
           settore_lavoro: boolean | null
           studio_id: string | null
           tipo_cliente: string
-          tipo_prestazione_a: string | null
-          tipo_prestazione_b: string | null
           tipo_prestazione_id: string | null
           tipo_redditi: string | null
           tipologia_cliente: string
@@ -394,8 +380,6 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
-          data_ultima_verifica_antiric?: string | null
-          data_ultima_verifica_b?: string | null
           email?: string | null
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -410,33 +394,21 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
-          gestione_antiriciclaggio?: boolean | null
-          gg_ver_a?: number | null
-          gg_ver_b?: number | null
-          giorni_scad_ver_a?: number | null
-          giorni_scad_ver_b?: number | null
           id?: string
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
-          note_antiriciclaggio?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
           provincia?: string | null
           ragione_sociale: string
           referente_esterno?: string | null
-          rischio_ver_a?: string | null
-          rischio_ver_b?: string | null
-          scadenza_antiric?: string | null
-          scadenza_antiric_b?: string | null
           settore_consulenza?: boolean | null
           settore_fiscale?: boolean | null
           settore_lavoro?: boolean | null
           studio_id?: string | null
           tipo_cliente: string
-          tipo_prestazione_a?: string | null
-          tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
           tipologia_cliente: string
@@ -457,8 +429,6 @@ export type Database = {
           contatto2_id?: string | null
           created_at?: string | null
           data_creazione?: string | null
-          data_ultima_verifica_antiric?: string | null
-          data_ultima_verifica_b?: string | null
           email?: string | null
           flag_770?: boolean | null
           flag_bilancio?: boolean | null
@@ -473,33 +443,21 @@ export type Database = {
           flag_mail_newsletter?: boolean | null
           flag_mail_scadenze?: boolean | null
           flag_proforma?: boolean | null
-          gestione_antiriciclaggio?: boolean | null
-          gg_ver_a?: number | null
-          gg_ver_b?: number | null
-          giorni_scad_ver_a?: number | null
-          giorni_scad_ver_b?: number | null
           id?: string
           indirizzo?: string | null
           matricola_inps?: string | null
           note?: string | null
-          note_antiriciclaggio?: string | null
           partita_iva?: string | null
           pat_inail?: string | null
           professionista_payroll_id?: string | null
           provincia?: string | null
           ragione_sociale?: string
           referente_esterno?: string | null
-          rischio_ver_a?: string | null
-          rischio_ver_b?: string | null
-          scadenza_antiric?: string | null
-          scadenza_antiric_b?: string | null
           settore_consulenza?: boolean | null
           settore_fiscale?: boolean | null
           settore_lavoro?: boolean | null
           studio_id?: string | null
           tipo_cliente?: string
-          tipo_prestazione_a?: string | null
-          tipo_prestazione_b?: string | null
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
           tipologia_cliente?: string

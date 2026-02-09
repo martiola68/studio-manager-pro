@@ -152,6 +152,40 @@ export default function ClientiPage() {
     imu: true,
   });
 
+  const initialFormData: ClienteFormData = {
+    cod_cliente: "",
+    tipo_cliente: "Persona fisica",
+    tipologia_cliente: "Interno",
+    settore_fiscale: true,
+    settore_lavoro: false,
+    settore_consulenza: false,
+    ragione_sociale: "",
+    partita_iva: "",
+    codice_fiscale: "",
+    indirizzo: "",
+    cap: "",
+    citta: "",
+    provincia: "",
+    email: "",
+    attivo: true,
+    cassetto_fiscale_id: "",
+    matricola_inps: "",
+    pat_inail: "",
+    codice_ditta_ce: "",
+    utente_operatore_id: "",
+    utente_professionista_id: "",
+    utente_payroll_id: "",
+    professionista_payroll_id: "",
+    contatto1_id: "",
+    referente_esterno: "",
+    tipo_prestazione_id: "",
+    tipo_redditi: undefined,
+    gestione_esterometro: false,
+    note_esterometro: "",
+    gestione_antiriciclaggio: false,
+    note_antiriciclaggio: "",
+  };
+
   const [formData, setFormData] = useState<{
     cod_cliente: string;
     tipo_cliente: string;
@@ -195,50 +229,7 @@ export default function ClientiPage() {
     data_ultima_verifica_b: Date | null;
     scadenza_antiric_b: Date | null;
     note: string;
-  }>({
-    cod_cliente: "",
-    tipo_cliente: "Persona fisica",
-    tipologia_cliente: "Interno",
-    settore_fiscale: true,
-    settore_lavoro: false,
-    settore_consulenza: false,
-    ragione_sociale: "",
-    partita_iva: "",
-    codice_fiscale: "",
-    indirizzo: "",
-    cap: "",
-    citta: "",
-    provincia: "",
-    email: "",
-    attivo: true,
-    cassetto_fiscale_id: "",
-    matricola_inps: "",
-    pat_inail: "",
-    codice_ditta_ce: "",
-    utente_operatore_id: "",
-    utente_professionista_id: "",
-    utente_payroll_id: "",
-    professionista_payroll_id: "",
-    contatto1_id: "",
-    referente_esterno: "",
-    tipo_prestazione_id: "",
-    tipo_redditi: undefined,
-    gestione_antiriciclaggio: false,
-    note_antiriciclaggio: "",
-    giorni_scad_ver_a: null,
-    giorni_scad_ver_b: null,
-    tipo_prestazione_a: "",
-    tipo_prestazione_b: "",
-    rischio_ver_a: "",
-    rischio_ver_b: "",
-    gg_ver_a: null,
-    gg_ver_b: null,
-    data_ultima_verifica_antiric: null,
-    scadenza_antiric: null,
-    data_ultima_verifica_b: null,
-    scadenza_antiric_b: null,
-    note: "",
-  });
+  }>(initialFormData);
 
   const handleRiskChange = (
     value: string,
@@ -453,7 +444,7 @@ export default function ClientiPage() {
         return;
       }
 
-      let dataToSave = {
+      const dataToSave = {
         ...formData,
         cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         utente_operatore_id: formData.utente_operatore_id || undefined,
@@ -479,11 +470,12 @@ export default function ClientiPage() {
         scadenza_antiric: formData.scadenza_antiric?.toISOString() || undefined,
         data_ultima_verifica_b: formData.data_ultima_verifica_b?.toISOString() || undefined,
         scadenza_antiric_b: formData.scadenza_antiric_b?.toISOString() || undefined,
-        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
         note_antiriciclaggio: formData.note_antiriciclaggio,
+        gestione_esterometro: formData.gestione_esterometro,
+        note_esterometro: formData.note_esterometro,
+        gestione_antiriciclaggio: formData.gestione_antiriciclaggio,
         giorni_scad_ver_a: formData.giorni_scad_ver_a ?? undefined,
         giorni_scad_ver_b: formData.giorni_scad_ver_b ?? undefined,
-        
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
         flag_bilancio: scadenzari.bilancio,
@@ -494,6 +486,7 @@ export default function ClientiPage() {
         flag_ccgg: scadenzari.ccgg,
         flag_proforma: scadenzari.proforma,
         flag_imu: scadenzari.imu,
+        updated_at: new Date().toISOString(),
       };
 
       // Encrypt sensitive fields if encryption is enabled and unlocked
@@ -710,8 +703,8 @@ export default function ClientiPage() {
         inserimenti.push(...promises);
       }
 
-      if (cliente.gestione_antiriciclaggio) {
-        scadenzariAttivi.push("Antiriciclaggio");
+      if (cliente.gestione_esterometro) {
+        scadenzariAttivi.push("Esterometro");
       }
 
       if (scadenzariAttivi.length === 0) {
@@ -1474,8 +1467,8 @@ export default function ClientiPage() {
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
-              <TabsTrigger value="antiriciclaggio">Antiriciclaggio</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+              <TabsTrigger value="note">Note</TabsTrigger>
             </TabsList>
 
             <TabsContent value="anagrafica" className="space-y-4 pt-4">
@@ -1968,262 +1961,6 @@ export default function ClientiPage() {
                     rows={2}
                   />
                 </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="antiriciclaggio" className="space-y-6 pt-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <Label className="flex items-center gap-2 font-medium text-blue-900 cursor-pointer">
-                  <Input
-                    type="checkbox"
-                    checked={formData.gestione_antiriciclaggio}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      gestione_antiriciclaggio: e.target.checked 
-                    })}
-                    className="w-5 h-5"
-                  />
-                  Gestione Antiriciclaggio
-                </Label>
-                <p className="text-sm text-blue-700 mt-2 ml-7">
-                  Attiva questa opzione per abilitare la gestione e includere il cliente nello scadenzario Antiriciclaggio
-                </p>
-              </div>
-
-              <h3 className="font-semibold text-lg mb-4">
-                Adeguata Verifica Clientela (Antiriciclaggio)
-              </h3>
-              
-              <div className="space-y-6">
-                <Card className={`bg-blue-50 dark:bg-blue-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-                      <CardTitle className="text-base">Verifica A (Principale)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label>Tipo Prestazione A</Label>
-                      <Select
-                        value={formData.tipo_prestazione_a || ""}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, tipo_prestazione_a: value })
-                        }
-                        disabled={!formData.gestione_antiriciclaggio}
-                      >
-                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
-                          <SelectValue placeholder="Seleziona tipo prestazione A" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>
-                              {opt}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Rischio Verifica A</Label>
-                        <Select
-                          value={formData.rischio_ver_a || ""}
-                          onValueChange={(value) =>
-                            handleRiskChange(
-                              value,
-                              "rischio_ver_a"
-                            )
-                          }
-                          disabled={!formData.gestione_antiriciclaggio}
-                        >
-                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
-                            <SelectValue placeholder="Seleziona rischio A" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Non significativo">Non significativo</SelectItem>
-                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
-                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
-                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Scadenza in mesi</Label>
-                        <Input
-                          type="number"
-                          value={formData.gg_ver_a ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value ? Number(e.target.value) : null;
-                            handleGgVerChange("A", value);
-                          }}
-                          placeholder="36, 12 o 6"
-                          disabled={!formData.gestione_antiriciclaggio}
-                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Data Ultima Verifica A</Label>
-                        <Input
-                          type="date"
-                          value={formData.data_ultima_verifica_antiric ? formData.data_ultima_verifica_antiric.toISOString().split('T')[0] : ""}
-                          onChange={(e) => {
-                            const dateValue = e.target.value ? new Date(e.target.value) : null;
-                            handleVerificaDateChange("A", dateValue);
-                          }}
-                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
-                          disabled={!formData.gestione_antiriciclaggio}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Scadenza Antiriciclaggio A</Label>
-                        <Input
-                          type="date"
-                          value={formData.scadenza_antiric ? formData.scadenza_antiric.toISOString().split('T')[0] : ""}
-                          disabled
-                          className="w-full bg-muted cursor-not-allowed"
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Giorni Scad. Ver A</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="text"
-                            value={formData.giorni_scad_ver_a !== null ? `${formData.giorni_scad_ver_a} giorni` : "N/A"}
-                            disabled
-                            className="w-full bg-muted cursor-not-allowed"
-                          />
-                          {formData.giorni_scad_ver_a !== null && (
-                            <Badge className={getBadgeColor(formData.giorni_scad_ver_a)}>
-                              {formData.giorni_scad_ver_a < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_a < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className={`bg-green-50 dark:bg-green-950/20 ${!formData.gestione_antiriciclaggio ? "opacity-60" : ""}`}>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                      <CardTitle className="text-base">Verifica B (Secondaria)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label>Tipo Prestazione B</Label>
-                      <Select
-                        value={formData.tipo_prestazione_b || ""}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, tipo_prestazione_b: value })
-                        }
-                        disabled={!formData.gestione_antiriciclaggio}
-                      >
-                        <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
-                          <SelectValue placeholder="Seleziona tipo prestazione B" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIPO_PRESTAZIONE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt} value={opt}>
-                              {opt}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Rischio Verifica B</Label>
-                        <Select
-                          value={formData.rischio_ver_b || ""}
-                          onValueChange={(value) =>
-                            handleRiskChange(
-                              value,
-                              "rischio_ver_b"
-                            )
-                          }
-                          disabled={!formData.gestione_antiriciclaggio}
-                        >
-                          <SelectTrigger className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}>
-                            <SelectValue placeholder="Seleziona rischio B" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Non significativo">Non significativo</SelectItem>
-                            <SelectItem value="Poco significativo">Poco significativo</SelectItem>
-                            <SelectItem value="Abbastanza significativo">Abbastanza significativo</SelectItem>
-                            <SelectItem value="Molto significativo">Molto significativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Scadenza in mesi</Label>
-                        <Input
-                          type="number"
-                          value={formData.gg_ver_b ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value ? Number(e.target.value) : null;
-                            handleGgVerChange("B", value);
-                          }}
-                          placeholder="36, 12 o 6"
-                          disabled={!formData.gestione_antiriciclaggio}
-                          className={!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Data Ultima Verifica B</Label>
-                        <Input
-                          type="date"
-                          value={formData.data_ultima_verifica_b ? formData.data_ultima_verifica_b.toISOString().split('T')[0] : ""}
-                          onChange={(e) => {
-                            const dateValue = e.target.value ? new Date(e.target.value) : null;
-                            handleVerificaDateChange("B", dateValue);
-                          }}
-                          className={`w-full ${!formData.gestione_antiriciclaggio ? "cursor-not-allowed bg-gray-100" : ""}`}
-                          disabled={!formData.gestione_antiriciclaggio}
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Scadenza Antiriciclaggio B</Label>
-                        <Input
-                          type="date"
-                          value={formData.scadenza_antiric_b ? formData.scadenza_antiric_b.toISOString().split('T')[0] : ""}
-                          disabled
-                          className="w-full bg-muted cursor-not-allowed"
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Giorni Scad. Ver B</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="text"
-                            value={formData.giorni_scad_ver_b !== null ? `${formData.giorni_scad_ver_b} giorni` : "N/A"}
-                            disabled
-                            className="w-full bg-muted cursor-not-allowed"
-                          />
-                          {formData.giorni_scad_ver_b !== null && (
-                            <Badge className={getBadgeColor(formData.giorni_scad_ver_b)}>
-                              {formData.giorni_scad_ver_b < 15 ? "🔴 URGENTE" : formData.giorni_scad_ver_b < 30 ? "🟠 ATTENZIONE" : "✅ OK"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
 
