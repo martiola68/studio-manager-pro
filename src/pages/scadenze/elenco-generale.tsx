@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase/client";
 import { Search, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
@@ -17,6 +18,8 @@ export default function ElencoGenerale() {
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("");
+  const [filtroUtentePayroll, setFiltroUtentePayroll] = useState<string>("");
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,18 +27,63 @@ export default function ElencoGenerale() {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredClienti(clienti);
-    } else {
+    let filtered = clienti;
+
+    if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
-      const filtered = clienti.filter(cliente =>
+      filtered = filtered.filter(cliente =>
         cliente.ragione_sociale?.toLowerCase().includes(query) ||
         cliente.codice_fiscale?.toLowerCase().includes(query) ||
         cliente.partita_iva?.toLowerCase().includes(query)
       );
-      setFilteredClienti(filtered);
     }
-  }, [searchQuery, clienti]);
+
+    if (filtroUtenteFiscale) {
+      filtered = filtered.filter(cliente => {
+        const nomeCompleto = cliente.utente_fiscale 
+          ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`
+          : "";
+        return nomeCompleto === filtroUtenteFiscale;
+      });
+    }
+
+    if (filtroUtentePayroll) {
+      filtered = filtered.filter(cliente => {
+        const nomeCompleto = cliente.utente_payroll 
+          ? `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}`
+          : "";
+        return nomeCompleto === filtroUtentePayroll;
+      });
+    }
+
+    setFilteredClienti(filtered);
+  }, [searchQuery, filtroUtenteFiscale, filtroUtentePayroll, clienti]);
+
+  const utentiFiscaliUnici = useMemo(() => {
+    const utentiMap = new Map<string, { nome: string; cognome: string }>();
+    clienti.forEach(cliente => {
+      if (cliente.utente_fiscale) {
+        const nomeCompleto = `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`;
+        utentiMap.set(nomeCompleto, cliente.utente_fiscale);
+      }
+    });
+    return Array.from(utentiMap.entries())
+      .map(([nomeCompleto, utente]) => ({ nomeCompleto, ...utente }))
+      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
+  }, [clienti]);
+
+  const utentiPayrollUnici = useMemo(() => {
+    const utentiMap = new Map<string, { nome: string; cognome: string }>();
+    clienti.forEach(cliente => {
+      if (cliente.utente_payroll) {
+        const nomeCompleto = `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}`;
+        utentiMap.set(nomeCompleto, cliente.utente_payroll);
+      }
+    });
+    return Array.from(utentiMap.entries())
+      .map(([nomeCompleto, utente]) => ({ nomeCompleto, ...utente }))
+      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
+  }, [clienti]);
 
   async function loadClienti() {
     try {
@@ -123,17 +171,47 @@ export default function ElencoGenerale() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <CardTitle>Clienti e Scadenzari ({filteredClienti.length})</CardTitle>
-            <div className="relative w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Cerca cliente..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex items-center gap-3">
+              <Select value={filtroUtenteFiscale} onValueChange={setFiltroUtenteFiscale}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Utente Fiscale" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tutti gli utenti fiscali</SelectItem>
+                  {utentiFiscaliUnici.map(utente => (
+                    <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
+                      {utente.nomeCompleto}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filtroUtentePayroll} onValueChange={setFiltroUtentePayroll}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Utente Payroll" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Tutti gli utenti payroll</SelectItem>
+                  {utentiPayrollUnici.map(utente => (
+                    <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
+                      {utente.nomeCompleto}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Cerca cliente..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
