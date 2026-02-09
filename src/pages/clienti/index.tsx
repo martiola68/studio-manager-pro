@@ -629,11 +629,9 @@ export default function ClientiPage() {
     }
     
     setFormData({
-      ...formData,
-      ...clienteData,
       cod_cliente: clienteData.cod_cliente || "",
       tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
-      tipologia_cliente: clienteData.tipologia_cliente || undefined,
+      tipologia_cliente: (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
       settore_fiscale: clienteData.settore_fiscale ?? true,
       settore_lavoro: clienteData.settore_lavoro ?? false,
       settore_consulenza: clienteData.settore_consulenza ?? false,
@@ -659,8 +657,8 @@ export default function ClientiPage() {
       tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
       tipo_redditi: (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
       note: clienteData.note || "",
-      gestione_esterometro: clienteData.gestione_esterometro ?? false,
-      note_esterometro: clienteData.note_esterometro || "",
+      gestione_esterometro: (clienteData as any).gestione_esterometro ?? false,
+      note_esterometro: (clienteData as any).note_esterometro || "",
     });
     
     setScadenzari({
