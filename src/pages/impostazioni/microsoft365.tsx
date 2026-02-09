@@ -77,6 +77,8 @@ export default function Microsoft365Page() {
 
   const [connectionStatus, setConnectionStatus] = useState<"unknown" | "connected" | "disconnected">("unknown");
   const [studioId, setStudioId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userOAuthStatus, setUserOAuthStatus] = useState<"unknown" | "connected" | "disconnected">("unknown");
 
   useEffect(() => {
     checkAuth();
@@ -112,11 +114,41 @@ export default function Microsoft365Page() {
       }
 
       setStudioId(utente.studio_id);
+      setCurrentUserId(authUser.id);
+      
+      // Controlla se l'utente ha token OAuth salvati
+      await checkUserOAuthStatus(authUser.id);
+      
       await loadConfiguration(utente.studio_id);
       setLoading(false);
     } catch (error) {
       console.error("Errore verifica autenticazione:", error);
       router.push("/login");
+    }
+  };
+
+  const checkUserOAuthStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("tbmicrosoft_tokens" as any)
+        .select("access_token")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Errore verifica token OAuth:", error);
+        setUserOAuthStatus("disconnected");
+        return;
+      }
+
+      if (data && data.access_token) {
+        setUserOAuthStatus("connected");
+      } else {
+        setUserOAuthStatus("disconnected");
+      }
+    } catch (error) {
+      console.error("Errore checkUserOAuthStatus:", error);
+      setUserOAuthStatus("disconnected");
     }
   };
 
@@ -270,6 +302,81 @@ export default function Microsoft365Page() {
     }
   };
 
+  const handleConnectMicrosoft = async () => {
+    if (!currentUserId) {
+      toast({
+        title: "Errore",
+        description: "Utente non identificato",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Chiama API per iniziare OAuth flow
+      const response = await fetch("/api/auth/microsoft/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: currentUserId })
+      });
+
+      const data = await response.json();
+
+      if (data.authUrl) {
+        // Apri popup OAuth
+        const width = 600;
+        const height = 700;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+
+        const popup = window.open(
+          data.authUrl,
+          "Microsoft OAuth",
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        // Monitora chiusura popup
+        const checkPopup = setInterval(() => {
+          if (popup?.closed) {
+            clearInterval(checkPopup);
+            // Ricarica stato OAuth
+            checkUserOAuthStatus(currentUserId);
+          }
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error("Errore connessione Microsoft:", error);
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile avviare connessione Microsoft",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDisconnectMicrosoft = async () => {
+    if (!currentUserId) return;
+
+    try {
+      const { microsoftGraphService } = await import("@/services/microsoftGraphService");
+      await microsoftGraphService.disconnectAccount(currentUserId);
+
+      setUserOAuthStatus("disconnected");
+
+      toast({
+        title: "Successo",
+        description: "Account Microsoft disconnesso"
+      });
+    } catch (error: any) {
+      console.error("Errore disconnessione:", error);
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile disconnettere account",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -308,6 +415,51 @@ export default function Microsoft365Page() {
         </TabsList>
 
         <TabsContent value="configuration" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Connessione Account Microsoft</CardTitle>
+              <CardDescription>
+                Autorizza il tuo account Microsoft per utilizzare le funzionalità
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`h-3 w-3 rounded-full ${userOAuthStatus === "connected" ? "bg-green-500" : "bg-gray-300"}`} />
+                  <div>
+                    <p className="font-medium">
+                      {userOAuthStatus === "connected" ? "Account Connesso" : "Account Non Connesso"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {userOAuthStatus === "connected" 
+                        ? "Il tuo account Microsoft è autorizzato" 
+                        : "Devi autorizzare il tuo account Microsoft"}
+                    </p>
+                  </div>
+                </div>
+                {userOAuthStatus === "connected" ? (
+                  <Button variant="outline" onClick={handleDisconnectMicrosoft}>
+                    Disconnetti
+                  </Button>
+                ) : (
+                  <Button onClick={handleConnectMicrosoft}>
+                    Connetti Account
+                  </Button>
+                )}
+              </div>
+
+              {userOAuthStatus === "disconnected" && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Per utilizzare le funzionalità Microsoft 365 (Teams, Email, Calendario), 
+                    devi prima connettere il tuo account Microsoft cliccando su "Connetti Account".
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Credenziali Azure AD</CardTitle>
