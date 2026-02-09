@@ -342,29 +342,12 @@ export default function AgendaPage() {
         } catch (error: any) {
           console.error("❌ ERRORE creazione meeting Teams:", error);
           
-          // Verifica se errore è dovuto a mancanza connessione
-          if (error.message?.includes("not connected") || 
-              error.message?.includes("User not connected")) {
-            console.log("🔓 Errore connessione rilevato - Apro dialog OAuth");
-            setPendingEventData(formData);
-
-            // ⚡ NUOVO: Chiudo form prima di aprire OAuth
-            setDialogOpen(false);
-
-            setTimeout(() => {
-              setNeedsMicrosoftAuth(true);
-              setPendingTeamsMeeting(true);
-            }, 300);
-
-            return;
-          }
-          
-          console.error("Errore creazione meeting Teams:", error);
           toast({ 
             title: "Avviso", 
-            description: "Impossibile creare meeting Teams. Puoi inserire il link manualmente.", 
+            description: "Impossibile creare meeting Teams. Assicurati di essere connesso a Microsoft 365 nelle impostazioni.", 
             variant: "destructive" 
           });
+          return;
         }
       }
 
