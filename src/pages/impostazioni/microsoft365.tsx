@@ -28,6 +28,19 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+// Definisco l'interfaccia esplicita per i dati dal DB
+interface Microsoft365ConfigDB {
+  id: string;
+  studio_id: string;
+  client_id: string | null;
+  tenant_id: string | null;
+  client_secret: string | null;
+  enabled: boolean | null;
+  features: any; // JSONB
+  connected_email: string | null;
+  last_sync: string | null;
+}
+
 interface Microsoft365Config {
   client_id: string;
   tenant_id: string;
@@ -101,29 +114,33 @@ export default function Microsoft365Page() {
 
   const loadConfiguration = async (studioId: string) => {
     try {
+      // Uso any per bypassare temporaneamente il check stretto finché i tipi non si aggiornano
       const { data, error } = await supabase
-        .from("microsoft365_config")
+        .from("microsoft365_config" as any) 
         .select("*")
         .eq("studio_id", studioId)
-        .single();
+        .maybeSingle();
 
       if (data) {
+        // Cast esplicito per sicurezza
+        const configData = data as Microsoft365ConfigDB;
+        
         setConfig({
-          client_id: data.client_id || "",
-          tenant_id: data.tenant_id || "",
-          client_secret: data.client_secret || "",
-          enabled: data.enabled || false,
-          features: data.features || {
+          client_id: configData.client_id || "",
+          tenant_id: configData.tenant_id || "",
+          client_secret: configData.client_secret || "",
+          enabled: configData.enabled || false,
+          features: (configData.features as any) || {
             email: false,
             calendar: false,
             contacts: false,
             teams: false
           },
-          connected_email: data.connected_email,
-          last_sync: data.last_sync
+          connected_email: configData.connected_email || undefined,
+          last_sync: configData.last_sync || undefined
         });
         
-        if (data.enabled && data.client_id && data.tenant_id && data.client_secret) {
+        if (configData.enabled && configData.client_id && configData.tenant_id && configData.client_secret) {
           setConnectionStatus("connected");
         } else {
           setConnectionStatus("disconnected");
@@ -148,8 +165,9 @@ export default function Microsoft365Page() {
 
     setSaving(true);
     try {
+      // Uso any per bypassare il check dei tipi finché non sono rigenerati
       const { error } = await supabase
-        .from("microsoft365_config")
+        .from("microsoft365_config" as any)
         .upsert({
           studio_id: studioId,
           client_id: config.client_id,
@@ -158,7 +176,7 @@ export default function Microsoft365Page() {
           enabled: config.enabled,
           features: config.features,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'studio_id' });
 
       if (error) throw error;
 

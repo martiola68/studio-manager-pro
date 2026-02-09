@@ -85,6 +85,56 @@ export type Database = {
           },
         ]
       }
+      microsoft365_config: {
+        Row: {
+          client_id: string | null
+          client_secret: string | null
+          connected_email: string | null
+          created_at: string | null
+          enabled: boolean | null
+          features: Json | null
+          id: string
+          last_sync: string | null
+          studio_id: string
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_secret?: string | null
+          connected_email?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          features?: Json | null
+          id?: string
+          last_sync?: string | null
+          studio_id: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_secret?: string | null
+          connected_email?: string | null
+          created_at?: string | null
+          enabled?: boolean | null
+          features?: Json | null
+          id?: string
+          last_sync?: string | null
+          studio_id?: string
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "microsoft365_config_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: true
+            referencedRelation: "tbstudio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_tokens: {
         Row: {
           attempts: number | null
