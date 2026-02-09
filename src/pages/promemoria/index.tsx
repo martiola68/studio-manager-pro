@@ -39,7 +39,8 @@ import {
   FileText, 
   ImageIcon, 
   File, 
-  X
+  X,
+  MessageSquare
 } from "lucide-react";
 import { promemoriaService, type Promemoria, type Allegato } from "@/services/promemoriaService";
 import { format, addDays } from "date-fns";
@@ -486,7 +487,8 @@ export default function PromemoriaPage() {
       destinatario_id: p.destinatario_id || "",
       destinatari_multipli: [],
       settore: p.settore || "",
-      tipo_promemoria_id: p.tipo_promemoria_id || ""
+      tipo_promemoria_id: p.tipo_promemoria_id || "",
+      invia_teams: false
     });
     setIsEditDialogOpen(true);
   }, []);

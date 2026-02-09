@@ -15,6 +15,7 @@ interface ScadenzaAlert {
   cliente_nome: string;
   urgenza: "critica" | "urgente" | "prossima";
   utente_assegnato?: string;
+  tabella_origine?: string;
 }
 
 interface AlertScadenzeProps {

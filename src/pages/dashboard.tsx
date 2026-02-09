@@ -61,25 +61,31 @@ export default function DashboardPage() {
       }
 
       if (session.user.email) {
-        const { data: utente } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from("tbutenti")
-          .select("id, ruolo, studio_id")
+          .select("id, tipo_utente, studio_id")
           .eq("email", session.user.email)
-          .maybeSingle();
+          .single();
+
+        if (userError || !userData) {
+          console.error("Errore recupero utente:", userError);
+          router.push("/login");
+          return;
+        }
+
+        // Verifica se è Admin o Partner
+        const isPartnerUser = userData.tipo_utente === "Admin";
+        setCurrentUserId(userData.id);
+        setIsPartner(isPartnerUser);
         
-        if (utente) {
-          setCurrentUserId(utente.id);
-          setIsPartner(utente.ruolo === "partner" || utente.ruolo === "admin");
-          
-          // Carica scadenze urgenti
-          if (utente.studio_id) {
-            const alerts = await scadenzaAlertService.getScadenzeInArrivo(
-              utente.id, 
-              utente.ruolo === "partner" || utente.ruolo === "admin", 
-              utente.studio_id
-            );
-            setScadenzeAlert(alerts);
-          }
+        // Carica scadenze urgenti
+        if (userData.studio_id) {
+          const alerts = await scadenzaAlertService.getScadenzeInArrivo(
+            userData.id, 
+            isPartnerUser, 
+            userData.studio_id
+          );
+          setScadenzeAlert(alerts);
         }
       }
 
@@ -145,9 +151,15 @@ export default function DashboardPage() {
   const handleNotifyTeams = async (scadenza: ScadenzaAlert) => {
     if (!currentUserId) return;
     
+    // Cast sicuro per compatibilità tra tipi UI e Service
+    const scadenzaServiceType = {
+      ...scadenza,
+      tabella_origine: scadenza.tabella_origine || ""
+    } as import("@/services/scadenzaAlertService").ScadenzaAlert;
+
     toast({ title: "Invio in corso...", description: "Sto inviando la notifica su Teams." });
     
-    const success = await scadenzaAlertService.sendTeamsAlert(scadenza, currentUserId);
+    const success = await scadenzaAlertService.sendTeamsAlert(scadenzaServiceType, currentUserId);
     
     if (success) {
       toast({ title: "Inviato!", description: "Notifica Teams inviata con successo." });

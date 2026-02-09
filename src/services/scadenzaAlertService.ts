@@ -8,7 +8,7 @@ export interface ScadenzaAlert {
   cliente_nome: string;
   urgenza: "critica" | "urgente" | "prossima";
   utente_assegnato?: string;
-  tabella_origine: string;
+  tabella_origine?: string;
 }
 
 // Mappatura delle colonne di completamento per ogni tabella

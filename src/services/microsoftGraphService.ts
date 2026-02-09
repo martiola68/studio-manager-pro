@@ -62,28 +62,27 @@ interface EmailMessage {
 
 export const microsoftGraphService = {
   async getStoredTokens(userId: string): Promise<MicrosoftTokens | null> {
-    try {
-      // Table not yet in types but casted to any
-      const { data, error } = await supabase
-        .from("tbmicrosoft_tokens" as any)
-        .select("*")
-        .eq("user_id", userId)
-        .single();
+    const { data, error } = await supabase
+      .from("tbmicrosoft_tokens")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-      if (error || !data) return null;
-
-      // Cast data to any to avoid TS errors with dynamic table
-      const tokenData = data as any;
-
-      return {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: new Date(tokenData.expires_at).getTime(),
-      };
-    } catch (error) {
-      console.error("Error getting stored tokens:", error);
+    if (error) {
+      console.error("Errore recupero token:", error);
       return null;
     }
+
+    if (!data) {
+      console.log("Nessun token salvato per l'utente");
+      return null;
+    }
+
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: new Date(data.expires_at).getTime()
+    };
   },
 
   async saveTokens(
