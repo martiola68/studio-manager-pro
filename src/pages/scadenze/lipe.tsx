@@ -259,8 +259,20 @@ export default function Lipe() {
   }
 
   async function handleDateChange(recordId: string, field: string, value: string) {
+    // Logica maschera: accetta solo numeri e formatta come 00/00/0000
+    const numericValue = value.replace(/\D/g, "");
+    const truncatedValue = numericValue.slice(0, 8);
+    
+    let formattedValue = truncatedValue;
+    if (truncatedValue.length >= 3) {
+      formattedValue = `${truncatedValue.slice(0, 2)}/${truncatedValue.slice(2)}`;
+    }
+    if (truncatedValue.length >= 5) {
+      formattedValue = `${formattedValue.slice(0, 5)}/${truncatedValue.slice(4)}`;
+    }
+
     const key = `${recordId}-${field}`;
-    setEditingDates(prev => ({ ...prev, [key]: value }));
+    setEditingDates(prev => ({ ...prev, [key]: formattedValue }));
   }
 
   async function handleDateBlur(recordId: string, field: string, value: string) {
