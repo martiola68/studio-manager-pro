@@ -335,7 +335,7 @@ export default function AgendaPage() {
 
             setPendingEventData(formData);
 
-            // ⚡ NUOVO: Chiudo il form PRIMA di aprire dialog OAuth
+            // ⚡ NUOVO: Chiudo form PRIMA di aprire dialog OAuth
             console.log("📋 Chiudo form Nuovo Evento...");
             setDialogOpen(false);
 
@@ -387,7 +387,7 @@ export default function AgendaPage() {
             setPendingEventData(formData);
 
             // ⚡ NUOVO: Chiudo form prima di aprire OAuth
-            setIsEventDialogOpen(false);
+            setDialogOpen(false);
 
             setTimeout(() => {
               setNeedsMicrosoftAuth(true);
