@@ -1,10 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // ⚡ Supporto HEAD method per preflight checks
   if (req.method === "HEAD") {
     return res.status(200).end();
   }
@@ -14,13 +17,37 @@ export default async function handler(
   }
 
   try {
-    const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
-    const tenantId = process.env.MICROSOFT_TENANT_ID || "common";
+    const userId = req.query.user_id as string;
 
-    if (!clientId || !redirectUri) {
-      return res.status(500).json({ error: "Microsoft 365 not configured" });
+    if (!userId) {
+      return res.status(400).json({ error: "Missing user_id parameter" });
     }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: utente, error: utenteError } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", userId)
+      .single();
+
+    if (utenteError || !utente?.studio_id) {
+      return res.status(404).json({ error: "User or studio not found" });
+    }
+
+    const { data: config, error: configError } = await supabase
+      .from("microsoft365_config")
+      .select("client_id, tenant_id")
+      .eq("studio_id", utente.studio_id)
+      .single();
+
+    if (configError || !config?.client_id || !config?.tenant_id) {
+      return res.status(400).json({ 
+        error: "Microsoft 365 not configured for this studio. Please configure credentials in Settings." 
+      });
+    }
+
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
 
     const scope = [
       "openid",
@@ -36,13 +63,14 @@ export default async function handler(
 
     const state = Buffer.from(
       JSON.stringify({
+        user_id: userId,
+        studio_id: utente.studio_id,
         timestamp: Date.now(),
-        redirect: req.query.redirect || "/impostazioni/microsoft365",
       })
     ).toString("base64");
 
-    const authUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?` +
-      `client_id=${clientId}` +
+    const authUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/authorize?` +
+      `client_id=${config.client_id}` +
       `&response_type=code` +
       `&redirect_uri=${encodeURIComponent(redirectUri)}` +
       `&response_mode=query` +

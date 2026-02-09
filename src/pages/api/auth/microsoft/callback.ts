@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,32 +17,94 @@ export default async function handler(
 
     if (error) {
       console.error("Microsoft OAuth error:", error);
-      return res.redirect("/impostazioni/microsoft365?error=auth_failed");
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: '${error}' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
     }
 
     if (!code || typeof code !== "string") {
-      return res.redirect("/impostazioni/microsoft365?error=no_code");
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'no_code' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
     }
 
-    const clientId = process.env.MICROSOFT_CLIENT_ID;
-    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
-    const tenantId = process.env.MICROSOFT_TENANT_ID || "common";
-
-    if (!clientId || !clientSecret || !redirectUri) {
-      return res.redirect("/impostazioni/microsoft365?error=config_missing");
+    if (!state || typeof state !== "string") {
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'no_state' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
     }
+
+    const stateData = JSON.parse(Buffer.from(state, "base64").toString());
+    const { user_id, studio_id } = stateData;
+
+    if (!user_id || !studio_id) {
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'invalid_state' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: config, error: configError } = await supabase
+      .from("microsoft365_config")
+      .select("client_id, client_secret, tenant_id")
+      .eq("studio_id", studio_id)
+      .single();
+
+    if (configError || !config) {
+      console.error("Config error:", configError);
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'config_not_found' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
+    }
+
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
 
     const tokenResponse = await fetch(
-      `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
+      `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
+          client_id: config.client_id,
+          client_secret: config.client_secret,
           code,
           redirect_uri: redirectUri,
           grant_type: "authorization_code",
@@ -50,24 +115,25 @@ export default async function handler(
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
       console.error("Token exchange error:", errorData);
-      return res.redirect("/impostazioni/microsoft365?error=token_exchange_failed");
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'token_exchange_failed' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
     }
 
     const tokens = await tokenResponse.json();
-
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user?.id) {
-      return res.redirect("/login?error=not_authenticated");
-    }
-
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-    // Table not yet in types but casted to any
     const { error: saveError } = await supabase
       .from("tbmicrosoft_tokens" as any)
       .upsert({
-        user_id: session.user.id,
+        user_id: user_id,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt,
@@ -76,25 +142,39 @@ export default async function handler(
 
     if (saveError) {
       console.error("Error saving tokens:", saveError);
-      return res.redirect("/impostazioni/microsoft365?error=save_failed");
+      return res.send(`
+        <html>
+          <body>
+            <script>
+              window.opener?.postMessage({ type: 'oauth_error', error: 'save_failed' }, '*');
+              window.close();
+            </script>
+          </body>
+        </html>
+      `);
     }
 
-    let redirectUrl = "/impostazioni/microsoft365?success=true";
-    
-    if (state && typeof state === "string") {
-      try {
-        const stateData = JSON.parse(Buffer.from(state, "base64").toString());
-        if (stateData.redirect) {
-          redirectUrl = `${stateData.redirect}?success=true`;
-        }
-      } catch (e) {
-        console.error("Error parsing state:", e);
-      }
-    }
-
-    res.redirect(redirectUrl);
+    return res.send(`
+      <html>
+        <body>
+          <script>
+            window.opener?.postMessage({ type: 'oauth_success' }, '*');
+            window.close();
+          </script>
+        </body>
+      </html>
+    `);
   } catch (error) {
     console.error("Microsoft callback error:", error);
-    res.redirect("/impostazioni/microsoft365?error=unexpected");
+    return res.send(`
+      <html>
+        <body>
+          <script>
+            window.opener?.postMessage({ type: 'oauth_error', error: 'unexpected' }, '*');
+            window.close();
+          </script>
+        </body>
+      </html>
+    `);
   }
 }
