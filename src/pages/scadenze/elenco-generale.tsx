@@ -92,7 +92,7 @@ export default function ElencoGenerale() {
     { label: "IVA", field: "flag_iva" as keyof Cliente },
     { label: "CCGG", field: "flag_ccgg" as keyof Cliente },
     { label: "Esterometro", field: "flag_esterometro" as keyof Cliente },
-    { label: "770", field: "flag_modello_770" as keyof Cliente },
+    { label: "770", field: "flag_770" as keyof Cliente },
     { label: "Fiscali", field: "flag_fiscali" as keyof Cliente },
     { label: "IMU", field: "flag_imu" as keyof Cliente }
   ];
