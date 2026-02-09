@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Building2, Settings, Shield, FileText, ChevronRight, Briefcase, CalendarCog } from "lucide-react";
+import { Users, Building2, Settings, Shield, FileText, ChevronRight, Briefcase, CalendarCog, Cloud } from "lucide-react";
 import Link from "next/link";
 
 export default function ImpostazioniPage() {
@@ -185,6 +185,27 @@ export default function ImpostazioniPage() {
             <CardContent>
               <p className="text-sm text-gray-600">
                 Gestisci le date di scadenza centralizzate e le regole di notifica
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/impostazioni/microsoft365">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <Cloud className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <CardTitle>Microsoft 365</CardTitle>
+                  <CardDescription>Integrazione cloud</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Configura Outlook, Teams, Calendar e Graph API
               </p>
             </CardContent>
           </Card>
