@@ -61,6 +61,39 @@ import {
   migrateAllClientiToEncrypted
 } from "@/services/encryptionService";
 
+interface ClienteFormData {
+  cod_cliente: string;
+  tipo_cliente: string;
+  tipologia_cliente: "Interno" | "Esterno";
+  settore_fiscale: boolean;
+  settore_lavoro: boolean;
+  settore_consulenza: boolean;
+  ragione_sociale: string;
+  partita_iva: string;
+  codice_fiscale: string;
+  indirizzo: string;
+  cap: string;
+  citta: string;
+  provincia: string;
+  email: string;
+  attivo: boolean;
+  cassetto_fiscale_id: string;
+  matricola_inps: string;
+  pat_inail: string;
+  codice_ditta_ce: string;
+  utente_operatore_id: string;
+  utente_professionista_id: string;
+  utente_payroll_id: string;
+  professionista_payroll_id: string;
+  contatto1_id: string;
+  referente_esterno: string;
+  tipo_prestazione_id: string;
+  tipo_redditi?: "USC" | "USP" | "ENC" | "UPF" | "730";
+  note: string;
+  gestione_esterometro: boolean;
+  note_esterometro: string;
+}
+
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
