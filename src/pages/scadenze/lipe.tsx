@@ -422,24 +422,24 @@ export default function Lipe() {
                       <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Feb</TableHead>
                       <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mar</TableHead>
                       <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 1T</TableHead>
-                      <TableHead className="bg-blue-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>Data Invio 1T</TableHead>
+                      <TableHead className="bg-blue-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 1T</TableHead>
                       <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Apr</TableHead>
                       <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mag</TableHead>
                       <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Giu</TableHead>
                       <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 2T</TableHead>
-                      <TableHead className="bg-green-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>Data Invio 2T</TableHead>
+                      <TableHead className="bg-green-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 2T</TableHead>
                       <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lug</TableHead>
                       <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ago</TableHead>
                       <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Set</TableHead>
                       <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 3T</TableHead>
-                      <TableHead className="bg-yellow-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>Data Invio 3T</TableHead>
+                      <TableHead className="bg-yellow-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 3T</TableHead>
                       <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ott</TableHead>
                       <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Nov</TableHead>
                       <TableHead className="bg-orange-50" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Acconto</TableHead>
                       <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Acc. Com</TableHead>
                       <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Dic</TableHead>
                       <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 4T</TableHead>
-                      <TableHead className="bg-orange-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>Data Invio 4T</TableHead>
+                      <TableHead className="bg-orange-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 4T</TableHead>
                       <TableHead className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -511,7 +511,7 @@ export default function Lipe() {
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-blue-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>
+                          <TableCell className="bg-blue-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -546,7 +546,7 @@ export default function Lipe() {
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-green-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>
+                          <TableCell className="bg-green-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -581,7 +581,7 @@ export default function Lipe() {
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-yellow-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>
+                          <TableCell className="bg-yellow-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
@@ -637,7 +637,7 @@ export default function Lipe() {
                               onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
                             />
                           </TableCell>
-                          <TableCell className="bg-orange-50" style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }}>
+                          <TableCell className="bg-orange-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
                             <div className="relative">
                               <Input
                                 type="date"
