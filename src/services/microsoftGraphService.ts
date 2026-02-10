@@ -15,29 +15,60 @@ interface GraphTokenResponse {
  * Ottiene il token valido per l'utente
  * Rinnova automaticamente se scaduto
  */
-async function getValidToken(userId: string): Promise<string> {
-  // Recupera token dal database
-  const { data: tokenData, error } = await supabase
-    .from("tbmicrosoft_tokens")
-    .select("access_token, refresh_token, expires_at")
-    .eq("user_id", userId)
-    .single();
+async function getValidToken(userId: string): Promise<string | null> {
+  try {
+    // Recupera il token dal database
+    const { data: tokenData, error } = await supabase
+      .from("tbmicrosoft_tokens")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-  if (error || !tokenData) {
-    throw new Error("Microsoft 365 non configurato per questo utente");
+    if (error) {
+      console.error("❌ Errore recupero token:", error);
+      return null;
+    }
+
+    if (!tokenData) {
+      console.log("⚠️  Nessun token trovato per utente:", userId);
+      return null;
+    }
+
+    // ✅ VALIDAZIONE AGGIUNTA: Verifica che il token sia una stringa valida
+    if (!tokenData.access_token || typeof tokenData.access_token !== "string" || tokenData.access_token.trim().length === 0) {
+      console.error("❌ Token access_token non valido o vuoto");
+      return null;
+    }
+
+    // ✅ VALIDAZIONE AGGIUNTA: Verifica formato JWT (deve contenere almeno 2 punti)
+    const tokenParts = tokenData.access_token.split(".");
+    if (tokenParts.length !== 3) {
+      console.error("❌ Token non è un JWT valido (formato errato)");
+      return null;
+    }
+
+    const expiresAt = new Date(tokenData.expires_at);
+    const now = new Date();
+
+    // Se il token è ancora valido (con margine di 5 minuti), ritornalo
+    if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
+      return tokenData.access_token;
+    }
+
+    // Token scaduto, prova a rinnovarlo
+    console.log("🔄 Token scaduto, tentativo refresh...");
+    
+    if (!tokenData.refresh_token || typeof tokenData.refresh_token !== "string" || tokenData.refresh_token.trim().length === 0) {
+      console.error("❌ Refresh token non valido o vuoto");
+      return null;
+    }
+
+    const newAccessToken = await refreshToken(userId, tokenData.refresh_token);
+    return newAccessToken;
+  } catch (error) {
+    console.error("❌ Errore in getValidToken:", error);
+    return null;
   }
-
-  const expiresAt = new Date(tokenData.expires_at);
-  const now = new Date();
-
-  // Token ancora valido (con buffer di 5 minuti)
-  if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
-    return tokenData.access_token;
-  }
-
-  // Token scaduto - refresh necessario
-  console.log("🔄 Token scaduto, eseguo refresh...");
-  return await refreshToken(userId, tokenData.refresh_token);
 }
 
 /**
@@ -105,38 +136,38 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
 }
 
 /**
- * Effettua una chiamata a Microsoft Graph API
+ * Esegue una chiamata autenticata a Microsoft Graph API
  */
-async function graphApiCall<T>(
+async function graphApiCall<T = any>(
   userId: string,
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const token = await getValidToken(userId);
 
+  if (!token) {
+    console.error("❌ Impossibile ottenere token valido per chiamata Graph API");
+    throw new Error("Microsoft 365 non configurato o token non valido. Configura l'integrazione in Impostazioni → Microsoft 365");
+  }
+
   const url = `https://graph.microsoft.com/v1.0${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
       ...options.headers,
-    },
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`❌ Graph API error (${endpoint}):`, errorText);
-    throw new Error(`Graph API error: ${response.status} - ${errorText}`);
+    console.error(`❌ Graph API Error (${response.status}):`, errorText);
+    throw new Error(`Microsoft Graph API error: ${errorText}`);
   }
 
-  // Handle 204 No Content
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  return await response.json();
+  return response.json();
 }
 
 /**

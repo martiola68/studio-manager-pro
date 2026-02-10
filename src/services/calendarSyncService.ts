@@ -1,4 +1,4 @@
-import { graphApiCall } from "./microsoftGraphService";
+import { graphApiCall, hasMicrosoft365 } from "./microsoftGraphService";
 import { supabase } from "@/lib/supabase/client";
 
 /**
@@ -259,24 +259,59 @@ async function deleteOutlookEvent(
 /**
  * Sincronizza un singolo evento verso Outlook
  */
-async function syncEventToOutlook(userId: string, eventId: string): Promise<void> {
+async function syncEventToOutlook(userId: string, eventoId: string): Promise<boolean> {
   try {
-    const { data: event } = await supabase
+    // Verifica se l'utente ha Microsoft 365 configurato
+    const hasMicrosoft = await hasMicrosoft365(userId);
+    if (!hasMicrosoft) {
+      console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
+      return false;
+    }
+
+    // Recupera l'evento dal database
+    const { data: evento, error } = await supabase
       .from("tbagenda")
       .select("*")
-      .eq("id", eventId)
+      .eq("id", eventoId)
       .single();
 
-    if (!event) return;
-
-    if (event.microsoft_event_id) {
-      await updateOutlookEvent(userId, event.microsoft_event_id, event as AppEvent);
-    } else {
-      await createOutlookEvent(userId, event as AppEvent);
+    if (error || !evento) {
+      console.error("Evento non trovato:", error);
+      return false;
     }
-  } catch (error) {
-    console.error("Error syncing event to Outlook:", error);
-    // Non propaghiamo l'errore per non bloccare l'UI
+
+    // Mappa l'evento del DB all'interfaccia AppEvent
+    const appEvent: AppEvent = {
+      id: evento.id,
+      titolo: evento.titolo || "",
+      data_inizio: evento.data_inizio || new Date().toISOString(),
+      data_fine: evento.data_fine || new Date().toISOString(),
+      descrizione: evento.descrizione || undefined,
+      luogo: evento.luogo || undefined,
+      cliente_id: evento.cliente_id || undefined,
+      utente_id: evento.utente_id,
+      microsoft_event_id: evento.microsoft_event_id || undefined,
+      tutto_giorno: evento.tutto_giorno || false
+    };
+
+    // Se l'evento ha già un microsoft_event_id, aggiornalo
+    if (evento.microsoft_event_id) {
+      await updateOutlookEvent(userId, evento.microsoft_event_id, appEvent);
+      return true;
+    }
+
+    // Altrimenti, crealo
+    await createOutlookEvent(userId, appEvent);
+    return true;
+
+  } catch (error: any) {
+    // ✅ Gestione errori migliorata
+    if (error.message?.includes("Microsoft 365 non configurato")) {
+      console.log("ℹ️  Sincronizzazione Outlook saltata: Microsoft 365 non configurato");
+      return false;
+    }
+    console.error("Errore sincronizzazione evento:", error);
+    return false;
   }
 }
 
