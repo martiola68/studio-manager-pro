@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { messaggioService } from "./messaggioService";
+import { teamsNotificationService } from "./teamsNotificationService";
 
 export type Promemoria = Database["public"]["Tables"]["tbpromemoria"]["Row"];
 
@@ -272,6 +273,36 @@ export const promemoriaService = {
     if (error) {
       console.error("Errore creazione promemoria:", error);
       throw error;
+    }
+
+    // NUOVO: Invia notifica Teams al destinatario (se configurato)
+    if (data && nuovoPromemoria.destinatario_id) {
+      try {
+        // Recupera info operatore e destinatario per notifica
+        const { data: operatoreData } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome")
+          .eq("id", nuovoPromemoria.operatore_id)
+          .single();
+
+        const { data: destinatarioData } = await supabase
+          .from("tbutenti")
+          .select("nome, cognome")
+          .eq("id", nuovoPromemoria.destinatario_id)
+          .single();
+
+        if (operatoreData && destinatarioData) {
+          await teamsNotificationService.sendPromemoriaNotification({
+            id: data.id,
+            titolo: nuovoPromemoria.titolo,
+            mittente: `${operatoreData.nome} ${operatoreData.cognome}`,
+            destinatario: `${destinatarioData.nome} ${destinatarioData.cognome}`,
+          });
+        }
+      } catch (teamsError) {
+        // Non blocchiamo l'operazione se la notifica Teams fallisce
+        console.log("Teams notification skipped:", teamsError);
+      }
     }
 
     return data;

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { teamsNotificationService } from "./teamsNotificationService";
 
 export interface ScadenzaAlert {
   id: string;
@@ -277,6 +278,31 @@ export const scadenzaAlertService = {
       return "urgente";
     } else {
       return "prossima";
+    }
+  },
+
+  /**
+   * Invia notifica Teams per una scadenza urgente/critica
+   */
+  async sendTeamsAlertForScadenza(scadenza: ScadenzaAlert): Promise<boolean> {
+    try {
+      // Solo scadenze urgenti/critiche
+      if (scadenza.urgenza !== "critica" && scadenza.urgenza !== "urgente") {
+        return false;
+      }
+
+      await teamsNotificationService.sendScadenzaAlert({
+        id: scadenza.id,
+        tipo: scadenza.tipo,
+        cliente: scadenza.cliente_nome,
+        dataScadenza: scadenza.data_scadenza,
+        responsabile: scadenza.utente_assegnato || "Non assegnato",
+      });
+
+      return true;
+    } catch (error) {
+      console.log("Teams alert skipped:", error);
+      return false;
     }
   },
 

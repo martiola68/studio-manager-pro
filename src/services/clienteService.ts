@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { teamsNotificationService } from "./teamsNotificationService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
@@ -38,6 +39,36 @@ export const clienteService = {
       .single();
 
     if (error) throw error;
+
+    // NUOVO: Invia notifica Teams per nuovo cliente (se configurato)
+    if (data) {
+      try {
+        // Recupera nome responsabile se presente
+        let responsabileNome = "Non assegnato";
+        if (data.utente_operatore_id) {
+          const { data: userData } = await supabase
+            .from("tbutenti")
+            .select("nome, cognome")
+            .eq("id", data.utente_operatore_id)
+            .single();
+
+          if (userData) {
+            responsabileNome = `${userData.nome} ${userData.cognome}`;
+          }
+        }
+
+        await teamsNotificationService.sendNuovoClienteNotification({
+          id: data.id,
+          ragioneSociale: data.ragione_sociale || "Cliente",
+          partitaIva: data.partita_iva || undefined,
+          responsabile: responsabileNome,
+        });
+      } catch (teamsError) {
+        // Non blocchiamo l'operazione se la notifica Teams fallisce
+        console.log("Teams notification skipped:", teamsError);
+      }
+    }
+
     return data;
   },
 
