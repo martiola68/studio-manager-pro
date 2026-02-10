@@ -137,6 +137,14 @@ async function sendTeamsNotification(
       return { success: false, error: "Canale Teams non configurato" };
     }
 
+    // Determina quale team usare
+    const teamId = config.defaultTeamId;
+
+    if (!teamId) {
+      console.warn("Nessun team Teams configurato");
+      return { success: false, error: "Team Teams non configurato" };
+    }
+
     // Formatta messaggio
     const formattedMessage = formatTeamsMessage(
       title,
@@ -148,11 +156,9 @@ async function sendTeamsNotification(
     // Invia messaggio su canale Teams
     const result = await microsoftGraphService.sendChannelMessage(
       userId,
+      teamId,
       channelId,
-      {
-        content: formattedMessage,
-        contentType: "html",
-      }
+      formattedMessage
     );
 
     if (!result.success) {
