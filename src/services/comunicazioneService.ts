@@ -41,34 +41,33 @@ export const comunicazioneService = {
   },
   
   async createComunicazione(comunicazione: ComunicazioneInsert): Promise<Comunicazione | null> {
-    const { data, error } = await supabase
-      .from("tbcomunicazioni")
-      .insert(comunicazione)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("tbcomunicazioni")
+        .insert(comunicazione)
+        .select()
+        .single();
 
-    if (error) {
+      if (error) {
+        console.error("Error creating comunicazione:", error);
+        throw error;
+      }
+
+      // Notifica Teams
+      try {
+        await teamsNotificationService.sendComunicazioneNotification(
+          comunicazione.oggetto,
+          "Cliente" // O nome del destinatario se disponibile
+        );
+      } catch (e) {
+        console.error("Errore notifica Teams:", e);
+      }
+
+      return data;
+    } catch (error: any) {
       console.error("Error creating comunicazione:", error);
       throw error;
     }
-
-    // NUOVO: Invia notifica Teams (se configurato)
-    if (data) {
-      try {
-        // Usa valori generici visto che la tabella non memorizza mittente/destinatari
-        await teamsNotificationService.sendComunicazioneNotification({
-          id: data.id,
-          oggetto: data.oggetto || "Nuova comunicazione",
-          mittente: "Sistema",
-          destinatari: [`${data.destinatari_count || 0} destinatari`],
-        });
-      } catch (teamsError) {
-        // Non blocchiamo l'operazione se la notifica Teams fallisce
-        console.log("Teams notification skipped:", teamsError);
-      }
-    }
-
-    return data;
   },
 
   async updateComunicazione(id: string, updates: ComunicazioneUpdate): Promise<Comunicazione | null> {

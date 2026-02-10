@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -96,6 +96,10 @@ export type Database = {
           id: string
           last_sync: string | null
           studio_id: string
+          teams_alert_channel_id: string | null
+          teams_default_channel_id: string | null
+          teams_default_team_id: string | null
+          teams_scadenze_channel_id: string | null
           tenant_id: string | null
           updated_at: string | null
         }
@@ -109,6 +113,10 @@ export type Database = {
           id?: string
           last_sync?: string | null
           studio_id: string
+          teams_alert_channel_id?: string | null
+          teams_default_channel_id?: string | null
+          teams_default_team_id?: string | null
+          teams_scadenze_channel_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
@@ -122,6 +130,10 @@ export type Database = {
           id?: string
           last_sync?: string | null
           studio_id?: string
+          teams_alert_channel_id?: string | null
+          teams_default_channel_id?: string | null
+          teams_default_team_id?: string | null
+          teams_scadenze_channel_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
@@ -943,6 +955,41 @@ export type Database = {
             columns: ["messaggio_id"]
             isOneToOne: false
             referencedRelation: "tbmessaggi"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbmicrosoft_calendar_mappings: {
+        Row: {
+          created_at: string | null
+          evento_id: string
+          id: string
+          last_synced: string | null
+          outlook_event_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          evento_id: string
+          id?: string
+          last_synced?: string | null
+          outlook_event_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          evento_id?: string
+          id?: string
+          last_synced?: string | null
+          outlook_event_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbmicrosoft_calendar_mappings_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: true
+            referencedRelation: "tbagenda"
             referencedColumns: ["id"]
           },
         ]

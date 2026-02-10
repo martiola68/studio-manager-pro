@@ -33,7 +33,10 @@ export const calendarSyncService = {
         .eq("studio_id", utente.studio_id)
         .single();
 
-      return config?.enabled && config?.features?.calendar;
+      if (!config?.enabled) return false;
+      
+      const features = config.features as Record<string, boolean> | null;
+      return features?.calendar === true;
     } catch {
       return false;
     }
@@ -100,7 +103,7 @@ export const calendarSyncService = {
 
       // 2. Ottieni evento locale
       const { data: evento, error: eventoError } = await supabase
-        .from("tbeventi")
+        .from("tbagenda")
         .select("*")
         .eq("id", eventoId)
         .single();
@@ -261,7 +264,7 @@ export const calendarSyncService = {
         const localEvent = this.convertFromOutlookEvent(outlookEvent);
 
         const { data: nuovoEvento, error: insertError } = await supabase
-          .from("tbeventi")
+          .from("tbagenda")
           .insert({
             ...localEvent,
             utente_id: userId,
@@ -316,7 +319,7 @@ export const calendarSyncService = {
 
       // 1. Sincronizza eventi locali verso Outlook
       const { data: eventiLocali } = await supabase
-        .from("tbeventi")
+        .from("tbagenda")
         .select("id")
         .eq("utente_id", userId)
         .gte("data_inizio", new Date().toISOString()); // Solo eventi futuri

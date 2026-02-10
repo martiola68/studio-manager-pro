@@ -4,7 +4,7 @@ import { teamsNotificationService } from "./teamsNotificationService";
 export interface ScadenzaAlert {
   id: string;
   tipo: string;
-  descrizione: string;
+  descrizione: string; // La proprietà corretta è descrizione
   data_scadenza: string;
   cliente_nome: string;
   urgenza: "critica" | "urgente" | "prossima";
@@ -291,13 +291,10 @@ export const scadenzaAlertService = {
         return false;
       }
 
-      await teamsNotificationService.sendScadenzaAlert({
-        id: scadenza.id,
-        tipo: scadenza.tipo,
-        cliente: scadenza.cliente_nome,
-        dataScadenza: scadenza.data_scadenza,
-        responsabile: scadenza.utente_assegnato || "Non assegnato",
-      });
+      await teamsNotificationService.sendScadenzaAlert(
+        scadenza.descrizione || "Scadenza", // Usa descrizione invece di titolo
+        scadenza.data_scadenza
+      );
 
       return true;
     } catch (error) {

@@ -579,13 +579,15 @@ export default function Microsoft365Page() {
     try {
       const { teamsNotificationService } = await import("@/services/teamsNotificationService");
       
-      const result = await teamsNotificationService.sendTeamsNotification(
-        "🧪 Test Notifica",
-        "Questo è un messaggio di test inviato da Studio Manager Pro. Se vedi questo messaggio, l'integrazione Teams funziona correttamente! ✅",
-        {
-          type: "success",
-          channelId: selectedChannelId
-        }
+      if (!currentUserId) {
+        throw new Error("Utente non identificato");
+      }
+
+      const result = await teamsNotificationService.notify(
+        currentUserId,
+        "Test Notifica", 
+        "Questa è una notifica di test inviata da Studio Manager Pro.",
+        "alert"
       );
 
       if (result.success) {

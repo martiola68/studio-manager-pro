@@ -411,7 +411,7 @@ export default function AgendaPage() {
         
         // NUOVO: Sincronizza con Outlook Calendar
         try {
-          await calendarSyncService.updateEventInOutlook(editingEventoId);
+          await calendarSyncService.syncEventToOutlook(formData.utente_id, editingEventoId);
         } catch (syncError) {
           console.error("Errore sincronizzazione Outlook:", syncError);
           // Non blocchiamo l'operazione se la sync fallisce
@@ -482,7 +482,7 @@ export default function AgendaPage() {
           // NUOVO: Sincronizza tutti gli eventi ricorrenti con Outlook
           try {
             for (const occurrence of data) {
-              await calendarSyncService.syncEventToOutlook(occurrence.id);
+              await calendarSyncService.syncEventToOutlook(formData.utente_id, occurrence.id);
             }
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook eventi ricorrenti:", syncError);
@@ -503,7 +503,7 @@ export default function AgendaPage() {
           
           // NUOVO: Sincronizza con Outlook Calendar
           try {
-            await calendarSyncService.syncEventToOutlook(data.id);
+            await calendarSyncService.syncEventToOutlook(formData.utente_id, data.id);
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook:", syncError);
             // Non blocchiamo l'operazione se la sync fallisce
@@ -547,11 +547,13 @@ export default function AgendaPage() {
     if (!eventoToDelete) return;
     try {
       // NUOVO: Cancella da Outlook prima di cancellare dal database
-      try {
-        await calendarSyncService.deleteEventFromOutlook(eventoToDelete);
-      } catch (syncError) {
-        console.error("Errore cancellazione Outlook:", syncError);
-        // Continuiamo comunque con la cancellazione locale
+      if (currentUserId) {
+        try {
+          await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
+        } catch (syncError) {
+          console.error("Errore cancellazione Outlook:", syncError);
+          // Continuiamo comunque con la cancellazione locale
+        }
       }
       
       const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
