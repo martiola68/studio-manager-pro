@@ -153,6 +153,24 @@ export default async function handler(
       expires_in: tokens.expires_in
     });
 
+    // Decodifica e logga i dettagli del token per debug
+    if (tokens.access_token) {
+      try {
+        const decodedToken = jwt.decode(tokens.access_token) as any;
+        console.log("🔍 DECODED ACCESS TOKEN:");
+        console.log("   - AUD (Audience):", decodedToken?.aud); // Deve essere https://graph.microsoft.com
+        console.log("   - SCP (Scopes):", decodedToken?.scp);   // Deve contenere Team.ReadBasic.All
+        console.log("   - ISS (Issuer):", decodedToken?.iss);
+        console.log("   - EXP (Expires):", new Date((decodedToken?.exp || 0) * 1000).toISOString());
+        
+        if (decodedToken?.aud !== "https://graph.microsoft.com" && decodedToken?.aud !== "00000003-0000-0000-c000-000000000000") {
+          console.error("⚠️ ATTENZIONE: L'audience del token non è Graph API! Potrebbe essere un ID Token scambiato per Access Token.");
+        }
+      } catch (e) {
+        console.error("❌ Errore decodifica token per debug:", e);
+      }
+    }
+
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
     console.log("💾 Salvataggio token nel database...");
