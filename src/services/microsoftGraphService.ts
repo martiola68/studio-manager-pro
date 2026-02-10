@@ -79,7 +79,7 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
     .from("microsoft365_config" as any)
     .select("client_id, client_secret, tenant_id")
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const config = configData as any;
 
@@ -178,7 +178,7 @@ async function hasMicrosoft365(userId: string): Promise<boolean> {
     .from("tbmicrosoft_tokens")
     .select("user_id")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   return !error && !!data;
 }

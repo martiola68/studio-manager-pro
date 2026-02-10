@@ -90,17 +90,21 @@ export default async function handler(
     console.log("💾 [Microsoft Callback] User ID:", userId);
     console.log("💾 [Microsoft Callback] Expires at:", expiresAt.toISOString());
 
-    // Salva o aggiorna token nel database
+    // Prima elimina eventuali token esistenti per questo utente
+    await supabase
+      .from("tbmicrosoft_tokens")
+      .delete()
+      .eq("user_id", userId);
+
+    // Poi inserisci il nuovo token
     const { error: upsertError } = await supabase
       .from("tbmicrosoft_tokens")
-      .upsert({
+      .insert({
         user_id: userId,
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString(),
-      }, {
-        onConflict: "user_id"
       });
 
     if (upsertError) {

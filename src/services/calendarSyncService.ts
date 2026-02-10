@@ -289,7 +289,7 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
       descrizione: evento.descrizione || undefined,
       luogo: evento.luogo || undefined,
       cliente_id: evento.cliente_id || undefined,
-      utente_id: evento.utente_id,
+      utente_id: evento.utente_id || userId, // Fallback a userId parametro se null
       microsoft_event_id: evento.microsoft_event_id || undefined,
       tutto_giorno: evento.tutto_giorno || false
     };
