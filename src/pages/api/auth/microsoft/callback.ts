@@ -1,10 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
-import jwt from "jsonwebtoken";
+import { supabase } from "@/lib/supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
+/**
+ * Callback endpoint per OAuth Microsoft
+ * GET /api/auth/microsoft/callback?code=xxx&state=user_id
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -14,18 +14,18 @@ export default async function handler(
   }
 
   try {
-    console.log("🔄 Microsoft Callback ricevuto");
-    
-    const { code, state, error } = req.query;
+    const { code, state, error: oauthError } = req.query;
 
-    if (error) {
-      console.error("❌ Errore OAuth Microsoft:", error);
+    // Gestione errori OAuth
+    if (oauthError) {
+      console.error("❌ OAuth error:", oauthError);
       return res.send(`
         <html>
           <body>
+            <h2>❌ Errore Autenticazione</h2>
+            <p>${oauthError}</p>
             <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: '${error}' }, '*');
-              window.close();
+              setTimeout(() => window.close(), 3000);
             </script>
           </body>
         </html>
@@ -33,196 +33,183 @@ export default async function handler(
     }
 
     if (!code || typeof code !== "string") {
-      console.error("❌ Code mancante nel callback");
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'no_code' }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
+      return res.status(400).json({ error: "Authorization code is required" });
     }
 
     if (!state || typeof state !== "string") {
-      console.error("❌ State mancante nel callback");
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'no_state' }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
+      return res.status(400).json({ error: "User ID (state) is required" });
     }
 
-    console.log("✅ Code ricevuto (length):", code.length);
-    console.log("🔐 State ricevuto, decodifico...");
+    const userId = state;
 
-    const stateData = JSON.parse(Buffer.from(state, "base64").toString());
-    const { user_id, studio_id } = stateData;
+    // Credenziali Microsoft
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+    const tenantId = process.env.MICROSOFT_TENANT_ID;
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI;
 
-    console.log("📋 State decodificato:", { user_id, studio_id });
-
-    if (!user_id || !studio_id) {
-      console.error("❌ State invalido - user_id o studio_id mancante");
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'invalid_state' }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
+    if (!clientId || !clientSecret || !tenantId || !redirectUri) {
+      throw new Error("Microsoft 365 configuration missing");
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log("🔐 [Microsoft Callback] Exchanging code for token...");
+    console.log("🔐 [Microsoft Callback] User ID:", userId);
 
-    console.log("🔍 Recupero configurazione Microsoft per studio:", studio_id);
-
-    const { data: config, error: configError } = await supabase
-      .from("microsoft365_config")
-      .select("client_id, client_secret, tenant_id")
-      .eq("studio_id", studio_id)
-      .single();
-
-    if (configError || !config) {
-      console.error("❌ Configurazione non trovata:", configError);
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'config_not_found' }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
-    }
-
-    console.log("✅ Configurazione trovata, scambio code per token...");
-
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
-
-    console.log("🔗 Redirect URI per token:", redirectUri);
-    console.log("🔑 Richiesta token a Microsoft...");
+    // Scambia authorization code per access token
+    const tokenParams = new URLSearchParams();
+    tokenParams.append("client_id", clientId);
+    tokenParams.append("client_secret", clientSecret);
+    tokenParams.append("code", code);
+    tokenParams.append("redirect_uri", redirectUri);
+    tokenParams.append("grant_type", "authorization_code");
 
     const tokenResponse = await fetch(
-      `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`,
+      `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          client_id: config.client_id,
-          client_secret: config.client_secret,
-          code,
-          redirect_uri: redirectUri,
-          grant_type: "authorization_code",
-        }),
+        body: tokenParams,
       }
     );
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
-      console.error("❌ Errore scambio token:", errorData);
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'token_exchange_failed', details: ${JSON.stringify(errorData)} }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
+      const errorText = await tokenResponse.text();
+      console.error("❌ Token exchange failed:", errorText);
+      throw new Error(`Token exchange failed: ${tokenResponse.status}`);
     }
 
-    const tokens = await tokenResponse.json();
-    console.log("✅ Token ricevuti da Microsoft");
-    console.log("📊 Token info:", {
-      has_access_token: !!tokens.access_token,
-      has_refresh_token: !!tokens.refresh_token,
-      expires_in: tokens.expires_in
-    });
+    const tokenData = await tokenResponse.json();
+    console.log("✅ [Microsoft Callback] Token received");
 
-    // Decodifica e logga i dettagli del token per debug
-    if (tokens.access_token) {
-      try {
-        const decodedToken = jwt.decode(tokens.access_token) as any;
-        console.log("🔍 DECODED ACCESS TOKEN:");
-        console.log("   - AUD (Audience):", decodedToken?.aud); // Deve essere https://graph.microsoft.com
-        console.log("   - SCP (Scopes):", decodedToken?.scp);   // Deve contenere Team.ReadBasic.All
-        console.log("   - ISS (Issuer):", decodedToken?.iss);
-        console.log("   - EXP (Expires):", new Date((decodedToken?.exp || 0) * 1000).toISOString());
-        
-        if (decodedToken?.aud !== "https://graph.microsoft.com" && decodedToken?.aud !== "00000003-0000-0000-c000-000000000000") {
-          console.error("⚠️ ATTENZIONE: L'audience del token non è Graph API! Potrebbe essere un ID Token scambiato per Access Token.");
-        }
-      } catch (e) {
-        console.error("❌ Errore decodifica token per debug:", e);
-      }
-    }
+    // Calcola scadenza token (expires_in è in secondi)
+    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
-    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+    console.log("💾 [Microsoft Callback] Saving token to database...");
+    console.log("💾 [Microsoft Callback] User ID:", userId);
+    console.log("💾 [Microsoft Callback] Expires at:", expiresAt.toISOString());
 
-    console.log("💾 Salvataggio token nel database...");
-    console.log("📋 User ID:", user_id);
-    console.log("⏰ Scadenza:", expiresAt);
-
-    const { error: saveError } = await supabase
-      .from("tbmicrosoft_tokens" as any)
+    // Salva o aggiorna token nel database
+    const { error: upsertError } = await supabase
+      .from("tbmicrosoft_tokens")
       .upsert({
-        user_id: user_id,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: expiresAt,
+        user_id: userId,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: "user_id"
       });
 
-    if (saveError) {
-      console.error("❌ Errore salvataggio token:", saveError);
-      return res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'save_failed', details: ${JSON.stringify(saveError)} }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
+    if (upsertError) {
+      console.error("❌ Database error:", upsertError);
+      throw new Error(`Database error: ${upsertError.message}`);
     }
 
-    console.log("✅ Token salvati con successo!");
-    console.log("🎉 OAuth completato - chiudo popup");
+    console.log("✅ [Microsoft Callback] Token saved successfully");
 
-    return res.send(`
+    // Pagina di successo con auto-close
+    res.send(`
       <html>
+        <head>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .container {
+              background: white;
+              padding: 2rem;
+              border-radius: 1rem;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+              text-align: center;
+              max-width: 400px;
+            }
+            .icon {
+              font-size: 4rem;
+              margin-bottom: 1rem;
+            }
+            h2 {
+              color: #10b981;
+              margin: 0 0 1rem 0;
+            }
+            p {
+              color: #6b7280;
+              margin: 0;
+            }
+          </style>
+        </head>
         <body>
+          <div class="container">
+            <div class="icon">✅</div>
+            <h2>Account Connesso!</h2>
+            <p>Microsoft 365 è stato collegato con successo.</p>
+            <p style="margin-top: 1rem; font-size: 0.875rem;">Questa finestra si chiuderà automaticamente...</p>
+          </div>
           <script>
-            console.log('✅ OAuth Microsoft completato con successo!');
-            window.opener?.postMessage({ type: 'oauth_success' }, '*');
-            setTimeout(() => window.close(), 500);
+            setTimeout(() => {
+              window.close();
+            }, 2000);
           </script>
         </body>
       </html>
     `);
   } catch (error: any) {
-    console.error("❌ Errore callback Microsoft:", error);
-    return res.send(`
+    console.error("❌ Callback error:", error);
+    
+    res.send(`
       <html>
+        <head>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+            }
+            .container {
+              background: white;
+              padding: 2rem;
+              border-radius: 1rem;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+              text-align: center;
+              max-width: 400px;
+            }
+            .icon {
+              font-size: 4rem;
+              margin-bottom: 1rem;
+            }
+            h2 {
+              color: #dc2626;
+              margin: 0 0 1rem 0;
+            }
+            p {
+              color: #6b7280;
+              margin: 0.5rem 0;
+            }
+          </style>
+        </head>
         <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h2>Errore Connessione</h2>
+            <p>${error.message || "Si è verificato un errore"}</p>
+            <p style="margin-top: 1rem; font-size: 0.875rem;">Questa finestra si chiuderà automaticamente...</p>
+          </div>
           <script>
-            window.opener?.postMessage({ type: 'oauth_error', error: 'unexpected', details: '${error.message}' }, '*');
-            window.close();
+            setTimeout(() => {
+              window.close();
+            }, 5000);
           </script>
         </body>
       </html>

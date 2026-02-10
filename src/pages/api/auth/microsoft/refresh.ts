@@ -1,5 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { supabase } from "@/lib/supabase/client";
 
+/**
+ * Endpoint per refreshare manualmente un token Microsoft
+ * POST /api/auth/microsoft/refresh
+ * Body: { user_id: string }
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -9,51 +15,81 @@ export default async function handler(
   }
 
   try {
-    const { refresh_token } = req.body;
+    const { user_id } = req.body;
 
-    if (!refresh_token) {
-      return res.status(400).json({ error: "Refresh token required" });
+    if (!user_id) {
+      return res.status(400).json({ error: "user_id is required" });
     }
 
+    // Ottieni token corrente
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("tbmicrosoft_tokens")
+      .select("*")
+      .eq("user_id", user_id)
+      .single();
+
+    if (tokenError || !tokenData) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+
+    // Credenziali Microsoft
     const clientId = process.env.MICROSOFT_CLIENT_ID;
     const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-    const tenantId = process.env.MICROSOFT_TENANT_ID || "common";
+    const tenantId = process.env.MICROSOFT_TENANT_ID;
 
-    if (!clientId || !clientSecret) {
-      return res.status(500).json({ error: "Microsoft 365 not configured" });
+    if (!clientId || !clientSecret || !tenantId) {
+      throw new Error("Microsoft 365 configuration missing");
     }
 
-    const tokenResponse = await fetch(
+    // Refresh token
+    const params = new URLSearchParams();
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
+    params.append("refresh_token", tokenData.refresh_token);
+    params.append("grant_type", "refresh_token");
+
+    const response = await fetch(
       `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token,
-          grant_type: "refresh_token",
-        }),
+        body: params,
       }
     );
 
-    if (!tokenResponse.ok) {
-      const error = await tokenResponse.json();
-      console.error("Token refresh error:", error);
-      return res.status(401).json({ error: "Failed to refresh token" });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Token refresh failed:", errorText);
+      throw new Error("Token refresh failed");
     }
 
-    const tokens = await tokenResponse.json();
+    const data = await response.json();
+
+    // Aggiorna token nel database
+    const expiresAt = new Date(Date.now() + data.expires_in * 1000);
+
+    const { error: updateError } = await supabase
+      .from("tbmicrosoft_tokens")
+      .update({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || tokenData.refresh_token,
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", tokenData.id);
+
+    if (updateError) {
+      throw new Error(`Database update error: ${updateError.message}`);
+    }
 
     res.status(200).json({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token || refresh_token,
-      expires_in: tokens.expires_in,
+      success: true,
+      message: "Token refreshed successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Refresh token error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 }
