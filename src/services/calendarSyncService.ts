@@ -14,7 +14,7 @@ interface EventoAgenda {
   data_inizio: string;
   data_fine: string;
   cliente_id?: string | null;
-  utente_id: string;
+  utente_id: string | null;
   luogo?: string | null;
   microsoft_event_id?: string | null;
   outlook_synced?: boolean | null;

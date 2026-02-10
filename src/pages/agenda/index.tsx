@@ -33,6 +33,7 @@ import {
 import type { Database } from "@/integrations/supabase/types";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
+import { calendarSyncService } from "@/services/calendarSyncService";
 import {
   Tooltip,
   TooltipContent,
@@ -408,6 +409,14 @@ export default function AgendaPage() {
         const { eventoService } = await import("@/services/eventoService");
         await eventoService.sendEventNotification(data);
         
+        // NUOVO: Sincronizza con Outlook Calendar
+        try {
+          await calendarSyncService.updateEventInOutlook(editingEventoId);
+        } catch (syncError) {
+          console.error("Errore sincronizzazione Outlook:", syncError);
+          // Non blocchiamo l'operazione se la sync fallisce
+        }
+        
         // NUOVO: Invia notifica Teams ai partecipanti
         if (formData.riunione_teams && teamsLink) {
           try {
@@ -470,6 +479,16 @@ export default function AgendaPage() {
             await eventoService.sendEventNotification(occurrence);
           }
           
+          // NUOVO: Sincronizza tutti gli eventi ricorrenti con Outlook
+          try {
+            for (const occurrence of data) {
+              await calendarSyncService.syncEventToOutlook(occurrence.id);
+            }
+          } catch (syncError) {
+            console.error("Errore sincronizzazione Outlook eventi ricorrenti:", syncError);
+            // Non blocchiamo l'operazione se la sync fallisce
+          }
+          
           toast({ 
             title: "Successo", 
             description: `${occurrences.length} eventi ricorrenti creati` 
@@ -481,6 +500,14 @@ export default function AgendaPage() {
           
           const { eventoService } = await import("@/services/eventoService");
           await eventoService.sendEventNotification(data);
+          
+          // NUOVO: Sincronizza con Outlook Calendar
+          try {
+            await calendarSyncService.syncEventToOutlook(data.id);
+          } catch (syncError) {
+            console.error("Errore sincronizzazione Outlook:", syncError);
+            // Non blocchiamo l'operazione se la sync fallisce
+          }
           
           // NUOVO: Invia notifica Teams ai partecipanti
           if (formData.riunione_teams && teamsLink) {
@@ -519,6 +546,14 @@ export default function AgendaPage() {
   const handleDeleteEvento = async () => {
     if (!eventoToDelete) return;
     try {
+      // NUOVO: Cancella da Outlook prima di cancellare dal database
+      try {
+        await calendarSyncService.deleteEventFromOutlook(eventoToDelete);
+      } catch (syncError) {
+        console.error("Errore cancellazione Outlook:", syncError);
+        // Continuiamo comunque con la cancellazione locale
+      }
+      
       const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
       if (error) throw error;
       setEventi(prevEventi => prevEventi.filter(e => e.id !== eventoToDelete));
