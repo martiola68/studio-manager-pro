@@ -2,9 +2,28 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
 
 /**
- * API per salvare configurazione Teams (team/canali selezionati)
+ * API: Save Teams Configuration
+ * 
+ * Saves Teams channel IDs for notifications.
+ * 
  * POST /api/microsoft365/save-teams-config
+ * Body: {
+ *   studioId: string,
+ *   teamId?: string,
+ *   defaultChannelId?: string,
+ *   alertChannelId?: string,
+ *   scadenzeChannelId?: string
+ * }
  */
+
+interface SaveTeamsConfigRequest {
+  studioId: string;
+  teamId?: string;
+  defaultChannelId?: string;
+  alertChannelId?: string;
+  scadenzeChannelId?: string;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -14,117 +33,57 @@ export default async function handler(
   }
 
   try {
-    // 1. Verifica autenticazione
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Non autenticato" });
+    const {
+      studioId,
+      teamId,
+      defaultChannelId,
+      alertChannelId,
+      scadenzeChannelId,
+    } = req.body as SaveTeamsConfigRequest;
+
+    if (!studioId) {
+      return res.status(400).json({ error: "Missing studioId" });
     }
 
-    const token = authHeader.substring(7);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    console.log("[Teams Config] Saving Teams configuration for studio:", studioId);
 
-    if (authError || !user || !user.email) {
-      return res.status(401).json({ error: "Token non valido" });
-    }
-
-    // 2. Verifica permessi Admin
-    const { data: userData, error: userError } = await supabase
-      .from("tbutenti")
-      .select("tipo_utente, studio_id")
-      .eq("email", user.email)
-      .single();
-
-    if (userError || !userData) {
-      return res.status(404).json({ error: "Utente non trovato" });
-    }
-
-    // Type guard: verifica che studio_id sia una stringa
-    if (!userData.studio_id || typeof userData.studio_id !== "string") {
-      return res.status(404).json({ error: "Studio ID non valido" });
-    }
-
-    if (!userData.tipo_utente || userData.tipo_utente !== "Admin") {
-      return res.status(403).json({ error: "Permessi insufficienti" });
-    }
-
-    // Ora TypeScript sa che userData.studio_id è string
-    const studioId = userData.studio_id! as string;
-
-    // 3. Valida i dati ricevuti
-    const { 
-      default_team_id, 
-      default_team_name,
-      default_channel_id, 
-      default_channel_name,
-      scadenze_channel_id,
-      scadenze_channel_name,
-      alert_channel_id,
-      alert_channel_name
-    } = req.body;
-
-    if (!default_team_id || !default_channel_id) {
-      return res.status(400).json({ 
-        error: "Team e canale predefiniti sono obbligatori" 
-      });
-    }
-
-    // 4. Verifica se esiste già una configurazione
-    const { data: existingConfig } = await supabase
-      .from("microsoft365_config")
-      .select("id")
+    // Update config
+    const { data, error } = await supabase
+      .from("tbmicrosoft365_config")
+      .update({
+        teams_default_team_id: teamId || null,
+        teams_default_channel_id: defaultChannelId || null,
+        teams_alert_channel_id: alertChannelId || null,
+        teams_scadenze_channel_id: scadenzeChannelId || null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("studio_id", studioId)
+      .select()
       .single();
 
-    // 5. Prepara i dati da salvare
-    const configData = {
-      teams_default_team_id: default_team_id,
-      teams_default_team_name: default_team_name,
-      teams_default_channel_id: default_channel_id,
-      teams_default_channel_name: default_channel_name,
-      teams_scadenze_channel_id: scadenze_channel_id || default_channel_id,
-      teams_scadenze_channel_name: scadenze_channel_name || default_channel_name,
-      teams_alert_channel_id: alert_channel_id || default_channel_id,
-      teams_alert_channel_name: alert_channel_name || default_channel_name,
-      updated_at: new Date().toISOString()
-    };
-
-    // 6. Aggiorna o inserisci configurazione
-    if (existingConfig) {
-      const { error: updateError } = await supabase
-        .from("microsoft365_config")
-        .update(configData)
-        .eq("studio_id", studioId)
-        .single();
-
-      if (updateError) {
-        console.error("Errore aggiornamento config:", updateError);
-        return res.status(500).json({ error: "Errore salvataggio configurazione" });
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from("microsoft365_config")
-        .insert({
-          ...configData,
-          studio_id: studioId,
-          enabled: true,
-          features: { email: false, calendar: false, contacts: false, teams: true }
-        });
-
-      if (insertError) {
-        console.error("Errore inserimento config:", insertError);
-        return res.status(500).json({ error: "Errore creazione configurazione" });
-      }
+    if (error) {
+      console.error("[Teams Config] Error saving configuration:", error);
+      throw error;
     }
+
+    console.log("[Teams Config] Configuration saved successfully");
 
     return res.status(200).json({
       success: true,
-      message: "Configurazione Teams salvata con successo"
+      message: "Teams configuration saved successfully",
+      config: {
+        teams_default_team_id: data.teams_default_team_id,
+        teams_default_channel_id: data.teams_default_channel_id,
+        teams_alert_channel_id: data.teams_alert_channel_id,
+        teams_scadenze_channel_id: data.teams_scadenze_channel_id,
+      },
     });
-
-  } catch (error: any) {
-    console.error("Errore API save-teams-config:", error);
+  } catch (error: unknown) {
+    console.error("[Teams Config] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json({
-      error: error.message || "Errore server"
+      error: "Failed to save Teams configuration",
+      details: errorMessage,
     });
   }
 }

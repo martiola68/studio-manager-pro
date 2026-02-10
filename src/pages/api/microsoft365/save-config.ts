@@ -21,7 +21,7 @@ import { encrypt } from "@/lib/encryption365";
 interface SaveConfigRequest {
   studioId: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string; // Optional during update
   tenantId: string;
   organizerEmail?: string;
 }
@@ -44,9 +44,9 @@ export default async function handler(
     } = req.body as SaveConfigRequest;
 
     // Validate required fields
-    if (!studioId || !clientId || !clientSecret || !tenantId) {
+    if (!studioId || !clientId || !tenantId) {
       return res.status(400).json({
-        error: "Missing required fields: studioId, clientId, clientSecret, tenantId",
+        error: "Missing required fields: studioId, clientId, tenantId",
       });
     }
 
@@ -61,11 +61,6 @@ export default async function handler(
       return res.status(404).json({ error: "Studio not found" });
     }
 
-    // Encrypt client secret
-    console.log("[M365 Config] Encrypting client secret...");
-    const encryptedSecret = encrypt(clientSecret);
-    console.log("[M365 Config] Client secret encrypted successfully");
-
     // Check if config already exists
     const { data: existingConfig } = await supabase
       .from("tbmicrosoft365_config")
@@ -78,16 +73,25 @@ export default async function handler(
     if (existingConfig) {
       // Update existing config
       console.log("[M365 Config] Updating existing config for studio:", studioId);
+      
+      // Prepare update data
+      const updateData: Record<string, unknown> = {
+        client_id: clientId,
+        tenant_id: tenantId,
+        organizer_email: organizerEmail || null,
+        enabled: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only update secret if provided
+      if (clientSecret) {
+        console.log("[M365 Config] Encrypting new client secret...");
+        updateData.client_secret_encrypted = encrypt(clientSecret);
+      }
+
       const { data, error } = await supabase
         .from("tbmicrosoft365_config")
-        .update({
-          client_id: clientId,
-          client_secret_encrypted: encryptedSecret,
-          tenant_id: tenantId,
-          organizer_email: organizerEmail || null,
-          enabled: true,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("studio_id", studioId)
         .select()
         .single();
@@ -95,8 +99,17 @@ export default async function handler(
       if (error) throw error;
       result = data;
     } else {
-      // Insert new config
+      // Insert new config - secret is required
+      if (!clientSecret) {
+        return res.status(400).json({
+          error: "Client secret is required for new configuration",
+        });
+      }
+
       console.log("[M365 Config] Creating new config for studio:", studioId);
+      console.log("[M365 Config] Encrypting client secret...");
+      const encryptedSecret = encrypt(clientSecret);
+
       const { data, error } = await supabase
         .from("tbmicrosoft365_config")
         .insert({
