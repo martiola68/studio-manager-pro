@@ -18,41 +18,40 @@ export default async function handler(
   try {
     console.log("📋 Teams-list API chiamata");
 
-    // 1. Verifica autenticazione con client standard
-    const authHeader = req.headers.authorization;
+    // 1. GUARDIA: Verifica presenza Authorization header
+    const authHeader = req.headers.authorization || "";
     console.log("🔐 Auth header presente:", !!authHeader);
     
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader.startsWith("Bearer ")) {
       console.error("❌ Auth header mancante o non valido");
-      return res.status(401).json({ error: "Non autenticato" });
+      return res.status(401).json({ 
+        code: "NO_AUTH", 
+        error: "Missing Authorization Bearer token" 
+      });
     }
 
-    const token = authHeader.substring(7);
-    console.log("🔑 Token estratto (length):", token.length);
+    // 2. ESTRAE TOKEN SUPABASE (NON MICROSOFT!)
+    const supabaseToken = authHeader.slice("Bearer ".length);
+    console.log("🔑 Supabase token estratto (length):", supabaseToken.length);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // 3. VERIFICA USER CON SUPABASE
+    const { data: { user }, error: authError } = await supabase.auth.getUser(supabaseToken);
 
-    if (authError) {
-      console.error("❌ Errore getUser:", authError);
-      return res.status(401).json({ error: "Token non valido", details: authError.message });
+    if (authError || !user) {
+      console.error("❌ Errore getUser:", authError?.message || "User null");
+      return res.status(401).json({ 
+        code: "BAD_SUPABASE_TOKEN", 
+        error: "Invalid Supabase session",
+        details: authError?.message 
+      });
     }
 
-    if (!user || !user.id) {
-      console.error("❌ User o user.id mancante:", { user: !!user, id: user?.id });
-      return res.status(401).json({ error: "Utente non valido" });
-    }
+    console.log("✅ User autenticato:", { id: user.id, email: user.email });
 
-    console.log("✅ User autenticato, user.id:", user.id);
-    console.log("✅ User email:", user.email);
-
-    // 2. Usa user.id come user_id
+    // 4. QUERY TOKEN MICROSOFT CON SUPABASE ADMIN (BYPASS RLS)
     const userId = user.id;
-    console.log("🔍 Uso direttamente user.id come user_id:", userId);
-
-    // 3. Query token con supabaseAdmin (bypassa RLS)
-    console.log("🔍 Query token con Service Role (bypass RLS)...");
+    console.log("🔍 Query Microsoft token per user_id:", userId);
     
-    // Cast a any per evitare errori TS sulla tabella non ancora tipizzata
     const { data: tokenData, error: tokenError } = await (supabaseAdmin as any)
       .from("tbmicrosoft_tokens")
       .select("id, access_token, expires_at")
@@ -68,50 +67,54 @@ export default async function handler(
     if (tokenError) {
       console.error("❌ Errore query token:", tokenError);
       return res.status(500).json({ 
-        error: "Errore verifica token",
         code: "DB_ERROR",
+        error: "Errore verifica token",
         details: tokenError.message
       });
     }
 
+    // 5. VERIFICA ESISTENZA TOKEN MICROSOFT
     if (!tokenData || !tokenData.access_token) {
-      console.error("❌ Token non trovato per user_id:", userId);
+      console.error("❌ Token Microsoft non trovato per user_id:", userId);
       return res.status(400).json({ 
-        error: "Account Microsoft non connesso",
         code: "NOT_CONNECTED",
-        debug: {
-          userId,
-          email: user.email,
-          hint: "Connetti l'account Microsoft dalla sezione Configurazione"
-        }
+        error: "Account Microsoft non connesso",
+        hint: "Connetti l'account Microsoft dalla sezione Configurazione"
       });
     }
 
-    // Verifica scadenza token
-    const now = new Date();
-    const expiresAt = new Date(tokenData.expires_at);
-    const isExpired = now >= expiresAt;
+    // 6. VERIFICA SCADENZA TOKEN MICROSOFT
+    const now = Date.now();
+    const expiresAt = tokenData.expires_at ? new Date(tokenData.expires_at).getTime() : 0;
+    const isExpired = expiresAt > 0 && expiresAt < now;
 
-    console.log("🔍 Token trovato:", {
+    console.log("🔍 Token Microsoft:", {
       id: tokenData.id,
-      expires: expiresAt.toISOString(),
-      isExpired
+      expires: tokenData.expires_at,
+      isExpired,
+      remainingMs: expiresAt - now
     });
 
     if (isExpired) {
-      console.log("⚠️ Token scaduto, ma procedo comunque (refresh automatico)");
+      console.error("❌ Token Microsoft scaduto");
+      return res.status(401).json({ 
+        code: "MS_TOKEN_EXPIRED", 
+        error: "Microsoft token expired. Reconnect.",
+        hint: "Riconnetti l'account dalla sezione Configurazione"
+      });
     }
 
-    console.log("✅ Token valido, recupero teams...");
+    console.log("✅ Token Microsoft valido, recupero teams...");
 
-    // 4. Recupera lista team e canali
-    const result = await microsoftGraphService.getTeamsWithChannels(userId);
+    // 7. CHIAMA MICROSOFT GRAPH CON IL TOKEN CORRETTO
+    const msAccessToken = tokenData.access_token;
+    const result = await microsoftGraphService.getTeamsWithChannels(msAccessToken);
 
     if (!result.success) {
       console.error("❌ Errore getTeamsWithChannels:", result.error);
       return res.status(500).json({ 
-        error: result.error || "Errore recupero team",
-        code: "GRAPH_ERROR"
+        code: "GRAPH_ERROR",
+        error: result.error || "Errore recupero team"
       });
     }
 
@@ -125,8 +128,8 @@ export default async function handler(
   } catch (error: any) {
     console.error("❌ Errore generale API teams-list:", error);
     return res.status(500).json({
-      error: error.message || "Errore server",
       code: "SERVER_ERROR",
+      error: error.message || "Errore server",
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined
     });
   }
