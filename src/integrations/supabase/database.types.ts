@@ -224,6 +224,7 @@ export type Database = {
           microsoft_event_id: string | null
           ora_fine: string | null
           ora_inizio: string | null
+          outlook_synced: boolean | null
           partecipanti: Json | null
           ricorrente: boolean | null
           riunione_teams: boolean | null
@@ -251,6 +252,7 @@ export type Database = {
           microsoft_event_id?: string | null
           ora_fine?: string | null
           ora_inizio?: string | null
+          outlook_synced?: boolean | null
           partecipanti?: Json | null
           ricorrente?: boolean | null
           riunione_teams?: boolean | null
@@ -278,6 +280,7 @@ export type Database = {
           microsoft_event_id?: string | null
           ora_fine?: string | null
           ora_inizio?: string | null
+          outlook_synced?: boolean | null
           partecipanti?: Json | null
           ricorrente?: boolean | null
           riunione_teams?: boolean | null

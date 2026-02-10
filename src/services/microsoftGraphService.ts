@@ -24,7 +24,6 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
     .from("tbmicrosoft_tokens")
     .select("*")
     .eq("user_id", userId)
-    .eq("studio_id", utente.studio_id)
     .single();
 
   if (!tokenData) {
@@ -107,7 +106,7 @@ export const microsoftGraphService = {
   /**
    * Metodo generico per chiamate al Graph API
    */
-  async graphRequest(userId: string, endpoint: string, method: string = 'GET', body?: any) {
+  async graphRequest(userId: string, endpoint: string, method: string = "GET", body?: any) {
     const accessToken = await getValidAccessToken(userId);
     if (!accessToken) {
       throw new Error("Microsoft 365 non connesso o token non valido");
@@ -142,19 +141,10 @@ export const microsoftGraphService = {
    * Verifica se l'utente è connesso
    */
   async isConnected(userId: string): Promise<boolean> {
-    const { data: utente } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
-      .single();
-
-    if (!utente || !utente.studio_id) return false;
-
     const { data: tokenData } = await supabase
       .from("tbmicrosoft_tokens")
       .select("id")
       .eq("user_id", userId)
-      .eq("studio_id", utente.studio_id)
       .single();
 
     return !!tokenData;
@@ -164,19 +154,10 @@ export const microsoftGraphService = {
    * Disconnette l'account rimuovendo i token
    */
   async disconnectAccount(userId: string): Promise<boolean> {
-    const { data: utente } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
-      .single();
-
-    if (!utente || !utente.studio_id) return false;
-
     const { error } = await supabase
       .from("tbmicrosoft_tokens")
       .delete()
-      .eq("user_id", userId)
-      .eq("studio_id", utente.studio_id);
+      .eq("user_id", userId);
 
     return !error;
   },
@@ -193,30 +174,75 @@ export const microsoftGraphService = {
    * CALENDAR METHODS
    */
   
-  async createCalendarEvent(userId: string, event: any) {
-    return this.graphRequest(userId, "/me/calendar/events", "POST", event);
+  async createEvent(userId: string, event: any): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const data = await this.graphRequest(userId, "/me/calendar/events", "POST", event);
+      return { success: true, data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore creazione evento",
+      };
+    }
   },
 
-  async updateCalendarEvent(userId: string, eventId: string, updates: any) {
-    return this.graphRequest(userId, `/me/calendar/events/${eventId}`, "PATCH", updates);
+  async updateEvent(userId: string, eventId: string, updates: any): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.graphRequest(userId, `/me/calendar/events/${eventId}`, "PATCH", updates);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore aggiornamento evento",
+      };
+    }
   },
 
-  async deleteCalendarEvent(userId: string, eventId: string) {
-    // DELETE request returns 204 No Content, graphRequest handles it returning null
-    return this.graphRequest(userId, `/me/calendar/events/${eventId}`, "DELETE");
+  async deleteEvent(userId: string, eventId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.graphRequest(userId, `/me/calendar/events/${eventId}`, "DELETE");
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore cancellazione evento",
+      };
+    }
+  },
+
+  async getEvents(userId: string, startDate?: string, endDate?: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      let endpoint = "/me/calendar/events";
+      
+      if (startDate && endDate) {
+        const params = new URLSearchParams({
+          $filter: `start/dateTime ge '${startDate}' and end/dateTime le '${endDate}'`,
+          $orderby: "start/dateTime",
+        });
+        endpoint += `?${params.toString()}`;
+      }
+
+      const data = await this.graphRequest(userId, endpoint, "GET");
+      return { success: true, data: data.value || [] };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore recupero eventi",
+      };
+    }
   },
 
   /**
    * TEAMS METHODS
    */
 
-  async sendTeamsChannelMessage(userId: string, teamId: string, channelId: string, content: string) {
+  async sendChannelMessage(userId: string, teamId: string, channelId: string, content: string) {
     return this.graphRequest(userId, `/teams/${teamId}/channels/${channelId}/messages`, "POST", {
-      body: { content }
+      body: { content },
     });
   },
 
-  async sendTeamsDirectMessage(userId: string, userEmail: string, content: string) {
+  async sendChatMessage(userId: string, userEmail: string, content: string) {
     // 1. Create chat
     const chat = await this.graphRequest(userId, "/chats", "POST", {
       chatType: "oneOnOne",
@@ -224,14 +250,31 @@ export const microsoftGraphService = {
         {
           "@odata.type": "#microsoft.graph.aadUserConversationMember",
           roles: ["owner"],
-          "user@odata.bind": `${GRAPH_API_BASE}/users('${userEmail}')`
-        }
-      ]
+          "user@odata.bind": `${GRAPH_API_BASE}/users('${userEmail}')`,
+        },
+      ],
     });
 
     // 2. Send message
     return this.graphRequest(userId, `/chats/${chat.id}/messages`, "POST", {
-      body: { content }
+      body: { content },
     });
-  }
+  },
+
+  async getTeams(userId: string) {
+    const data = await this.graphRequest(userId, "/me/joinedTeams", "GET");
+    return data.value || [];
+  },
+
+  async getChannels(userId: string, teamId: string) {
+    const data = await this.graphRequest(userId, `/teams/${teamId}/channels`, "GET");
+    return data.value || [];
+  },
+
+  async createChannel(userId: string, teamId: string, channelName: string, description?: string) {
+    return this.graphRequest(userId, `/teams/${teamId}/channels`, "POST", {
+      displayName: channelName,
+      description: description || "",
+    });
+  },
 };
