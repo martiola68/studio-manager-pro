@@ -69,7 +69,7 @@ export default async function handler(
     const { data: existingConfig } = await supabase
       .from("microsoft365_config")
       .select("id")
-      .eq("studio_id", userData.studio_id as string)
+      .eq("studio_id", userData.studio_id!)
       .single();
 
     // 5. Prepara i dati da salvare
@@ -90,7 +90,7 @@ export default async function handler(
       const { error: updateError } = await supabase
         .from("microsoft365_config")
         .update(configData)
-        .eq("studio_id", userData.studio_id as string)
+        .eq("studio_id", userData.studio_id!)
         .single();
 
       if (updateError) {
@@ -102,7 +102,7 @@ export default async function handler(
         .from("microsoft365_config")
         .insert({
           ...configData,
-          studio_id: userData.studio_id as string,
+          studio_id: userData.studio_id!,
           enabled: true,
           features: { email: false, calendar: false, contacts: false, teams: true }
         });
