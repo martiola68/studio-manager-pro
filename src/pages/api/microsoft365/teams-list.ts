@@ -24,7 +24,7 @@ export default async function handler(
     const token = authHeader.substring(7);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (authError || !user) {
+    if (authError || !user || !user.email) {
       return res.status(401).json({ error: "Token non valido" });
     }
 
