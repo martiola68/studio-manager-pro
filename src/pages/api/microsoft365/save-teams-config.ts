@@ -48,7 +48,7 @@ export default async function handler(
     }
 
     // Ora TypeScript sa che userData.studio_id è string
-    const studioId: string = userData.studio_id;
+    const studioId = userData.studio_id as string;
 
     // 3. Valida i dati ricevuti
     const { 
