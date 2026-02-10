@@ -11,18 +11,11 @@ interface GraphTokenResponse {
   expires_in: number;
 }
 
-interface UserToken {
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  user_id: string;
-}
-
 /**
  * Ottiene il token valido per l'utente
  * Rinnova automaticamente se scaduto
  */
-export async function getValidToken(userId: string): Promise<string> {
+async function getValidToken(userId: string): Promise<string> {
   // Recupera token dal database
   const { data: tokenData, error } = await supabase
     .from("tbmicrosoft_tokens")
@@ -51,19 +44,23 @@ export async function getValidToken(userId: string): Promise<string> {
  * Rinnova il token usando refresh_token
  */
 async function refreshToken(userId: string, refreshToken: string): Promise<string> {
-  const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID;
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
-  const tenantId = process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID;
+  const { data: configData, error } = await supabase
+    .from("microsoft365_config" as any)
+    .select("client_id, client_secret, tenant_id")
+    .limit(1)
+    .single();
 
-  if (!clientId || !clientSecret || !tenantId) {
+  const config = configData as any;
+
+  if (error || !config) {
     throw new Error("Configurazione Microsoft 365 mancante");
   }
 
-  const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+  const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
 
   const params = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
+    client_id: config.client_id,
+    client_secret: config.client_secret,
     refresh_token: refreshToken,
     grant_type: "refresh_token",
   });
@@ -110,7 +107,7 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
 /**
  * Effettua una chiamata a Microsoft Graph API
  */
-export async function graphApiCall<T>(
+async function graphApiCall<T>(
   userId: string,
   endpoint: string,
   options: RequestInit = {}
@@ -134,13 +131,18 @@ export async function graphApiCall<T>(
     throw new Error(`Graph API error: ${response.status} - ${errorText}`);
   }
 
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return {} as T;
+  }
+
   return await response.json();
 }
 
 /**
  * Verifica se l'utente ha Microsoft 365 configurato
  */
-export async function hasMicrosoft365(userId: string): Promise<boolean> {
+async function hasMicrosoft365(userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("tbmicrosoft_tokens")
     .select("user_id")
@@ -149,3 +151,100 @@ export async function hasMicrosoft365(userId: string): Promise<boolean> {
 
   return !error && !!data;
 }
+
+// Wrapper object per mantenere compatibilità con le chiamate esistenti
+export const microsoftGraphService = {
+  // Metodi base
+  getValidToken,
+  graphApiCall, // Alias per uso diretto
+  graphRequest: async (userId: string, endpoint: string, method: string = "GET", body?: any) => {
+    return graphApiCall(userId, endpoint, {
+      method,
+      body: body ? JSON.stringify(body) : undefined
+    });
+  },
+  
+  // Metodi utility
+  isConnected: hasMicrosoft365,
+  
+  disconnectAccount: async (userId: string) => {
+    const { error } = await supabase
+      .from("tbmicrosoft_tokens")
+      .delete()
+      .eq("user_id", userId);
+      
+    if (error) throw error;
+  },
+
+  // Teams methods
+  getTeamsWithChannels: async (userId: string) => {
+    try {
+      // 1. Get joined teams
+      const teamsResponse = await graphApiCall<{ value: any[] }>(userId, "/me/joinedTeams");
+      const teams = teamsResponse.value || [];
+      
+      const teamsWithChannels = [];
+      
+      // 2. Get channels for each team
+      for (const team of teams) {
+        try {
+          const channelsResponse = await graphApiCall<{ value: any[] }>(
+            userId, 
+            `/teams/${team.id}/channels`
+          );
+          
+          teamsWithChannels.push({
+            id: team.id,
+            displayName: team.displayName,
+            description: team.description,
+            channels: channelsResponse.value || []
+          });
+        } catch (e) {
+          console.warn(`Could not fetch channels for team ${team.id}`, e);
+          teamsWithChannels.push({
+            id: team.id,
+            displayName: team.displayName,
+            description: team.description,
+            channels: []
+          });
+        }
+      }
+      
+      return { success: true, teams: teamsWithChannels };
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  sendChannelMessage: async (userId: string, teamId: string, channelId: string, messageHtml: string) => {
+    try {
+      await graphApiCall(userId, `/teams/${teamId}/channels/${channelId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          body: {
+            contentType: "html",
+            content: messageHtml
+          }
+        })
+      });
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Email methods
+  sendEmail: async (userId: string, message: any) => {
+    return graphApiCall(userId, "/me/sendMail", {
+      method: "POST",
+      body: JSON.stringify({
+        message,
+        saveToSentItems: true
+      })
+    });
+  }
+};
+
+// Esporta anche le funzioni singole per chi le usa direttamente
+export { getValidToken, graphApiCall, hasMicrosoft365 };

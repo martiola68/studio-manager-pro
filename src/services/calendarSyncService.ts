@@ -56,7 +56,7 @@ function convertOutlookToLocal(dateTime: string): string {
 /**
  * Sincronizza eventi da Outlook ad Agenda app
  */
-export async function syncFromOutlook(userId: string): Promise<number> {
+async function syncFromOutlook(userId: string): Promise<number> {
   console.log("🔄 Sincronizzazione da Outlook ad Agenda...");
 
   try {
@@ -133,7 +133,7 @@ export async function syncFromOutlook(userId: string): Promise<number> {
 /**
  * Crea evento in Outlook da evento Agenda app
  */
-export async function createOutlookEvent(
+async function createOutlookEvent(
   userId: string,
   appEvent: AppEvent
 ): Promise<string> {
@@ -193,7 +193,7 @@ export async function createOutlookEvent(
 /**
  * Aggiorna evento in Outlook
  */
-export async function updateOutlookEvent(
+async function updateOutlookEvent(
   userId: string,
   microsoftEventId: string,
   appEvent: AppEvent
@@ -238,7 +238,7 @@ export async function updateOutlookEvent(
 /**
  * Elimina evento da Outlook
  */
-export async function deleteOutlookEvent(
+async function deleteOutlookEvent(
   userId: string,
   microsoftEventId: string
 ): Promise<void> {
@@ -257,9 +257,33 @@ export async function deleteOutlookEvent(
 }
 
 /**
+ * Sincronizza un singolo evento verso Outlook
+ */
+async function syncEventToOutlook(userId: string, eventId: string): Promise<void> {
+  try {
+    const { data: event } = await supabase
+      .from("tbagenda")
+      .select("*")
+      .eq("id", eventId)
+      .single();
+
+    if (!event) return;
+
+    if (event.microsoft_event_id) {
+      await updateOutlookEvent(userId, event.microsoft_event_id, event as AppEvent);
+    } else {
+      await createOutlookEvent(userId, event as AppEvent);
+    }
+  } catch (error) {
+    console.error("Error syncing event to Outlook:", error);
+    // Non propaghiamo l'errore per non bloccare l'UI
+  }
+}
+
+/**
  * Sincronizza tutti gli eventi (bidirezionale)
  */
-export async function fullCalendarSync(userId: string): Promise<void> {
+async function fullCalendarSync(userId: string): Promise<void> {
   console.log("🔄 Sincronizzazione completa calendario...");
 
   // Sync da Outlook ad app
@@ -289,3 +313,13 @@ export async function fullCalendarSync(userId: string): Promise<void> {
 
   console.log("✅ Sincronizzazione completa terminata");
 }
+
+export const calendarSyncService = {
+  syncFromOutlook,
+  createOutlookEvent,
+  updateOutlookEvent,
+  deleteOutlookEvent,
+  deleteEventFromOutlook: deleteOutlookEvent, // Alias per compatibilità
+  syncEventToOutlook,
+  fullCalendarSync
+};

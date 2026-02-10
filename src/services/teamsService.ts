@@ -1,188 +1,162 @@
-import { supabase } from "@/lib/supabase/client";
-import { microsoftGraphService } from "./microsoftGraphService";
+import { graphApiCall } from "./microsoftGraphService";
+
+interface Team {
+  id: string;
+  displayName: string;
+  description?: string;
+}
+
+interface Channel {
+  id: string;
+  displayName: string;
+  description?: string;
+  webUrl?: string;
+}
 
 export const teamsService = {
   /**
-   * Crea un meeting Teams online
+   * Ottiene i team dell'utente
    */
-  async createOnlineMeeting(
-    userId: string,
-    subject: string,
-    startDateTime: string,
-    endDateTime: string,
-    attendeesEmails: string[] = []
-  ): Promise<{
-    success: boolean;
-    joinUrl?: string;
-    joinWebUrl?: string;
-    meetingId?: string;
-    error?: string;
-  }> {
+  getUserTeams: async (userId: string) => {
     try {
-      console.log("🎥 Creazione meeting Teams...", { subject, startDateTime, endDateTime });
+      const response = await graphApiCall<{ value: Team[] }>(userId, "/me/joinedTeams");
+      return response.value || [];
+    } catch (error) {
+      console.error("Error fetching user teams:", error);
+      return [];
+    }
+  },
 
-      // Prepara attendees per Microsoft Graph
-      const attendees = attendeesEmails.map(email => ({
-        emailAddress: {
-          address: email,
-          name: email.split("@")[0]
-        },
-        type: "required"
-      }));
+  /**
+   * Ottiene i canali di un team
+   */
+  getTeamChannels: async (userId: string, teamId: string) => {
+    try {
+      const response = await graphApiCall<{ value: Channel[] }>(userId, `/teams/${teamId}/channels`);
+      return response.value || [];
+    } catch (error) {
+      console.error(`Error fetching channels for team ${teamId}:`, error);
+      return [];
+    }
+  },
 
-      // Payload per creare online meeting
-      const meetingPayload = {
-        startDateTime,
-        endDateTime,
+  /**
+   * Invia un messaggio a un canale Teams
+   */
+  sendMessageToChannel: async (userId: string, teamId: string, channelId: string, message: string) => {
+    try {
+      await graphApiCall(userId, `/teams/${teamId}/channels/${channelId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
+          body: {
+            contentType: "html",
+            content: message
+          }
+        })
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error sending message to Teams:", error);
+      return { success: false, error: error.message };
+    }
+  },
+  
+  /**
+   * Crea un link per una riunione Teams
+   */
+  createTeamsMeeting: async (userId: string, subject: string, startTime: Date, endTime: Date, attendeesEmails?: string[]) => {
+    try {
+      const meeting: any = {
         subject,
-        participants: {
-          attendees
-        }
+        start: {
+          dateTime: startTime.toISOString(),
+          timeZone: "UTC"
+        },
+        end: {
+          dateTime: endTime.toISOString(),
+          timeZone: "UTC"
+        },
+        isOnlineMeeting: true,
+        onlineMeetingProvider: "teamsForBusiness"
       };
 
-      // Crea meeting via Microsoft Graph
-      const result = await microsoftGraphService.graphRequest(
-        userId,
-        "/me/onlineMeetings",
-        "POST",
-        meetingPayload
-      );
-
-      if (!result || !result.joinWebUrl) {
-        throw new Error("Errore creazione meeting Teams - risposta non valida");
+      if (attendeesEmails && attendeesEmails.length > 0) {
+        meeting.attendees = attendeesEmails.map(email => ({
+          emailAddress: {
+            address: email,
+            name: email 
+          },
+          type: "required"
+        }));
       }
 
-      console.log("✅ Meeting Teams creato con successo:", result.joinWebUrl);
-
+      const response = await graphApiCall<any>(userId, "/me/events", {
+        method: "POST",
+        body: JSON.stringify(meeting)
+      });
+      
       return {
         success: true,
-        joinUrl: result.joinUrl,
-        joinWebUrl: result.joinWebUrl,
-        meetingId: result.id
+        joinUrl: response.onlineMeeting?.joinUrl || response.webLink,
+        id: response.id
       };
     } catch (error: any) {
-      console.error("❌ Errore creazione meeting Teams:", error);
-      return {
-        success: false,
-        error: error.message || "Errore creazione meeting Teams"
-      };
+      console.error("Error creating Teams meeting:", error);
+      return { success: false, error: error.message };
     }
   },
 
   /**
-   * Invia messaggio diretto a un utente
+   * Invia un messaggio diretto (chat 1:1) a un utente
    */
-  async sendDirectMessage(
-    userId: string,
-    recipientEmail: string,
-    message: { content: string; contentType: "text" | "html"; importance?: "normal" | "high" | "urgent" }
-  ): Promise<{ success: boolean; error?: string }> {
+  sendDirectMessage: async (senderId: string, recipientEmail: string, message: { content: string, contentType: "html" | "text", importance?: "normal" | "high" | "urgent" }) => {
     try {
-      console.log("💬 Invio messaggio diretto Teams...", recipientEmail);
-
-      // Crea chat 1:1 se non esiste
-      const chat = await microsoftGraphService.graphRequest(userId, "/chats", "POST", {
-        chatType: "oneOnOne",
-        members: [
-          {
-            "@odata.type": "#microsoft.graph.aadUserConversationMember",
-            roles: ["owner"],
-            "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${recipientEmail}')`
-          }
-        ]
+      // 1. Trova/Crea la chat
+      const chat = await graphApiCall<any>(senderId, "/chats", {
+        method: "POST",
+        body: JSON.stringify({
+          chatType: "oneOnOne",
+          members: [
+            {
+              "@odata.type": "#microsoft.graph.aadUserConversationMember",
+              roles: ["owner"],
+              "user@odata.bind": `https://graph.microsoft.com/v1.0/me`
+            },
+            {
+              "@odata.type": "#microsoft.graph.aadUserConversationMember",
+              roles: ["owner"],
+              "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${recipientEmail}')`
+            }
+          ]
+        })
       });
 
-      if (!chat || !chat.id) {
-        throw new Error("Impossibile creare chat");
-      }
-
-      // Invia messaggio
-      await microsoftGraphService.graphRequest(
-        userId,
-        `/chats/${chat.id}/messages`,
-        "POST",
-        {
+      // 2. Invia il messaggio
+      await graphApiCall(senderId, `/chats/${chat.id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({
           body: {
-            content: message.content,
             contentType: message.contentType,
-            importance: message.importance
-          }
-        }
-      );
+            content: message.content
+          },
+          importance: message.importance || "normal"
+        })
+      });
 
-      console.log("✅ Messaggio Teams inviato con successo");
       return { success: true };
     } catch (error: any) {
-      console.error("❌ Errore invio messaggio Teams:", error);
-      return {
-        success: false,
-        error: error.message || "Errore invio messaggio Teams"
-      };
-    }
-  },
-
-  /**
-   * Invia messaggio a un canale Teams
-   */
-  async sendChannelMessage(
-    userId: string,
-    teamId: string,
-    channelId: string,
-    content: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      console.log("📢 Invio messaggio canale Teams...", { teamId, channelId });
-
-      await microsoftGraphService.graphRequest(
-        userId,
-        `/teams/${teamId}/channels/${channelId}/messages`,
-        "POST",
-        {
-          body: {
-            content,
-            contentType: "html"
-          }
-        }
-      );
-
-      console.log("✅ Messaggio canale Teams inviato con successo");
-      return { success: true };
-    } catch (error: any) {
-      console.error("❌ Errore invio messaggio canale Teams:", error);
-      return {
-        success: false,
-        error: error.message || "Errore invio messaggio canale Teams"
-      };
-    }
-  },
-
-  /**
-   * Recupera lista team disponibili
-   */
-  async getTeams(userId: string) {
-    try {
-      const data = await microsoftGraphService.graphRequest(userId, "/me/joinedTeams", "GET");
-      return data.value || [];
-    } catch (error) {
-      console.error("Errore recupero teams:", error);
-      return [];
-    }
-  },
-
-  /**
-   * Recupera canali di un team
-   */
-  async getChannels(userId: string, teamId: string) {
-    try {
-      const data = await microsoftGraphService.graphRequest(
-        userId,
-        `/teams/${teamId}/channels`,
-        "GET"
-      );
-      return data.value || [];
-    } catch (error) {
-      console.error("Errore recupero canali:", error);
-      return [];
+      console.error("Error sending direct message:", error);
+      return { success: false, error: error.message };
     }
   }
 };
+
+// Aggiungi alias per retrocompatibilità e comodità
+export const teamsServiceExtended = {
+  ...teamsService,
+  createOnlineMeeting: teamsService.createTeamsMeeting
+};
+
+// Sovrascrivi l'export di default o named export se necessario, 
+// ma qui stiamo estendendo l'oggetto teamsService originale in-place per mantenere i riferimenti
+Object.assign(teamsService, { createOnlineMeeting: teamsService.createTeamsMeeting });

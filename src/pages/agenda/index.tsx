@@ -353,7 +353,7 @@ export default function AgendaPage() {
             .filter(Boolean) as string[];
           
           // Crea meeting Teams usando le credenziali dell'utente LOGGATO
-          const meeting = await teamsService.createOnlineMeeting(
+          const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
             startDateTime,
