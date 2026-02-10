@@ -175,25 +175,18 @@ export default function Microsoft365Page() {
 
   const checkUserOAuthStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from("tbmicrosoft_tokens" as any)
-        .select("access_token")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Errore verifica token OAuth:", error);
-        setUserOAuthStatus("disconnected");
-        return;
-      }
-
-      if (data && (data as any).access_token) {
+      const { microsoftGraphService } = await import("@/services/microsoftGraphService");
+      const isConnected = await microsoftGraphService.isConnected(userId);
+      
+      console.log("🔍 Check OAuth status per user:", userId, "→", isConnected ? "CONNECTED" : "DISCONNECTED");
+      
+      if (isConnected) {
         setUserOAuthStatus("connected");
       } else {
         setUserOAuthStatus("disconnected");
       }
     } catch (error) {
-      console.error("Errore checkUserOAuthStatus:", error);
+      console.error("❌ Errore checkUserOAuthStatus:", error);
       setUserOAuthStatus("disconnected");
     }
   };
