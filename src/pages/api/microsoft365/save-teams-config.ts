@@ -42,6 +42,8 @@ export default async function handler(
       return res.status(400).json({ error: "Studio non identificato" });
     }
 
+    const studioId = userData.studio_id as string;
+
     // 3. Valida i dati ricevuti
     const { 
       default_team_id, 
@@ -64,7 +66,7 @@ export default async function handler(
     const { data: existingConfig } = await supabase
       .from("microsoft365_config")
       .select("id")
-      .eq("studio_id", userData.studio_id)
+      .eq("studio_id", studioId)
       .single();
 
     // 5. Prepara i dati da salvare
@@ -85,7 +87,7 @@ export default async function handler(
       const { error: updateError } = await supabase
         .from("microsoft365_config")
         .update(configData)
-        .eq("studio_id", userData.studio_id);
+        .eq("studio_id", studioId);
 
       if (updateError) {
         console.error("Errore aggiornamento config:", updateError);
@@ -96,7 +98,7 @@ export default async function handler(
         .from("microsoft365_config")
         .insert({
           ...configData,
-          studio_id: userData.studio_id,
+          studio_id: studioId,
           enabled: true,
           features: { email: false, calendar: false, contacts: false, teams: true }
         });
