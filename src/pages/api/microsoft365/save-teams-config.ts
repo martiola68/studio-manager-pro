@@ -34,7 +34,11 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (userError || !userData?.tipo_utente || userData.tipo_utente !== "Admin") {
+    if (userError || !userData) {
+      return res.status(404).json({ error: "Utente non trovato" });
+    }
+
+    if (!userData.tipo_utente || userData.tipo_utente !== "Admin") {
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
 

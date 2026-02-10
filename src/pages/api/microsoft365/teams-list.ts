@@ -35,8 +35,12 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (userError || !userData?.id) {
+    if (userError || !userData) {
       return res.status(404).json({ error: "Utente non trovato" });
+    }
+
+    if (!userData.id) {
+      return res.status(404).json({ error: "ID utente non valido" });
     }
 
     // Type assertion dopo verifica null
