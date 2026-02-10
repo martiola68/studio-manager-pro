@@ -140,7 +140,7 @@ export function TopNavBar() {
       // Badge NASCOSTO quando working_progress = "Presa visione"
       const { data, error } = await supabase
         .from("tbpromemoria")
-        .select("*", { count: "exact", head: false })
+        .select("id", { count: "exact", head: false })
         .neq("working_progress", "Presa visione")
         .eq("destinatario_id", user.id);
 
