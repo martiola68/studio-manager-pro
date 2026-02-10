@@ -271,6 +271,64 @@ export const microsoftGraphService = {
     return data.value || [];
   },
 
+  /**
+   * Recupera lista completa di team e relativi canali
+   */
+  async getTeamsWithChannels(userId: string): Promise<{
+    success: boolean;
+    teams?: Array<{
+      id: string;
+      displayName: string;
+      description?: string;
+      channels: Array<{
+        id: string;
+        displayName: string;
+        description?: string;
+      }>;
+    }>;
+    error?: string;
+  }> {
+    try {
+      // 1. Recupera tutti i team
+      const teams = await this.getTeams(userId);
+      
+      // 2. Per ogni team, recupera i canali
+      const teamsWithChannels = await Promise.all(
+        teams.map(async (team: any) => {
+          try {
+            const channels = await this.getChannels(userId, team.id);
+            return {
+              id: team.id,
+              displayName: team.displayName,
+              description: team.description,
+              channels: channels.map((channel: any) => ({
+                id: channel.id,
+                displayName: channel.displayName,
+                description: channel.description,
+              })),
+            };
+          } catch (error) {
+            console.error(`Errore recupero canali per team ${team.id}:`, error);
+            return {
+              id: team.id,
+              displayName: team.displayName,
+              description: team.description,
+              channels: [],
+            };
+          }
+        })
+      );
+
+      return { success: true, teams: teamsWithChannels };
+    } catch (error) {
+      console.error("Errore getTeamsWithChannels:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Errore recupero team",
+      };
+    }
+  },
+
   async createChannel(userId: string, teamId: string, channelName: string, description?: string) {
     return this.graphRequest(userId, `/teams/${teamId}/channels`, "POST", {
       displayName: channelName,

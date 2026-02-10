@@ -24,9 +24,17 @@ import {
   ExternalLink,
   Info,
   Shield,
-  RefreshCw
+  RefreshCw,
+  Send
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Microsoft365ConfigDB {
   id: string;
@@ -38,6 +46,14 @@ interface Microsoft365ConfigDB {
   features: any;
   connected_email: string | null;
   last_sync: string | null;
+  teams_default_team_id?: string | null;
+  teams_default_team_name?: string | null;
+  teams_default_channel_id?: string | null;
+  teams_default_channel_name?: string | null;
+  teams_scadenze_channel_id?: string | null;
+  teams_scadenze_channel_name?: string | null;
+  teams_alert_channel_id?: string | null;
+  teams_alert_channel_name?: string | null;
 }
 
 interface Microsoft365Config {
@@ -53,6 +69,29 @@ interface Microsoft365Config {
   };
   connected_email?: string;
   last_sync?: string;
+  teams_config?: {
+    default_team_id?: string;
+    default_team_name?: string;
+    default_channel_id?: string;
+    default_channel_name?: string;
+    scadenze_channel_id?: string;
+    scadenze_channel_name?: string;
+    alert_channel_id?: string;
+    alert_channel_name?: string;
+  }
+}
+
+interface Team {
+  id: string;
+  displayName: string;
+  description?: string;
+  channels: Channel[];
+}
+
+interface Channel {
+  id: string;
+  displayName: string;
+  description?: string;
 }
 
 export default function Microsoft365Page() {
@@ -61,6 +100,8 @@ export default function Microsoft365Page() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   
   const [config, setConfig] = useState<Microsoft365Config>({
     client_id: "",
@@ -79,6 +120,13 @@ export default function Microsoft365Page() {
   const [studioId, setStudioId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userOAuthStatus, setUserOAuthStatus] = useState<"unknown" | "connected" | "disconnected">("unknown");
+
+  // Teams state
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [scadenzeChannelId, setScadenzeChannelId] = useState<string>("");
+  const [alertChannelId, setAlertChannelId] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -173,8 +221,32 @@ export default function Microsoft365Page() {
             teams: false
           },
           connected_email: configData.connected_email || undefined,
-          last_sync: configData.last_sync || undefined
+          last_sync: configData.last_sync || undefined,
+          teams_config: {
+            default_team_id: configData.teams_default_team_id || undefined,
+            default_team_name: configData.teams_default_team_name || undefined,
+            default_channel_id: configData.teams_default_channel_id || undefined,
+            default_channel_name: configData.teams_default_channel_name || undefined,
+            scadenze_channel_id: configData.teams_scadenze_channel_id || undefined,
+            scadenze_channel_name: configData.teams_scadenze_channel_name || undefined,
+            alert_channel_id: configData.teams_alert_channel_id || undefined,
+            alert_channel_name: configData.teams_alert_channel_name || undefined,
+          }
         });
+
+        // Imposta valori Teams salvati
+        if (configData.teams_default_team_id) {
+          setSelectedTeamId(configData.teams_default_team_id);
+        }
+        if (configData.teams_default_channel_id) {
+          setSelectedChannelId(configData.teams_default_channel_id);
+        }
+        if (configData.teams_scadenze_channel_id) {
+          setScadenzeChannelId(configData.teams_scadenze_channel_id);
+        }
+        if (configData.teams_alert_channel_id) {
+          setAlertChannelId(configData.teams_alert_channel_id);
+        }
         
         if (configData.client_id && configData.tenant_id && configData.client_secret) {
           setConnectionStatus("connected");
@@ -368,6 +440,185 @@ export default function Microsoft365Page() {
     }
   };
 
+  const loadTeamsAndChannels = async () => {
+    if (userOAuthStatus !== "connected") {
+      toast({
+        title: "Errore",
+        description: "Connetti prima il tuo account Microsoft",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoadingTeams(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error("Sessione non valida");
+      }
+
+      const response = await fetch("/api/microsoft365/teams-list", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.code === "NOT_CONNECTED") {
+          toast({
+            title: "Account non connesso",
+            description: "Connetti prima il tuo account Microsoft",
+            variant: "destructive"
+          });
+        } else {
+          throw new Error(data.error || "Errore recupero team");
+        }
+        return;
+      }
+
+      setTeams(data.teams || []);
+      
+      if (data.teams.length === 0) {
+        toast({
+          title: "Nessun team trovato",
+          description: "Non sei membro di alcun team Microsoft Teams",
+        });
+      } else {
+        toast({
+          title: "Team caricati",
+          description: `Trovati ${data.teams.length} team disponibili`
+        });
+      }
+    } catch (error: any) {
+      console.error("Errore caricamento team:", error);
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile caricare i team",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  const handleSaveTeamsConfig = async () => {
+    if (!selectedTeamId || !selectedChannelId) {
+      toast({
+        title: "Errore",
+        description: "Seleziona almeno un team e un canale predefinito",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error("Sessione non valida");
+      }
+
+      const selectedTeam = teams.find(t => t.id === selectedTeamId);
+      const selectedChannel = selectedTeam?.channels.find(c => c.id === selectedChannelId);
+      const scadenzeChannel = selectedTeam?.channels.find(c => c.id === scadenzeChannelId);
+      const alertChannel = selectedTeam?.channels.find(c => c.id === alertChannelId);
+
+      const response = await fetch("/api/microsoft365/save-teams-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          default_team_id: selectedTeamId,
+          default_team_name: selectedTeam?.displayName,
+          default_channel_id: selectedChannelId,
+          default_channel_name: selectedChannel?.displayName,
+          scadenze_channel_id: scadenzeChannelId || selectedChannelId,
+          scadenze_channel_name: scadenzeChannel?.displayName || selectedChannel?.displayName,
+          alert_channel_id: alertChannelId || selectedChannelId,
+          alert_channel_name: alertChannel?.displayName || selectedChannel?.displayName,
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Errore salvataggio configurazione");
+      }
+
+      toast({
+        title: "Successo",
+        description: "Configurazione Teams salvata correttamente"
+      });
+
+      if (studioId) {
+        await loadConfiguration(studioId);
+      }
+    } catch (error: any) {
+      console.error("Errore salvataggio Teams:", error);
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile salvare configurazione Teams",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    if (!selectedTeamId || !selectedChannelId) {
+      toast({
+        title: "Errore",
+        description: "Seleziona prima un team e un canale",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSendingTest(true);
+    try {
+      const { teamsNotificationService } = await import("@/services/teamsNotificationService");
+      
+      const result = await teamsNotificationService.sendTeamsNotification(
+        "🧪 Test Notifica",
+        "Questo è un messaggio di test inviato da Studio Manager Pro. Se vedi questo messaggio, l'integrazione Teams funziona correttamente! ✅",
+        {
+          type: "success",
+          channelId: selectedChannelId
+        }
+      );
+
+      if (result.success) {
+        toast({
+          title: "Messaggio inviato!",
+          description: "Controlla il canale Teams selezionato"
+        });
+      } else {
+        toast({
+          title: "Errore invio",
+          description: result.error || "Impossibile inviare messaggio",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      console.error("Errore invio test:", error);
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile inviare messaggio di test",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -375,6 +626,8 @@ export default function Microsoft365Page() {
       </div>
     );
   }
+
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
@@ -401,6 +654,7 @@ export default function Microsoft365Page() {
       <Tabs defaultValue="configuration" className="space-y-6">
         <TabsList>
           <TabsTrigger value="configuration">Configurazione</TabsTrigger>
+          <TabsTrigger value="teams">Microsoft Teams</TabsTrigger>
           <TabsTrigger value="features">Funzionalità</TabsTrigger>
           <TabsTrigger value="guide">Guida Setup</TabsTrigger>
         </TabsList>
@@ -560,6 +814,247 @@ export default function Microsoft365Page() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Ultima sincronizzazione:</span>
                     <span className="text-sm">{new Date(config.last_sync).toLocaleString("it-IT")}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="teams" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurazione Microsoft Teams</CardTitle>
+              <CardDescription>
+                Seleziona team e canali per le notifiche automatiche
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {userOAuthStatus !== "connected" ? (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Devi prima connettere il tuo account Microsoft nella sezione "Configurazione" per utilizzare Teams.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium">Account Microsoft Connesso</p>
+                        <p className="text-sm text-gray-500">Pronto per configurare Teams</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={loadTeamsAndChannels}
+                      disabled={loadingTeams}
+                      variant="outline"
+                    >
+                      {loadingTeams ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Caricamento...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Carica Team
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {teams.length > 0 && (
+                    <>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="team-select">Team Predefinito *</Label>
+                          <Select
+                            value={selectedTeamId}
+                            onValueChange={setSelectedTeamId}
+                          >
+                            <SelectTrigger id="team-select">
+                              <SelectValue placeholder="Seleziona un team..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {teams.map((team) => (
+                                <SelectItem key={team.id} value={team.id}>
+                                  {team.displayName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-500">
+                            Il team dove verranno inviate le notifiche
+                          </p>
+                        </div>
+
+                        {selectedTeam && selectedTeam.channels.length > 0 && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="channel-select">Canale Predefinito *</Label>
+                              <Select
+                                value={selectedChannelId}
+                                onValueChange={setSelectedChannelId}
+                              >
+                                <SelectTrigger id="channel-select">
+                                  <SelectValue placeholder="Seleziona un canale..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedTeam.channels.map((channel) => (
+                                    <SelectItem key={channel.id} value={channel.id}>
+                                      {channel.displayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-gray-500">
+                                Canale per notifiche generali
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="scadenze-channel-select">Canale Scadenze (Opzionale)</Label>
+                              <Select
+                                value={scadenzeChannelId}
+                                onValueChange={setScadenzeChannelId}
+                              >
+                                <SelectTrigger id="scadenze-channel-select">
+                                  <SelectValue placeholder="Stesso del canale predefinito" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">Usa canale predefinito</SelectItem>
+                                  {selectedTeam.channels.map((channel) => (
+                                    <SelectItem key={channel.id} value={channel.id}>
+                                      {channel.displayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-gray-500">
+                                Canale dedicato per notifiche scadenze
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="alert-channel-select">Canale Alert (Opzionale)</Label>
+                              <Select
+                                value={alertChannelId}
+                                onValueChange={setAlertChannelId}
+                              >
+                                <SelectTrigger id="alert-channel-select">
+                                  <SelectValue placeholder="Stesso del canale predefinito" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">Usa canale predefinito</SelectItem>
+                                  {selectedTeam.channels.map((channel) => (
+                                    <SelectItem key={channel.id} value={channel.id}>
+                                      {channel.displayName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-gray-500">
+                                Canale per alert urgenti
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {selectedTeamId && selectedChannelId && (
+                        <div className="pt-4 space-y-3">
+                          <Alert className="bg-blue-50 border-blue-200">
+                            <Info className="h-4 w-4 text-blue-600" />
+                            <AlertDescription className="text-blue-800">
+                              <strong>Configurazione selezionata:</strong>
+                              <br />
+                              Team: {selectedTeam?.displayName}
+                              <br />
+                              Canale: {selectedTeam?.channels.find(c => c.id === selectedChannelId)?.displayName}
+                            </AlertDescription>
+                          </Alert>
+
+                          <div className="flex gap-3">
+                            <Button
+                              onClick={handleSendTestMessage}
+                              disabled={sendingTest}
+                              variant="outline"
+                              className="flex-1"
+                            >
+                              {sendingTest ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Invio...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Invia Test
+                                </>
+                              )}
+                            </Button>
+
+                            <Button
+                              onClick={handleSaveTeamsConfig}
+                              disabled={saving}
+                              className="flex-1"
+                            >
+                              {saving ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Salvataggio...
+                                </>
+                              ) : (
+                                "Salva Configurazione"
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {teams.length === 0 && !loadingTeams && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        Clicca su "Carica Team" per visualizzare i team disponibili.
+                        Assicurati di essere membro di almeno un team Microsoft Teams.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {config.teams_config?.default_team_name && (
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader>
+                <CardTitle className="text-green-900">✅ Configurazione Attiva</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Team:</span>
+                  <span className="font-medium">{config.teams_config.default_team_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Canale predefinito:</span>
+                  <span className="font-medium">{config.teams_config.default_channel_name}</span>
+                </div>
+                {config.teams_config.scadenze_channel_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Canale scadenze:</span>
+                    <span className="font-medium">{config.teams_config.scadenze_channel_name}</span>
+                  </div>
+                )}
+                {config.teams_config.alert_channel_name && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Canale alert:</span>
+                    <span className="font-medium">{config.teams_config.alert_channel_name}</span>
                   </div>
                 )}
               </CardContent>
