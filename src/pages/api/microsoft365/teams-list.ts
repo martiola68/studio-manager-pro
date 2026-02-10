@@ -50,6 +50,7 @@ export default async function handler(
 
     // 3. Verifica token direttamente nel database (bypass RLS potenziale)
     console.log("🔍 Verifico token Microsoft direttamente nel database...");
+    console.log("🔍 Query params:", { user_id: userId });
     
     const { data: tokenData, error: tokenError } = await supabase
       .from("tbmicrosoft_tokens")
@@ -59,15 +60,19 @@ export default async function handler(
 
     console.log("🔍 Token query result:", { 
       found: !!tokenData, 
-      error: tokenError ? tokenError.message : null 
+      error: tokenError ? tokenError.message : null,
+      tokenDataKeys: tokenData ? Object.keys(tokenData) : [],
+      hasAccessToken: tokenData ? !!tokenData.access_token : false
     });
 
     if (tokenError) {
       console.error("❌ Errore query token:", tokenError);
+      console.error("❌ Errore completo:", JSON.stringify(tokenError, null, 2));
       return res.status(500).json({ 
         error: "Errore verifica token",
         code: "DB_ERROR",
-        details: tokenError.message
+        details: tokenError.message,
+        hint: "Possibile problema RLS o permessi database"
       });
     }
 
