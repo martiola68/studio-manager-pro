@@ -356,12 +356,12 @@ export default function AgendaPage() {
           const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
-            startDateTime,
-            endDateTime,
+            new Date(startDateTime),
+            new Date(endDateTime),
             attendeesEmails
           );
           
-          teamsLink = meeting.joinUrl || meeting.joinWebUrl || "";
+          teamsLink = meeting.joinUrl || "";
           
           toast({ 
             title: "Meeting Teams creato!", 
