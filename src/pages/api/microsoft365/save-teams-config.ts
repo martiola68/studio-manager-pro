@@ -24,6 +24,13 @@ interface SaveTeamsConfigRequest {
   scadenzeChannelId?: string;
 }
 
+interface M365ConfigRow {
+  teams_default_team_id: string | null;
+  teams_default_channel_id: string | null;
+  teams_alert_channel_id: string | null;
+  teams_scadenze_channel_id: string | null;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -49,7 +56,7 @@ export default async function handler(
 
     // Update config
     const { data, error } = await supabase
-      .from("tbmicrosoft365_config" as any)
+      .from("tbmicrosoft365_config")
       .update({
         teams_default_team_id: teamId || null,
         teams_default_channel_id: defaultChannelId || null,
@@ -66,16 +73,17 @@ export default async function handler(
       throw error;
     }
 
+    const result = data as M365ConfigRow;
     console.log("[Teams Config] Configuration saved successfully");
 
     return res.status(200).json({
       success: true,
       message: "Teams configuration saved successfully",
       config: {
-        teams_default_team_id: data.teams_default_team_id,
-        teams_default_channel_id: data.teams_default_channel_id,
-        teams_alert_channel_id: data.teams_alert_channel_id,
-        teams_scadenze_channel_id: data.teams_scadenze_channel_id,
+        teams_default_team_id: result.teams_default_team_id,
+        teams_default_channel_id: result.teams_default_channel_id,
+        teams_alert_channel_id: result.teams_alert_channel_id,
+        teams_scadenze_channel_id: result.teams_scadenze_channel_id,
       },
     });
   } catch (error: unknown) {

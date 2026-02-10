@@ -72,17 +72,17 @@ export default function Microsoft365Settings() {
 
       // Load existing config
       const { data: existingConfig } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("tbmicrosoft365_config")
         .select("*")
         .eq("studio_id", user.studio_id)
-        .single();
+        .maybeSingle();
 
       if (existingConfig) {
-        // Safe casting since we know the shape from the API
-        setConfig(existingConfig as unknown as M365Config);
-        setClientId(existingConfig.client_id);
-        setTenantId(existingConfig.tenant_id);
-        setOrganizerEmail(existingConfig.organizer_email || "");
+        const typedConfig = existingConfig as unknown as M365Config;
+        setConfig(typedConfig);
+        setClientId(typedConfig.client_id);
+        setTenantId(typedConfig.tenant_id);
+        setOrganizerEmail(typedConfig.organizer_email || "");
       }
 
       setLoading(false);

@@ -26,6 +26,18 @@ interface SaveConfigRequest {
   organizerEmail?: string;
 }
 
+interface M365ConfigRow {
+  id: string;
+  studio_id: string;
+  client_id: string;
+  client_secret_encrypted: string;
+  tenant_id: string;
+  organizer_email: string | null;
+  enabled: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -62,20 +74,25 @@ export default async function handler(
     }
 
     // Check if config already exists
-    const { data: existingConfig } = await supabase
-      .from("tbmicrosoft365_config" as any)
+    const { data: existingConfig, error: checkError } = await supabase
+      .from("tbmicrosoft365_config")
       .select("id")
       .eq("studio_id", studioId)
-      .single();
+      .maybeSingle();
 
-    let result;
+    if (checkError) {
+      console.error("[M365 Config] Error checking existing config:", checkError);
+      throw checkError;
+    }
+
+    let result: M365ConfigRow;
 
     if (existingConfig) {
       // Update existing config
       console.log("[M365 Config] Updating existing config for studio:", studioId);
       
       // Prepare update data
-      const updateData: Record<string, unknown> = {
+      const updateData: Partial<M365ConfigRow> = {
         client_id: clientId,
         tenant_id: tenantId,
         organizer_email: organizerEmail || null,
@@ -90,14 +107,14 @@ export default async function handler(
       }
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("tbmicrosoft365_config")
         .update(updateData)
         .eq("studio_id", studioId)
         .select()
         .single();
 
       if (error) throw error;
-      result = data;
+      result = data as M365ConfigRow;
     } else {
       // Insert new config - secret is required
       if (!clientSecret) {
@@ -111,7 +128,7 @@ export default async function handler(
       const encryptedSecret = encrypt(clientSecret);
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("tbmicrosoft365_config")
         .insert({
           studio_id: studioId,
           client_id: clientId,
@@ -124,7 +141,7 @@ export default async function handler(
         .single();
 
       if (error) throw error;
-      result = data;
+      result = data as M365ConfigRow;
     }
 
     console.log("[M365 Config] Configuration saved successfully");

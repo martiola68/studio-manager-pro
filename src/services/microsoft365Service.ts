@@ -29,10 +29,10 @@ interface TokenResponse {
  */
 export async function getM365Config(studioId: string): Promise<M365Config | null> {
   const { data, error } = await supabase
-    .from("tbmicrosoft365_config" as any)
+    .from("tbmicrosoft365_config")
     .select("*")
     .eq("studio_id", studioId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
   return data as M365Config;

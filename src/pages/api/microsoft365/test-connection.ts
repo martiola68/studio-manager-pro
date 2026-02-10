@@ -16,6 +16,16 @@ interface TestConnectionRequest {
   studioId: string;
 }
 
+interface M365ConfigRow {
+  id: string;
+  studio_id: string;
+  client_id: string;
+  client_secret_encrypted: string;
+  tenant_id: string;
+  organizer_email: string | null;
+  enabled: boolean;
+}
+
 interface TokenResponse {
   access_token: string;
   token_type: string;
@@ -40,19 +50,26 @@ export default async function handler(
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
     // Get config
-    const { data: config, error } = await supabase
-      .from("tbmicrosoft365_config" as any)
+    const { data, error } = await supabase
+      .from("tbmicrosoft365_config")
       .select("*")
       .eq("studio_id", studioId)
-      .single();
+      .maybeSingle();
 
-    if (error || !config) {
-      console.error("[M365 Test] Config not found:", error);
+    if (error) {
+      console.error("[M365 Test] Database error:", error);
+      throw error;
+    }
+
+    if (!data) {
+      console.error("[M365 Test] Config not found");
       return res.status(404).json({
         success: false,
         error: "Microsoft 365 not configured for this studio",
       });
     }
+
+    const config = data as M365ConfigRow;
 
     if (!config.enabled) {
       return res.status(400).json({
