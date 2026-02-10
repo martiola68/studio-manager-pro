@@ -161,6 +161,13 @@ export const microsoftGraphService = {
       throw new Error("Microsoft 365 non connesso o token non valido");
     }
 
+    // 🔍 DEBUG: Log token preview (primi e ultimi 20 caratteri)
+    console.log("🔐 [graphRequest] Token preview:", {
+      first20: accessToken.substring(0, 20),
+      last20: accessToken.substring(accessToken.length - 20),
+      length: accessToken.length
+    });
+
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
@@ -178,11 +185,39 @@ export const microsoftGraphService = {
       });
 
       console.log("📡 [graphRequest] Response status:", response.status);
+      console.log("📡 [graphRequest] Response headers:", {
+        'request-id': response.headers.get('request-id'),
+        'client-request-id': response.headers.get('client-request-id'),
+        'content-type': response.headers.get('content-type')
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Graph Request Error (${method} ${endpoint}):`, errorText);
-        throw new Error(`Graph API Error: ${response.status} - ${errorText}`);
+        let errorDetails;
+        
+        try {
+          errorDetails = JSON.parse(errorText);
+        } catch {
+          errorDetails = { message: errorText };
+        }
+
+        // 🚨 LOG DETTAGLIATO ERRORE MICROSOFT GRAPH
+        console.error(`❌ [graphRequest] Microsoft Graph Error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          endpoint: url,
+          method: method,
+          errorCode: errorDetails.error?.code,
+          errorMessage: errorDetails.error?.message,
+          innerError: errorDetails.error?.innerError,
+          requestId: response.headers.get('request-id'),
+          timestamp: new Date().toISOString(),
+          fullError: errorDetails
+        });
+
+        // Throw con dettagli completi
+        const errorMsg = errorDetails.error?.message || errorDetails.message || `HTTP ${response.status}`;
+        throw new Error(`Graph API Error [${response.status}]: ${errorMsg}`);
       }
 
       // Gestione risposte vuote (es. 204 No Content)
