@@ -87,6 +87,7 @@ export default async function handler(
       "Mail.Read",
       "OnlineMeetings.ReadWrite",
       "Chat.ReadWrite",
+      "Team.ReadBasic.All",        // ✅ AGGIUNTO: Permette di leggere i team
       "Channel.ReadBasic.All",
       "ChannelMessage.Send"
     ].join(" ");
