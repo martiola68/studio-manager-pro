@@ -54,7 +54,7 @@ async function isTeamsEnabled(): Promise<{
     }
 
     // 4. Verifica se l'utente ha token Microsoft validi
-    const isConnected = await microsoftGraphService.isConnected(userData.id);
+    const isConnected = await microsoftGraphService.isConnected(userData.id as string);
     if (!isConnected) {
       return { enabled: false, config: null, userId: null };
     }
@@ -70,7 +70,7 @@ async function isTeamsEnabled(): Promise<{
       alertChannelId: (studioConfig as any).teams_alert_channel_id || undefined,
     };
 
-    return { enabled: true, config: teamsConfig, userId: userData.id };
+    return { enabled: true, config: teamsConfig, userId: userData.id as string };
   } catch (error) {
     console.error("Errore verifica Teams:", error);
     return { enabled: false, config: null, userId: null };

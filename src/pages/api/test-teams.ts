@@ -82,7 +82,7 @@ export default async function handler(
     results[1].success = true;
     results[1].message = `✅ Utente trovato: ${userData.nome} ${userData.cognome}`;
     results[1].data = {
-      userId: userData.id,
+      userId: userData.id as string,
       studioId: userData.studio_id,
     };
 
