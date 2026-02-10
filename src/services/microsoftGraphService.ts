@@ -141,25 +141,43 @@ export const microsoftGraphService = {
    * Verifica se l'utente è connesso
    */
   async isConnected(userId: string): Promise<boolean> {
-    console.log("🔍 Checking connection for user:", userId);
+    console.log("🔍 [isConnected] Inizio verifica per userId:", userId);
+    console.log("🔍 [isConnected] Type of userId:", typeof userId);
     
-    const { data: tokenData, error } = await supabase
-      .from("tbmicrosoft_tokens")
-      .select("id")
-      .eq("user_id", userId)
-      .single();
+    try {
+      const { data: tokenData, error } = await supabase
+        .from("tbmicrosoft_tokens")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
 
-    if (error) {
-      console.error("❌ Error checking connection:", error);
+      console.log("🔍 [isConnected] Query result:", { 
+        hasData: !!tokenData, 
+        hasError: !!error,
+        errorDetails: error ? {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        } : null
+      });
+
+      if (error) {
+        console.error("❌ [isConnected] Error checking connection:", error);
+        return false;
+      }
+
+      if (tokenData) {
+        console.log("✅ [isConnected] Token found, id:", tokenData.id);
+        return true;
+      } else {
+        console.log("❌ [isConnected] No token found for user:", userId);
+        return false;
+      }
+    } catch (err) {
+      console.error("❌ [isConnected] Exception:", err);
+      return false;
     }
-
-    if (tokenData) {
-      console.log("✅ Token found for user:", userId);
-    } else {
-      console.log("❌ No token found for user:", userId);
-    }
-
-    return !!tokenData;
   },
 
   /**
