@@ -2,375 +2,308 @@ import { supabase } from "@/lib/supabase/client";
 import { microsoftGraphService } from "./microsoftGraphService";
 
 /**
- * Teams Notification Service
- * Gestisce l'invio di notifiche automatiche su Microsoft Teams
+ * Tipi di notifica supportati
  */
+export type NotificationType = "info" | "success" | "warning" | "error" | "alert";
 
-interface TeamNotificationConfig {
-  enabled: boolean;
-  defaultTeamId?: string;
-  defaultChannelId?: string;
-  scadenzeChannelId?: string;
-  alertChannelId?: string;
+/**
+ * Opzioni per l'invio di notifiche Teams
+ */
+interface TeamsNotificationOptions {
+  type?: NotificationType;
+  teamId?: string;
+  channelId?: string;
+  mention?: string[];
+  urgent?: boolean;
 }
 
 /**
- * Verifica se Teams è abilitato per lo studio corrente
+ * Configurazione canali Teams per tipo di notifica
  */
-async function isTeamsEnabled(): Promise<{
-  enabled: boolean;
-  config: TeamNotificationConfig | null;
-  userId: string | null;
-}> {
-  try {
-    // 1. Ottieni utente corrente
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.email) {
-      return { enabled: false, config: null, userId: null };
-    }
-
-    // 2. Ottieni dati utente
-    const { data: userData } = await supabase
-      .from("tbutenti")
-      .select("id, studio_id")
-      .eq("email", session.user.email)
-      .single();
-
-    if (!userData?.studio_id) {
-      return { enabled: false, config: null, userId: null };
-    }
-
-    // 3. Verifica se Microsoft 365 è abilitato per lo studio
-    const { data: studioConfig } = await supabase
-      .from("microsoft365_config")
-      .select("*")
-      .eq("studio_id", userData.studio_id)
-      .maybeSingle();
-
-    if (!studioConfig || !studioConfig.enabled) {
-      return { enabled: false, config: null, userId: null };
-    }
-
-    // 4. Verifica se l'utente ha token Microsoft validi
-    const isConnected = await microsoftGraphService.isConnected(userData.id as string);
-    if (!isConnected) {
-      return { enabled: false, config: null, userId: null };
-    }
-
-    // 5. Ottieni configurazione Teams (se presente)
-    const teamsConfig: TeamNotificationConfig = {
-      enabled: true,
-      defaultTeamId: (studioConfig as any).teams_default_team_id || undefined,
-      defaultChannelId:
-        (studioConfig as any).teams_default_channel_id || undefined,
-      scadenzeChannelId:
-        (studioConfig as any).teams_scadenze_channel_id || undefined,
-      alertChannelId: (studioConfig as any).teams_alert_channel_id || undefined,
-    };
-
-    return { enabled: true, config: teamsConfig, userId: userData.id as string };
-  } catch (error) {
-    console.error("Errore verifica Teams:", error);
-    return { enabled: false, config: null, userId: null };
-  }
+interface TeamsChannelConfig {
+  default_team_id?: string;
+  default_channel_id?: string;
+  scadenze_channel_id?: string;
+  alert_channel_id?: string;
 }
 
 /**
- * Formatta messaggio per Teams con stile Adaptive Card
+ * Servizio per l'invio di notifiche su Microsoft Teams
  */
-function formatTeamsMessage(
-  title: string,
-  message: string,
-  type: "info" | "warning" | "error" | "success" = "info",
-  link?: string
-): string {
-  const emoji = {
-    info: "ℹ️",
-    warning: "⚠️",
-    error: "❌",
-    success: "✅",
-  };
-
-  let html = `<h3>${emoji[type]} ${title}</h3>`;
-  html += `<p>${message}</p>`;
-
-  if (link) {
-    html += `<p><a href="${link}">🔗 Apri nel Software</a></p>`;
-  }
-
-  html += `<p><small>📅 ${new Date().toLocaleString("it-IT")}</small></p>`;
-
-  return html;
-}
-
-/**
- * Invia notifica generica su Teams
- */
-async function sendTeamsNotification(
-  title: string,
-  message: string,
-  options?: {
-    type?: "info" | "warning" | "error" | "success";
-    channelId?: string;
-    link?: string;
-    mentionUsers?: string[]; // Array di user IDs da menzionare
-  }
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { enabled, config, userId } = await isTeamsEnabled();
-
-    if (!enabled || !userId || !config) {
-      console.log("Teams non abilitato, skip notifica");
-      return { success: false, error: "Teams non abilitato" };
-    }
-
-    // Determina quale canale usare
-    const channelId =
-      options?.channelId ||
-      config.defaultChannelId ||
-      config.alertChannelId;
-
-    if (!channelId) {
-      console.warn("Nessun canale Teams configurato");
-      return { success: false, error: "Canale Teams non configurato" };
-    }
-
-    // Determina quale team usare
-    const teamId = config.defaultTeamId;
-
-    if (!teamId) {
-      console.warn("Nessun team Teams configurato");
-      return { success: false, error: "Team Teams non configurato" };
-    }
-
-    // Formatta messaggio
-    const formattedMessage = formatTeamsMessage(
-      title,
-      message,
-      options?.type || "info",
-      options?.link
-    );
-
-    // Invia messaggio su canale Teams
-    const result = await microsoftGraphService.sendChannelMessage(
-      userId,
-      teamId,
-      channelId,
-      formattedMessage
-    );
-
-    if (!result.success) {
-      console.error("Errore invio messaggio Teams:", result.error);
-      return { success: false, error: result.error };
-    }
-
-    console.log("✅ Notifica Teams inviata con successo");
-    return { success: true };
-  } catch (error) {
-    console.error("Errore sendTeamsNotification:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Errore sconosciuto",
-    };
-  }
-}
-
-/**
- * Invia alert per scadenza imminente
- */
-async function sendScadenzaAlert(scadenza: {
-  id: string;
-  tipo: string;
-  cliente: string;
-  dataScadenza: string;
-  responsabile: string;
-}): Promise<{ success: boolean }> {
-  const title = `📅 Scadenza ${scadenza.tipo} Imminente`;
-  const message = `
-<strong>Cliente:</strong> ${scadenza.cliente}<br>
-<strong>Data Scadenza:</strong> ${new Date(scadenza.dataScadenza).toLocaleDateString("it-IT")}<br>
-<strong>Responsabile:</strong> ${scadenza.responsabile}<br>
-<br>
-<em>Assicurati di completare la pratica entro la scadenza!</em>
-  `;
-
-  const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://yourapp.vercel.app"}/scadenze?id=${scadenza.id}`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "warning",
-    link,
-  });
-}
-
-/**
- * Invia notifica per nuovo promemoria
- */
-async function sendPromemoriaNotification(promemoria: {
-  id: string;
-  titolo: string;
-  mittente: string;
-  destinatario: string;
-}): Promise<{ success: boolean }> {
-  const title = `📬 Nuovo Promemoria`;
-  const message = `
-<strong>Da:</strong> ${promemoria.mittente}<br>
-<strong>A:</strong> ${promemoria.destinatario}<br>
-<strong>Oggetto:</strong> ${promemoria.titolo}<br>
-<br>
-<em>Hai ricevuto un nuovo promemoria! Clicca per visualizzarlo.</em>
-  `;
-
-  const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://yourapp.vercel.app"}/promemoria?id=${promemoria.id}`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "info",
-    link,
-  });
-}
-
-/**
- * Invia notifica per nuovo evento/appuntamento
- */
-async function sendEventoNotification(evento: {
-  id: string;
-  titolo: string;
-  dataInizio: string;
-  cliente?: string;
-  utente: string;
-}): Promise<{ success: boolean }> {
-  const title = `📅 Nuovo Appuntamento`;
-  const message = `
-<strong>Titolo:</strong> ${evento.titolo}<br>
-<strong>Data:</strong> ${new Date(evento.dataInizio).toLocaleString("it-IT")}<br>
-${evento.cliente ? `<strong>Cliente:</strong> ${evento.cliente}<br>` : ""}
-<strong>Assegnato a:</strong> ${evento.utente}<br>
-<br>
-<em>Nuovo appuntamento in agenda!</em>
-  `;
-
-  const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://yourapp.vercel.app"}/agenda?id=${evento.id}`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "success",
-    link,
-  });
-}
-
-/**
- * Invia notifica per nuova comunicazione
- */
-async function sendComunicazioneNotification(comunicazione: {
-  id: string;
-  oggetto: string;
-  mittente: string;
-  destinatari: string[];
-}): Promise<{ success: boolean }> {
-  const title = `📧 Nuova Comunicazione`;
-  const message = `
-<strong>Mittente:</strong> ${comunicazione.mittente}<br>
-<strong>Destinatari:</strong> ${comunicazione.destinatari.join(", ")}<br>
-<strong>Oggetto:</strong> ${comunicazione.oggetto}<br>
-<br>
-<em>È stata inviata una nuova comunicazione!</em>
-  `;
-
-  const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://yourapp.vercel.app"}/comunicazioni?id=${comunicazione.id}`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "info",
-    link,
-  });
-}
-
-/**
- * Invia notifica per nuovo cliente
- */
-async function sendNuovoClienteNotification(cliente: {
-  id: string;
-  ragioneSociale: string;
-  partitaIva?: string;
-  responsabile: string;
-}): Promise<{ success: boolean }> {
-  const title = `🏢 Nuovo Cliente Inserito`;
-  const message = `
-<strong>Ragione Sociale:</strong> ${cliente.ragioneSociale}<br>
-${cliente.partitaIva ? `<strong>P.IVA:</strong> ${cliente.partitaIva}<br>` : ""}
-<strong>Responsabile:</strong> ${cliente.responsabile}<br>
-<br>
-<em>Un nuovo cliente è stato aggiunto al sistema!</em>
-  `;
-
-  const link = `${process.env.NEXT_PUBLIC_APP_URL || "https://yourapp.vercel.app"}/clienti?id=${cliente.id}`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "success",
-    link,
-  });
-}
-
-/**
- * Invia reminder giornaliero con riepilogo scadenze
- */
-async function sendDailyScadenzeDigest(scadenze: Array<{
-  tipo: string;
-  cliente: string;
-  dataScadenza: string;
-  responsabile: string;
-}>): Promise<{ success: boolean }> {
-  if (scadenze.length === 0) {
-    return { success: true }; // Nessuna scadenza, non inviare
-  }
-
-  const title = `📊 Riepilogo Scadenze Oggi`;
-
-  let message = `<strong>Hai ${scadenze.length} scadenza/e oggi:</strong><br><br>`;
-
-  scadenze.forEach((s, index) => {
-    message += `${index + 1}. <strong>${s.tipo}</strong> - ${s.cliente} (${s.responsabile})<br>`;
-  });
-
-  message += `<br><em>Buon lavoro! 💪</em>`;
-
-  return await sendTeamsNotification(title, message, {
-    type: "info",
-  });
-}
-
-/**
- * Invia messaggio di benvenuto quando un utente si connette a Teams
- */
-async function sendWelcomeMessage(userName: string): Promise<{ success: boolean }> {
-  const title = `👋 Benvenuto su Studio Manager Pro!`;
-  const message = `
-<strong>Ciao ${userName}!</strong><br>
-<br>
-Il tuo account è stato connesso con successo a Microsoft Teams!<br>
-<br>
-Da ora riceverai notifiche automatiche su:<br>
-✅ Scadenze imminenti<br>
-✅ Nuovi promemoria<br>
-✅ Appuntamenti in agenda<br>
-✅ Comunicazioni importanti<br>
-<br>
-<em>Buon lavoro! 🚀</em>
-  `;
-
-  return await sendTeamsNotification(title, message, {
-    type: "success",
-  });
-}
-
-// Esporta tutte le funzioni
 export const teamsNotificationService = {
-  isTeamsEnabled,
-  sendTeamsNotification,
-  sendScadenzaAlert,
-  sendPromemoriaNotification,
-  sendEventoNotification,
-  sendComunicazioneNotification,
-  sendNuovoClienteNotification,
-  sendDailyScadenzeDigest,
-  sendWelcomeMessage,
+  /**
+   * Ottiene la configurazione Teams per lo studio dell'utente
+   */
+  async getTeamsConfig(userId: string): Promise<TeamsChannelConfig | null> {
+    try {
+      // 1. Ottieni studio_id dell'utente
+      const { data: utente } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", userId)
+        .single();
+
+      if (!utente?.studio_id) {
+        console.error("❌ Studio non trovato per utente:", userId);
+        return null;
+      }
+
+      // 2. Ottieni configurazione Teams
+      const { data: config } = await supabase
+        .from("microsoft365_config")
+        .select("teams_default_team_id, teams_default_channel_id, teams_scadenze_channel_id, teams_alert_channel_id")
+        .eq("studio_id", utente.studio_id)
+        .single();
+
+      if (!config) {
+        console.error("❌ Configurazione Teams non trovata");
+        return null;
+      }
+
+      return {
+        default_team_id: config.teams_default_team_id || undefined,
+        default_channel_id: config.teams_default_channel_id || undefined,
+        scadenze_channel_id: config.teams_scadenze_channel_id || undefined,
+        alert_channel_id: config.teams_alert_channel_id || undefined,
+      };
+    } catch (error) {
+      console.error("❌ Errore recupero configurazione Teams:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Formatta il contenuto del messaggio con icone e colori
+   */
+  formatMessage(title: string, message: string, type: NotificationType = "info"): string {
+    const icons = {
+      info: "ℹ️",
+      success: "✅",
+      warning: "⚠️",
+      error: "❌",
+      alert: "🚨",
+    };
+
+    const icon = icons[type] || "📢";
+
+    return `
+<p><strong>${icon} ${title}</strong></p>
+<p>${message}</p>
+    `.trim();
+  },
+
+  /**
+   * Invia notifica su Microsoft Teams
+   */
+  async sendTeamsNotification(
+    title: string,
+    message: string,
+    options: TeamsNotificationOptions = {}
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log("📨 [Teams] Invio notifica:", { title, type: options.type });
+
+      // 1. Ottieni utente corrente
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: "Utente non autenticato" };
+      }
+
+      // 2. Verifica se Teams è abilitato
+      const { data: utente } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!utente?.studio_id) {
+        return { success: false, error: "Studio non trovato" };
+      }
+
+      const { data: config } = await supabase
+        .from("microsoft365_config")
+        .select("enabled, features")
+        .eq("studio_id", utente.studio_id)
+        .single();
+
+      if (!config?.enabled || !config?.features?.teams) {
+        console.log("⚠️ Teams non abilitato, skip notifica");
+        return { success: false, error: "Teams non abilitato" };
+      }
+
+      // 3. Ottieni configurazione canali
+      const teamsConfig = await this.getTeamsConfig(user.id);
+      if (!teamsConfig) {
+        return { success: false, error: "Configurazione Teams non trovata" };
+      }
+
+      // 4. Determina il canale di destinazione
+      let targetChannelId = options.channelId;
+      let targetTeamId = options.teamId;
+
+      if (!targetChannelId) {
+        // Usa canale specifico in base al tipo di notifica
+        if (options.type === "alert" && teamsConfig.alert_channel_id) {
+          targetChannelId = teamsConfig.alert_channel_id;
+        } else if (options.urgent && teamsConfig.scadenze_channel_id) {
+          targetChannelId = teamsConfig.scadenze_channel_id;
+        } else {
+          targetChannelId = teamsConfig.default_channel_id;
+        }
+      }
+
+      if (!targetTeamId) {
+        targetTeamId = teamsConfig.default_team_id;
+      }
+
+      if (!targetTeamId || !targetChannelId) {
+        return { success: false, error: "Team o canale non configurato" };
+      }
+
+      // 5. Formatta messaggio
+      const formattedMessage = this.formatMessage(title, message, options.type);
+
+      // 6. Invia messaggio su Teams
+      console.log("📤 [Teams] Invio a canale:", { teamId: targetTeamId, channelId: targetChannelId });
+
+      await microsoftGraphService.sendChannelMessage(
+        user.id,
+        targetTeamId,
+        targetChannelId,
+        formattedMessage
+      );
+
+      console.log("✅ [Teams] Notifica inviata con successo");
+      return { success: true };
+    } catch (error: any) {
+      console.error("❌ [Teams] Errore invio notifica:", error);
+      return {
+        success: false,
+        error: error.message || "Errore invio notifica Teams",
+      };
+    }
+  },
+
+  /**
+   * Invia notifica per nuova scadenza
+   */
+  async notifyScadenza(
+    clienteNome: string,
+    tipoScadenza: string,
+    dataScadenza: string,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const title = "📅 Nuova Scadenza";
+    const message = `
+**Cliente:** ${clienteNome}
+**Tipo:** ${tipoScadenza}
+**Data scadenza:** ${new Date(dataScadenza).toLocaleDateString("it-IT")}
+    `.trim();
+
+    return this.sendTeamsNotification(title, message, {
+      type: "info",
+      urgent: true,
+    });
+  },
+
+  /**
+   * Invia notifica per scadenza imminente
+   */
+  async notifyScadenzaImminente(
+    clienteNome: string,
+    tipoScadenza: string,
+    dataScadenza: string,
+    giorniMancanti: number
+  ): Promise<{ success: boolean; error?: string }> {
+    const title = "⚠️ Scadenza Imminente";
+    const message = `
+**Cliente:** ${clienteNome}
+**Tipo:** ${tipoScadenza}
+**Data scadenza:** ${new Date(dataScadenza).toLocaleDateString("it-IT")}
+**Giorni mancanti:** ${giorniMancanti}
+    `.trim();
+
+    return this.sendTeamsNotification(title, message, {
+      type: "warning",
+      urgent: true,
+    });
+  },
+
+  /**
+   * Invia notifica per scadenza critica
+   */
+  async notifyScadenzaCritica(
+    clienteNome: string,
+    tipoScadenza: string,
+    dataScadenza: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const title = "🚨 SCADENZA CRITICA";
+    const message = `
+**URGENTE - AZIONE RICHIESTA**
+
+**Cliente:** ${clienteNome}
+**Tipo:** ${tipoScadenza}
+**Data scadenza:** ${new Date(dataScadenza).toLocaleDateString("it-IT")}
+
+⚠️ La scadenza è imminente o già superata!
+    `.trim();
+
+    return this.sendTeamsNotification(title, message, {
+      type: "alert",
+      urgent: true,
+    });
+  },
+
+  /**
+   * Invia notifica per nuovo promemoria
+   */
+  async notifyPromemoria(
+    clienteNome: string,
+    oggetto: string,
+    messaggio: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const title = "📝 Nuovo Promemoria";
+    const content = `
+**Cliente:** ${clienteNome}
+**Oggetto:** ${oggetto}
+**Messaggio:** ${messaggio}
+    `.trim();
+
+    return this.sendTeamsNotification(title, content, {
+      type: "info",
+    });
+  },
+
+  /**
+   * Invia notifica per nuovo evento in agenda
+   */
+  async notifyEvento(
+    titolo: string,
+    dataInizio: string,
+    dataFine: string,
+    descrizione?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const title = "📅 Nuovo Evento in Agenda";
+    const message = `
+**Titolo:** ${titolo}
+**Data inizio:** ${new Date(dataInizio).toLocaleString("it-IT")}
+**Data fine:** ${new Date(dataFine).toLocaleString("it-IT")}
+${descrizione ? `**Descrizione:** ${descrizione}` : ""}
+    `.trim();
+
+    return this.sendTeamsNotification(title, message, {
+      type: "info",
+    });
+  },
+
+  /**
+   * Invia notifica generica
+   */
+  async notify(
+    title: string,
+    message: string,
+    type: NotificationType = "info"
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.sendTeamsNotification(title, message, { type });
+  },
 };
