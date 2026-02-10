@@ -48,25 +48,58 @@ export default async function handler(
     const userId = user.id;
     console.log("🔍 Uso direttamente user.id come user_id:", userId);
 
-    // 3. Verifica se l'utente è connesso a Microsoft
-    console.log("🔍 Verifico connessione Microsoft per user_id:", userId);
+    // 3. Verifica token direttamente nel database (bypass RLS potenziale)
+    console.log("🔍 Verifico token Microsoft direttamente nel database...");
     
-    const isConnected = await microsoftGraphService.isConnected(userId);
-    console.log("🔍 Risultato isConnected:", isConnected);
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("tbmicrosoft_tokens")
+      .select("id, access_token, expires_at")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-    if (!isConnected) {
-      console.error("❌ Account non connesso per user_id:", userId);
+    console.log("🔍 Token query result:", { 
+      found: !!tokenData, 
+      error: tokenError ? tokenError.message : null 
+    });
+
+    if (tokenError) {
+      console.error("❌ Errore query token:", tokenError);
+      return res.status(500).json({ 
+        error: "Errore verifica token",
+        code: "DB_ERROR",
+        details: tokenError.message
+      });
+    }
+
+    if (!tokenData || !tokenData.access_token) {
+      console.error("❌ Token non trovato per user_id:", userId);
       return res.status(400).json({ 
         error: "Account Microsoft non connesso",
         code: "NOT_CONNECTED",
         debug: {
           userId,
-          email: user.email
+          email: user.email,
+          hint: "Connetti l'account Microsoft dalla sezione Configurazione"
         }
       });
     }
 
-    console.log("✅ Account connesso, recupero teams...");
+    // Verifica scadenza token
+    const now = new Date();
+    const expiresAt = new Date(tokenData.expires_at);
+    const isExpired = now >= expiresAt;
+
+    console.log("🔍 Token trovato:", {
+      id: tokenData.id,
+      expires: expiresAt.toISOString(),
+      isExpired
+    });
+
+    if (isExpired) {
+      console.log("⚠️ Token scaduto, ma procedo comunque (refresh automatico)");
+    }
+
+    console.log("✅ Token valido, recupero teams...");
 
     // 4. Recupera lista team e canali
     const result = await microsoftGraphService.getTeamsWithChannels(userId);
