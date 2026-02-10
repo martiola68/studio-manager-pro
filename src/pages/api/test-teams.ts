@@ -71,10 +71,10 @@ export default async function handler(
       .eq("email", session.user.email)
       .single();
 
-    if (userError || !userData) {
+    if (userError || !userData || !userData.id || !userData.studio_id) {
       results[1].success = false;
-      results[1].message = "❌ Utente non trovato nel database";
-      results[1].error = userError?.message || "Dati utente mancanti";
+      results[1].message = "❌ Utente non trovato o non associato a uno studio";
+      results[1].error = userError?.message || "Dati utente incompleti";
       allPassed = false;
       return res.status(404).json({ success: false, results });
     }
@@ -82,20 +82,11 @@ export default async function handler(
     results[1].success = true;
     results[1].message = `✅ Utente trovato: ${userData.nome} ${userData.cognome}`;
     results[1].data = {
-      userId: userData.id as string,
+      userId: userData.id,
       studioId: userData.studio_id,
     };
 
-    if (!userData.id) {
-      results.push({
-        step: "2b. Verifica ID Utente",
-        success: false,
-        message: "❌ ID utente non valido",
-        error: "L'ID utente è null o undefined",
-      });
-      allPassed = false;
-      return res.status(400).json({ success: false, results });
-    }
+    const userId = userData.id as string;
 
     // STEP 3: Verifica configurazione Microsoft 365
     results.push({
@@ -107,7 +98,7 @@ export default async function handler(
     const { data: studioConfig, error: configError } = await supabase
       .from("microsoft365_config")
       .select("*")
-      .eq("studio_id", userData.studio_id)
+      .eq("studio_id", userData.studio_id as string)
       .maybeSingle();
 
     if (configError || !studioConfig || !studioConfig.enabled) {
@@ -133,7 +124,7 @@ export default async function handler(
       message: "Controllo token di accesso Microsoft Graph...",
     });
 
-    const isConnected = await microsoftGraphService.isConnected(userData.id as string);
+    const isConnected = await microsoftGraphService.isConnected(userId);
 
     if (!isConnected) {
       results[3].success = false;
