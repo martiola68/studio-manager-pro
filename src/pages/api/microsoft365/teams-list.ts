@@ -52,7 +52,8 @@ export default async function handler(
     // 3. Query token con supabaseAdmin (bypassa RLS)
     console.log("🔍 Query token con Service Role (bypass RLS)...");
     
-    const { data: tokenData, error: tokenError } = await supabaseAdmin
+    // Cast a any per evitare errori TS sulla tabella non ancora tipizzata
+    const { data: tokenData, error: tokenError } = await (supabaseAdmin as any)
       .from("tbmicrosoft_tokens")
       .select("id, access_token, expires_at")
       .eq("user_id", userId)
