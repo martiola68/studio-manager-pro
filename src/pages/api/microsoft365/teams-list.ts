@@ -36,35 +36,17 @@ export default async function handler(
       return res.status(401).json({ error: "Token non valido", details: authError.message });
     }
 
-    if (!user || !user.email) {
-      console.error("❌ User o email mancante:", { user: !!user, email: user?.email });
+    if (!user || !user.id) {
+      console.error("❌ User o user.id mancante:", { user: !!user, id: user?.id });
       return res.status(401).json({ error: "Utente non valido" });
     }
 
-    console.log("✅ User autenticato:", user.email);
+    console.log("✅ User autenticato, user.id:", user.id);
+    console.log("✅ User email:", user.email);
 
-    // 2. Recupera user_id dal database
-    console.log("🔍 Cerco user_id per email:", user.email);
-
-    const { data: userData, error: userError } = await supabase
-      .from("tbutenti")
-      .select("id, studio_id")
-      .eq("email", user.email)
-      .single();
-
-    if (userError) {
-      console.error("❌ Errore query tbutenti:", userError);
-      return res.status(404).json({ error: "Utente non trovato nel database", details: userError.message });
-    }
-
-    if (!userData || !userData.id) {
-      console.error("❌ userData mancante o senza id:", userData);
-      return res.status(404).json({ error: "Dati utente non validi" });
-    }
-
-    const userId = userData.id;
-    console.log("✅ User ID trovato:", userId);
-    console.log("✅ Studio ID:", userData.studio_id);
+    // 2. Usa direttamente user.id come user_id
+    const userId = user.id;
+    console.log("🔍 Uso direttamente user.id come user_id:", userId);
 
     // 3. Verifica se l'utente è connesso a Microsoft
     console.log("🔍 Verifico connessione Microsoft per user_id:", userId);
