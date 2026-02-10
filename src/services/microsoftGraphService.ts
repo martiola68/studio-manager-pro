@@ -7,12 +7,20 @@ const GRAPH_API_BASE = "https://graph.microsoft.com/v1.0";
  * Gestisce automaticamente il refresh se necessario
  */
 async function getValidAccessToken(userId: string): Promise<string | null> {
+  console.log("🔐 [getValidAccessToken] START - userId:", userId);
+  
   // 1. Ottieni lo studio_id dell'utente
-  const { data: utente } = await supabase
+  const { data: utente, error: utenteError } = await supabase
     .from("tbutenti")
     .select("studio_id")
     .eq("id", userId)
     .single();
+
+  console.log("🔍 [getValidAccessToken] Studio query:", { 
+    found: !!utente, 
+    studio_id: utente?.studio_id,
+    error: utenteError?.message 
+  });
 
   if (!utente || !utente.studio_id) {
     console.error("❌ Utente non trovato o senza studio");
@@ -20,11 +28,20 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
   }
 
   // 2. Ottieni il token corrente
-  const { data: tokenData } = await supabase
+  const { data: tokenData, error: tokenError } = await supabase
     .from("tbmicrosoft_tokens")
     .select("*")
     .eq("user_id", userId)
     .single();
+
+  console.log("🔍 [getValidAccessToken] Token query:", { 
+    found: !!tokenData,
+    token_id: tokenData?.id,
+    expires_at: tokenData?.expires_at,
+    has_access_token: !!tokenData?.access_token,
+    has_refresh_token: !!tokenData?.refresh_token,
+    error: tokenError?.message
+  });
 
   if (!tokenData) {
     console.error("❌ Token Microsoft non trovato - account non connesso");
@@ -34,9 +51,17 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
   // 3. Controlla se il token è ancora valido
   const now = new Date();
   const expiresAt = new Date(tokenData.expires_at);
+  const isExpired = now >= expiresAt;
 
-  if (now < expiresAt) {
-    // Token ancora valido
+  console.log("⏰ [getValidAccessToken] Token validity:", {
+    now: now.toISOString(),
+    expires: expiresAt.toISOString(),
+    isExpired,
+    minutesUntilExpiry: Math.floor((expiresAt.getTime() - now.getTime()) / 60000)
+  });
+
+  if (!isExpired) {
+    console.log("✅ [getValidAccessToken] Token ancora valido, ritorno access_token");
     return tokenData.access_token;
   }
 
@@ -44,11 +69,19 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
   console.log("🔄 Token scaduto, eseguo refresh...");
 
   // 4a. Ottieni credenziali Azure
-  const { data: config } = await supabase
+  const { data: config, error: configError } = await supabase
     .from("microsoft365_config")
     .select("client_id, client_secret, tenant_id")
     .eq("studio_id", utente.studio_id)
     .single();
+
+  console.log("🔍 [getValidAccessToken] Config query:", {
+    found: !!config,
+    has_client_id: !!config?.client_id,
+    has_client_secret: !!config?.client_secret,
+    has_tenant_id: !!config?.tenant_id,
+    error: configError?.message
+  });
 
   if (!config || !config.client_id || !config.client_secret || !config.tenant_id) {
     console.error("❌ Configurazione Microsoft 365 incompleta o non trovata");
@@ -63,6 +96,8 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
     params.append("refresh_token", tokenData.refresh_token);
     params.append("grant_type", "refresh_token");
 
+    console.log("🔄 [getValidAccessToken] Calling refresh token API...");
+
     const response = await fetch(
       `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`,
       {
@@ -74,17 +109,21 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
       }
     );
 
+    console.log("🔄 [getValidAccessToken] Refresh response status:", response.status);
+
     if (!response.ok) {
-      console.error("❌ Errore refresh token:", await response.text());
+      const errorText = await response.text();
+      console.error("❌ Errore refresh token:", errorText);
       return null;
     }
 
     const data = await response.json();
+    console.log("✅ [getValidAccessToken] Token refreshed successfully");
 
     // 4c. Aggiorna token nel database
     const newExpiresAt = new Date(now.getTime() + data.expires_in * 1000);
 
-    await supabase
+    const { error: updateError } = await supabase
       .from("tbmicrosoft_tokens")
       .update({
         access_token: data.access_token,
@@ -94,7 +133,11 @@ async function getValidAccessToken(userId: string): Promise<string | null> {
       })
       .eq("id", tokenData.id);
 
-    console.log("✅ Token refreshed con successo");
+    if (updateError) {
+      console.error("❌ Errore aggiornamento token:", updateError);
+    }
+
+    console.log("✅ Token refreshed e salvato, expires:", newExpiresAt.toISOString());
     return data.access_token;
   } catch (error) {
     console.error("❌ Errore durante refresh token:", error);
@@ -107,8 +150,14 @@ export const microsoftGraphService = {
    * Metodo generico per chiamate al Graph API
    */
   async graphRequest(userId: string, endpoint: string, method: string = "GET", body?: any) {
+    console.log("📡 [graphRequest] START:", { userId, endpoint, method });
+    
     const accessToken = await getValidAccessToken(userId);
+    
+    console.log("🔑 [graphRequest] Access token obtained:", !!accessToken);
+    
     if (!accessToken) {
+      console.error("❌ [graphRequest] No access token available");
       throw new Error("Microsoft 365 non connesso o token non valido");
     }
 
@@ -118,23 +167,37 @@ export const microsoftGraphService = {
     };
 
     const url = endpoint.startsWith("http") ? endpoint : `${GRAPH_API_BASE}${endpoint}`;
+    
+    console.log("📡 [graphRequest] Calling:", { url, method });
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Graph Request Error (${method} ${endpoint}):`, errorText);
-      throw new Error(`Graph API Error: ${response.status} - ${errorText}`);
+      console.log("📡 [graphRequest] Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Graph Request Error (${method} ${endpoint}):`, errorText);
+        throw new Error(`Graph API Error: ${response.status} - ${errorText}`);
+      }
+
+      // Gestione risposte vuote (es. 204 No Content)
+      if (response.status === 204) {
+        console.log("✅ [graphRequest] Success (204 No Content)");
+        return null;
+      }
+
+      const data = await response.json();
+      console.log("✅ [graphRequest] Success, data keys:", Object.keys(data));
+      return data;
+    } catch (error) {
+      console.error("❌ [graphRequest] Exception:", error);
+      throw error;
     }
-
-    // Gestione risposte vuote (es. 204 No Content)
-    if (response.status === 204) return null;
-
-    return response.json();
   },
 
   /**
@@ -361,12 +424,16 @@ export const microsoftGraphService = {
   },
 
   async getTeams(userId: string) {
+    console.log("📋 [getTeams] START for userId:", userId);
     const data = await this.graphRequest(userId, "/me/joinedTeams", "GET");
+    console.log("📋 [getTeams] Teams found:", data?.value?.length || 0);
     return data.value || [];
   },
 
   async getChannels(userId: string, teamId: string) {
+    console.log("📋 [getChannels] START for teamId:", teamId);
     const data = await this.graphRequest(userId, `/teams/${teamId}/channels`, "GET");
+    console.log("📋 [getChannels] Channels found:", data?.value?.length || 0);
     return data.value || [];
   },
 
@@ -387,15 +454,22 @@ export const microsoftGraphService = {
     }>;
     error?: string;
   }> {
+    console.log("🎯 [getTeamsWithChannels] START for userId:", userId);
+    
     try {
       // 1. Recupera tutti i team
+      console.log("📋 [getTeamsWithChannels] Fetching teams...");
       const teams = await this.getTeams(userId);
+      console.log("📋 [getTeamsWithChannels] Teams retrieved:", teams.length);
       
       // 2. Per ogni team, recupera i canali
+      console.log("📋 [getTeamsWithChannels] Fetching channels for each team...");
       const teamsWithChannels = await Promise.all(
-        teams.map(async (team: any) => {
+        teams.map(async (team: any, index: number) => {
+          console.log(`📋 [getTeamsWithChannels] Processing team ${index + 1}/${teams.length}:`, team.displayName);
           try {
             const channels = await this.getChannels(userId, team.id);
+            console.log(`✅ Team "${team.displayName}": ${channels.length} channels`);
             return {
               id: team.id,
               displayName: team.displayName,
@@ -407,7 +481,7 @@ export const microsoftGraphService = {
               })),
             };
           } catch (error) {
-            console.error(`Errore recupero canali per team ${team.id}:`, error);
+            console.error(`❌ Errore recupero canali per team ${team.id}:`, error);
             return {
               id: team.id,
               displayName: team.displayName,
@@ -418,9 +492,10 @@ export const microsoftGraphService = {
         })
       );
 
+      console.log("✅ [getTeamsWithChannels] SUCCESS - Total teams:", teamsWithChannels.length);
       return { success: true, teams: teamsWithChannels };
     } catch (error) {
-      console.error("Errore getTeamsWithChannels:", error);
+      console.error("❌ [getTeamsWithChannels] ERROR:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Errore recupero team",
