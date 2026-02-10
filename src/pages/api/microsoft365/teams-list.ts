@@ -39,8 +39,8 @@ export default async function handler(
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    // Type assertion: abbiamo verificato che userData.id esiste
-    const userId = userData.id as string;
+    // Type assertion dopo verifica null
+    const userId: string = userData.id as string;
 
     // 3. Verifica se l'utente è connesso a Microsoft
     const isConnected = await microsoftGraphService.isConnected(userId);

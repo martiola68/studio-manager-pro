@@ -42,8 +42,8 @@ export default async function handler(
       return res.status(400).json({ error: "Studio non identificato" });
     }
 
-    // Type assertion: abbiamo verificato che studio_id esiste
-    const studioId = userData.studio_id as string;
+    // Type assertion dopo verifica null
+    const studioId: string = userData.studio_id as string;
 
     // 3. Valida i dati ricevuti
     const { 
