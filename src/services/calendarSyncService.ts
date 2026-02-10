@@ -36,14 +36,21 @@ interface OutlookEvent {
 interface AppEvent {
   id: string;
   titolo: string;
-  data: string;
-  ora_inizio: string;
-  ora_fine: string;
+  data_inizio: string;
+  data_fine: string;
   descrizione?: string;
   luogo?: string;
   cliente_id?: string;
-  user_id: string;
+  utente_id: string;
   microsoft_event_id?: string;
+  tutto_giorno?: boolean;
+}
+
+/**
+ * Helper: Converte DateTime Outlook in Timestamp locale
+ */
+function convertOutlookToLocal(dateTime: string): string {
+  return new Date(dateTime).toISOString();
 }
 
 /**
@@ -74,40 +81,39 @@ export async function syncFromOutlook(userId: string): Promise<number> {
     for (const outlookEvent of outlookEvents) {
       // Verifica se evento già sincronizzato
       const { data: existing } = await supabase
-        .from("tbeventi")
+        .from("tbagenda")
         .select("id")
         .eq("microsoft_event_id", outlookEvent.id)
-        .eq("user_id", userId)
+        .eq("utente_id", userId)
         .single();
+
+      const eventData = {
+        titolo: outlookEvent.subject,
+        data_inizio: convertOutlookToLocal(outlookEvent.start.dateTime),
+        data_fine: convertOutlookToLocal(outlookEvent.end.dateTime),
+        descrizione: outlookEvent.body?.content || null,
+        luogo: outlookEvent.location?.displayName || null,
+        updated_at: new Date().toISOString(),
+        outlook_synced: true
+      };
 
       if (existing) {
         // Aggiorna evento esistente
         await supabase
-          .from("tbeventi")
-          .update({
-            titolo: outlookEvent.subject,
-            data: outlookEvent.start.dateTime.split("T")[0],
-            ora_inizio: outlookEvent.start.dateTime.split("T")[1].substring(0, 5),
-            ora_fine: outlookEvent.end.dateTime.split("T")[1].substring(0, 5),
-            descrizione: outlookEvent.body?.content || null,
-            luogo: outlookEvent.location?.displayName || null,
-            updated_at: new Date().toISOString(),
-          })
+          .from("tbagenda")
+          .update(eventData)
           .eq("id", existing.id);
 
         console.log(`✅ Aggiornato evento: ${outlookEvent.subject}`);
       } else {
         // Crea nuovo evento
-        await supabase.from("tbeventi").insert({
-          titolo: outlookEvent.subject,
-          data: outlookEvent.start.dateTime.split("T")[0],
-          ora_inizio: outlookEvent.start.dateTime.split("T")[1].substring(0, 5),
-          ora_fine: outlookEvent.end.dateTime.split("T")[1].substring(0, 5),
-          descrizione: outlookEvent.body?.content || null,
-          luogo: outlookEvent.location?.displayName || null,
-          user_id: userId,
+        await supabase.from("tbagenda").insert({
+          ...eventData,
+          utente_id: userId,
           microsoft_event_id: outlookEvent.id,
           created_at: new Date().toISOString(),
+          tutto_giorno: false, // Default per eventi Outlook
+          in_sede: true
         });
 
         console.log(`✅ Creato nuovo evento: ${outlookEvent.subject}`);
@@ -137,13 +143,14 @@ export async function createOutlookEvent(
     const outlookEvent = {
       subject: appEvent.titolo,
       start: {
-        dateTime: `${appEvent.data}T${appEvent.ora_inizio}:00`,
+        dateTime: appEvent.data_inizio,
         timeZone: "Europe/Rome",
       },
       end: {
-        dateTime: `${appEvent.data}T${appEvent.ora_fine}:00`,
+        dateTime: appEvent.data_fine,
         timeZone: "Europe/Rome",
       },
+      isAllDay: appEvent.tutto_giorno || false,
       body: {
         contentType: "Text",
         content: appEvent.descrizione || "",
@@ -168,9 +175,10 @@ export async function createOutlookEvent(
 
     // Salva ID Outlook nell'evento app
     await supabase
-      .from("tbeventi")
+      .from("tbagenda")
       .update({
         microsoft_event_id: response.id,
+        outlook_synced: true,
         updated_at: new Date().toISOString(),
       })
       .eq("id", appEvent.id);
@@ -196,13 +204,14 @@ export async function updateOutlookEvent(
     const outlookEvent = {
       subject: appEvent.titolo,
       start: {
-        dateTime: `${appEvent.data}T${appEvent.ora_inizio}:00`,
+        dateTime: appEvent.data_inizio,
         timeZone: "Europe/Rome",
       },
       end: {
-        dateTime: `${appEvent.data}T${appEvent.ora_fine}:00`,
+        dateTime: appEvent.data_fine,
         timeZone: "Europe/Rome",
       },
+      isAllDay: appEvent.tutto_giorno || false,
       body: {
         contentType: "Text",
         content: appEvent.descrizione || "",
@@ -257,12 +266,14 @@ export async function fullCalendarSync(userId: string): Promise<void> {
   await syncFromOutlook(userId);
 
   // Sync da app ad Outlook (eventi senza microsoft_event_id)
+  const today = new Date().toISOString();
+  
   const { data: unsyncedEvents } = await supabase
-    .from("tbeventi")
+    .from("tbagenda")
     .select("*")
-    .eq("user_id", userId)
+    .eq("utente_id", userId)
     .is("microsoft_event_id", null)
-    .gte("data", new Date().toISOString().split("T")[0]); // Solo eventi futuri
+    .gte("data_inizio", today); // Solo eventi futuri
 
   if (unsyncedEvents && unsyncedEvents.length > 0) {
     console.log(`📤 ${unsyncedEvents.length} eventi da sincronizzare su Outlook`);
