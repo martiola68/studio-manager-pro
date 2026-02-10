@@ -13,10 +13,12 @@ export default async function handler(
   }
 
   try {
+    console.log("🔄 Microsoft Callback ricevuto");
+    
     const { code, state, error } = req.query;
 
     if (error) {
-      console.error("Microsoft OAuth error:", error);
+      console.error("❌ Errore OAuth Microsoft:", error);
       return res.send(`
         <html>
           <body>
@@ -30,6 +32,7 @@ export default async function handler(
     }
 
     if (!code || typeof code !== "string") {
+      console.error("❌ Code mancante nel callback");
       return res.send(`
         <html>
           <body>
@@ -43,6 +46,7 @@ export default async function handler(
     }
 
     if (!state || typeof state !== "string") {
+      console.error("❌ State mancante nel callback");
       return res.send(`
         <html>
           <body>
@@ -55,10 +59,16 @@ export default async function handler(
       `);
     }
 
+    console.log("✅ Code ricevuto (length):", code.length);
+    console.log("🔐 State ricevuto, decodifico...");
+
     const stateData = JSON.parse(Buffer.from(state, "base64").toString());
     const { user_id, studio_id } = stateData;
 
+    console.log("📋 State decodificato:", { user_id, studio_id });
+
     if (!user_id || !studio_id) {
+      console.error("❌ State invalido - user_id o studio_id mancante");
       return res.send(`
         <html>
           <body>
@@ -73,6 +83,8 @@ export default async function handler(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log("🔍 Recupero configurazione Microsoft per studio:", studio_id);
+
     const { data: config, error: configError } = await supabase
       .from("microsoft365_config")
       .select("client_id, client_secret, tenant_id")
@@ -80,7 +92,7 @@ export default async function handler(
       .single();
 
     if (configError || !config) {
-      console.error("Config error:", configError);
+      console.error("❌ Configurazione non trovata:", configError);
       return res.send(`
         <html>
           <body>
@@ -93,7 +105,12 @@ export default async function handler(
       `);
     }
 
+    console.log("✅ Configurazione trovata, scambio code per token...");
+
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
+
+    console.log("🔗 Redirect URI per token:", redirectUri);
+    console.log("🔑 Richiesta token a Microsoft...");
 
     const tokenResponse = await fetch(
       `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`,
@@ -114,12 +131,12 @@ export default async function handler(
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
-      console.error("Token exchange error:", errorData);
+      console.error("❌ Errore scambio token:", errorData);
       return res.send(`
         <html>
           <body>
             <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'token_exchange_failed' }, '*');
+              window.opener?.postMessage({ type: 'oauth_error', error: 'token_exchange_failed', details: ${JSON.stringify(errorData)} }, '*');
               window.close();
             </script>
           </body>
@@ -128,7 +145,18 @@ export default async function handler(
     }
 
     const tokens = await tokenResponse.json();
+    console.log("✅ Token ricevuti da Microsoft");
+    console.log("📊 Token info:", {
+      has_access_token: !!tokens.access_token,
+      has_refresh_token: !!tokens.refresh_token,
+      expires_in: tokens.expires_in
+    });
+
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+
+    console.log("💾 Salvataggio token nel database...");
+    console.log("📋 User ID:", user_id);
+    console.log("⏰ Scadenza:", expiresAt);
 
     const { error: saveError } = await supabase
       .from("tbmicrosoft_tokens" as any)
@@ -141,12 +169,12 @@ export default async function handler(
       });
 
     if (saveError) {
-      console.error("Error saving tokens:", saveError);
+      console.error("❌ Errore salvataggio token:", saveError);
       return res.send(`
         <html>
           <body>
             <script>
-              window.opener?.postMessage({ type: 'oauth_error', error: 'save_failed' }, '*');
+              window.opener?.postMessage({ type: 'oauth_error', error: 'save_failed', details: ${JSON.stringify(saveError)} }, '*');
               window.close();
             </script>
           </body>
@@ -154,23 +182,27 @@ export default async function handler(
       `);
     }
 
+    console.log("✅ Token salvati con successo!");
+    console.log("🎉 OAuth completato - chiudo popup");
+
     return res.send(`
       <html>
         <body>
           <script>
+            console.log('✅ OAuth Microsoft completato con successo!');
             window.opener?.postMessage({ type: 'oauth_success' }, '*');
-            window.close();
+            setTimeout(() => window.close(), 500);
           </script>
         </body>
       </html>
     `);
-  } catch (error) {
-    console.error("Microsoft callback error:", error);
+  } catch (error: any) {
+    console.error("❌ Errore callback Microsoft:", error);
     return res.send(`
       <html>
         <body>
           <script>
-            window.opener?.postMessage({ type: 'oauth_error', error: 'unexpected' }, '*');
+            window.opener?.postMessage({ type: 'oauth_error', error: 'unexpected', details: '${error.message}' }, '*');
             window.close();
           </script>
         </body>
