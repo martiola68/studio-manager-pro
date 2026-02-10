@@ -25,8 +25,11 @@ export default async function handler(
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user || !user.email) {
+      console.error("❌ Auth error:", authError);
       return res.status(401).json({ error: "Token non valido" });
     }
+
+    console.log("✅ User authenticated:", user.email);
 
     // 2. Recupera user_id dal database
     const { data: userData, error: userError } = await supabase
@@ -36,19 +39,17 @@ export default async function handler(
       .single();
 
     if (userError || !userData) {
+      console.error("❌ User not found:", userError);
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    // Type guard: verifica che id sia una stringa
-    if (!userData.id || typeof userData.id !== "string") {
-      return res.status(404).json({ error: "ID utente non valido" });
-    }
-
-    // Ora TypeScript sa che userData.id è string
-    const userId = userData.id! as string;
+    const userId = userData.id;
+    console.log("✅ User ID found:", userId);
 
     // 3. Verifica se l'utente è connesso a Microsoft
     const isConnected = await microsoftGraphService.isConnected(userId);
+    console.log("🔍 Is connected:", isConnected);
+
     if (!isConnected) {
       return res.status(400).json({ 
         error: "Account Microsoft non connesso",
@@ -60,6 +61,7 @@ export default async function handler(
     const result = await microsoftGraphService.getTeamsWithChannels(userId);
 
     if (!result.success) {
+      console.error("❌ Graph error:", result.error);
       return res.status(500).json({ 
         error: result.error || "Errore recupero team",
         code: "GRAPH_ERROR"
@@ -72,7 +74,7 @@ export default async function handler(
     });
 
   } catch (error: any) {
-    console.error("Errore API teams-list:", error);
+    console.error("❌ Errore API teams-list:", error);
     return res.status(500).json({
       error: error.message || "Errore server",
       code: "SERVER_ERROR"

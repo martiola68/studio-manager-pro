@@ -141,11 +141,23 @@ export const microsoftGraphService = {
    * Verifica se l'utente è connesso
    */
   async isConnected(userId: string): Promise<boolean> {
-    const { data: tokenData } = await supabase
+    console.log("🔍 Checking connection for user:", userId);
+    
+    const { data: tokenData, error } = await supabase
       .from("tbmicrosoft_tokens")
       .select("id")
       .eq("user_id", userId)
       .single();
+
+    if (error) {
+      console.error("❌ Error checking connection:", error);
+    }
+
+    if (tokenData) {
+      console.log("✅ Token found for user:", userId);
+    } else {
+      console.log("❌ No token found for user:", userId);
+    }
 
     return !!tokenData;
   },
