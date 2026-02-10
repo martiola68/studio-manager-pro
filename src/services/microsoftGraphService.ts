@@ -143,17 +143,25 @@ export const microsoftGraphService = {
   async isConnected(userId: string): Promise<boolean> {
     console.log("🔍 [isConnected] Inizio verifica per userId:", userId);
     console.log("🔍 [isConnected] Type of userId:", typeof userId);
+    console.log("🔍 [isConnected] userId is valid UUID:", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId));
     
     try {
+      // Primo tentativo: query diretta
+      console.log("🔍 [isConnected] Tentativo 1: Query diretta con user_id");
       const { data: tokenData, error } = await supabase
         .from("tbmicrosoft_tokens")
-        .select("id")
+        .select("id, user_id, expires_at")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       console.log("🔍 [isConnected] Query result:", { 
         hasData: !!tokenData, 
         hasError: !!error,
+        data: tokenData ? {
+          id: tokenData.id,
+          user_id: tokenData.user_id,
+          expires_at: tokenData.expires_at
+        } : null,
         errorDetails: error ? {
           message: error.message,
           details: error.details,
@@ -163,15 +171,76 @@ export const microsoftGraphService = {
       });
 
       if (error) {
-        console.error("❌ [isConnected] Error checking connection:", error);
+        console.error("❌ [isConnected] Error in query:", error);
+        
+        // Secondo tentativo: query con cast esplicito
+        console.log("🔍 [isConnected] Tentativo 2: Query con cast UUID");
+        const { data: tokenData2, error: error2 } = await supabase
+          .from("tbmicrosoft_tokens")
+          .select("id, user_id, expires_at")
+          .eq("user_id", userId.toLowerCase())
+          .maybeSingle();
+
+        if (error2) {
+          console.error("❌ [isConnected] Error in second attempt:", error2);
+          return false;
+        }
+
+        if (tokenData2) {
+          console.log("✅ [isConnected] Token found in second attempt, id:", tokenData2.id);
+          return true;
+        }
+        
         return false;
       }
 
       if (tokenData) {
         console.log("✅ [isConnected] Token found, id:", tokenData.id);
-        return true;
+        console.log("✅ [isConnected] Token user_id:", tokenData.user_id);
+        console.log("✅ [isConnected] Token expires_at:", tokenData.expires_at);
+        
+        // Verifica se il token è scaduto
+        const now = new Date();
+        const expiresAt = new Date(tokenData.expires_at);
+        const isExpired = now >= expiresAt;
+        
+        console.log("🔍 [isConnected] Token expired:", isExpired);
+        console.log("🔍 [isConnected] Now:", now.toISOString());
+        console.log("🔍 [isConnected] Expires:", expiresAt.toISOString());
+        
+        return true; // Token esiste (anche se scaduto, getValidAccessToken farà refresh)
       } else {
         console.log("❌ [isConnected] No token found for user:", userId);
+        
+        // Terzo tentativo: lista tutti i token per debug
+        console.log("🔍 [isConnected] Tentativo 3: Lista tutti i token (debug)");
+        const { data: allTokens, error: error3 } = await supabase
+          .from("tbmicrosoft_tokens")
+          .select("id, user_id");
+
+        if (error3) {
+          console.error("❌ [isConnected] Error listing all tokens:", error3);
+        } else {
+          console.log("📋 [isConnected] All tokens in database:", allTokens);
+          console.log("📋 [isConnected] Looking for userId:", userId);
+          
+          // Cerca manualmente
+          const found = allTokens?.find(t => {
+            const match = t.user_id === userId || 
+                         t.user_id.toLowerCase() === userId.toLowerCase() ||
+                         t.user_id.replace(/-/g, '') === userId.replace(/-/g, '');
+            if (match) {
+              console.log("🎯 [isConnected] FOUND MATCH:", t);
+            }
+            return match;
+          });
+          
+          if (found) {
+            console.log("✅ [isConnected] Token found in manual search!");
+            return true;
+          }
+        }
+        
         return false;
       }
     } catch (err) {
