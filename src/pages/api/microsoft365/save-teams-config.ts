@@ -34,15 +34,20 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (userError || !userData?.studio_id) {
+    if (userError || !userData) {
       return res.status(404).json({ error: "Utente non trovato" });
+    }
+
+    // Type guard esplicito
+    if (typeof userData.studio_id !== "string") {
+      return res.status(404).json({ error: "Studio ID non valido" });
     }
 
     if (!userData.tipo_utente || userData.tipo_utente !== "Admin") {
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
 
-    const studioId: string = userData.studio_id as string;
+    const studioId: string = userData.studio_id;
 
     // 3. Valida i dati ricevuti
     const { 
