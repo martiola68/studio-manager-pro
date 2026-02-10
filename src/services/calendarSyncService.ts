@@ -1,357 +1,280 @@
+import { graphApiCall } from "./microsoftGraphService";
 import { supabase } from "@/lib/supabase/client";
-import { microsoftGraphService } from "./microsoftGraphService";
 
 /**
- * Mapping tra eventi locali e eventi Outlook
+ * Calendar Sync Service
+ * Sincronizza eventi tra Outlook Calendar e Agenda app
  */
-interface EventMapping {
-  evento_id: string;
-  outlook_event_id: string;
-  last_synced: string;
+
+interface OutlookEvent {
+  id: string;
+  subject: string;
+  start: {
+    dateTime: string;
+    timeZone: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone: string;
+  };
+  body: {
+    contentType: string;
+    content: string;
+  };
+  location?: {
+    displayName: string;
+  };
+  attendees?: Array<{
+    emailAddress: {
+      address: string;
+      name: string;
+    };
+    type: string;
+  }>;
+}
+
+interface AppEvent {
+  id: string;
+  titolo: string;
+  data: string;
+  ora_inizio: string;
+  ora_fine: string;
+  descrizione?: string;
+  luogo?: string;
+  cliente_id?: string;
+  user_id: string;
+  microsoft_event_id?: string;
 }
 
 /**
- * Servizio per sincronizzazione calendario tra App e Microsoft Outlook
+ * Sincronizza eventi da Outlook ad Agenda app
  */
-export const calendarSyncService = {
-  /**
-   * Verifica se la sincronizzazione calendario è abilitata
-   */
-  async isSyncEnabled(userId: string): Promise<boolean> {
-    try {
-      const { data: utente } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", userId)
+export async function syncFromOutlook(userId: string): Promise<number> {
+  console.log("🔄 Sincronizzazione da Outlook ad Agenda...");
+
+  try {
+    // Ottieni eventi da Outlook (ultimi 30 giorni e prossimi 90 giorni)
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 90);
+
+    const filter = `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`;
+    
+    const response = await graphApiCall<{ value: OutlookEvent[] }>(
+      userId,
+      `/me/calendar/events?$filter=${encodeURIComponent(filter)}&$top=100`
+    );
+
+    const outlookEvents = response.value;
+    console.log(`📅 Trovati ${outlookEvents.length} eventi in Outlook`);
+
+    let syncedCount = 0;
+
+    for (const outlookEvent of outlookEvents) {
+      // Verifica se evento già sincronizzato
+      const { data: existing } = await supabase
+        .from("tbeventi")
+        .select("id")
+        .eq("microsoft_event_id", outlookEvent.id)
+        .eq("user_id", userId)
         .single();
 
-      if (!utente?.studio_id) return false;
+      if (existing) {
+        // Aggiorna evento esistente
+        await supabase
+          .from("tbeventi")
+          .update({
+            titolo: outlookEvent.subject,
+            data: outlookEvent.start.dateTime.split("T")[0],
+            ora_inizio: outlookEvent.start.dateTime.split("T")[1].substring(0, 5),
+            ora_fine: outlookEvent.end.dateTime.split("T")[1].substring(0, 5),
+            descrizione: outlookEvent.body?.content || null,
+            luogo: outlookEvent.location?.displayName || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
 
-      const { data: config } = await supabase
-        .from("microsoft365_config")
-        .select("enabled, features")
-        .eq("studio_id", utente.studio_id)
-        .single();
+        console.log(`✅ Aggiornato evento: ${outlookEvent.subject}`);
+      } else {
+        // Crea nuovo evento
+        await supabase.from("tbeventi").insert({
+          titolo: outlookEvent.subject,
+          data: outlookEvent.start.dateTime.split("T")[0],
+          ora_inizio: outlookEvent.start.dateTime.split("T")[1].substring(0, 5),
+          ora_fine: outlookEvent.end.dateTime.split("T")[1].substring(0, 5),
+          descrizione: outlookEvent.body?.content || null,
+          luogo: outlookEvent.location?.displayName || null,
+          user_id: userId,
+          microsoft_event_id: outlookEvent.id,
+          created_at: new Date().toISOString(),
+        });
 
-      if (!config?.enabled) return false;
-      
-      const features = config.features as Record<string, boolean> | null;
-      return features?.calendar === true;
-    } catch {
-      return false;
+        console.log(`✅ Creato nuovo evento: ${outlookEvent.subject}`);
+      }
+
+      syncedCount++;
     }
-  },
 
-  /**
-   * Converte evento locale in formato Microsoft Graph
-   */
-  convertToOutlookEvent(evento: any) {
-    return {
-      subject: evento.titolo || "Evento",
-      body: {
-        contentType: "HTML",
-        content: evento.descrizione || "",
-      },
+    console.log(`✅ Sincronizzazione completata: ${syncedCount} eventi`);
+    return syncedCount;
+  } catch (error: any) {
+    console.error("❌ Errore sincronizzazione da Outlook:", error);
+    throw new Error(`Errore sincronizzazione: ${error.message}`);
+  }
+}
+
+/**
+ * Crea evento in Outlook da evento Agenda app
+ */
+export async function createOutlookEvent(
+  userId: string,
+  appEvent: AppEvent
+): Promise<string> {
+  console.log("📅 Creazione evento in Outlook...");
+
+  try {
+    const outlookEvent = {
+      subject: appEvent.titolo,
       start: {
-        dateTime: evento.data_inizio,
+        dateTime: `${appEvent.data}T${appEvent.ora_inizio}:00`,
         timeZone: "Europe/Rome",
       },
       end: {
-        dateTime: evento.data_fine,
+        dateTime: `${appEvent.data}T${appEvent.ora_fine}:00`,
         timeZone: "Europe/Rome",
       },
-      location: evento.luogo
+      body: {
+        contentType: "Text",
+        content: appEvent.descrizione || "",
+      },
+      location: appEvent.luogo
         ? {
-            displayName: evento.luogo,
+            displayName: appEvent.luogo,
           }
         : undefined,
-      isReminderOn: true,
-      reminderMinutesBeforeStart: 15,
     };
-  },
 
-  /**
-   * Converte evento Outlook in formato locale
-   */
-  convertFromOutlookEvent(outlookEvent: any) {
-    return {
-      titolo: outlookEvent.subject,
-      descrizione: outlookEvent.body?.content || "",
-      data_inizio: outlookEvent.start?.dateTime,
-      data_fine: outlookEvent.end?.dateTime,
-      luogo: outlookEvent.location?.displayName,
-      tutto_il_giorno: outlookEvent.isAllDay || false,
+    const response = await graphApiCall<OutlookEvent>(
+      userId,
+      "/me/calendar/events",
+      {
+        method: "POST",
+        body: JSON.stringify(outlookEvent),
+      }
+    );
+
+    console.log("✅ Evento creato in Outlook:", response.id);
+
+    // Salva ID Outlook nell'evento app
+    await supabase
+      .from("tbeventi")
+      .update({
+        microsoft_event_id: response.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", appEvent.id);
+
+    return response.id;
+  } catch (error: any) {
+    console.error("❌ Errore creazione evento Outlook:", error);
+    throw new Error(`Errore creazione evento: ${error.message}`);
+  }
+}
+
+/**
+ * Aggiorna evento in Outlook
+ */
+export async function updateOutlookEvent(
+  userId: string,
+  microsoftEventId: string,
+  appEvent: AppEvent
+): Promise<void> {
+  console.log("📝 Aggiornamento evento in Outlook...");
+
+  try {
+    const outlookEvent = {
+      subject: appEvent.titolo,
+      start: {
+        dateTime: `${appEvent.data}T${appEvent.ora_inizio}:00`,
+        timeZone: "Europe/Rome",
+      },
+      end: {
+        dateTime: `${appEvent.data}T${appEvent.ora_fine}:00`,
+        timeZone: "Europe/Rome",
+      },
+      body: {
+        contentType: "Text",
+        content: appEvent.descrizione || "",
+      },
+      location: appEvent.luogo
+        ? {
+            displayName: appEvent.luogo,
+          }
+        : undefined,
     };
-  },
 
-  /**
-   * Sincronizza un evento locale con Outlook (crea o aggiorna)
-   */
-  async syncEventToOutlook(
-    userId: string,
-    eventoId: string
-  ): Promise<{ success: boolean; outlookEventId?: string; error?: string }> {
-    try {
-      console.log("🔄 [Sync] Sincronizzazione evento a Outlook:", eventoId);
+    await graphApiCall(userId, `/me/calendar/events/${microsoftEventId}`, {
+      method: "PATCH",
+      body: JSON.stringify(outlookEvent),
+    });
 
-      // 1. Verifica se sync abilitato
-      const syncEnabled = await this.isSyncEnabled(userId);
-      if (!syncEnabled) {
-        console.log("⚠️ Sincronizzazione calendario non abilitata");
-        return { success: false, error: "Sincronizzazione non abilitata" };
+    console.log("✅ Evento aggiornato in Outlook");
+  } catch (error: any) {
+    console.error("❌ Errore aggiornamento evento Outlook:", error);
+    throw new Error(`Errore aggiornamento evento: ${error.message}`);
+  }
+}
+
+/**
+ * Elimina evento da Outlook
+ */
+export async function deleteOutlookEvent(
+  userId: string,
+  microsoftEventId: string
+): Promise<void> {
+  console.log("🗑️ Eliminazione evento da Outlook...");
+
+  try {
+    await graphApiCall(userId, `/me/calendar/events/${microsoftEventId}`, {
+      method: "DELETE",
+    });
+
+    console.log("✅ Evento eliminato da Outlook");
+  } catch (error: any) {
+    console.error("❌ Errore eliminazione evento Outlook:", error);
+    throw new Error(`Errore eliminazione evento: ${error.message}`);
+  }
+}
+
+/**
+ * Sincronizza tutti gli eventi (bidirezionale)
+ */
+export async function fullCalendarSync(userId: string): Promise<void> {
+  console.log("🔄 Sincronizzazione completa calendario...");
+
+  // Sync da Outlook ad app
+  await syncFromOutlook(userId);
+
+  // Sync da app ad Outlook (eventi senza microsoft_event_id)
+  const { data: unsyncedEvents } = await supabase
+    .from("tbeventi")
+    .select("*")
+    .eq("user_id", userId)
+    .is("microsoft_event_id", null)
+    .gte("data", new Date().toISOString().split("T")[0]); // Solo eventi futuri
+
+  if (unsyncedEvents && unsyncedEvents.length > 0) {
+    console.log(`📤 ${unsyncedEvents.length} eventi da sincronizzare su Outlook`);
+
+    for (const event of unsyncedEvents) {
+      try {
+        await createOutlookEvent(userId, event as AppEvent);
+      } catch (error) {
+        console.error(`❌ Errore sync evento ${event.id}:`, error);
       }
-
-      // 2. Ottieni evento locale
-      const { data: evento, error: eventoError } = await supabase
-        .from("tbagenda")
-        .select("*")
-        .eq("id", eventoId)
-        .single();
-
-      if (eventoError || !evento) {
-        return { success: false, error: "Evento non trovato" };
-      }
-
-      // 3. Converti in formato Outlook
-      const outlookEvent = this.convertToOutlookEvent(evento);
-
-      // 4. Verifica se già sincronizzato
-      const { data: mapping } = await supabase
-        .from("tbmicrosoft_calendar_mappings")
-        .select("outlook_event_id")
-        .eq("evento_id", eventoId)
-        .single();
-
-      let result;
-      if (mapping?.outlook_event_id) {
-        // Aggiorna evento esistente
-        console.log("📝 Aggiornamento evento esistente:", mapping.outlook_event_id);
-        result = await microsoftGraphService.updateEvent(
-          userId,
-          mapping.outlook_event_id,
-          outlookEvent
-        );
-
-        if (result.success) {
-          // Aggiorna timestamp sincronizzazione
-          await supabase
-            .from("tbmicrosoft_calendar_mappings")
-            .update({ last_synced: new Date().toISOString() })
-            .eq("evento_id", eventoId);
-
-          return { success: true, outlookEventId: mapping.outlook_event_id };
-        }
-      } else {
-        // Crea nuovo evento
-        console.log("➕ Creazione nuovo evento Outlook");
-        result = await microsoftGraphService.createEvent(userId, outlookEvent);
-
-        if (result.success && result.data?.id) {
-          // Salva mapping
-          await supabase.from("tbmicrosoft_calendar_mappings").insert({
-            evento_id: eventoId,
-            outlook_event_id: result.data.id,
-            last_synced: new Date().toISOString(),
-          });
-
-          return { success: true, outlookEventId: result.data.id };
-        }
-      }
-
-      return {
-        success: false,
-        error: result.error || "Errore sincronizzazione",
-      };
-    } catch (error: any) {
-      console.error("❌ Errore sincronizzazione evento:", error);
-      return {
-        success: false,
-        error: error.message || "Errore sincronizzazione",
-      };
     }
-  },
+  }
 
-  /**
-   * Elimina evento da Outlook
-   */
-  async deleteEventFromOutlook(
-    userId: string,
-    eventoId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      console.log("🗑️ [Sync] Eliminazione evento da Outlook:", eventoId);
-
-      // 1. Ottieni mapping
-      const { data: mapping } = await supabase
-        .from("tbmicrosoft_calendar_mappings")
-        .select("outlook_event_id")
-        .eq("evento_id", eventoId)
-        .single();
-
-      if (!mapping?.outlook_event_id) {
-        console.log("⚠️ Evento non sincronizzato, skip eliminazione");
-        return { success: true }; // Non è un errore, semplicemente non era sincronizzato
-      }
-
-      // 2. Elimina da Outlook
-      const result = await microsoftGraphService.deleteEvent(
-        userId,
-        mapping.outlook_event_id
-      );
-
-      if (result.success) {
-        // 3. Rimuovi mapping
-        await supabase
-          .from("tbmicrosoft_calendar_mappings")
-          .delete()
-          .eq("evento_id", eventoId);
-      }
-
-      return result;
-    } catch (error: any) {
-      console.error("❌ Errore eliminazione evento:", error);
-      return {
-        success: false,
-        error: error.message || "Errore eliminazione evento",
-      };
-    }
-  },
-
-  /**
-   * Importa eventi da Outlook
-   */
-  async importEventsFromOutlook(
-    userId: string,
-    startDate?: string,
-    endDate?: string
-  ): Promise<{ success: boolean; imported: number; error?: string }> {
-    try {
-      console.log("📥 [Sync] Importazione eventi da Outlook");
-
-      // 1. Verifica se sync abilitato
-      const syncEnabled = await this.isSyncEnabled(userId);
-      if (!syncEnabled) {
-        return { success: false, imported: 0, error: "Sincronizzazione non abilitata" };
-      }
-
-      // 2. Ottieni eventi da Outlook
-      const result = await microsoftGraphService.getEvents(userId, startDate, endDate);
-
-      if (!result.success || !result.data) {
-        return {
-          success: false,
-          imported: 0,
-          error: result.error || "Errore recupero eventi",
-        };
-      }
-
-      let imported = 0;
-
-      // 3. Per ogni evento Outlook, verifica se già importato
-      for (const outlookEvent of result.data) {
-        const { data: existing } = await supabase
-          .from("tbmicrosoft_calendar_mappings")
-          .select("evento_id")
-          .eq("outlook_event_id", outlookEvent.id)
-          .single();
-
-        if (existing) {
-          console.log("⚠️ Evento già importato, skip:", outlookEvent.id);
-          continue;
-        }
-
-        // 4. Converti e crea evento locale
-        const localEvent = this.convertFromOutlookEvent(outlookEvent);
-
-        const { data: nuovoEvento, error: insertError } = await supabase
-          .from("tbagenda")
-          .insert({
-            ...localEvent,
-            utente_id: userId,
-            tipo: "appointment",
-            stato: "scheduled",
-          })
-          .select()
-          .single();
-
-        if (insertError || !nuovoEvento) {
-          console.error("❌ Errore creazione evento locale:", insertError);
-          continue;
-        }
-
-        // 5. Crea mapping
-        await supabase.from("tbmicrosoft_calendar_mappings").insert({
-          evento_id: nuovoEvento.id,
-          outlook_event_id: outlookEvent.id,
-          last_synced: new Date().toISOString(),
-        });
-
-        imported++;
-      }
-
-      console.log(`✅ Importati ${imported} eventi da Outlook`);
-
-      return { success: true, imported };
-    } catch (error: any) {
-      console.error("❌ Errore importazione eventi:", error);
-      return {
-        success: false,
-        imported: 0,
-        error: error.message || "Errore importazione eventi",
-      };
-    }
-  },
-
-  /**
-   * Sincronizzazione bidirezionale completa
-   */
-  async fullSync(userId: string): Promise<{
-    success: boolean;
-    synced: number;
-    imported: number;
-    error?: string;
-  }> {
-    try {
-      console.log("🔄 [Sync] Sincronizzazione completa calendario");
-
-      let synced = 0;
-      let imported = 0;
-
-      // 1. Sincronizza eventi locali verso Outlook
-      const { data: eventiLocali } = await supabase
-        .from("tbagenda")
-        .select("id")
-        .eq("utente_id", userId)
-        .gte("data_inizio", new Date().toISOString()); // Solo eventi futuri
-
-      if (eventiLocali) {
-        for (const evento of eventiLocali) {
-          const result = await this.syncEventToOutlook(userId, evento.id);
-          if (result.success) synced++;
-        }
-      }
-
-      // 2. Importa eventi da Outlook
-      const importResult = await this.importEventsFromOutlook(
-        userId,
-        new Date().toISOString() // Solo eventi futuri
-      );
-
-      if (importResult.success) {
-        imported = importResult.imported;
-      }
-
-      console.log(`✅ Sincronizzazione completata: ${synced} sincronizzati, ${imported} importati`);
-
-      return { success: true, synced, imported };
-    } catch (error: any) {
-      console.error("❌ Errore sincronizzazione completa:", error);
-      return {
-        success: false,
-        synced: 0,
-        imported: 0,
-        error: error.message || "Errore sincronizzazione",
-      };
-    }
-  },
-};
+  console.log("✅ Sincronizzazione completa terminata");
+}
