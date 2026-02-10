@@ -292,12 +292,11 @@ export const promemoriaService = {
           .single();
 
         if (operatoreData && destinatarioData) {
-          await teamsNotificationService.sendPromemoriaNotification({
-            id: data.id,
-            titolo: nuovoPromemoria.titolo,
-            mittente: `${operatoreData.nome} ${operatoreData.cognome}`,
-            destinatario: `${destinatarioData.nome} ${destinatarioData.cognome}`,
-          });
+          await teamsNotificationService.sendPromemoriaNotification(
+            nuovoPromemoria.titolo,
+            nuovoPromemoria.data_scadenza,
+            nuovoPromemoria.destinatario_id
+          );
         }
       } catch (teamsError) {
         // Non blocchiamo l'operazione se la notifica Teams fallisce
