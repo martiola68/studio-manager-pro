@@ -29,16 +29,12 @@ interface TokenResponse {
  */
 export async function getM365Config(studioId: string): Promise<M365Config | null> {
   const { data, error } = await supabase
-    .from("tbmicrosoft365_config")
+    .from("tbmicrosoft365_config" as any)
     .select("*")
     .eq("studio_id", studioId)
     .single();
 
-  if (error || !data) {
-    console.error("[M365 Service] Config not found for studio:", studioId);
-    return null;
-  }
-
+  if (error || !data) return null;
   return data as M365Config;
 }
 
@@ -47,7 +43,7 @@ export async function getM365Config(studioId: string): Promise<M365Config | null
  */
 export async function isM365Enabled(studioId: string): Promise<boolean> {
   const config = await getM365Config(studioId);
-  return config !== null && config.enabled;
+  return !!(config && config.enabled && config.client_id && config.tenant_id);
 }
 
 /**

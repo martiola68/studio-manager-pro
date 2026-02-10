@@ -13,9 +13,10 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 interface HeaderProps {
   onMenuToggle?: () => void;
+  title?: string;
 }
 
-export default function Header({ onMenuToggle }: HeaderProps) {
+export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
   const router = useRouter();
@@ -117,7 +118,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           )}
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {studio?.denominazione_breve || studio?.ragione_sociale || "Studio Manager Pro"}
+              {title || studio?.denominazione_breve || studio?.ragione_sociale || "Studio Manager Pro"}
             </h1>
             <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
           </div>

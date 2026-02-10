@@ -39,15 +39,15 @@ export default async function handler(
 
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
-    // Get studio config
-    const { data: config, error: configError } = await supabase
-      .from("tbmicrosoft365_config")
+    // Get config
+    const { data: config, error } = await supabase
+      .from("tbmicrosoft365_config" as any)
       .select("*")
       .eq("studio_id", studioId)
       .single();
 
-    if (configError || !config) {
-      console.error("[M365 Test] Config not found:", configError);
+    if (error || !config) {
+      console.error("[M365 Test] Config not found:", error);
       return res.status(404).json({
         success: false,
         error: "Microsoft 365 not configured for this studio",
@@ -59,6 +59,11 @@ export default async function handler(
         success: false,
         error: "Microsoft 365 integration is disabled",
       });
+    }
+
+    // Decrypt secret
+    if (!config.client_secret_encrypted) {
+      return res.status(400).json({ error: "Configuration invalid: missing secret" });
     }
 
     // Decrypt client secret

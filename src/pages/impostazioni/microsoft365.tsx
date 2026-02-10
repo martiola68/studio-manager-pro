@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
+import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,13 +72,14 @@ export default function Microsoft365Settings() {
 
       // Load existing config
       const { data: existingConfig } = await supabase
-        .from("tbmicrosoft365_config")
+        .from("tbmicrosoft365_config" as any)
         .select("*")
         .eq("studio_id", user.studio_id)
         .single();
 
       if (existingConfig) {
-        setConfig(existingConfig as M365Config);
+        // Safe casting since we know the shape from the API
+        setConfig(existingConfig as unknown as M365Config);
         setClientId(existingConfig.client_id);
         setTenantId(existingConfig.tenant_id);
         setOrganizerEmail(existingConfig.organizer_email || "");

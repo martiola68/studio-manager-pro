@@ -49,7 +49,7 @@ export default async function handler(
 
     // Update config
     const { data, error } = await supabase
-      .from("tbmicrosoft365_config")
+      .from("tbmicrosoft365_config" as any)
       .update({
         teams_default_team_id: teamId || null,
         teams_default_channel_id: defaultChannelId || null,
