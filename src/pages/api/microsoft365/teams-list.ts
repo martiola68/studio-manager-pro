@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabase/server";
 import { microsoftGraphService } from "@/services/microsoftGraphService";
 
 /**
@@ -17,7 +18,7 @@ export default async function handler(
   try {
     console.log("📋 Teams-list API chiamata");
 
-    // 1. Verifica autenticazione
+    // 1. Verifica autenticazione con client standard
     const authHeader = req.headers.authorization;
     console.log("🔐 Auth header presente:", !!authHeader);
     
@@ -44,15 +45,14 @@ export default async function handler(
     console.log("✅ User autenticato, user.id:", user.id);
     console.log("✅ User email:", user.email);
 
-    // 2. Usa direttamente user.id come user_id
+    // 2. Usa user.id come user_id
     const userId = user.id;
     console.log("🔍 Uso direttamente user.id come user_id:", userId);
 
-    // 3. Verifica token direttamente nel database (bypass RLS potenziale)
-    console.log("🔍 Verifico token Microsoft direttamente nel database...");
-    console.log("🔍 Query params:", { user_id: userId });
+    // 3. Query token con supabaseAdmin (bypassa RLS)
+    console.log("🔍 Query token con Service Role (bypass RLS)...");
     
-    const { data: tokenData, error: tokenError } = await supabase
+    const { data: tokenData, error: tokenError } = await supabaseAdmin
       .from("tbmicrosoft_tokens")
       .select("id, access_token, expires_at")
       .eq("user_id", userId)
@@ -61,18 +61,15 @@ export default async function handler(
     console.log("🔍 Token query result:", { 
       found: !!tokenData, 
       error: tokenError ? tokenError.message : null,
-      tokenDataKeys: tokenData ? Object.keys(tokenData) : [],
       hasAccessToken: tokenData ? !!tokenData.access_token : false
     });
 
     if (tokenError) {
       console.error("❌ Errore query token:", tokenError);
-      console.error("❌ Errore completo:", JSON.stringify(tokenError, null, 2));
       return res.status(500).json({ 
         error: "Errore verifica token",
         code: "DB_ERROR",
-        details: tokenError.message,
-        hint: "Possibile problema RLS o permessi database"
+        details: tokenError.message
       });
     }
 
