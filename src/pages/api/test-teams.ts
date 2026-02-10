@@ -133,7 +133,7 @@ export default async function handler(
       message: "Controllo token di accesso Microsoft Graph...",
     });
 
-    const isConnected = await microsoftGraphService.isConnected(userData.id);
+    const isConnected = await microsoftGraphService.isConnected(userData.id as string);
 
     if (!isConnected) {
       results[3].success = false;
