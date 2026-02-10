@@ -239,7 +239,7 @@ export const scadenzaAlertService = {
           data_scadenza,
           operatore_id,
           tbtipopromemoria(nome),
-          tbutenti(nome, cognome)
+          tbutenti!tbpromemoria_operatore_id_fkey(nome, cognome)
         `)
         .eq("working_progress", "In lavorazione")
         .gte("data_scadenza", dataInizio)
