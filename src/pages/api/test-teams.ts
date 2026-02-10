@@ -86,6 +86,17 @@ export default async function handler(
       studioId: userData.studio_id,
     };
 
+    if (!userData.id) {
+      results.push({
+        step: "2b. Verifica ID Utente",
+        success: false,
+        message: "❌ ID utente non valido",
+        error: "L'ID utente è null o undefined",
+      });
+      allPassed = false;
+      return res.status(400).json({ success: false, results });
+    }
+
     // STEP 3: Verifica configurazione Microsoft 365
     results.push({
       step: "3. Verifica Configurazione Microsoft 365",
@@ -122,7 +133,7 @@ export default async function handler(
       message: "Controllo token di accesso Microsoft Graph...",
     });
 
-    const isConnected = await microsoftGraphService.isConnected(userData.id!);
+    const isConnected = await microsoftGraphService.isConnected(userData.id);
 
     if (!isConnected) {
       results[3].success = false;
