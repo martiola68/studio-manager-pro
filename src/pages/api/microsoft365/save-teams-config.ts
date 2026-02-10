@@ -34,7 +34,7 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (userError || !userData || !userData.studio_id) {
+    if (userError || !userData?.studio_id) {
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
@@ -42,8 +42,7 @@ export default async function handler(
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
 
-    // Type assertion dopo verifica null
-    const studioId = userData.studio_id!;
+    const studioId: string = userData.studio_id as string;
 
     // 3. Valida i dati ricevuti
     const { 

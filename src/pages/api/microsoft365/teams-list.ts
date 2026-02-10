@@ -35,12 +35,11 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (userError || !userData || !userData.id) {
+    if (userError || !userData?.id) {
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    // Type assertion dopo verifica null
-    const userId = userData.id!;
+    const userId: string = userData.id as string;
 
     // 3. Verifica se l'utente è connesso a Microsoft
     const isConnected = await microsoftGraphService.isConnected(userId);
