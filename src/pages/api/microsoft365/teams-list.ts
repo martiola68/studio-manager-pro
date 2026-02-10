@@ -35,12 +35,14 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (!userData || !userData.id) {
+    if (!userData?.id) {
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
+    const userId: string = String(userData.id);
+
     // 3. Verifica se l'utente è connesso a Microsoft
-    const isConnected = await microsoftGraphService.isConnected(userData.id as string);
+    const isConnected = await microsoftGraphService.isConnected(userId);
     if (!isConnected) {
       return res.status(400).json({ 
         error: "Account Microsoft non connesso",
@@ -49,7 +51,7 @@ export default async function handler(
     }
 
     // 4. Recupera lista team e canali
-    const result = await microsoftGraphService.getTeamsWithChannels(userData.id as string);
+    const result = await microsoftGraphService.getTeamsWithChannels(userId);
 
     if (!result.success) {
       return res.status(500).json({ 

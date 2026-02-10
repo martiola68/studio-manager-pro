@@ -34,7 +34,7 @@ export default async function handler(
       .eq("email", user.email)
       .single();
 
-    if (!userData || userData.tipo_utente !== "Admin") {
+    if (!userData?.tipo_utente || userData.tipo_utente !== "Admin") {
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
 
@@ -42,7 +42,7 @@ export default async function handler(
       return res.status(400).json({ error: "Studio non identificato" });
     }
 
-    const studioId = userData.studio_id as string;
+    const studioId: string = String(userData.studio_id);
 
     // 3. Valida i dati ricevuti
     const { 
