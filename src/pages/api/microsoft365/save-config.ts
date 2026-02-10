@@ -1,42 +1,36 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
 import { encrypt } from "@/lib/encryption365";
+import { z } from "zod";
 
 /**
  * API: Save Microsoft 365 Configuration
  * 
  * Encrypts and saves M365 credentials for a studio.
- * Only admins can call this endpoint.
+ * Uses Zod for payload and database validation.
  * 
  * POST /api/microsoft365/save-config
- * Body: {
- *   studioId: string,
- *   clientId: string,
- *   clientSecret: string (plain text - will be encrypted),
- *   tenantId: string,
- *   organizerEmail?: string
- * }
  */
 
-interface SaveConfigRequest {
-  studioId: string;
-  clientId: string;
-  clientSecret?: string; // Optional during update
-  tenantId: string;
-  organizerEmail?: string;
-}
+// Schema for request body
+const SaveConfigRequestSchema = z.object({
+  studioId: z.string().uuid(),
+  clientId: z.string().min(1),
+  clientSecret: z.string().optional(),
+  tenantId: z.string().min(1),
+  organizerEmail: z.string().email().optional().or(z.literal("")),
+});
 
-interface M365ConfigRow {
-  id: string;
-  studio_id: string;
-  client_id: string;
-  client_secret_encrypted: string;
-  tenant_id: string;
-  organizer_email: string | null;
-  enabled: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
+// Schema for database result
+const ConfigRowSchema = z.object({
+  id: z.string(),
+  studio_id: z.string(),
+  client_id: z.string(),
+  tenant_id: z.string(),
+  organizer_email: z.string().nullable(),
+  enabled: z.boolean(),
+  client_secret_encrypted: z.string(),
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -47,22 +41,24 @@ export default async function handler(
   }
 
   try {
+    // 1. Validate Request Body
+    const parseResult = SaveConfigRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: "Invalid request data", 
+        details: parseResult.error.flatten() 
+      });
+    }
+
     const {
       studioId,
       clientId,
       clientSecret,
       tenantId,
       organizerEmail,
-    } = req.body as SaveConfigRequest;
+    } = parseResult.data;
 
-    // Validate required fields
-    if (!studioId || !clientId || !tenantId) {
-      return res.status(400).json({
-        error: "Missing required fields: studioId, clientId, tenantId",
-      });
-    }
-
-    // Validate studio exists
+    // 2. Validate Studio Existence
     const { data: studio, error: studioError } = await supabase
       .from("tbstudio")
       .select("id")
@@ -73,26 +69,24 @@ export default async function handler(
       return res.status(404).json({ error: "Studio not found" });
     }
 
-    // Check if config already exists
-    const { data: existingConfig, error: checkError } = await supabase
-      .from("tbmicrosoft365_config")
+    // 3. Check for existing config
+    const { data: existingData, error: checkError } = await supabase
+      .from("tbmicrosoft365_config" as any)
       .select("id")
       .eq("studio_id", studioId)
       .maybeSingle();
 
     if (checkError) {
-      console.error("[M365 Config] Error checking existing config:", checkError);
       throw checkError;
     }
 
-    let result: M365ConfigRow;
+    let resultData: unknown;
 
-    if (existingConfig) {
-      // Update existing config
+    // 4. Update or Insert
+    if (existingData) {
       console.log("[M365 Config] Updating existing config for studio:", studioId);
       
-      // Prepare update data
-      const updateData: Partial<M365ConfigRow> = {
+      const updateData: Record<string, unknown> = {
         client_id: clientId,
         tenant_id: tenantId,
         organizer_email: organizerEmail || null,
@@ -100,23 +94,20 @@ export default async function handler(
         updated_at: new Date().toISOString(),
       };
 
-      // Only update secret if provided
       if (clientSecret) {
-        console.log("[M365 Config] Encrypting new client secret...");
         updateData.client_secret_encrypted = encrypt(clientSecret);
       }
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config")
+        .from("tbmicrosoft365_config" as any)
         .update(updateData)
         .eq("studio_id", studioId)
         .select()
         .single();
 
       if (error) throw error;
-      result = data as M365ConfigRow;
+      resultData = data;
     } else {
-      // Insert new config - secret is required
       if (!clientSecret) {
         return res.status(400).json({
           error: "Client secret is required for new configuration",
@@ -124,11 +115,10 @@ export default async function handler(
       }
 
       console.log("[M365 Config] Creating new config for studio:", studioId);
-      console.log("[M365 Config] Encrypting client secret...");
       const encryptedSecret = encrypt(clientSecret);
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config")
+        .from("tbmicrosoft365_config" as any)
         .insert({
           studio_id: studioId,
           client_id: clientId,
@@ -141,12 +131,18 @@ export default async function handler(
         .single();
 
       if (error) throw error;
-      result = data as M365ConfigRow;
+      resultData = data;
     }
 
-    console.log("[M365 Config] Configuration saved successfully");
+    // 5. Validate Database Result
+    const parsedDB = ConfigRowSchema.safeParse(resultData);
+    if (!parsedDB.success) {
+      console.error("Database mismatch:", parsedDB.error);
+      throw new Error("Database returned unexpected data shape");
+    }
+    
+    const result = parsedDB.data;
 
-    // Return config without encrypted secret
     return res.status(200).json({
       success: true,
       message: "Microsoft 365 configuration saved successfully",
@@ -159,6 +155,7 @@ export default async function handler(
         enabled: result.enabled,
       },
     });
+
   } catch (error: unknown) {
     console.error("[M365 Config] Error saving configuration:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

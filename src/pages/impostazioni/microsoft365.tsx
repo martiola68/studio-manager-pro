@@ -9,14 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle2, XCircle, AlertCircle, Info } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { z } from "zod";
 
-interface M365Config {
-  id: string;
-  client_id: string;
-  tenant_id: string;
-  organizer_email: string | null;
-  enabled: boolean;
-}
+// Shared Zod Schema (can be imported, but defining here for client-side use)
+const M365ConfigSchema = z.object({
+  client_id: z.string(),
+  tenant_id: z.string(),
+  organizer_email: z.string().nullable().optional(),
+  enabled: z.boolean(),
+});
+
+type M365Config = z.infer<typeof M365ConfigSchema>;
 
 interface TestResult {
   success: boolean;
@@ -70,19 +73,26 @@ export default function Microsoft365Settings() {
 
       setStudioId(user.studio_id);
 
-      // Load existing config
-      const { data: existingConfig } = await supabase
-        .from("tbmicrosoft365_config")
-        .select("*")
+      // Load existing config using Supabase with manual cast bypass + Zod validation
+      const { data: rawData } = await supabase
+        .from("tbmicrosoft365_config" as any)
+        .select("client_id, tenant_id, organizer_email, enabled")
         .eq("studio_id", user.studio_id)
         .maybeSingle();
 
-      if (existingConfig) {
-        const typedConfig = existingConfig as unknown as M365Config;
-        setConfig(typedConfig);
-        setClientId(typedConfig.client_id);
-        setTenantId(typedConfig.tenant_id);
-        setOrganizerEmail(typedConfig.organizer_email || "");
+      if (rawData) {
+        // Validate with Zod
+        const parsed = M365ConfigSchema.safeParse(rawData);
+        if (parsed.success) {
+          const validConfig = parsed.data;
+          setConfig(validConfig);
+          setClientId(validConfig.client_id);
+          setTenantId(validConfig.tenant_id);
+          setOrganizerEmail(validConfig.organizer_email || "");
+        } else {
+          console.error("Invalid config data in DB:", parsed.error);
+          setError("Configurazione nel database corrotta o non valida");
+        }
       }
 
       setLoading(false);
@@ -104,7 +114,6 @@ export default function Microsoft365Settings() {
       return;
     }
 
-    // If updating and no new secret provided, warn user
     if (config && !clientSecret) {
       const confirmed = window.confirm(
         "Non hai inserito un nuovo Client Secret. Vuoi mantenere quello esistente?"
@@ -112,7 +121,6 @@ export default function Microsoft365Settings() {
       if (!confirmed) return;
     }
 
-    // If creating new and no secret, error
     if (!config && !clientSecret) {
       setError("Client Secret è obbligatorio per nuove configurazioni");
       return;
@@ -141,8 +149,9 @@ export default function Microsoft365Settings() {
         throw new Error(result.error || "Errore nel salvataggio");
       }
 
+      // Result config is already validated by API
       setConfig(result.config);
-      setClientSecret(""); // Clear secret after save
+      setClientSecret(""); 
       
       // Auto-test after save
       await handleTest();
@@ -319,7 +328,7 @@ export default function Microsoft365Settings() {
                     onChange={(e) => setClientSecret(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Il secret viene cifrato con AES-256-GCM prima del salvataggio
+                    Il secret viene cifrato con AES-256-GCM prima del salvataggio.
                   </p>
                 </div>
 

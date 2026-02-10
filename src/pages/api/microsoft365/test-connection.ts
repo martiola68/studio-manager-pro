@@ -1,36 +1,35 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
 import { decrypt } from "@/lib/encryption365";
+import { z } from "zod";
 
 /**
  * API: Test Microsoft 365 Connection
- * 
- * Tests M365 connection using client_credentials flow (app-only).
- * Validates credentials and obtains an access token.
- * 
- * POST /api/microsoft365/test-connection
- * Body: { studioId: string }
+ * Tests client_credentials flow.
  */
 
-interface TestConnectionRequest {
-  studioId: string;
-}
+const TestRequestSchema = z.object({
+  studioId: z.string().uuid(),
+});
 
-interface M365ConfigRow {
-  id: string;
-  studio_id: string;
-  client_id: string;
-  client_secret_encrypted: string;
-  tenant_id: string;
-  organizer_email: string | null;
-  enabled: boolean;
-}
+const DBConfigSchema = z.object({
+  client_id: z.string(),
+  client_secret_encrypted: z.string(),
+  tenant_id: z.string(),
+  enabled: z.boolean(),
+});
 
-interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
+const TokenResponseSchema = z.object({
+  access_token: z.string(),
+  token_type: z.string(),
+  expires_in: z.number(),
+});
+
+const GraphOrgSchema = z.object({
+  value: z.array(z.object({
+    displayName: z.string().optional().nullable(),
+  })).min(1),
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -41,35 +40,35 @@ export default async function handler(
   }
 
   try {
-    const { studioId } = req.body as TestConnectionRequest;
-
-    if (!studioId) {
-      return res.status(400).json({ error: "Missing studioId" });
+    const parseResult = TestRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: "Invalid studioId" });
     }
+    const { studioId } = parseResult.data;
 
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
-    // Get config
+    // Get config from DB
     const { data, error } = await supabase
-      .from("tbmicrosoft365_config")
-      .select("*")
+      .from("tbmicrosoft365_config" as any)
+      .select("client_id, client_secret_encrypted, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    if (error) {
-      console.error("[M365 Test] Database error:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     if (!data) {
-      console.error("[M365 Test] Config not found");
       return res.status(404).json({
         success: false,
         error: "Microsoft 365 not configured for this studio",
       });
     }
 
-    const config = data as M365ConfigRow;
+    // Validate DB data
+    const dbParse = DBConfigSchema.safeParse(data);
+    if (!dbParse.success) {
+      return res.status(500).json({ error: "Invalid database configuration data" });
+    }
+    const config = dbParse.data;
 
     if (!config.enabled) {
       return res.status(400).json({
@@ -78,16 +77,10 @@ export default async function handler(
       });
     }
 
-    // Decrypt secret
-    if (!config.client_secret_encrypted) {
-      return res.status(400).json({ error: "Configuration invalid: missing secret" });
-    }
-
-    // Decrypt client secret
-    console.log("[M365 Test] Decrypting client secret...");
+    // Decrypt
     const clientSecret = decrypt(config.client_secret_encrypted);
 
-    // Test connection with client_credentials flow
+    // Request Token
     console.log("[M365 Test] Obtaining access token...");
     const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
 
@@ -100,60 +93,62 @@ export default async function handler(
 
     const tokenResponse = await fetch(tokenUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json().catch(() => ({}));
-      console.error("[M365 Test] Token request failed:", errorData);
+      const err = await tokenResponse.json().catch(() => ({}));
       return res.status(401).json({
         success: false,
         error: "Failed to obtain access token",
-        details: errorData.error_description || "Invalid credentials",
+        details: err.error_description || "Invalid credentials",
       });
     }
 
-    const tokenData: TokenResponse = await tokenResponse.json();
-    console.log("[M365 Test] Access token obtained successfully");
+    const tokenJson = await tokenResponse.json();
+    const tokenParsed = TokenResponseSchema.safeParse(tokenJson);
+    if (!tokenParsed.success) {
+      return res.status(500).json({ error: "Invalid token response from Microsoft" });
+    }
+    const { access_token, expires_in } = tokenParsed.data;
 
-    // Test Graph API call to verify permissions
+    // Test Graph API
     console.log("[M365 Test] Testing Graph API call...");
     const graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
+      headers: { Authorization: `Bearer ${access_token}` },
     });
 
     if (!graphResponse.ok) {
-      const errorData = await graphResponse.json().catch(() => ({}));
-      console.error("[M365 Test] Graph API call failed:", errorData);
       return res.status(403).json({
         success: false,
         error: "Graph API call failed",
-        details: "Token obtained but insufficient permissions",
+        details: "Token obtained but permissions denied",
       });
     }
 
-    const orgData = await graphResponse.json();
-    console.log("[M365 Test] Graph API call successful");
+    const graphJson = await graphResponse.json();
+    const graphParsed = GraphOrgSchema.safeParse(graphJson);
+    
+    let orgName = "Unknown";
+    if (graphParsed.success) {
+      orgName = graphParsed.data.value[0].displayName || "Unknown";
+    }
 
     return res.status(200).json({
       success: true,
       message: "Microsoft 365 connection successful",
-      organization: orgData.value?.[0]?.displayName || "Unknown",
+      organization: orgName,
       tenant_id: config.tenant_id,
-      expires_in: tokenData.expires_in,
+      expires_in,
     });
+
   } catch (error: unknown) {
-    console.error("[M365 Test] Error testing connection:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[M365 Test] Error:", error);
     return res.status(500).json({
       success: false,
       error: "Internal server error",
-      details: errorMessage,
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }

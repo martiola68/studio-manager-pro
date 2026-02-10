@@ -1,41 +1,64 @@
 import { supabase } from "@/lib/supabase/client";
 import { decrypt } from "@/lib/encryption365";
+import { z } from "zod";
 
 /**
  * Microsoft 365 Service - Client Credentials Only
  * 
  * Manages app-only authentication and Graph API calls.
- * Each studio can have its own M365 tenant configuration.
+ * Uses Zod for runtime validation of database and API responses.
  */
 
-interface M365Config {
-  id: string;
-  studio_id: string;
-  client_id: string;
-  client_secret_encrypted: string;
-  tenant_id: string;
-  organizer_email: string | null;
-  enabled: boolean;
-}
+// Zod Schema for Database Config
+export const M365ConfigSchema = z.object({
+  id: z.string().uuid().optional(),
+  studio_id: z.string().uuid(),
+  client_id: z.string(),
+  client_secret_encrypted: z.string(),
+  tenant_id: z.string(),
+  organizer_email: z.string().nullable().optional(),
+  enabled: z.boolean().optional().default(true),
+  // Fields for Teams (optional)
+  teams_default_team_id: z.string().nullable().optional(),
+  teams_default_channel_id: z.string().nullable().optional(),
+  teams_alert_channel_id: z.string().nullable().optional(),
+  teams_scadenze_channel_id: z.string().nullable().optional(),
+});
 
-interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
+export type M365Config = z.infer<typeof M365ConfigSchema>;
+
+// Zod Schema for Microsoft Token Response
+const TokenResponseSchema = z.object({
+  access_token: z.string(),
+  token_type: z.string(),
+  expires_in: z.number(),
+});
 
 /**
- * Get M365 configuration for a studio
+ * Get M365 configuration for a studio with validation
  */
 export async function getM365Config(studioId: string): Promise<M365Config | null> {
   const { data, error } = await supabase
-    .from("tbmicrosoft365_config")
+    .from("tbmicrosoft365_config" as any)
     .select("*")
     .eq("studio_id", studioId)
     .maybeSingle();
 
-  if (error || !data) return null;
-  return data as M365Config;
+  if (error) {
+    console.error("[M365 Service] Database error:", error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  // Runtime validation
+  const parsed = M365ConfigSchema.safeParse(data);
+  if (!parsed.success) {
+    console.error("[M365 Service] Config validation failed:", parsed.error);
+    return null;
+  }
+
+  return parsed.data;
 }
 
 /**
@@ -85,8 +108,16 @@ export async function getAppOnlyToken(studioId: string): Promise<string | null> 
       return null;
     }
 
-    const tokenData: TokenResponse = await response.json();
-    return tokenData.access_token;
+    const json = await response.json();
+    
+    // Validate token response
+    const parsed = TokenResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.error("[M365 Service] Invalid token response shape:", parsed.error);
+      return null;
+    }
+
+    return parsed.data.access_token;
   } catch (error) {
     console.error("[M365 Service] Error getting app-only token:", error);
     return null;

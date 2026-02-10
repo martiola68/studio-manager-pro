@@ -1,35 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
+import { z } from "zod";
 
 /**
  * API: Save Teams Configuration
- * 
- * Saves Teams channel IDs for notifications.
- * 
- * POST /api/microsoft365/save-teams-config
- * Body: {
- *   studioId: string,
- *   teamId?: string,
- *   defaultChannelId?: string,
- *   alertChannelId?: string,
- *   scadenzeChannelId?: string
- * }
  */
 
-interface SaveTeamsConfigRequest {
-  studioId: string;
-  teamId?: string;
-  defaultChannelId?: string;
-  alertChannelId?: string;
-  scadenzeChannelId?: string;
-}
+const SaveTeamsConfigSchema = z.object({
+  studioId: z.string().uuid(),
+  teamId: z.string().optional().nullable(),
+  defaultChannelId: z.string().optional().nullable(),
+  alertChannelId: z.string().optional().nullable(),
+  scadenzeChannelId: z.string().optional().nullable(),
+});
 
-interface M365ConfigRow {
-  teams_default_team_id: string | null;
-  teams_default_channel_id: string | null;
-  teams_alert_channel_id: string | null;
-  teams_scadenze_channel_id: string | null;
-}
+const TeamsConfigRowSchema = z.object({
+  teams_default_team_id: z.string().nullable(),
+  teams_default_channel_id: z.string().nullable(),
+  teams_alert_channel_id: z.string().nullable(),
+  teams_scadenze_channel_id: z.string().nullable(),
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -40,23 +30,26 @@ export default async function handler(
   }
 
   try {
+    const parseResult = SaveTeamsConfigSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ 
+        error: "Invalid request data", 
+        details: parseResult.error.flatten() 
+      });
+    }
+
     const {
       studioId,
       teamId,
       defaultChannelId,
       alertChannelId,
       scadenzeChannelId,
-    } = req.body as SaveTeamsConfigRequest;
-
-    if (!studioId) {
-      return res.status(400).json({ error: "Missing studioId" });
-    }
+    } = parseResult.data;
 
     console.log("[Teams Config] Saving Teams configuration for studio:", studioId);
 
-    // Update config
     const { data, error } = await supabase
-      .from("tbmicrosoft365_config")
+      .from("tbmicrosoft365_config" as any)
       .update({
         teams_default_team_id: teamId || null,
         teams_default_channel_id: defaultChannelId || null,
@@ -73,18 +66,17 @@ export default async function handler(
       throw error;
     }
 
-    const result = data as M365ConfigRow;
-    console.log("[Teams Config] Configuration saved successfully");
+    const parsedDB = TeamsConfigRowSchema.safeParse(data);
+    if (!parsedDB.success) {
+      throw new Error("Database returned invalid data structure");
+    }
+
+    const result = parsedDB.data;
 
     return res.status(200).json({
       success: true,
       message: "Teams configuration saved successfully",
-      config: {
-        teams_default_team_id: result.teams_default_team_id,
-        teams_default_channel_id: result.teams_default_channel_id,
-        teams_alert_channel_id: result.teams_alert_channel_id,
-        teams_scadenze_channel_id: result.teams_scadenze_channel_id,
-      },
+      config: result,
     });
   } catch (error: unknown) {
     console.error("[Teams Config] Error:", error);
