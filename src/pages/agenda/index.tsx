@@ -361,7 +361,7 @@ export default function AgendaPage() {
             attendeesEmails
           );
           
-          teamsLink = meeting.joinUrl || meeting.joinWebUrl;
+          teamsLink = meeting.joinUrl || meeting.joinWebUrl || "";
           
           toast({ 
             title: "Meeting Teams creato!", 
