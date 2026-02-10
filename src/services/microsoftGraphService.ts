@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 
 interface GraphTokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string;
   expires_in: number;
 }
 
@@ -58,11 +58,6 @@ async function getValidToken(userId: string): Promise<string | null> {
     // Token scaduto, prova a rinnovarlo
     console.log("🔄 Token scaduto, tentativo refresh...");
     
-    if (!tokenData.refresh_token || typeof tokenData.refresh_token !== "string" || tokenData.refresh_token.trim().length === 0) {
-      console.error("❌ Refresh token non valido o vuoto");
-      return null;
-    }
-
     const newAccessToken = await refreshToken(userId, tokenData.refresh_token);
     return newAccessToken;
   } catch (error) {
@@ -72,9 +67,9 @@ async function getValidToken(userId: string): Promise<string | null> {
 }
 
 /**
- * Rinnova il token usando refresh_token
+ * Rinnova il token usando refresh_token (se disponibile) o client_credentials
  */
-async function refreshToken(userId: string, refreshToken: string): Promise<string> {
+async function refreshToken(userId: string, refreshToken: string | null): Promise<string> {
   const { data: configData, error } = await supabase
     .from("microsoft365_config" as any)
     .select("client_id, client_secret, tenant_id")
@@ -89,12 +84,20 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
 
   const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
 
-  const params = new URLSearchParams({
-    client_id: config.client_id,
-    client_secret: config.client_secret,
-    refresh_token: refreshToken,
-    grant_type: "refresh_token",
-  });
+  const params = new URLSearchParams();
+  params.append("client_id", config.client_id);
+  params.append("client_secret", config.client_secret);
+
+  // Se esiste refresh_token, usa il flusso authorization_code
+  // Altrimenti usa client_credentials (app-only)
+  if (refreshToken) {
+    params.append("refresh_token", refreshToken);
+    params.append("grant_type", "refresh_token");
+  } else {
+    // Flusso client_credentials (app-only)
+    params.append("grant_type", "client_credentials");
+    params.append("scope", "https://graph.microsoft.com/.default");
+  }
 
   const response = await fetch(tokenUrl, {
     method: "POST",
@@ -120,7 +123,7 @@ async function refreshToken(userId: string, refreshToken: string): Promise<strin
     .from("tbmicrosoft_tokens")
     .update({
       access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
+      refresh_token: tokenData.refresh_token || refreshToken,
       expires_at: expiresAt.toISOString(),
       updated_at: new Date().toISOString(),
     })
