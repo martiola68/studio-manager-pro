@@ -44,7 +44,7 @@ export default async function handler(
     }
 
     // Type assertion dopo verifica null
-    const userId: string = userData.id as string;
+    const userId: string = userData.id!;
 
     // 3. Verifica se l'utente è connesso a Microsoft
     const isConnected = await microsoftGraphService.isConnected(userId);

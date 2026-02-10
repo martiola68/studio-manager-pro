@@ -47,7 +47,7 @@ export default async function handler(
     }
 
     // Type assertion dopo verifica null
-    const studioId: string = userData.studio_id as string;
+    const studioId: string = userData.studio_id!;
 
     // 3. Valida i dati ricevuti
     const { 
