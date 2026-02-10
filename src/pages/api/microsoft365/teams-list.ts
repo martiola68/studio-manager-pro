@@ -29,17 +29,18 @@ export default async function handler(
     }
 
     // 2. Recupera user_id dal database
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("tbutenti")
       .select("id")
       .eq("email", user.email)
       .single();
 
-    if (!userData?.id) {
+    if (userError || !userData?.id) {
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    const userId: string = String(userData.id);
+    // Type assertion: abbiamo verificato che userData.id esiste
+    const userId = userData.id as string;
 
     // 3. Verifica se l'utente è connesso a Microsoft
     const isConnected = await microsoftGraphService.isConnected(userId);

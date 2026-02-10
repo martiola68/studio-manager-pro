@@ -28,13 +28,13 @@ export default async function handler(
     }
 
     // 2. Verifica permessi Admin
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from("tbutenti")
       .select("tipo_utente, studio_id")
       .eq("email", user.email)
       .single();
 
-    if (!userData?.tipo_utente || userData.tipo_utente !== "Admin") {
+    if (userError || !userData?.tipo_utente || userData.tipo_utente !== "Admin") {
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
 
@@ -42,7 +42,8 @@ export default async function handler(
       return res.status(400).json({ error: "Studio non identificato" });
     }
 
-    const studioId: string = String(userData.studio_id);
+    // Type assertion: abbiamo verificato che studio_id esiste
+    const studioId = userData.studio_id as string;
 
     // 3. Valida i dati ricevuti
     const { 
