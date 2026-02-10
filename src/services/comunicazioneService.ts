@@ -55,41 +55,12 @@ export const comunicazioneService = {
     // NUOVO: Invia notifica Teams (se configurato)
     if (data) {
       try {
-        // Recupera nome mittente
-        let mittenteNome = "Sistema";
-        if (data.mittente_id) {
-          const { data: mittenteData } = await supabase
-            .from("tbutenti")
-            .select("nome, cognome")
-            .eq("id", data.mittente_id)
-            .single();
-
-          if (mittenteData) {
-            mittenteNome = `${mittenteData.nome} ${mittenteData.cognome}`;
-          }
-        }
-
-        // Recupera nomi destinatari (se disponibili in campo destinatari)
-        const destinatariNomi: string[] = [];
-        if (data.destinatari && Array.isArray(data.destinatari)) {
-          for (const destId of data.destinatari) {
-            const { data: destData } = await supabase
-              .from("tbutenti")
-              .select("nome, cognome")
-              .eq("id", destId)
-              .single();
-
-            if (destData) {
-              destinatariNomi.push(`${destData.nome} ${destData.cognome}`);
-            }
-          }
-        }
-
+        // Usa valori generici visto che la tabella non memorizza mittente/destinatari
         await teamsNotificationService.sendComunicazioneNotification({
           id: data.id,
           oggetto: data.oggetto || "Nuova comunicazione",
-          mittente: mittenteNome,
-          destinatari: destinatariNomi.length > 0 ? destinatariNomi : ["Team"],
+          mittente: "Sistema",
+          destinatari: [`${data.destinatari_count || 0} destinatari`],
         });
       } catch (teamsError) {
         // Non blocchiamo l'operazione se la notifica Teams fallisce
