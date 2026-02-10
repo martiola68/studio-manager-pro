@@ -18,8 +18,21 @@ export default async function handler(
       });
     }
 
-    // Test connessione Microsoft Graph API
-    // Ottieni un token di accesso usando le credenziali
+    // Test 1: Verifica che il tenant esista e sia accessibile
+    const discoveryUrl = `https://login.microsoftonline.com/${tenant_id}/v2.0/.well-known/openid-configuration`;
+    
+    const discoveryResponse = await fetch(discoveryUrl);
+
+    if (!discoveryResponse.ok) {
+      return res.status(401).json({ 
+        success: false,
+        error: "Tenant ID non valido",
+        details: "Verifica che il Tenant ID sia corretto"
+      });
+    }
+
+    // Test 2: Verifica che le credenziali siano valide tentando di ottenere un token
+    // Usa scope minimo per non richiedere permessi Application
     const tokenUrl = `https://login.microsoftonline.com/${tenant_id}/oauth2/v2.0/token`;
     
     const params = new URLSearchParams({
@@ -48,29 +61,14 @@ export default async function handler(
       });
     }
 
-    const tokenData = await tokenResponse.json();
-
-    // Test chiamata Graph API per verificare che il token funzioni
-    const graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`
-      }
-    });
-
-    if (!graphResponse.ok) {
-      return res.status(500).json({ 
-        success: false,
-        error: "Autenticazione riuscita ma impossibile accedere a Graph API",
-        details: "Verifica i permessi dell'applicazione in Azure AD"
-      });
-    }
-
-    const orgData = await graphResponse.json();
+    // Se arriviamo qui, le credenziali sono corrette!
+    // Non testiamo l'accesso a Graph API perché richiederebbe permessi Application
+    // L'accesso reale avverrà tramite OAuth flow con permessi Delegated
 
     return res.status(200).json({ 
       success: true,
-      message: "Connessione Microsoft 365 verificata con successo",
-      organization: orgData.value?.[0]?.displayName || "Organizzazione verificata"
+      message: "✅ Credenziali Microsoft 365 verificate con successo!",
+      details: "La configurazione è corretta. Gli utenti potranno autenticarsi tramite OAuth."
     });
 
   } catch (error: any) {
