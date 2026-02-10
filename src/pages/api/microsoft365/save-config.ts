@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
 import { encrypt } from "@/lib/encryption365";
+import { tokenCache } from "@/services/tokenCacheService";
 import { z } from "zod";
 
 /**
@@ -142,6 +143,10 @@ export default async function handler(
     }
     
     const result = parsedDB.data;
+
+    // 6. Invalidate cached token (config changed)
+    tokenCache.invalidate(studioId);
+    console.log("[M365 Config] Token cache invalidated for studio:", studioId);
 
     return res.status(200).json({
       success: true,
