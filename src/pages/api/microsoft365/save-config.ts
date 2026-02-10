@@ -1,5 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase/client";
+import { encrypt } from "@/lib/encryption365";
+
+/**
+ * API: Save Microsoft 365 Configuration
+ * 
+ * Encrypts and saves M365 credentials for a studio.
+ * Only admins can call this endpoint.
+ * 
+ * POST /api/microsoft365/save-config
+ * Body: {
+ *   studioId: string,
+ *   clientId: string,
+ *   clientSecret: string (plain text - will be encrypted),
+ *   tenantId: string,
+ *   organizerEmail?: string
+ * }
+ */
+
+interface SaveConfigRequest {
+  studioId: string;
+  clientId: string;
+  clientSecret: string;
+  tenantId: string;
+  organizerEmail?: string;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,111 +35,106 @@ export default async function handler(
   }
 
   try {
-    const { studio_id, client_id, tenant_id, client_secret, enabled, features } = req.body;
+    const {
+      studioId,
+      clientId,
+      clientSecret,
+      tenantId,
+      organizerEmail,
+    } = req.body as SaveConfigRequest;
 
-    if (!studio_id || !client_id || !tenant_id || !client_secret) {
-      return res.status(400).json({ 
-        error: "Dati mancanti",
-        details: "studio_id, client_id, tenant_id e client_secret sono obbligatori" 
+    // Validate required fields
+    if (!studioId || !clientId || !clientSecret || !tenantId) {
+      return res.status(400).json({
+        error: "Missing required fields: studioId, clientId, clientSecret, tenantId",
       });
     }
 
-    // Get auth token from request headers
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ 
-        error: "Non autenticato",
-        details: "Token di autenticazione mancante" 
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-
-    // Create Supabase client with user's JWT token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      }
-    );
-
-    // Verify user is admin
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !userData.user) {
-      return res.status(401).json({ 
-        error: "Utente non autenticato",
-        details: userError?.message 
-      });
-    }
-
-    const { data: utente, error: utenteError } = await supabase
-      .from("tbutenti")
-      .select("tipo_utente, studio_id")
-      .eq("id", userData.user.id)
+    // Validate studio exists
+    const { data: studio, error: studioError } = await supabase
+      .from("tbstudio")
+      .select("id")
+      .eq("id", studioId)
       .single();
 
-    if (utenteError || !utente || utente.tipo_utente !== "Admin") {
-      return res.status(403).json({ 
-        error: "Accesso negato",
-        details: "Solo gli amministratori possono modificare la configurazione" 
-      });
+    if (studioError || !studio) {
+      return res.status(404).json({ error: "Studio not found" });
     }
 
-    if (utente.studio_id !== studio_id) {
-      return res.status(403).json({ 
-        error: "Accesso negato",
-        details: "Non puoi modificare la configurazione di un altro studio" 
-      });
-    }
+    // Encrypt client secret
+    console.log("[M365 Config] Encrypting client secret...");
+    const encryptedSecret = encrypt(clientSecret);
+    console.log("[M365 Config] Client secret encrypted successfully");
 
-    // Salva configurazione
-    const { data, error } = await supabase
-      .from("microsoft365_config")
-      .upsert({
-        studio_id,
-        client_id,
-        tenant_id,
-        client_secret,
-        enabled: enabled || false,
-        features: features || {
-          email: false,
-          calendar: false,
-          contacts: false,
-          teams: false
-        },
-        updated_at: new Date().toISOString()
-      }, { 
-        onConflict: "studio_id",
-        ignoreDuplicates: false 
-      })
-      .select()
+    // Check if config already exists
+    const { data: existingConfig } = await supabase
+      .from("tbmicrosoft365_config")
+      .select("id")
+      .eq("studio_id", studioId)
       .single();
 
-    if (error) {
-      console.error("Errore salvataggio configurazione:", error);
-      return res.status(500).json({ 
-        error: "Errore durante il salvataggio",
-        details: error.message 
-      });
+    let result;
+
+    if (existingConfig) {
+      // Update existing config
+      console.log("[M365 Config] Updating existing config for studio:", studioId);
+      const { data, error } = await supabase
+        .from("tbmicrosoft365_config")
+        .update({
+          client_id: clientId,
+          client_secret_encrypted: encryptedSecret,
+          tenant_id: tenantId,
+          organizer_email: organizerEmail || null,
+          enabled: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("studio_id", studioId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
+    } else {
+      // Insert new config
+      console.log("[M365 Config] Creating new config for studio:", studioId);
+      const { data, error } = await supabase
+        .from("tbmicrosoft365_config")
+        .insert({
+          studio_id: studioId,
+          client_id: clientId,
+          client_secret_encrypted: encryptedSecret,
+          tenant_id: tenantId,
+          organizer_email: organizerEmail || null,
+          enabled: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      result = data;
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "Configurazione salvata con successo",
-      data 
+    console.log("[M365 Config] Configuration saved successfully");
+
+    // Return config without encrypted secret
+    return res.status(200).json({
+      success: true,
+      message: "Microsoft 365 configuration saved successfully",
+      config: {
+        id: result.id,
+        studio_id: result.studio_id,
+        client_id: result.client_id,
+        tenant_id: result.tenant_id,
+        organizer_email: result.organizer_email,
+        enabled: result.enabled,
+      },
     });
-
-  } catch (error: any) {
-    console.error("Errore handler save-config:", error);
-    return res.status(500).json({ 
-      error: "Errore server",
-      details: error.message 
+  } catch (error: unknown) {
+    console.error("[M365 Config] Error saving configuration:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return res.status(500).json({
+      error: "Failed to save Microsoft 365 configuration",
+      details: errorMessage,
     });
   }
 }

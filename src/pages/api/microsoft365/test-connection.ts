@@ -1,4 +1,26 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { supabase } from "@/lib/supabase/client";
+import { decrypt } from "@/lib/encryption365";
+
+/**
+ * API: Test Microsoft 365 Connection
+ * 
+ * Tests M365 connection using client_credentials flow (app-only).
+ * Validates credentials and obtains an access token.
+ * 
+ * POST /api/microsoft365/test-connection
+ * Body: { studioId: string }
+ */
+
+interface TestConnectionRequest {
+  studioId: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,74 +31,107 @@ export default async function handler(
   }
 
   try {
-    const { client_id, tenant_id, client_secret } = req.body;
+    const { studioId } = req.body as TestConnectionRequest;
 
-    if (!client_id || !tenant_id || !client_secret) {
-      return res.status(400).json({ 
-        error: "Dati mancanti",
-        details: "client_id, tenant_id e client_secret sono obbligatori" 
-      });
+    if (!studioId) {
+      return res.status(400).json({ error: "Missing studioId" });
     }
 
-    // Test 1: Verifica che il tenant esista e sia accessibile
-    const discoveryUrl = `https://login.microsoftonline.com/${tenant_id}/v2.0/.well-known/openid-configuration`;
-    
-    const discoveryResponse = await fetch(discoveryUrl);
+    console.log("[M365 Test] Testing connection for studio:", studioId);
 
-    if (!discoveryResponse.ok) {
-      return res.status(401).json({ 
+    // Get studio config
+    const { data: config, error: configError } = await supabase
+      .from("tbmicrosoft365_config")
+      .select("*")
+      .eq("studio_id", studioId)
+      .single();
+
+    if (configError || !config) {
+      console.error("[M365 Test] Config not found:", configError);
+      return res.status(404).json({
         success: false,
-        error: "Tenant ID non valido",
-        details: "Verifica che il Tenant ID sia corretto"
+        error: "Microsoft 365 not configured for this studio",
       });
     }
 
-    // Test 2: Verifica che le credenziali siano valide tentando di ottenere un token
-    // Usa scope minimo per non richiedere permessi Application
-    const tokenUrl = `https://login.microsoftonline.com/${tenant_id}/oauth2/v2.0/token`;
-    
+    if (!config.enabled) {
+      return res.status(400).json({
+        success: false,
+        error: "Microsoft 365 integration is disabled",
+      });
+    }
+
+    // Decrypt client secret
+    console.log("[M365 Test] Decrypting client secret...");
+    const clientSecret = decrypt(config.client_secret_encrypted);
+
+    // Test connection with client_credentials flow
+    console.log("[M365 Test] Obtaining access token...");
+    const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
+
     const params = new URLSearchParams({
-      client_id,
-      client_secret,
+      client_id: config.client_id,
+      client_secret: clientSecret,
       scope: "https://graph.microsoft.com/.default",
-      grant_type: "client_credentials"
+      grant_type: "client_credentials",
     });
 
     const tokenResponse = await fetch(tokenUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString()
+      body: params.toString(),
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
-      console.error("Errore autenticazione Microsoft:", errorData);
-      
-      return res.status(401).json({ 
+      const errorData = await tokenResponse.json().catch(() => ({}));
+      console.error("[M365 Test] Token request failed:", errorData);
+      return res.status(401).json({
         success: false,
-        error: "Credenziali non valide",
-        details: errorData.error_description || "Verifica Client ID, Tenant ID e Client Secret"
+        error: "Failed to obtain access token",
+        details: errorData.error_description || "Invalid credentials",
       });
     }
 
-    // Se arriviamo qui, le credenziali sono corrette!
-    // Non testiamo l'accesso a Graph API perché richiederebbe permessi Application
-    // L'accesso reale avverrà tramite OAuth flow con permessi Delegated
+    const tokenData: TokenResponse = await tokenResponse.json();
+    console.log("[M365 Test] Access token obtained successfully");
 
-    return res.status(200).json({ 
-      success: true,
-      message: "✅ Credenziali Microsoft 365 verificate con successo!",
-      details: "La configurazione è corretta. Gli utenti potranno autenticarsi tramite OAuth."
+    // Test Graph API call to verify permissions
+    console.log("[M365 Test] Testing Graph API call...");
+    const graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
     });
 
-  } catch (error: any) {
-    console.error("Errore test connessione:", error);
-    return res.status(500).json({ 
+    if (!graphResponse.ok) {
+      const errorData = await graphResponse.json().catch(() => ({}));
+      console.error("[M365 Test] Graph API call failed:", errorData);
+      return res.status(403).json({
+        success: false,
+        error: "Graph API call failed",
+        details: "Token obtained but insufficient permissions",
+      });
+    }
+
+    const orgData = await graphResponse.json();
+    console.log("[M365 Test] Graph API call successful");
+
+    return res.status(200).json({
+      success: true,
+      message: "Microsoft 365 connection successful",
+      organization: orgData.value?.[0]?.displayName || "Unknown",
+      tenant_id: config.tenant_id,
+      expires_in: tokenData.expires_in,
+    });
+  } catch (error: unknown) {
+    console.error("[M365 Test] Error testing connection:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return res.status(500).json({
       success: false,
-      error: "Errore durante il test della connessione",
-      details: error.message 
+      error: "Internal server error",
+      details: errorMessage,
     });
   }
 }
