@@ -38,14 +38,17 @@ export default async function handler(
       return res.status(404).json({ error: "Utente non trovato" });
     }
 
-    // Type guard esplicito
-    if (typeof userData.studio_id !== "string") {
+    // Type guard: verifica che studio_id sia una stringa
+    if (!userData.studio_id || typeof userData.studio_id !== "string") {
       return res.status(404).json({ error: "Studio ID non valido" });
     }
 
     if (!userData.tipo_utente || userData.tipo_utente !== "Admin") {
       return res.status(403).json({ error: "Permessi insufficienti" });
     }
+
+    // Ora TypeScript sa che userData.studio_id è string
+    const studioId: string = userData.studio_id;
 
     // 3. Valida i dati ricevuti
     const { 
@@ -69,7 +72,7 @@ export default async function handler(
     const { data: existingConfig } = await supabase
       .from("microsoft365_config")
       .select("id")
-      .eq("studio_id", userData.studio_id!)
+      .eq("studio_id", studioId)
       .single();
 
     // 5. Prepara i dati da salvare
@@ -90,7 +93,7 @@ export default async function handler(
       const { error: updateError } = await supabase
         .from("microsoft365_config")
         .update(configData)
-        .eq("studio_id", userData.studio_id!)
+        .eq("studio_id", studioId)
         .single();
 
       if (updateError) {
@@ -102,7 +105,7 @@ export default async function handler(
         .from("microsoft365_config")
         .insert({
           ...configData,
-          studio_id: userData.studio_id!,
+          studio_id: studioId,
           enabled: true,
           features: { email: false, calendar: false, contacts: false, teams: true }
         });
