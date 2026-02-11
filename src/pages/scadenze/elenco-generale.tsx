@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   utente_fiscale?: { nome: string; cognome: string } | null;
-  utente_payroll?: { nome: string; cognome: string } | null;
 };
 
 const TIPI_SCADENZE = [
@@ -22,6 +21,7 @@ const TIPI_SCADENZE = [
   { id: "flag_cu", label: "CU" },
   { id: "flag_fiscali", label: "Fiscali" },
   { id: "flag_esterometro", label: "Esterometro" },
+  { id: "flag_ccgg", label: "CCGG" },
 ];
 
 export default function ElencoGenerale() {
@@ -92,8 +92,7 @@ export default function ElencoGenerale() {
         .from("tbclienti")
         .select(`
           *,
-          utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome),
-          utente_payroll:tbutenti!tbclienti_utente_payroll_id_fkey(nome, cognome)
+          utente_fiscale:tbutenti!tbclienti_utente_operatore_id_fkey(nome, cognome)
         `)
         .eq("studio_id", userData.studio_id)
         .order("ragione_sociale", { ascending: true });
@@ -163,6 +162,39 @@ export default function ElencoGenerale() {
           <p className="text-gray-500 mt-1">Visione completa degli scadenzari per ogni cliente</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Cerca Nominativo"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select value={filtroUtenteFiscale} onValueChange={setFiltroUtenteFiscale}>
+              <SelectTrigger>
+                <SelectValue placeholder="Utente Operatore" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutti</SelectItem>
+                {utentiFiscaliUnici.map(utente => (
+                  <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
+                    {utente.nomeCompleto}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
