@@ -391,7 +391,7 @@ export default function ScadenzeIvaPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">Nominativo</TableHead>
+                      <TableHead className="sticky-nominativo-header border-r min-w-[200px]">Nominativo</TableHead>
                       <TableHead className="min-w-[150px]">Professionista</TableHead>
                       <TableHead className="min-w-[150px]">Operatore</TableHead>
                       <TableHead className="text-center min-w-[120px]">Mod. Predisposto</TableHead>
@@ -429,7 +429,7 @@ export default function ScadenzeIvaPage() {
                             key={scadenza.id}
                             className={isRicevuta ? "bg-green-50" : ""}
                           >
-                            <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium min-w-[200px]">
+                            <TableCell className="sticky-nominativo-cell border-r font-medium min-w-[200px]">
                               {scadenza.nominativo}
                             </TableCell>
                             <TableCell className="min-w-[150px]">

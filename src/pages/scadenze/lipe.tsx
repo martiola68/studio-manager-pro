@@ -470,7 +470,7 @@ export default function Lipe() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Nominativo</TableHead>
+                      <TableHead className="sticky-nominativo-header border-r" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Nominativo</TableHead>
                       <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Professionista</TableHead>
                       <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Operatore</TableHead>
                       <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Tipo Liq</TableHead>
@@ -520,7 +520,7 @@ export default function Lipe() {
                     ) : (
                       lipeRecords.map((record) => (
                         <TableRow key={record.id}>
-                          <TableCell className="sticky left-0 z-10 bg-inherit border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
+                          <TableCell className="sticky-nominativo-cell border-r font-medium" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
                             {record.nominativo}
                           </TableCell>
                           <TableCell className="text-gray-700" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
