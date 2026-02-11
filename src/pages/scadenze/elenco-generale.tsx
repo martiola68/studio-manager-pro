@@ -30,7 +30,6 @@ export default function ElencoGenerale() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("tutti");
-  const [filtroUtentePayroll, setFiltroUtentePayroll] = useState<string>("tutti");
   const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -59,17 +58,8 @@ export default function ElencoGenerale() {
       });
     }
 
-    if (filtroUtentePayroll && filtroUtentePayroll !== "tutti") {
-      filtered = filtered.filter(cliente => {
-        const nomeCompleto = cliente.utente_payroll 
-          ? `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}`
-          : "";
-        return nomeCompleto === filtroUtentePayroll;
-      });
-    }
-
     setFilteredClienti(filtered);
-  }, [searchQuery, filtroUtenteFiscale, filtroUtentePayroll, clienti]);
+  }, [searchQuery, filtroUtenteFiscale, clienti]);
 
   const utentiFiscaliUnici = useMemo(() => {
     const utentiMap = new Map<string, { nome: string; cognome: string }>();
@@ -77,19 +67,6 @@ export default function ElencoGenerale() {
       if (cliente.utente_fiscale) {
         const nomeCompleto = `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}`;
         utentiMap.set(nomeCompleto, cliente.utente_fiscale);
-      }
-    });
-    return Array.from(utentiMap.entries())
-      .map(([nomeCompleto, utente]) => ({ nomeCompleto, ...utente }))
-      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
-  }, [clienti]);
-
-  const utentiPayrollUnici = useMemo(() => {
-    const utentiMap = new Map<string, { nome: string; cognome: string }>();
-    clienti.forEach(cliente => {
-      if (cliente.utente_payroll) {
-        const nomeCompleto = `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}`;
-        utentiMap.set(nomeCompleto, cliente.utente_payroll);
       }
     });
     return Array.from(utentiMap.entries())
