@@ -1,0 +1,401 @@
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { supabase } from "@/lib/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
+
+type ScadenzaCURow = Database["public"]["Tables"]["tbscadcu"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type ScadenzaCU = ScadenzaCURow & {
+  professionista?: string;
+  operatore?: string;
+};
+
+export default function ScadenzeCUPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [scadenze, setScadenze] = useState<ScadenzaCU[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
+  
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
+  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
+
+  const [stats, setStats] = useState({
+    totale: 0,
+    confermate: 0,
+    nonConfermate: 0
+  });
+
+  useEffect(() => {
+    checkAuthAndLoad();
+  }, []);
+
+  const checkAuthAndLoad = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      await loadData();
+    } catch (error) {
+      console.error("Errore:", error);
+      router.push("/login");
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [scadenzeData, utentiData] = await Promise.all([
+        loadScadenze(),
+        loadUtenti()
+      ]);
+      setScadenze(scadenzeData);
+      setUtenti(utentiData);
+      
+      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      setStats({
+        totale: scadenzeData.length,
+        confermate,
+        nonConfermate: scadenzeData.length - confermate
+      });
+    } catch (error) {
+      console.error("Errore caricamento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i dati",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadScadenze = async (): Promise<ScadenzaCU[]> => {
+    const { data, error } = await supabase
+      .from("tbscadcu")
+      .select(`
+        *,
+        professionista:tbutenti!tbscadcu_utente_professionista_id_fkey(nome, cognome),
+        operatore:tbutenti!tbscadcu_utente_operatore_id_fkey(nome, cognome)
+      `)
+      .order("nominativo", { ascending: true });
+    
+    if (error) throw error;
+    
+    return (data || []).map(record => ({
+      ...record,
+      professionista: record.professionista 
+        ? `${record.professionista.nome} ${record.professionista.cognome}`
+        : "-",
+      operatore: record.operatore
+        ? `${record.operatore.nome} ${record.operatore.cognome}`
+        : "-"
+    })) as ScadenzaCU[];
+  };
+
+  const loadUtenti = async (): Promise<Utente[]> => {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  };
+
+  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaCU, currentValue: any) => {
+    try {
+      const newValue = !currentValue;
+      
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: newValue } : s
+      ));
+      
+      if (field === "conferma_riga") {
+        setStats(prev => ({
+          ...prev,
+          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
+        }));
+      }
+      
+      const { error } = await supabase
+        .from("tbscadcu")
+        .update({ [field]: newValue })
+        .eq("id", scadenzaId);
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Errore aggiornamento",
+        description: error.message,
+        variant: "destructive"
+      });
+      await loadData();
+    }
+  };
+
+  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaCU, value: any) => {
+    try {
+      const { error } = await supabase
+        .from("tbscadcu")
+        .update({ [field]: value || null })
+        .eq("id", scadenzaId);
+      
+      if (error) throw error;
+      
+      setScadenze(prev => prev.map(s => 
+        s.id === scadenzaId ? { ...s, [field]: value } : s
+      ));
+    } catch (error: any) {
+      toast({
+        title: "Errore aggiornamento",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tbscadcu")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Record eliminato"
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il record",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const filteredScadenze = scadenze.filter(s => {
+    const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
+    return matchSearch && matchOperatore && matchProfessionista;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Scadenzario CU</h1>
+          <p className="text-gray-500 mt-1">Gestione Certificazioni Uniche</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Totale Certificazioni</div>
+            <div className="text-3xl font-bold text-gray-900">{stats.totale}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Confermate</div>
+            <div className="text-3xl font-bold text-green-600">{stats.confermate}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600 mb-1">Non Confermate</div>
+            <div className="text-3xl font-bold text-orange-600">{stats.nonConfermate}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Cerca Nominativo..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Utente Operatore" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti gli operatori</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Utente Professionista" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti i professionisti</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Professionista</th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Operatore</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[140px]">CU Autonomi</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Inserite</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Generate</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Inviate</th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Invio</th>
+                  <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Num CU</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Conferma</th>
+                  <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {filteredScadenze.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={11} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center text-gray-500">
+                      Nessun record trovato
+                    </td>
+                  </tr>
+                ) : (
+                  filteredScadenze.map((scadenza) => (
+                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                        {scadenza.nominativo}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.professionista}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.operatore}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[140px]">
+                        <Input
+                          type="number"
+                          value={scadenza.cu_autonomi?.toString() ?? ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "cu_autonomi", e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full"
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.inserite || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "inserite", scadenza.inserite)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.generate || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "generate", scadenza.generate)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.inviate || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "inviate", scadenza.inviate)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_invio || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                          className="w-full"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
+                        <Input
+                          type="text"
+                          value={scadenza.num_cu || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "num_cu", e.target.value)}
+                          className="w-full"
+                          placeholder="Numero CU"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.conferma_riga || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(scadenza.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
