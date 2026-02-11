@@ -339,7 +339,6 @@ export default function ScadenzeBilanciPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full align-middle">
-              {/* Header Fisso */}
               <div className="sticky top-0 z-20 bg-white border-b">
                 <Table>
                   <TableHeader>
@@ -366,7 +365,6 @@ export default function ScadenzeBilanciPage() {
                 </Table>
               </div>
 
-              {/* Body Scrollabile */}
               <div className="max-h-[600px] overflow-y-auto">
                 <Table>
                   <TableBody>
