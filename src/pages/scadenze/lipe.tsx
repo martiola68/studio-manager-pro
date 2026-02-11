@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "@/hooks/use-toast";
+import { Trash2, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
-import { Database } from "@/integrations/supabase/types";
-import { Search } from "lucide-react";
+import { useRouter } from "next/router";
+import type { Database } from "@/integrations/supabase/types";
 
 type LipeRow = Database["public"]["Tables"]["tbscadlipe"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -41,11 +43,15 @@ type LipeRecord = LipeRow & {
   operatore?: string;
 };
 
-export default function Lipe() {
-  const [records, setRecords] = useState<LipeRecord[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
+export default function ScadenzeLipePage() {
+  const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [scadenze, setScadenze] = useState<LipeRecord[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterOperatore, setFilterOperatore] = useState("__all__");
+  const [filterProfessionista, setFilterProfessionista] = useState("__all__");
 
   useEffect(() => {
     loadData();
@@ -54,25 +60,25 @@ export default function Lipe() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [recordsData, utentiData] = await Promise.all([
-        loadRecords(),
+      const [scadenzeData, utentiData] = await Promise.all([
+        loadScadenze(),
         loadUtenti()
       ]);
-      setRecords(recordsData);
+      setScadenze(scadenzeData);
       setUtenti(utentiData);
     } catch (error) {
-      console.error("Errore caricamento LIPE:", error);
+      console.error("Errore caricamento:", error);
       toast({
         title: "Errore",
-        description: "Impossibile caricare i dati LIPE",
-        variant: "destructive",
+        description: "Impossibile caricare i dati",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadRecords = async (): Promise<LipeRecord[]> => {
+  const loadScadenze = async (): Promise<LipeRecord[]> => {
     const { data, error } = await supabase
       .from("tbscadlipe")
       .select(`
@@ -119,7 +125,7 @@ export default function Lipe() {
 
       if (error) throw error;
 
-      setRecords((prev) =>
+      setScadenze((prev) =>
         prev.map((r) => (r.id === recordId ? { ...r, [field]: newValue } : r))
       );
 
@@ -150,7 +156,7 @@ export default function Lipe() {
 
       if (error) throw error;
 
-      setRecords((prev) =>
+      setScadenze((prev) =>
         prev.map((r) => (r.id === recordId ? { ...r, [field]: value } : r))
       );
 
@@ -168,9 +174,12 @@ export default function Lipe() {
     }
   };
 
-  const filteredRecords = records.filter((record) =>
-    record.nominativo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredScadenze = scadenze.filter(s => {
+    const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
+    return matchSearch && matchOperatore && matchProfessionista;
+  });
 
   if (loading) {
     return (
@@ -181,27 +190,71 @@ export default function Lipe() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Scadenzario LIPE</h1>
+          <p className="text-gray-500 mt-1">Gestione Liquidazioni Periodiche IVA</p>
+        </div>
+      </div>
+
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Scadenzario LIPE</CardTitle>
-            <div className="flex items-center gap-4">
+          <CardTitle>Filtri e Ricerca</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cerca Nominativo</label>
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Cerca per nominativo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
                 />
               </div>
-              <Button onClick={loadData} variant="outline">
-                Ricarica
-              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Utente Operatore</label>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti gli operatori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti gli operatori</SelectItem>
+                  {utenti.map(u => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Utente Professionista</label>
+              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti i professionisti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tutti i professionisti</SelectItem>
+                  {utenti.map(u => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
@@ -237,46 +290,46 @@ export default function Lipe() {
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-                {filteredRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={25} className="p-4 text-center text-muted-foreground">
+                {filteredScadenze.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50">
+                    <td colSpan={20} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
-                  filteredRecords.map((record) => (
+                  filteredScadenze.map((scadenza) => (
                     <tr
-                      key={record.id}
+                      key={scadenza.id}
                       className="border-b transition-colors hover:bg-green-50"
                     >
                       <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px]">
-                        {record.nominativo}
+                        {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle min-w-[180px]">{record.professionista}</td>
-                      <td className="p-2 align-middle min-w-[180px]">{record.operatore}</td>
+                      <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
+                      <td className="p-2 align-middle min-w-[180px]">{scadenza.operatore}</td>
                       
                       {/* Mesi Trimestre 1 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.gen || false}
+                          checked={scadenza.gen || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "gen", record.gen || false)
+                            handleToggleField(scadenza.id, "gen", scadenza.gen || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.feb || false}
+                          checked={scadenza.feb || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "feb", record.feb || false)
+                            handleToggleField(scadenza.id, "feb", scadenza.feb || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.mar || false}
+                          checked={scadenza.mar || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "mar", record.mar || false)
+                            handleToggleField(scadenza.id, "mar", scadenza.mar || false)
                           }
                         />
                       </td>
@@ -284,18 +337,18 @@ export default function Lipe() {
                       {/* LIPE 1T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
-                          checked={record.lipe1t || false}
+                          checked={scadenza.lipe1t || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "lipe1t", record.lipe1t || false)
+                            handleToggleField(scadenza.id, "lipe1t", scadenza.lipe1t || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle min-w-[140px]">
                         <Input
                           type="date"
-                          value={record.lipe1t_invio || ""}
+                          value={scadenza.lipe1t_invio || ""}
                           onChange={(e) =>
-                            handleUpdateValue(record.id, "lipe1t_invio", e.target.value)
+                            handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)
                           }
                           className="h-8 text-xs"
                         />
@@ -304,25 +357,25 @@ export default function Lipe() {
                       {/* Mesi Trimestre 2 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.apr || false}
+                          checked={scadenza.apr || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "apr", record.apr || false)
+                            handleToggleField(scadenza.id, "apr", scadenza.apr || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.mag || false}
+                          checked={scadenza.mag || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "mag", record.mag || false)
+                            handleToggleField(scadenza.id, "mag", scadenza.mag || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.giu || false}
+                          checked={scadenza.giu || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "giu", record.giu || false)
+                            handleToggleField(scadenza.id, "giu", scadenza.giu || false)
                           }
                         />
                       </td>
@@ -330,18 +383,18 @@ export default function Lipe() {
                       {/* LIPE 2T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
-                          checked={record.lipe2t || false}
+                          checked={scadenza.lipe2t || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "lipe2t", record.lipe2t || false)
+                            handleToggleField(scadenza.id, "lipe2t", scadenza.lipe2t || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle min-w-[140px]">
                         <Input
                           type="date"
-                          value={record.lipe2t_invio || ""}
+                          value={scadenza.lipe2t_invio || ""}
                           onChange={(e) =>
-                            handleUpdateValue(record.id, "lipe2t_invio", e.target.value)
+                            handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)
                           }
                           className="h-8 text-xs"
                         />
@@ -350,25 +403,25 @@ export default function Lipe() {
                       {/* Mesi Trimestre 3 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.lug || false}
+                          checked={scadenza.lug || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "lug", record.lug || false)
+                            handleToggleField(scadenza.id, "lug", scadenza.lug || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.ago || false}
+                          checked={scadenza.ago || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "ago", record.ago || false)
+                            handleToggleField(scadenza.id, "ago", scadenza.ago || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.set || false}
+                          checked={scadenza.set || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "set", record.set || false)
+                            handleToggleField(scadenza.id, "set", scadenza.set || false)
                           }
                         />
                       </td>
@@ -376,18 +429,18 @@ export default function Lipe() {
                       {/* LIPE 3T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
-                          checked={record.lipe3t || false}
+                          checked={scadenza.lipe3t || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "lipe3t", record.lipe3t || false)
+                            handleToggleField(scadenza.id, "lipe3t", scadenza.lipe3t || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle min-w-[140px]">
                         <Input
                           type="date"
-                          value={record.lipe3t_invio || ""}
+                          value={scadenza.lipe3t_invio || ""}
                           onChange={(e) =>
-                            handleUpdateValue(record.id, "lipe3t_invio", e.target.value)
+                            handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
                           }
                           className="h-8 text-xs"
                         />
@@ -396,25 +449,25 @@ export default function Lipe() {
                       {/* Mesi Trimestre 4 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.ott || false}
+                          checked={scadenza.ott || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "ott", record.ott || false)
+                            handleToggleField(scadenza.id, "ott", scadenza.ott || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.nov || false}
+                          checked={scadenza.nov || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "nov", record.nov || false)
+                            handleToggleField(scadenza.id, "nov", scadenza.nov || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
-                          checked={record.dic || false}
+                          checked={scadenza.dic || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "dic", record.dic || false)
+                            handleToggleField(scadenza.id, "dic", scadenza.dic || false)
                           }
                         />
                       </td>
@@ -423,9 +476,9 @@ export default function Lipe() {
                       <td className="p-2 align-middle min-w-[120px]">
                         <Input
                           type="text"
-                          value={record.acconto || ""}
+                          value={scadenza.acconto || ""}
                           onChange={(e) =>
-                            handleUpdateValue(record.id, "acconto", e.target.value)
+                            handleUpdateValue(scadenza.id, "acconto", e.target.value)
                           }
                           className="h-8 text-xs"
                           placeholder="Metodo"
@@ -433,12 +486,12 @@ export default function Lipe() {
                       </td>
                       <td className="p-2 align-middle text-center min-w-[100px]">
                         <Checkbox
-                          checked={record.acconto_com || false}
+                          checked={scadenza.acconto_com || false}
                           onCheckedChange={() =>
                             handleToggleField(
-                              record.id,
+                              scadenza.id,
                               "acconto_com",
-                              record.acconto_com || false
+                              scadenza.acconto_com || false
                             )
                           }
                         />
@@ -447,18 +500,18 @@ export default function Lipe() {
                       {/* LIPE 4T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
-                          checked={record.lipe4t || false}
+                          checked={scadenza.lipe4t || false}
                           onCheckedChange={() =>
-                            handleToggleField(record.id, "lipe4t", record.lipe4t || false)
+                            handleToggleField(scadenza.id, "lipe4t", scadenza.lipe4t || false)
                           }
                         />
                       </td>
                       <td className="p-2 align-middle min-w-[140px]">
                         <Input
                           type="date"
-                          value={record.lipe4t_invio || ""}
+                          value={scadenza.lipe4t_invio || ""}
                           onChange={(e) =>
-                            handleUpdateValue(record.id, "lipe4t_invio", e.target.value)
+                            handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
                           }
                           className="h-8 text-xs"
                         />
