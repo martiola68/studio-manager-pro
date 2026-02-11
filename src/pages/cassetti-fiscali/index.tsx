@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2, Lock, Unlock } from "lucide-react";
+import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2, Lock, Unlock, ExternalLink } from "lucide-react";
 import { cassettiFiscaliService, type CassettoFiscale } from "@/services/cassettiFiscaliService";
 import {
   isEncryptionEnabled,
@@ -423,12 +423,20 @@ export default function CassettiFiscaliPage() {
           <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
           <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
         </div>
-        <Button 
-          onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}
-          disabled={!isUnlocked}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.open("https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate", "_blank")}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" /> Agenzia delle Entrate
+          </Button>
+          <Button 
+            onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}
+            disabled={!isUnlocked}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">
