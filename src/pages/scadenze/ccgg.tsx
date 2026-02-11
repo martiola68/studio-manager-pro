@@ -386,7 +386,7 @@ export default function ScadenzeCCGGPage() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={scadenza.importo_calcolato || ""}
+                          value={scadenza.importo_calcolato?.toString() ?? ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "importo_calcolato", parseFloat(e.target.value) || null)}
                           className="w-full"
                           placeholder="0.00"
