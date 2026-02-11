@@ -105,9 +105,9 @@ export default function ScadenzeEsterometroPage() {
   };
 
   const loadScadenze = async (): Promise<ScadenzaEsterometro[]> => {
-    // Nota: fk esplicite potrebbero essere diverse, uso fallback generico se necessario, ma provo con lo standard del progetto
-    const { data, error } = await supabase
-      .from("tbscadesterometro" as any)
+    // Uso (supabase as any) per bypassare il controllo sui tipi della tabella che non viene ancora riconosciuta
+    const { data, error } = await (supabase as any)
+      .from("tbscadesterometro")
       .select(`
         *,
         professionista:tbutenti!tbscadesterometro_utente_professionista_id_fkey(nome, cognome),
@@ -117,7 +117,8 @@ export default function ScadenzeEsterometroPage() {
     
     if (error) throw error;
     
-    return (data || []).map(record => ({
+    // Cast esplicito a any[] per evitare errori di tipo sullo spread operator
+    return ((data as any[]) || []).map((record: any) => ({
       ...record,
       professionista: record.professionista 
         ? `${record.professionista.nome} ${record.professionista.cognome}`
@@ -146,7 +147,7 @@ export default function ScadenzeEsterometroPage() {
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("tbscadesterometro")
         .update({ [field]: newValue })
         .eq("id", scadenzaId);
@@ -164,7 +165,7 @@ export default function ScadenzeEsterometroPage() {
 
   const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaEsterometro, value: any) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("tbscadesterometro")
         .update({ [field]: value === "" ? null : value })
         .eq("id", scadenzaId);
