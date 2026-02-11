@@ -6,10 +6,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { Search, Calendar } from "lucide-react";
+import { Search } from "lucide-react";
 
-// Tipo locale basato sui campi reali del database tbscadlipe (senza tipo_liq)
 type LipeRow = Database["public"]["Tables"]["tbscadlipe"]["Row"];
+type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
 type LipeRecord = LipeRow & {
   nominativo: string;
   utente_professionista_id?: string | null;
@@ -36,27 +37,29 @@ type LipeRecord = LipeRow & {
   lipe4t_invio?: string | null;
   acconto?: string | null;
   acconto_com?: boolean | null;
+  professionista?: string;
+  operatore?: string;
 };
 
 export default function Lipe() {
   const [records, setRecords] = useState<LipeRecord[]>([]);
+  const [utenti, setUtenti] = useState<Utente[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    loadRecords();
+    loadData();
   }, []);
 
-  const loadRecords = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("tbscadlipe")
-        .select("*")
-        .order("nominativo", { ascending: true });
-
-      if (error) throw error;
-      setRecords(data || []);
+      const [recordsData, utentiData] = await Promise.all([
+        loadRecords(),
+        loadUtenti()
+      ]);
+      setRecords(recordsData);
+      setUtenti(utentiData);
     } catch (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({
@@ -67,6 +70,39 @@ export default function Lipe() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadRecords = async (): Promise<LipeRecord[]> => {
+    const { data, error } = await supabase
+      .from("tbscadlipe")
+      .select(`
+        *,
+        professionista:tbutenti!tbscadlipe_utente_professionista_id_fkey(nome, cognome),
+        operatore:tbutenti!tbscadlipe_utente_operatore_id_fkey(nome, cognome)
+      `)
+      .order("nominativo", { ascending: true });
+
+    if (error) throw error;
+    
+    return (data || []).map(record => ({
+      ...record,
+      professionista: record.professionista 
+        ? `${record.professionista.nome} ${record.professionista.cognome}`
+        : "-",
+      operatore: record.operatore
+        ? `${record.operatore.nome} ${record.operatore.cognome}`
+        : "-"
+    })) as LipeRecord[];
+  };
+
+  const loadUtenti = async (): Promise<Utente[]> => {
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("*")
+      .order("cognome", { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
   };
 
   const handleToggleField = async (
@@ -160,7 +196,7 @@ export default function Lipe() {
                   className="pl-8 w-64"
                 />
               </div>
-              <Button onClick={loadRecords} variant="outline">
+              <Button onClick={loadData} variant="outline">
                 Ricarica
               </Button>
             </div>
@@ -174,6 +210,8 @@ export default function Lipe() {
                   <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
                     Nominativo
                   </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Gen</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Feb</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Mar</th>
@@ -192,7 +230,7 @@ export default function Lipe() {
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Ott</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Nov</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Dic</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">Acconto</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Acconto</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Acconto Com</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 4T</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 4T</th>
@@ -201,7 +239,7 @@ export default function Lipe() {
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={23} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={25} className="p-4 text-center text-muted-foreground">
                       Nessun record trovato
                     </td>
                   </tr>
@@ -214,6 +252,8 @@ export default function Lipe() {
                       <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px]">
                         {record.nominativo}
                       </td>
+                      <td className="p-2 align-middle min-w-[180px]">{record.professionista}</td>
+                      <td className="p-2 align-middle min-w-[180px]">{record.operatore}</td>
                       
                       {/* Mesi Trimestre 1 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
