@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -425,7 +425,7 @@ export type Database = {
           settore_consulenza: boolean | null
           settore_fiscale: boolean | null
           settore_lavoro: boolean | null
-          studio_id: string | null
+          studio_id: string
           tipo_cliente: string
           tipo_prestazione_id: string | null
           tipo_redditi: string | null
@@ -476,7 +476,7 @@ export type Database = {
           settore_consulenza?: boolean | null
           settore_fiscale?: boolean | null
           settore_lavoro?: boolean | null
-          studio_id?: string | null
+          studio_id: string
           tipo_cliente: string
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
@@ -527,7 +527,7 @@ export type Database = {
           settore_consulenza?: boolean | null
           settore_fiscale?: boolean | null
           settore_lavoro?: boolean | null
-          studio_id?: string | null
+          studio_id?: string
           tipo_cliente?: string
           tipo_prestazione_id?: string | null
           tipo_redditi?: string | null
