@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search } from "lucide-react";
-import { TopNavBar } from "@/components/TopNavBar";
 
 // TypeScript types
 type ScadenzaProformaRow = {
@@ -200,317 +199,310 @@ export default function ScadenzarioProforma() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TopNavBar />
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TopNavBar />
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Scadenzario PROFORMA</h1>
+        <p className="text-gray-600 mt-1">Gestione scadenze PROFORMA mensili</p>
+      </div>
 
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Scadenzario PROFORMA</h1>
-          <p className="text-gray-600 mt-1">Gestione scadenze PROFORMA mensili</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">Totale Record</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">{totalScadenze}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Filtri e Ricerca</CardTitle>
-            <CardDescription>Filtra le scadenze per nominativo o utente</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600">Totale Record</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search Nominativo */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Cerca Nominativo</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Cerca per nominativo..."
-                    value={searchNominativo}
-                    onChange={(e) => setSearchNominativo(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              {/* Filter Operatore */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Utente Operatore</label>
-                <Select value={filterOperatore} onValueChange={setFilterOperatore}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tutti gli operatori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutti gli operatori</SelectItem>
-                    {utenti.map(u => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.nome} {u.cognome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filter Professionista */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Utente Professionista</label>
-                <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tutti i professionisti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tutti i professionisti</SelectItem>
-                    {utenti.map(u => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.nome} {u.cognome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Reset Filters */}
-            {(searchNominativo || filterOperatore !== "all" || filterProfessionista !== "all") && (
-              <div className="mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchNominativo("");
-                    setFilterOperatore("all");
-                    setFilterProfessionista("all");
-                  }}
-                >
-                  Reimposta filtri
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 border-b">
-                    <th className="sticky-col-header text-left p-3 font-semibold text-sm border-r">Nominativo</th>
-                    <th className="text-left p-3 font-semibold text-sm border-r min-w-[150px]">Professionista</th>
-                    <th className="text-left p-3 font-semibold text-sm border-r min-w-[150px]">Operatore</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Gennaio</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Febbraio</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Marzo</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Aprile</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Maggio</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Giugno</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Luglio</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Agosto</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Settembre</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Ottobre</th>
-                    <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Novembre</th>
-                    <th className="text-center p-3 font-semibold text-sm min-w-[100px]">Dicembre</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredScadenze.length === 0 ? (
-                    <tr>
-                      <td colSpan={15} className="text-center p-8 text-gray-500">
-                        Nessuna scadenza trovata
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredScadenze.map((scadenza) => (
-                      <tr key={scadenza.id} className="border-b hover:bg-gray-50">
-                        {/* Nominativo - Sticky Column */}
-                        <td className="sticky-col-cell p-3 border-r font-medium">
-                          {scadenza.nominativo || "-"}
-                        </td>
-
-                        {/* Professionista */}
-                        <td className="p-3 border-r">
-                          <Select
-                            value={scadenza.utente_professionista_id || "none"}
-                            onValueChange={(value) => handleUtenteChange(scadenza.id, "utente_professionista_id", value)}
-                            disabled={saving === scadenza.id}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue>
-                                {scadenza.professionista_nome || "-"}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">-</SelectItem>
-                              {utenti.map(u => (
-                                <SelectItem key={u.id} value={u.id}>
-                                  {u.nome} {u.cognome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-
-                        {/* Operatore */}
-                        <td className="p-3 border-r">
-                          <Select
-                            value={scadenza.utente_operatore_id || "none"}
-                            onValueChange={(value) => handleUtenteChange(scadenza.id, "utente_operatore_id", value)}
-                            disabled={saving === scadenza.id}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue>
-                                {scadenza.operatore_nome || "-"}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">-</SelectItem>
-                              {utenti.map(u => (
-                                <SelectItem key={u.id} value={u.id}>
-                                  {u.nome} {u.cognome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-
-                        {/* Gennaio */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.gennaio || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "gennaio", scadenza.gennaio)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Febbraio */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.febbraio || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "febbraio", scadenza.febbraio)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Marzo */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.marzo || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "marzo", scadenza.marzo)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Aprile */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.aprile || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "aprile", scadenza.aprile)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Maggio */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.maggio || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "maggio", scadenza.maggio)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Giugno */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.giugno || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "giugno", scadenza.giugno)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Luglio */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.luglio || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "luglio", scadenza.luglio)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Agosto */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.agosto || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "agosto", scadenza.agosto)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Settembre */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.settembre || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "settembre", scadenza.settembre)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Ottobre */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.ottobre || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "ottobre", scadenza.ottobre)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Novembre */}
-                        <td className="p-3 border-r text-center">
-                          <Checkbox
-                            checked={scadenza.novembre || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "novembre", scadenza.novembre)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-
-                        {/* Dicembre */}
-                        <td className="p-3 text-center">
-                          <Checkbox
-                            checked={scadenza.dicembre || false}
-                            onCheckedChange={() => handleCheckboxChange(scadenza.id, "dicembre", scadenza.dicembre)}
-                            disabled={saving === scadenza.id}
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <div className="text-3xl font-bold text-primary">{totalScadenze}</div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtri e Ricerca</CardTitle>
+          <CardDescription>Filtra le scadenze per nominativo o utente</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Search Nominativo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cerca Nominativo</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca per nominativo..."
+                  value={searchNominativo}
+                  onChange={(e) => setSearchNominativo(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Filter Operatore */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Utente Operatore</label>
+              <Select value={filterOperatore} onValueChange={setFilterOperatore}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti gli operatori" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti gli operatori</SelectItem>
+                  {utenti.map(u => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filter Professionista */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Utente Professionista</label>
+              <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tutti i professionisti" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tutti i professionisti</SelectItem>
+                  {utenti.map(u => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Reset Filters */}
+          {(searchNominativo || filterOperatore !== "all" || filterProfessionista !== "all") && (
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchNominativo("");
+                  setFilterOperatore("all");
+                  setFilterProfessionista("all");
+                }}
+              >
+                Reimposta filtri
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-100 border-b">
+                  <th className="sticky-col-header text-left p-3 font-semibold text-sm border-r">Nominativo</th>
+                  <th className="text-left p-3 font-semibold text-sm border-r min-w-[150px]">Professionista</th>
+                  <th className="text-left p-3 font-semibold text-sm border-r min-w-[150px]">Operatore</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Gennaio</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Febbraio</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Marzo</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Aprile</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Maggio</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Giugno</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Luglio</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Agosto</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Settembre</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Ottobre</th>
+                  <th className="text-center p-3 font-semibold text-sm border-r min-w-[100px]">Novembre</th>
+                  <th className="text-center p-3 font-semibold text-sm min-w-[100px]">Dicembre</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredScadenze.length === 0 ? (
+                  <tr>
+                    <td colSpan={15} className="text-center p-8 text-gray-500">
+                      Nessuna scadenza trovata
+                    </td>
+                  </tr>
+                ) : (
+                  filteredScadenze.map((scadenza) => (
+                    <tr key={scadenza.id} className="border-b hover:bg-gray-50">
+                      {/* Nominativo - Sticky Column */}
+                      <td className="sticky-col-cell p-3 border-r font-medium">
+                        {scadenza.nominativo || "-"}
+                      </td>
+
+                      {/* Professionista */}
+                      <td className="p-3 border-r">
+                        <Select
+                          value={scadenza.utente_professionista_id || "none"}
+                          onValueChange={(value) => handleUtenteChange(scadenza.id, "utente_professionista_id", value)}
+                          disabled={saving === scadenza.id}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue>
+                              {scadenza.professionista_nome || "-"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-</SelectItem>
+                            {utenti.map(u => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.nome} {u.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+
+                      {/* Operatore */}
+                      <td className="p-3 border-r">
+                        <Select
+                          value={scadenza.utente_operatore_id || "none"}
+                          onValueChange={(value) => handleUtenteChange(scadenza.id, "utente_operatore_id", value)}
+                          disabled={saving === scadenza.id}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue>
+                              {scadenza.operatore_nome || "-"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-</SelectItem>
+                            {utenti.map(u => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.nome} {u.cognome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+
+                      {/* Gennaio */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.gennaio || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "gennaio", scadenza.gennaio)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Febbraio */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.febbraio || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "febbraio", scadenza.febbraio)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Marzo */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.marzo || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "marzo", scadenza.marzo)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Aprile */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.aprile || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "aprile", scadenza.aprile)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Maggio */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.maggio || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "maggio", scadenza.maggio)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Giugno */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.giugno || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "giugno", scadenza.giugno)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Luglio */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.luglio || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "luglio", scadenza.luglio)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Agosto */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.agosto || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "agosto", scadenza.agosto)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Settembre */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.settembre || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "settembre", scadenza.settembre)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Ottobre */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.ottobre || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "ottobre", scadenza.ottobre)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Novembre */}
+                      <td className="p-3 border-r text-center">
+                        <Checkbox
+                          checked={scadenza.novembre || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "novembre", scadenza.novembre)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+
+                      {/* Dicembre */}
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={scadenza.dicembre || false}
+                          onCheckedChange={() => handleCheckboxChange(scadenza.id, "dicembre", scadenza.dicembre)}
+                          disabled={saving === scadenza.id}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
