@@ -275,7 +275,8 @@ export function TopNavBar() {
         { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
         { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> }
+        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+        { label: "Microsoft 365", href: "/impostazioni/microsoft365", icon: <Cloud className="h-4 w-4" /> }
       ]
     }
   ];
@@ -325,13 +326,6 @@ export function TopNavBar() {
                 </Link>
               </DropdownMenuItem>
             ))}
-
-            <DropdownMenuItem asChild>
-              <Link href="/impostazioni/microsoft365">
-                <Cloud className="mr-2 h-4 w-4" />
-                Microsoft 365
-              </Link>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
