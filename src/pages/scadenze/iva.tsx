@@ -11,24 +11,13 @@ import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
-// 1. Tipi Locali per UI (Fix TS errors)
 type ScadenzaIvaRow = Database["public"]["Tables"]["tbscadiva"]["Row"];
-type ScadenzaIva = ScadenzaIvaRow & {
-  periodo?: string | null;
-  acconto?: boolean | null;
-  acconto_metodo?: string | null;
-  saldo?: boolean | null;
-  inviata?: boolean | null;
-  ricevuta?: boolean | null;
-  data_scadenza?: string | null;
-  data_invio?: string | null;
-  conferma_riga?: boolean | null;
-  note?: string | null;
-  professionista?: string | null;
-  operatore?: string | null;
-};
-
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type ScadenzaIva = ScadenzaIvaRow & {
+  professionista?: string;
+  operatore?: string;
+};
 
 export default function ScadenzeIvaPage() {
   const router = useRouter();
@@ -41,11 +30,8 @@ export default function ScadenzeIvaPage() {
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
   
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({]);
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
-  
-  const [localImporti, setLocalImporti] = useState<Record<string, string>>({});
-  const [importoTimers, setImportoTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -102,12 +88,24 @@ export default function ScadenzeIvaPage() {
   const loadScadenze = async (): Promise<ScadenzaIva[]> => {
     const { data, error } = await supabase
       .from("tbscadiva")
-      .select("*")
+      .select(`
+        *,
+        professionista:tbutenti!tbscadiva_utente_professionista_id_fkey(nome, cognome),
+        operatore:tbutenti!tbscadiva_utente_operatore_id_fkey(nome, cognome)
+      `)
       .order("nominativo", { ascending: true });
     
     if (error) throw error;
-    // Cast manuale per matchare il tipo UI esteso
-    return (data || []) as unknown as ScadenzaIva[];
+    
+    return (data || []).map(record => ({
+      ...record,
+      professionista: record.professionista 
+        ? `${record.professionista.nome} ${record.professionista.cognome}`
+        : "-",
+      operatore: record.operatore
+        ? `${record.operatore.nome} ${record.operatore.cognome}`
+        : "-"
+    })) as ScadenzaIva[];
   };
 
   const loadUtenti = async (): Promise<Utente[]> => {
@@ -136,8 +134,6 @@ export default function ScadenzeIvaPage() {
         }));
       }
       
-      // Verifica se il campo esiste nel DB prima di fare update (opzionale, ma sicuro)
-      // Per ora assumiamo che l'interfaccia UI rifletta il DB o che Supabase ignori campi extra se configurato
       const { error } = await supabase
         .from("tbscadiva")
         .update({ [field]: newValue })
@@ -359,108 +355,71 @@ export default function ScadenzeIvaPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Professionista</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Periodo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Acconto</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Acconto Metodo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Saldo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Scad.</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Inviata</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Invio</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Ricevuta</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">Note</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Conferma</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Mod. Predisposto</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Mod. Definitivo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Asseverazione</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Importo Credito</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Mod. Inviato</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data Invio</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Ricevuta</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">Note</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Conferma</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">Azioni</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={14} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                    <td colSpan={13} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
                     <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                      <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.professionista || "-"}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.operatore || "-"}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Select
-                          value={scadenza.periodo || ""}
-                          onValueChange={(value) => handleUpdateField(scadenza.id, "periodo", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="-" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="M1">Gennaio</SelectItem>
-                            <SelectItem value="M2">Febbraio</SelectItem>
-                            <SelectItem value="M3">Marzo</SelectItem>
-                            <SelectItem value="M4">Aprile</SelectItem>
-                            <SelectItem value="M5">Maggio</SelectItem>
-                            <SelectItem value="M6">Giugno</SelectItem>
-                            <SelectItem value="M7">Luglio</SelectItem>
-                            <SelectItem value="M8">Agosto</SelectItem>
-                            <SelectItem value="M9">Settembre</SelectItem>
-                            <SelectItem value="M10">Ottobre</SelectItem>
-                            <SelectItem value="M11">Novembre</SelectItem>
-                            <SelectItem value="M12">Dicembre</SelectItem>
-                            <SelectItem value="T1">1° Trimestre</SelectItem>
-                            <SelectItem value="T2">2° Trimestre</SelectItem>
-                            <SelectItem value="T3">3° Trimestre</SelectItem>
-                            <SelectItem value="T4">4° Trimestre</SelectItem>
-                            <SelectItem value="AN">Annuale</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
+                      <td className="p-2 align-middle min-w-[180px]">{scadenza.operatore}</td>
+                      <td className="p-2 align-middle text-center min-w-[140px]">
                         <Checkbox
-                          checked={scadenza.acconto || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto", scadenza.acconto)}
+                          checked={scadenza.mod_predisposto || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "mod_predisposto", scadenza.mod_predisposto)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Select
-                          value={scadenza.acconto_metodo || ""}
-                          onValueChange={(value) => handleUpdateField(scadenza.id, "acconto_metodo", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="-" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="STORICO">Storico</SelectItem>
-                            <SelectItem value="PREVISIONALE">Previsionale</SelectItem>
-                            <SelectItem value="EFFETTIVO">Effettivo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[140px]">
                         <Checkbox
-                          checked={scadenza.saldo || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "saldo", scadenza.saldo)}
+                          checked={scadenza.mod_definitivo || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                      <td className="p-2 align-middle text-center min-w-[140px]">
+                        <Checkbox
+                          checked={scadenza.asseverazione || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "asseverazione", scadenza.asseverazione)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle min-w-[150px]">
                         <Input
-                          type="date"
-                          value={scadenza.data_scadenza || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_scadenza", e.target.value)}
+                          type="number"
+                          step="0.01"
+                          value={scadenza.importo_credito || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "importo_credito", parseFloat(e.target.value) || null)}
                           className="w-full"
+                          placeholder="0.00"
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
-                          checked={scadenza.inviata || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "inviata", scadenza.inviata)}
+                          checked={scadenza.mod_inviato || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                      <td className="p-2 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_invio || ""}
@@ -468,13 +427,13 @@ export default function ScadenzeIvaPage() {
                           className="w-full"
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.ricevuta || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
+                      <td className="p-2 align-middle min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
@@ -482,13 +441,13 @@ export default function ScadenzeIvaPage() {
                           className="min-h-[60px] resize-none"
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.conferma_riga || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                      <td className="p-2 align-middle text-center min-w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
