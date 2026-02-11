@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import Header from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
+import { TopNavBar } from "@/components/TopNavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -215,192 +214,194 @@ export default function Microsoft365Settings() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header title="Impostazioni Microsoft 365" />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-4xl space-y-6">
-            
-            {/* Info Card */}
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione Azure AD registrata per il tuo studio. 
-                Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
-              </AlertDescription>
-            </Alert>
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
+      <TopNavBar />
+      <main className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-4xl space-y-6">
+          
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">Impostazioni Microsoft 365</h1>
+            <p className="text-muted-foreground">Configura l&apos;integrazione con Microsoft 365 per il tuo studio</p>
+          </div>
 
-            {/* Status Card */}
-            {config && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {config.enabled ? (
-                      <>
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        Microsoft 365 Connesso
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-5 w-5 text-red-500" />
-                        Microsoft 365 Disabilitato
-                      </>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Configurazione attiva per questo studio
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            )}
+          {/* Info Card */}
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione Azure AD registrata per il tuo studio. 
+              Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
+            </AlertDescription>
+          </Alert>
 
-            {/* Test Result */}
-            {testResult && (
-              <Alert variant={testResult.success ? "default" : "destructive"}>
-                {testResult.success ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" />
-                )}
-                <AlertDescription>
-                  {testResult.success ? (
+          {/* Status Card */}
+          {config && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {config.enabled ? (
                     <>
-                      <strong>✅ Connessione riuscita!</strong>
-                      {testResult.organization && (
-                        <div className="mt-1">Organizzazione: {testResult.organization}</div>
-                      )}
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      Microsoft 365 Connesso
                     </>
                   ) : (
                     <>
-                      <strong>❌ Connessione fallita</strong>
-                      <div className="mt-1">{testResult.error}</div>
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      Microsoft 365 Disabilitato
                     </>
                   )}
-                </AlertDescription>
-              </Alert>
-            )}
+                </CardTitle>
+                <CardDescription>
+                  Configurazione attiva per questo studio
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
 
-            {/* Error Alert */}
-            {error && (
-              <Alert variant="destructive">
+          {/* Test Result */}
+          {testResult && (
+            <Alert variant={testResult.success ? "default" : "destructive"}>
+              {testResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+              )}
+              <AlertDescription>
+                {testResult.success ? (
+                  <>
+                    <strong>✅ Connessione riuscita!</strong>
+                    {testResult.organization && (
+                      <div className="mt-1">Organizzazione: {testResult.organization}</div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <strong>❌ Connessione fallita</strong>
+                    <div className="mt-1">{testResult.error}</div>
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            {/* Configuration Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Credenziali Azure AD</CardTitle>
-                <CardDescription>
-                  Configura l&apos;applicazione Microsoft 365 per il tuo studio.
-                  <a 
-                    href="/guide/MICROSOFT_365_SETUP_GUIDE.md" 
-                    target="_blank"
-                    className="ml-2 text-blue-600 hover:underline"
-                  >
-                    Guida completa →
-                  </a>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                
-                <div className="space-y-2">
-                  <Label htmlFor="clientId">Client ID *</Label>
-                  <Input
-                    id="clientId"
-                    placeholder="12345678-1234-1234-1234-123456789abc"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                  />
-                </div>
+          {/* Error Alert */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="clientSecret">
-                    Client Secret {config ? "(Lascia vuoto per mantenere quello esistente)" : "*"}
-                  </Label>
-                  <Input
-                    id="clientSecret"
-                    type="password"
-                    placeholder={config ? "••••••••••••••••" : "Client Secret"}
-                    value={clientSecret}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Il secret viene cifrato con AES-256-GCM prima del salvataggio.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tenantId">Tenant ID *</Label>
-                  <Input
-                    id="tenantId"
-                    placeholder="12345678-1234-1234-1234-123456789abc"
-                    value={tenantId}
-                    onChange={(e) => setTenantId(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="organizerEmail">Email Organizer (Opzionale)</Label>
-                  <Input
-                    id="organizerEmail"
-                    type="email"
-                    placeholder="agenda@tuostudio.com"
-                    value={organizerEmail}
-                    onChange={(e) => setOrganizerEmail(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email usata come organizzatore per eventi e meeting Teams
-                  </p>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={handleSave}
-                    disabled={saving || !clientId || !tenantId}
-                  >
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {config ? "Aggiorna Configurazione" : "Salva Configurazione"}
-                  </Button>
-
-                  {config && (
-                    <Button
-                      variant="outline"
-                      onClick={handleTest}
-                      disabled={testing}
-                    >
-                      {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Testa Connessione
-                    </Button>
-                  )}
-                </div>
-
-              </CardContent>
-            </Card>
-
-            {/* Setup Guide Link */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Guida alla Configurazione</CardTitle>
-                <CardDescription>
-                  Segui la guida passo-passo per configurare l&apos;applicazione Azure AD
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  variant="outline"
-                  onClick={() => window.open("/guide/MICROSOFT_365_SETUP_GUIDE.md", "_blank")}
+          {/* Configuration Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Credenziali Azure AD</CardTitle>
+              <CardDescription>
+                Configura l&apos;applicazione Microsoft 365 per il tuo studio.
+                <a 
+                  href="/guide/MICROSOFT_365_SETUP_GUIDE.md" 
+                  target="_blank"
+                  className="ml-2 text-blue-600 hover:underline"
                 >
-                  Apri Guida Completa
-                </Button>
-              </CardContent>
-            </Card>
+                  Guida completa →
+                </a>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              
+              <div className="space-y-2">
+                <Label htmlFor="clientId">Client ID *</Label>
+                <Input
+                  id="clientId"
+                  placeholder="12345678-1234-1234-1234-123456789abc"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                />
+              </div>
 
-          </div>
-        </main>
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientSecret">
+                  Client Secret {config ? "(Lascia vuoto per mantenere quello esistente)" : "*"}
+                </Label>
+                <Input
+                  id="clientSecret"
+                  type="password"
+                  placeholder={config ? "••••••••••••••••" : "Client Secret"}
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Il secret viene cifrato con AES-256-GCM prima del salvataggio.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tenantId">Tenant ID *</Label>
+                <Input
+                  id="tenantId"
+                  placeholder="12345678-1234-1234-1234-123456789abc"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organizerEmail">Email Organizer (Opzionale)</Label>
+                <Input
+                  id="organizerEmail"
+                  type="email"
+                  placeholder="agenda@tuostudio.com"
+                  value={organizerEmail}
+                  onChange={(e) => setOrganizerEmail(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Email usata come organizzatore per eventi e meeting Teams
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={handleSave}
+                  disabled={saving || !clientId || !tenantId}
+                >
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {config ? "Aggiorna Configurazione" : "Salva Configurazione"}
+                </Button>
+
+                {config && (
+                  <Button
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={testing}
+                  >
+                    {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Testa Connessione
+                  </Button>
+                )}
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* Setup Guide Link */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Guida alla Configurazione</CardTitle>
+              <CardDescription>
+                Segui la guida passo-passo per configurare l&apos;applicazione Azure AD
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => window.open("/guide/MICROSOFT_365_SETUP_GUIDE.md", "_blank")}
+              >
+                Apri Guida Completa
+              </Button>
+            </CardContent>
+          </Card>
+
+        </div>
+      </main>
     </div>
   );
 }
