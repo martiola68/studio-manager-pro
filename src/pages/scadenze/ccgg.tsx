@@ -354,35 +354,35 @@ export default function ScadenzeCCGGPage() {
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">Nominativo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Importo Calcolato</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">F24 Generato</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">F24 Comunicato</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data Comunicato</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">Note</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Conferma</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Azioni</th>
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Professionista</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Operatore</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Importo Calcolato</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">F24 Generato</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">F24 Comunicato</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Comunicato</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">Note</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Conferma</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">Azioni</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50">
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td colSpan={10} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50">
-                      <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
+                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
-                      <td className="p-2 align-middle min-w-[180px]">{scadenza.operatore}</td>
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.professionista}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.operatore}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
                         <Input
                           type="number"
                           step="0.01"
@@ -392,19 +392,19 @@ export default function ScadenzeCCGGPage() {
                           placeholder="0.00"
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.f24_generato || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.f24_comunicato || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[150px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_comunicato || ""}
@@ -412,7 +412,7 @@ export default function ScadenzeCCGGPage() {
                           className="w-full"
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[300px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
@@ -420,13 +420,13 @@ export default function ScadenzeCCGGPage() {
                           className="min-h-[60px] resize-none"
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[120px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.conferma_riga || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
