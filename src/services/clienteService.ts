@@ -3,8 +3,9 @@ import type { Database } from "@/integrations/supabase/types";
 import { teamsNotificationService } from "./teamsNotificationService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
-type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
-type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
+// Omit studio_id because it's handled server-side
+type ClienteInsert = Omit<Database["public"]["Tables"]["tbclienti"]["Insert"], "studio_id">;
+type ClienteUpdate = Omit<Database["public"]["Tables"]["tbclienti"]["Update"], "studio_id">;
 
 export const clienteService = {
   async getClienti() {
@@ -32,13 +33,28 @@ export const clienteService = {
   },
 
   async createCliente(cliente: ClienteInsert) {
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .insert(cliente)
-      .select()
-      .single();
+    // Get current session token for API authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (error) throw error;
+    if (!token) throw new Error("Utente non autenticato");
+
+    // Call API endpoint
+    const response = await fetch("/api/clienti/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(cliente)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Errore durante la creazione del cliente");
+    }
+
+    const newCliente = await response.json();
 
     // Invia notifica Teams
     try {
@@ -49,19 +65,32 @@ export const clienteService = {
       console.error("Errore invio notifica Teams:", e);
     }
 
-    return { data: cliente, error: null };
+    return { data: newCliente, error: null };
   },
 
   async updateCliente(id: string, updates: ClienteUpdate) {
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
+    // Get current session token for API authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    if (error) throw error;
-    return data;
+    if (!token) throw new Error("Utente non autenticato");
+
+    // Call API endpoint
+    const response = await fetch("/api/clienti/update", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ id, ...updates })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Errore durante l'aggiornamento del cliente");
+    }
+
+    return await response.json();
   },
 
   async deleteCliente(id: string) {
