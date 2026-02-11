@@ -10,7 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 // Tipo base derivato dal database (simulato per garantire i campi richiesti se i tipi generati non sono aggiornati)
-type ScadenzaEsterometroRow = Database["public"]["Tables"]["tbscadesterometro"]["Row"];
+type ScadenzaEsterometroRow = Database["public"]["Tables"] extends { "tbscadesterometro": { Row: infer R } } 
+  ? R 
+  : {
+      id: string;
+      nominativo: string | null;
+      utente_operatore_id: string | null;
+      utente_professionista_id: string | null;
+      [key: string]: any;
+    };
+
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type ScadenzaEsterometro = ScadenzaEsterometroRow & {
@@ -98,7 +107,7 @@ export default function ScadenzeEsterometroPage() {
   const loadScadenze = async (): Promise<ScadenzaEsterometro[]> => {
     // Nota: fk esplicite potrebbero essere diverse, uso fallback generico se necessario, ma provo con lo standard del progetto
     const { data, error } = await supabase
-      .from("tbscadesterometro")
+      .from("tbscadesterometro" as any)
       .select(`
         *,
         professionista:tbutenti!tbscadesterometro_utente_professionista_id_fkey(nome, cognome),
