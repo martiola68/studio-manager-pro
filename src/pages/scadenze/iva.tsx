@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
 
 type ScadenzaIvaRow = Database["public"]["Tables"]["tbscadiva"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
