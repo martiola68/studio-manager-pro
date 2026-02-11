@@ -8,29 +8,35 @@
   }
   
   /* Sticky column for Nominativo in all scadenzari tables */
-  .sticky-nominativo-header {
+  .sticky-col-header {
     position: sticky;
     left: 0;
-    z-index: 30;
+    z-index: 40; /* Higher than sticky header row (30) */
     background-color: white;
-    box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.12);
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
   }
   
-  .sticky-nominativo-cell {
+  .sticky-col-cell {
     position: sticky;
     left: 0;
-    z-index: 20;
+    z-index: 20; /* Higher than normal cells (0) */
     background-color: white;
-    box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.12);
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
   }
   
-  /* Support for row backgrounds (hover, alternate, etc) */
-  tr:hover .sticky-nominativo-cell {
-    background-color: inherit;
+  /* Support for row backgrounds (hover) - using !important to override specificity issues */
+  tr:hover .sticky-col-cell {
+    background-color: rgb(240 253 244) !important; /* Matches hover:bg-green-50 */
   }
   
-  tr.bg-green-50 .sticky-nominativo-cell {
-    background-color: rgb(240 253 244);
+  tr.bg-green-50 .sticky-col-cell {
+    background-color: rgb(240 253 244) !important;
+  }
+  
+  /* Fix for dark mode if needed, though requirement said keep colors */
+  :is(.dark) .sticky-col-header,
+  :is(.dark) .sticky-col-cell {
+    background-color: #1f2937; /* gray-800 */
   }
 }
 

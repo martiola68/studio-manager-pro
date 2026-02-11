@@ -171,111 +171,53 @@ export default function ElencoGenerale() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle>Clienti e Scadenzari ({filteredClienti.length})</CardTitle>
-            <div className="flex items-center gap-3">
-              <Select value={filtroUtenteFiscale} onValueChange={setFiltroUtenteFiscale}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Utente Fiscale" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tutti">Tutti gli utenti fiscali</SelectItem>
-                  {utentiFiscaliUnici.map(utente => (
-                    <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
-                      {utente.nomeCompleto}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filtroUtentePayroll} onValueChange={setFiltroUtentePayroll}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Utente Payroll" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tutti">Tutti gli utenti payroll</SelectItem>
-                  {utentiPayrollUnici.map(utente => (
-                    <SelectItem key={utente.nomeCompleto} value={utente.nomeCompleto}>
-                      {utente.nomeCompleto}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="relative w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Cerca cliente..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <div className="flex items-center justify-between">
+            <CardTitle>Riepilogo Generale Scadenze</CardTitle>
+            <div className="text-sm text-gray-500">
+              {Object.keys(scadenzeByCliente).length} Clienti
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-30 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-[300px] min-w-[300px] max-w-[300px]">Ragione Sociale</TableHead>
-                      <TableHead className="min-w-[150px]">Utente Fiscale</TableHead>
-                      <TableHead className="min-w-[150px]">Utente Payroll</TableHead>
-                      {scadenzari.map(scad => (
-                        <TableHead key={scad.field} className="text-center min-w-[100px]">
-                          {scad.label}
-                        </TableHead>
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Cliente</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Utente Fiscale</th>
+                  {TIPI_SCADENZE.map(tipo => (
+                    <th key={tipo.id} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
+                      {tipo.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {Object.keys(scadenzeByCliente).length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={2 + TIPI_SCADENZE.length} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                      Nessun dato trovato
+                    </td>
+                  </tr>
+                ) : (
+                  Object.values(scadenzeByCliente).map((cliente) => (
+                    <tr key={cliente.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                        {cliente.nominativo}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-sm text-gray-600 min-w-[150px]">
+                        {cliente.utente_fiscale || "-"}
+                      </td>
+                      {TIPI_SCADENZE.map(tipo => (
+                        <td key={tipo.id} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
+                          {renderStatoCell(cliente.scadenze[tipo.id])}
+                        </td>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                </Table>
-              </div>
-
-              <div className="max-h-[600px] overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {filteredClienti.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-gray-500">
-                          Nessun cliente trovato
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredClienti.map(cliente => (
-                        <TableRow key={cliente.id}>
-                          <TableCell className="sticky left-0 z-10 bg-white border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] font-medium w-[300px] min-w-[300px] max-w-[300px]">
-                            {cliente.ragione_sociale || "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.utente_fiscale ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600 min-w-[150px]">
-                            {cliente.utente_payroll ? `${cliente.utente_payroll.nome} ${cliente.utente_payroll.cognome}` : "-"}
-                          </TableCell>
-                          {scadenzari.map(scad => (
-                            <TableCell key={scad.field} className="text-center min-w-[100px]">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={cliente[scad.field] as boolean || false}
-                                  onCheckedChange={(checked) =>
-                                    updateScadenzario(cliente.id, scad.field, checked as boolean)
-                                  }
-                                  disabled={updating === cliente.id}
-                                />
-                              </div>
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

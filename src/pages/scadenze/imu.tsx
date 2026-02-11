@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -255,152 +255,144 @@ export default function ImuPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky-nominativo-header border-r min-w-[200px]">Nominativo</TableHead>
-                      <TableHead className="min-w-[150px]">Professionista</TableHead>
-                      <TableHead className="min-w-[150px]">Operatore</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Acconto IMU</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Acconto Dovuto</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Acconto Comunicato</TableHead>
-                      <TableHead className="min-w-[150px]">Data Com. Acconto</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Saldo IMU</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Saldo Dovuto</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Saldo Comunicato</TableHead>
-                      <TableHead className="min-w-[150px]">Data Com. Saldo</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Dichiarazione IMU</TableHead>
-                      <TableHead className="min-w-[150px]">Data Scad. Dich.</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Dich. Presentata</TableHead>
-                      <TableHead className="min-w-[150px]">Data Presentazione</TableHead>
-                      <TableHead className="min-w-[300px]">Note</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                </Table>
-              </div>
-
-              <div className="max-h-[600px] overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {filteredScadenze.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={17} className="text-center py-8 text-gray-500">
-                          Nessuna dichiarazione IMU trovata
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredScadenze.map((scadenza) => (
-                        <TableRow key={scadenza.id}>
-                          <TableCell className="sticky-nominativo-cell border-r font-medium min-w-[200px]">
-                            {scadenza.nominativo}
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">{scadenza.professionista || "-"}</TableCell>
-                          <TableCell className="min-w-[150px]">{scadenza.operatore || "-"}</TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.acconto_imu || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.acconto_dovuto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.acconto_comunicato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "acconto_comunicato", scadenza.acconto_comunicato)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_com_acconto || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.saldo_imu || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "saldo_imu", scadenza.saldo_imu)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.saldo_dovuto || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.saldo_comunicato || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "saldo_comunicato", scadenza.saldo_comunicato)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_com_saldo || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.dichiarazione_imu || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_scad_dichiarazione || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.dichiarazione_presentata || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_presentata", scadenza.dichiarazione_presentata)}
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[150px]">
-                            <Input
-                              type="date"
-                              value={scadenza.data_presentazione || ""}
-                              onChange={(e) => handleUpdateField(scadenza.id, "data_presentazione", e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="min-w-[300px]">
-                            <Textarea
-                              value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                              onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                              placeholder="Aggiungi note..."
-                              className="min-h-[60px] resize-none"
-                            />
-                          </TableCell>
-                          <TableCell className="text-center min-w-[120px]">
-                            <Checkbox
-                              checked={scadenza.conferma_riga || false}
-                              onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Professionista</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Operatore</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Acconto</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Saldo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">Note</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Conferma</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {filteredScadenze.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={8} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                      Nessun record trovato
+                    </td>
+                  </tr>
+                ) : (
+                  filteredScadenze.map((scadenza) => (
+                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                        {scadenza.nominativo}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.professionista || "-"}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.operatore || "-"}</td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.acconto_imu || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.acconto_dovuto || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.acconto_comunicato || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto_comunicato", scadenza.acconto_comunicato)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_com_acconto || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)}
+                          className="w-full"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.saldo_imu || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "saldo_imu", scadenza.saldo_imu)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.saldo_dovuto || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.saldo_comunicato || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "saldo_comunicato", scadenza.saldo_comunicato)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_com_saldo || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)}
+                          className="w-full"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.dichiarazione_imu || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_scad_dichiarazione || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)}
+                          className="w-full"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.dichiarazione_presentata || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_presentata", scadenza.dichiarazione_presentata)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_presentazione || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_presentazione", e.target.value)}
+                          className="w-full"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
+                        <Textarea
+                          value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                          onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
+                          placeholder="Aggiungi note..."
+                          className="min-h-[60px] resize-none"
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                        <Checkbox
+                          checked={scadenza.conferma_riga || false}
+                          onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                        />
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(scadenza.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

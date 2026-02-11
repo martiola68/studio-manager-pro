@@ -468,213 +468,215 @@ export default function CassettiFiscaliPage() {
         </div>
 
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nominativo</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Password 1</TableHead>
-                <TableHead>Password 2</TableHead>
-                <TableHead>PIN</TableHead>
-                <TableHead>Password Iniziale</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <TableHeader className="sticky top-0 z-30 bg-white shadow-sm">
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                  </TableCell>
+                  <TableHead className="sticky-col-header bg-white">Nominativo</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Password 1</TableHead>
+                  <TableHead>Password 2</TableHead>
+                  <TableHead>PIN</TableHead>
+                  <TableHead>Password Iniziale</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
-              ) : !isUnlocked ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <Lock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                    <p className="text-muted-foreground mb-2">Cassetti bloccati. Inserisci la Master Password per visualizzare.</p>
-                  </TableCell>
-                </TableRow>
-              ) : filteredCassetti.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nessun cassetto fiscale trovato
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredCassetti.map((cassetto) => (
-                  <TableRow key={cassetto.id}>
-                    <TableCell className="font-medium">{cassetto.nominativo}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">{cassetto.username || "-"}</span>
-                        {cassetto.username && (
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                    </TableCell>
+                  </TableRow>
+                ) : !isUnlocked ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <Lock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                      <p className="text-muted-foreground mb-2">Cassetti bloccati. Inserisci la Master Password per visualizzare.</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredCassetti.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nessun cassetto fiscale trovato
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCassetti.map((cassetto) => (
+                    <TableRow key={cassetto.id}>
+                      <TableCell className="sticky-col-cell font-medium bg-white">{cassetto.nominativo}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">{cassetto.username || "-"}</span>
+                          {cassetto.username && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => copyToClipboard(cassetto.username, "Username")}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">
+                            {cassetto.password1 ? (
+                              visiblePasswords[`${cassetto.id}_pw1`] ? cassetto.password1 : "••••••••"
+                            ) : "-"}
+                          </span>
+                          {cassetto.password1 && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(cassetto.id, "pw1")}
+                              >
+                                {visiblePasswords[`${cassetto.id}_pw1`] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(cassetto.password1, "Password 1")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">
+                            {cassetto.password2 ? (
+                              visiblePasswords[`${cassetto.id}_pw2`] ? cassetto.password2 : "••••••••"
+                            ) : "-"}
+                          </span>
+                          {cassetto.password2 && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(cassetto.id, "pw2")}
+                              >
+                                {visiblePasswords[`${cassetto.id}_pw2`] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(cassetto.password2, "Password 2")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">
+                            {cassetto.pin ? (
+                              visiblePasswords[`${cassetto.id}_pin`] ? cassetto.pin : "••••"
+                            ) : "-"}
+                          </span>
+                          {cassetto.pin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(cassetto.id, "pin")}
+                              >
+                                {visiblePasswords[`${cassetto.id}_pin`] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(cassetto.pin, "PIN")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono">
+                            {cassetto.pw_iniziale ? (
+                              visiblePasswords[`${cassetto.id}_pw_init`] ? cassetto.pw_iniziale : "••••••••"
+                            ) : "-"}
+                          </span>
+                          {cassetto.pw_iniziale && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(cassetto.id, "pw_init")}
+                              >
+                                {visiblePasswords[`${cassetto.id}_pw_init`] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyToClipboard(cassetto.pw_iniziale, "Password Iniziale")}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
-                            onClick={() => copyToClipboard(cassetto.username, "Username")}
+                            onClick={() => { setEditingCassetto(cassetto); setDialogOpen(true); }}
                           >
-                            <Copy className="h-3 w-3" />
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">
-                          {cassetto.password1 ? (
-                            visiblePasswords[`${cassetto.id}_pw1`] ? cassetto.password1 : "••••••••"
-                          ) : "-"}
-                        </span>
-                        {cassetto.password1 && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => togglePasswordVisibility(cassetto.id, "pw1")}
-                            >
-                              {visiblePasswords[`${cassetto.id}_pw1`] ? (
-                                <EyeOff className="h-3 w-3" />
-                              ) : (
-                                <Eye className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => copyToClipboard(cassetto.password1, "Password 1")}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">
-                          {cassetto.password2 ? (
-                            visiblePasswords[`${cassetto.id}_pw2`] ? cassetto.password2 : "••••••••"
-                          ) : "-"}
-                        </span>
-                        {cassetto.password2 && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => togglePasswordVisibility(cassetto.id, "pw2")}
-                            >
-                              {visiblePasswords[`${cassetto.id}_pw2`] ? (
-                                <EyeOff className="h-3 w-3" />
-                              ) : (
-                                <Eye className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => copyToClipboard(cassetto.password2, "Password 2")}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">
-                          {cassetto.pin ? (
-                            visiblePasswords[`${cassetto.id}_pin`] ? cassetto.pin : "••••"
-                          ) : "-"}
-                        </span>
-                        {cassetto.pin && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => togglePasswordVisibility(cassetto.id, "pin")}
-                            >
-                              {visiblePasswords[`${cassetto.id}_pin`] ? (
-                                <EyeOff className="h-3 w-3" />
-                              ) : (
-                                <Eye className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => copyToClipboard(cassetto.pin, "PIN")}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">
-                          {cassetto.pw_iniziale ? (
-                            visiblePasswords[`${cassetto.id}_pw_init`] ? cassetto.pw_iniziale : "••••••••"
-                          ) : "-"}
-                        </span>
-                        {cassetto.pw_iniziale && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => togglePasswordVisibility(cassetto.id, "pw_init")}
-                            >
-                              {visiblePasswords[`${cassetto.id}_pw_init`] ? (
-                                <EyeOff className="h-3 w-3" />
-                              ) : (
-                                <Eye className="h-3 w-3" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => copyToClipboard(cassetto.pw_iniziale, "Password Iniziale")}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => { setEditingCassetto(cassetto); setDialogOpen(true); }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(cassetto.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(cassetto.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </table>
+          </div>
         </div>
       </div>
 

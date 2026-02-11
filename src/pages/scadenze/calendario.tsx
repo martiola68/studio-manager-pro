@@ -33,6 +33,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type TipoScadenza = Database["public"]["Tables"]["tbtipi_scadenze"]["Row"];
 
@@ -714,75 +715,77 @@ export default function CalendarioScadenzePage() {
             )}
           </Card>
         ) : (
-          <div className="space-y-8">
-            {/* Scadute */}
-            {scadenzeScadute.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <h2 className="text-xl font-bold text-red-600">
-                    Scadute ({scadenzeScadute.length})
-                  </h2>
-                </div>
-                <div className="space-y-3">
-                  {scadenzeScadute.map((scadenza) => (
-                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                  ))}
-                </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="relative w-full overflow-auto max-h-[600px]">
+                <table className="w-full caption-bottom text-sm">
+                  <TableHeader className="sticky top-0 z-30 bg-white shadow-sm">
+                    <TableRow>
+                      <TableHead className="sticky-col-header border-r min-w-[200px]">Nome Scadenza</TableHead>
+                      <TableHead className="min-w-[120px]">Tipo</TableHead>
+                      <TableHead className="min-w-[150px]">Data Scadenza</TableHead>
+                      <TableHead className="min-w-[300px]">Descrizione</TableHead>
+                      <TableHead className="min-w-[150px]">Stato</TableHead>
+                      <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scadenzeFiltrate.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          Nessuna scadenza trovata
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      scadenzeFiltrate.map((scadenza) => (
+                        <TableRow key={scadenza.id}>
+                          <TableCell className="sticky-col-cell border-r font-medium min-w-[200px]">
+                            {scadenza.nome}
+                          </TableCell>
+                          <TableCell className="min-w-[120px]">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {getTipoLabel(scadenza.tipo_scadenza)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            {new Date(scadenza.data_scadenza).toLocaleDateString("it-IT")}
+                          </TableCell>
+                          <TableCell className="min-w-[300px]">
+                            {scadenza.descrizione || "-"}
+                          </TableCell>
+                          <TableCell className="min-w-[150px]">
+                            <Badge variant={getUrgenzaBadgeColor(scadenza.urgenza)}>
+                              {formatGiorniRimanenti(scadenza.giorniRimanenti)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center min-w-[100px]">
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                className="p-2"
+                                onClick={() => handleInviaAlert(scadenza)}
+                                title={alertsInviati[scadenza.id] ? "Alert già inviato quest'anno" : "Invia alert email"}
+                              >
+                                <Bell className={alertsInviati[scadenza.id] ? "w-4 h-4 text-green-600" : "w-4 h-4 text-red-600"} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="p-2"
+                                onClick={() => handleCreaPromemoria(scadenza)}
+                                title={alertsInviati[scadenza.id] ? "Promemoria già creato quest'anno" : "Crea promemoria per tutti gli utenti del settore"}
+                              >
+                                <ClipboardList className={alertsInviati[scadenza.id] ? "w-4 h-4 text-green-600" : "w-4 h-4 text-blue-600"} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </table>
               </div>
-            )}
-
-            {/* Prossimi 7 giorni */}
-            {scadenze7Giorni.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="w-5 h-5 text-orange-600" />
-                  <h2 className="text-xl font-bold text-orange-600">
-                    Prossimi 7 giorni ({scadenze7Giorni.length})
-                  </h2>
-                </div>
-                <div className="space-y-3">
-                  {scadenze7Giorni.map((scadenza) => (
-                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Prossimi 30 giorni */}
-            {scadenze30Giorni.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 className="w-5 h-5 text-yellow-600" />
-                  <h2 className="text-xl font-bold text-yellow-600">
-                    Prossimi 30 giorni ({scadenze30Giorni.length})
-                  </h2>
-                </div>
-                <div className="space-y-3">
-                  {scadenze30Giorni.map((scadenza) => (
-                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Oltre 30 giorni */}
-            {scadenzeOltre30.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="w-5 h-5 text-green-600" />
-                  <h2 className="text-xl font-bold text-green-600">
-                    Oltre 30 giorni ({scadenzeOltre30.length})
-                  </h2>
-                </div>
-                <div className="space-y-3">
-                  {scadenzeOltre30.map((scadenza) => (
-                    <ScadenzaCard key={scadenza.id} scadenza={scadenza} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </>

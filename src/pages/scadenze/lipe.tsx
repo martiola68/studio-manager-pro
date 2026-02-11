@@ -460,270 +460,65 @@ export default function Lipe() {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Record LIPE ({lipeRecords.length})</h3>
+            <CardTitle>Riepilogo LIPE</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span>Totale: {lipeRecords.length}</span>
+              <span className="mx-2">|</span>
+              <span>Inviate: {lipeRecords.filter(r => r.inviata).length}</span>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky-nominativo-header border-r" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Nominativo</TableHead>
-                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Professionista</TableHead>
-                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Operatore</TableHead>
-                      <TableHead style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Tipo Liq</TableHead>
-                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Gen</TableHead>
-                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Feb</TableHead>
-                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mar</TableHead>
-                      <TableHead className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 1T</TableHead>
-                      <TableHead className="bg-blue-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 1T</TableHead>
-                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Apr</TableHead>
-                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Mag</TableHead>
-                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Giu</TableHead>
-                      <TableHead className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 2T</TableHead>
-                      <TableHead className="bg-green-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 2T</TableHead>
-                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lug</TableHead>
-                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ago</TableHead>
-                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Set</TableHead>
-                      <TableHead className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 3T</TableHead>
-                      <TableHead className="bg-yellow-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 3T</TableHead>
-                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Ott</TableHead>
-                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Nov</TableHead>
-                      <TableHead className="bg-orange-50" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>Acconto</TableHead>
-                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Acc. Com</TableHead>
-                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Dic</TableHead>
-                      <TableHead className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Lipe 4T</TableHead>
-                      <TableHead className="bg-orange-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>Data Invio 4T</TableHead>
-                      <TableHead className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                </Table>
-              </div>
-
-              <div className="max-h-[600px] overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={27} className="text-center py-8">
-                          Caricamento in corso...
-                        </TableCell>
-                      </TableRow>
-                    ) : lipeRecords.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={27} className="text-center py-8 text-muted-foreground">
-                          Nessuna dichiarazione trovata
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lipeRecords.map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="sticky-nominativo-cell border-r font-medium" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
-                            {record.nominativo}
-                          </TableCell>
-                          <TableCell className="text-gray-700" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
-                            {record.utente_professionista_nome}
-                          </TableCell>
-                          <TableCell className="text-gray-700" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
-                            {record.utente_operatore_nome}
-                          </TableCell>
-                          <TableCell style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
-                            <Select
-                              value={record.tipo_liq || "T"}
-                              onValueChange={(value) => handleSelectChange(record.id, "tipo_liq", value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="T">T</SelectItem>
-                                <SelectItem value="M">M</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.gen || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "gen", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.feb || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "feb", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.mar || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "mar", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-blue-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.lipe1t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe1t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-blue-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                placeholder="gg/mm/aaaa"
-                                value={getDateDisplayValue(record.id, "lipe1t_invio", record.lipe1t_invio)}
-                                onChange={(e) => handleDateChange(record.id, "lipe1t_invio", e.target.value)}
-                                onBlur={(e) => handleDateBlur(record.id, "lipe1t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.apr || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "apr", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.mag || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "mag", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.giu || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "giu", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-green-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.lipe2t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe2t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-green-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                placeholder="gg/mm/aaaa"
-                                value={getDateDisplayValue(record.id, "lipe2t_invio", record.lipe2t_invio)}
-                                onChange={(e) => handleDateChange(record.id, "lipe2t_invio", e.target.value)}
-                                onBlur={(e) => handleDateBlur(record.id, "lipe2t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.lug || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lug", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.ago || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "ago", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.set || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "set", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-yellow-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.lipe3t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe3t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-yellow-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                placeholder="gg/mm/aaaa"
-                                value={getDateDisplayValue(record.id, "lipe3t_invio", record.lipe3t_invio)}
-                                onChange={(e) => handleDateChange(record.id, "lipe3t_invio", e.target.value)}
-                                onBlur={(e) => handleDateBlur(record.id, "lipe3t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.ott || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "ott", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.nov || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "nov", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-orange-50" style={{ width: "113px", minWidth: "113px", maxWidth: "113px" }}>
-                            <Select
-                              value={record.acconto || "Non dovuto"}
-                              onValueChange={(value) => handleSelectChange(record.id, "acconto", value)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Non dovuto">Non dovuto</SelectItem>
-                                <SelectItem value="Dovuto">Dovuto</SelectItem>
-                                <SelectItem value="Pagato">Pagato</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.acconto_com || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "acconto_com", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.dic || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "dic", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-center bg-orange-50" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Checkbox
-                              checked={record.lipe4t || false}
-                              onCheckedChange={(checked) => handleCheckboxChange(record.id, "lipe4t", checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="bg-orange-50" style={{ width: "180px", minWidth: "180px", maxWidth: "180px" }}>
-                            <div className="relative">
-                              <Input
-                                type="text"
-                                placeholder="gg/mm/aaaa"
-                                value={getDateDisplayValue(record.id, "lipe4t_invio", record.lipe4t_invio)}
-                                onChange={(e) => handleDateChange(record.id, "lipe4t_invio", e.target.value)}
-                                onBlur={(e) => handleDateBlur(record.id, "lipe4t_invio", e.target.value)}
-                                className="w-full"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center" style={{ width: "57px", minWidth: "57px", maxWidth: "57px" }}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(record.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] border-r" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Professionista</th>
+                  {PERIODI_LIPE.map((periodo) => (
+                    <th key={periodo.key} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-r border-gray-100 bg-gray-50/50">
+                      {periodo.label}
+                    </th>
+                  ))}
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {lipeRecords.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={6} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                      Nessun record trovato
+                    </td>
+                  </tr>
+                ) : (
+                  lipeRecords.map((record) => (
+                    <tr key={record.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                        {record.nominativo}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] border-r text-gray-600" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
+                        {record.professionista || "-"}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            if (confirm("Eliminare tutte le LIPE per questo cliente?")) {
+                              // Logica eliminazione (da implementare se necessaria)
+                              toast({ title: "Info", description: "Funzionalità da implementare per eliminazione multipla" });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

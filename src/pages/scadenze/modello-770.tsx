@@ -323,208 +323,188 @@ export default function Scadenze770Page() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-full align-middle">
-              <div className="sticky top-0 z-20 bg-white border-b">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky-nominativo-header border-r min-w-[200px]">Nominativo</TableHead>
-                      <TableHead className="min-w-[120px]">Settore</TableHead>
-                      <TableHead className="min-w-[150px]">Prof. Fiscale</TableHead>
-                      <TableHead className="min-w-[150px]">Oper. Fiscale</TableHead>
-                      <TableHead className="min-w-[150px]">Prof. Payroll</TableHead>
-                      <TableHead className="min-w-[150px]">Oper. Payroll</TableHead>
-                      <TableHead className="min-w-[150px]">Tipo Invio</TableHead>
-                      <TableHead className="min-w-[150px]">Modelli 770</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Compilato</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Definitivo</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Inviato</TableHead>
-                      <TableHead className="text-center min-w-[140px]">Data Invio</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Ricevuta</TableHead>
-                      <TableHead className="min-w-[200px]">Note</TableHead>
-                      <TableHead className="text-center min-w-[120px]">Conferma</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                </Table>
-              </div>
-
-              <div className="max-h-[600px] overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {filteredScadenze.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={16} className="text-center py-8 text-gray-500">
-                          Nessuna scadenza trovata
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredScadenze.map((scadenza) => {
-                        const isRicevuta = scadenza.ricevuta || false;
-                        const isConfermata = scadenza.conferma_riga || false;
-                        
-                        return (
-                          <TableRow 
-                            key={scadenza.id}
-                            className={isRicevuta ? "bg-green-50" : ""}
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">Settore</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Inviata</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Invio</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Ricevuta</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">Note</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Conferma</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {filteredScadenze.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={8} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                      Nessun record trovato
+                    </td>
+                  </tr>
+                ) : (
+                  filteredScadenze.map((scadenza) => {
+                    const settoreInfo = getSettoreInfo(scadenza.settore);
+                    const SettoreIcon = settoreInfo.icon;
+                    
+                    return (
+                      <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                          {scadenza.nominativo}
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
+                          <div className="flex flex-col gap-1">
+                            {scadenza.cliente?.settore_fiscale && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Fiscale</span>}
+                            {scadenza.cliente?.settore_lavoro && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Lavoro</span>}
+                            {scadenza.cliente?.settore_consulenza && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Consulenza</span>}
+                            {!scadenza.cliente?.settore_fiscale && !scadenza.cliente?.settore_lavoro && !scadenza.cliente?.settore_consulenza && <span className="text-xs text-gray-500">-</span>}
+                          </div>
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            value={scadenza.utente_professionista_id || ""}
+                            disabled={true}
+                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            value={scadenza.utente_operatore_id || ""}
+                            disabled={true}
+                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            value={scadenza.professionista_payroll_id || ""}
+                            disabled={true}
+                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            value={scadenza.utente_payroll_id || ""}
+                            disabled={true}
+                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Select
+                            value={scadenza.tipo_invio || "__none__"}
+                            onValueChange={(value) => handleUpdateField(
+                              scadenza.id,
+                              "tipo_invio",
+                              value === "__none__" ? null : value
+                            )}
+                            disabled={isConfermata}
                           >
-                            <TableCell className="sticky-nominativo-cell border-r font-medium min-w-[200px]">
-                              {scadenza.nominativo}
-                            </TableCell>
-                            <TableCell className="text-sm min-w-[120px]">
-                              <div className="flex flex-col gap-1">
-                                {scadenza.cliente?.settore_fiscale && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Fiscale</span>}
-                                {scadenza.cliente?.settore_lavoro && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Lavoro</span>}
-                                {scadenza.cliente?.settore_consulenza && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Consulenza</span>}
-                                {!scadenza.cliente?.settore_fiscale && !scadenza.cliente?.settore_lavoro && !scadenza.cliente?.settore_consulenza && <span className="text-xs text-gray-500">-</span>}
-                              </div>
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Input
-                                type="text"
-                                value={scadenza.utente_professionista_id || ""}
-                                disabled={true}
-                                className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                              />
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Input
-                                type="text"
-                                value={scadenza.utente_operatore_id || ""}
-                                disabled={true}
-                                className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                              />
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Input
-                                type="text"
-                                value={scadenza.professionista_payroll_id || ""}
-                                disabled={true}
-                                className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                              />
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Input
-                                type="text"
-                                value={scadenza.utente_payroll_id || ""}
-                                disabled={true}
-                                className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                              />
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Select
-                                value={scadenza.tipo_invio || "__none__"}
-                                onValueChange={(value) => handleUpdateField(
-                                  scadenza.id,
-                                  "tipo_invio",
-                                  value === "__none__" ? null : value
-                                )}
-                                disabled={isConfermata}
-                              >
-                                <SelectTrigger className="w-full text-xs">
-                                  <SelectValue placeholder="Seleziona..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__none__">Nessuno</SelectItem>
-                                  {TIPO_INVIO_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt} value={opt}>
-                                      {opt}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              <Input
-                                type="text"
-                                value={scadenza.modelli_770 || ""}
-                                onChange={(e) => handleUpdateField(scadenza.id, "modelli_770", e.target.value)}
-                                className="w-full text-xs"
-                                disabled={isConfermata}
-                                placeholder="Es: 770 Semplificato"
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
-                              <input
-                                type="checkbox"
-                                checked={scadenza.mod_compilato || false}
-                                onChange={() => handleToggleField(scadenza.id, "mod_compilato", scadenza.mod_compilato)}
-                                className="rounded w-4 h-4 cursor-pointer"
-                                disabled={isConfermata}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
-                              <input
-                                type="checkbox"
-                                checked={scadenza.mod_definitivo || false}
-                                onChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
-                                className="rounded w-4 h-4 cursor-pointer"
-                                disabled={isConfermata}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
-                              <input
-                                type="checkbox"
-                                checked={scadenza.mod_inviato || false}
-                                onChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
-                                className="rounded w-4 h-4 cursor-pointer"
-                                disabled={isConfermata}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[140px]">
-                              <Input
-                                type="date"
-                                value={scadenza.data_invio || ""}
-                                onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                                className="w-36 text-xs"
-                                disabled={isConfermata}
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
-                              <input
-                                type="checkbox"
-                                checked={isRicevuta}
-                                onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
-                                className="rounded w-4 h-4 cursor-pointer"
-                                disabled={isConfermata}
-                              />
-                            </TableCell>
-                            <TableCell className="min-w-[200px]">
-                              <Textarea
-                                value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                                onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                                className="min-h-[60px] text-xs resize-none"
-                                disabled={isConfermata}
-                                placeholder="Note..."
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[120px]">
-                              <input
-                                type="checkbox"
-                                checked={isConfermata}
-                                onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                                className="rounded w-4 h-4 cursor-pointer"
-                              />
-                            </TableCell>
-                            <TableCell className="text-center min-w-[100px]">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(scadenza.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {TIPO_INVIO_OPTIONS.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            value={scadenza.modelli_770 || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "modelli_770", e.target.value)}
+                            className="w-full text-xs"
+                            disabled={isConfermata}
+                            placeholder="Es: 770 Semplificato"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_compilato || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_compilato", scadenza.mod_compilato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_definitivo || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_definitivo", scadenza.mod_definitivo)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <input
+                            type="checkbox"
+                            checked={scadenza.mod_inviato || false}
+                            onChange={() => handleToggleField(scadenza.id, "mod_inviato", scadenza.mod_inviato)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
+                          <Input
+                            type="date"
+                            value={scadenza.data_invio || ""}
+                            onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                            className="w-36 text-xs"
+                            disabled={isConfermata}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <input
+                            type="checkbox"
+                            checked={isRicevuta}
+                            onChange={() => handleToggleField(scadenza.id, "ricevuta", scadenza.ricevuta)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                            disabled={isConfermata}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[200px]">
+                          <Textarea
+                            value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                            onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
+                            className="min-h-[60px] text-xs resize-none"
+                            disabled={isConfermata}
+                            placeholder="Note..."
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                          <input
+                            type="checkbox"
+                            checked={isConfermata}
+                            onChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                            className="rounded w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(scadenza.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
