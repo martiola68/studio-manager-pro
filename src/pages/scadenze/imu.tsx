@@ -165,6 +165,32 @@ export default function ImuPage() {
     setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tbscadimu")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Successo",
+        description: "Record eliminato"
+      });
+      await loadScadenze();
+    } catch (error: any) {
+      console.error("Errore eliminazione:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il record",
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredScadenze = scadenze.filter(s => {
     const matchSearch = !searchQuery || 
       s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase()) ||

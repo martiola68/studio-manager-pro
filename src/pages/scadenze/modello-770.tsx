@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, FileText, Briefcase, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -18,10 +17,17 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
     settore_lavoro?: boolean | null;
     settore_consulenza?: boolean | null;
   } | null;
+  // Estensione per la UI se necessario
+  settore?: string;
 };
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"];
+
+const getSettoreInfo = (settore?: string) => {
+  // Mock implementation or logic based on boolean flags if settore string is not available
+  return { icon: FileText };
+};
 
 export default function Scadenze770Page() {
   const router = useRouter();
@@ -346,6 +352,9 @@ export default function Scadenze770Page() {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => {
+                    // Logic for variables
+                    const isConfermata = scadenza.conferma_riga || false;
+                    const isRicevuta = scadenza.ricevuta || false;
                     const settoreInfo = getSettoreInfo(scadenza.settore);
                     const SettoreIcon = settoreInfo.icon;
                     

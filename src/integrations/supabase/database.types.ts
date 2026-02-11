@@ -2179,7 +2179,6 @@ export type Database = {
           ott: boolean | null
           set: boolean | null
           studio_id: string | null
-          tipo_liq: string | null
           tipo_scadenza_id: string | null
           updated_at: string | null
           utente_operatore_id: string | null
@@ -2212,7 +2211,6 @@ export type Database = {
           ott?: boolean | null
           set?: boolean | null
           studio_id?: string | null
-          tipo_liq?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null
@@ -2245,7 +2243,6 @@ export type Database = {
           ott?: boolean | null
           set?: boolean | null
           studio_id?: string | null
-          tipo_liq?: string | null
           tipo_scadenza_id?: string | null
           updated_at?: string | null
           utente_operatore_id?: string | null

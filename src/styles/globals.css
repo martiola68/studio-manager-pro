@@ -29,14 +29,15 @@
     background-color: rgb(240 253 244) !important; /* Matches hover:bg-green-50 */
   }
   
-  tr.bg-green-50 .sticky-col-cell {
-    background-color: rgb(240 253 244) !important;
-  }
-  
-  /* Fix for dark mode if needed, though requirement said keep colors */
+  /* Fix for dark mode if needed */
   :is(.dark) .sticky-col-header,
   :is(.dark) .sticky-col-cell {
     background-color: #1f2937; /* gray-800 */
+    color: #e5e7eb;
+  }
+  
+  :is(.dark) tr:hover .sticky-col-cell {
+    background-color: #374151 !important; /* gray-700 */
   }
 }
 

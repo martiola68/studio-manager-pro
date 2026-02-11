@@ -1,136 +1,62 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase/client";
-import { Trash2, Calendar } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import { Search, Calendar } from "lucide-react";
 
-interface LipeRecord {
-  id: string;
+// Tipo locale basato sui campi reali del database tbscadlipe (senza tipo_liq)
+type LipeRow = Database["public"]["Tables"]["tbscadlipe"]["Row"];
+type LipeRecord = LipeRow & {
   nominativo: string;
-  gen: boolean | null;
-  feb: boolean | null;
-  mar: boolean | null;
-  apr: boolean | null;
-  mag: boolean | null;
-  giu: boolean | null;
-  lug: boolean | null;
-  ago: boolean | null;
-  set: boolean | null;
-  ott: boolean | null;
-  nov: boolean | null;
-  dic: boolean | null;
-  acconto: string | null;
-  acconto_com: boolean | null;
-  lipe1t: boolean | null;
-  lipe2t: boolean | null;
-  lipe3t: boolean | null;
-  lipe4t: boolean | null;
-  lipe1t_invio: string | null;
-  lipe2t_invio: string | null;
-  lipe3t_invio: string | null;
-  lipe4t_invio: string | null;
-  tipo_liq: string | null;
-  utente_operatore_id: string | null;
-  utente_professionista_id: string | null;
-  studio_id: string | null;
-  utente_operatore_nome: string;
-  utente_professionista_nome: string;
-}
+  utente_professionista_id?: string | null;
+  utente_operatore_id?: string | null;
+  gen?: boolean | null;
+  feb?: boolean | null;
+  mar?: boolean | null;
+  apr?: boolean | null;
+  mag?: boolean | null;
+  giu?: boolean | null;
+  lug?: boolean | null;
+  ago?: boolean | null;
+  set?: boolean | null;
+  ott?: boolean | null;
+  nov?: boolean | null;
+  dic?: boolean | null;
+  lipe1t?: boolean | null;
+  lipe1t_invio?: string | null;
+  lipe2t?: boolean | null;
+  lipe2t_invio?: string | null;
+  lipe3t?: boolean | null;
+  lipe3t_invio?: string | null;
+  lipe4t?: boolean | null;
+  lipe4t_invio?: string | null;
+  acconto?: string | null;
+  acconto_com?: boolean | null;
+};
 
 export default function Lipe() {
-  const { toast } = useToast();
+  const [records, setRecords] = useState<LipeRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lipeRecords, setLipeRecords] = useState<LipeRecord[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [operatoreFilter, setOperatoreFilter] = useState<string>("all");
-  const [professionistaFilter, setProfessionistaFilter] = useState<string>("all");
-  const [operatori, setOperatori] = useState<any[]>([]);
-  const [professionisti, setProfessionisti] = useState<any[]>([]);
-  const [editingDates, setEditingDates] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({
-    totale: 0,
-    inviate: 0,
-    nonInviate: 0,
-  });
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    loadUserAndData();
-  }, [operatoreFilter, professionistaFilter, searchQuery]);
+    loadRecords();
+  }, []);
 
-  async function loadUserAndData() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
-
-    const { data: userData } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", session.user.id)
-      .single();
-
-    if (userData?.studio_id) {
-      await Promise.all([
-        loadLipeRecords(userData.studio_id),
-        loadStats(userData.studio_id),
-        loadOperatori(userData.studio_id),
-        loadProfessionisti(userData.studio_id),
-      ]);
-    }
-  }
-
-  async function loadLipeRecords(studioId: string) {
-    setLoading(true);
+  const loadRecords = async () => {
     try {
-      let query = supabase
+      setLoading(true);
+      const { data, error } = await supabase
         .from("tbscadlipe")
-        .select(`
-          *,
-          cliente:tbclienti!inner (
-            ragione_sociale,
-            utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (nome, cognome),
-            utente_professionista:tbutenti!tbclienti_utente_professionista_id_fkey (nome, cognome)
-          )
-        `)
-        .eq("studio_id", studioId);
-
-      if (searchQuery) {
-        query = query.ilike("nominativo", `%${searchQuery}%`);
-      }
-
-      if (operatoreFilter !== "all") {
-        query = query.eq("utente_operatore_id", operatoreFilter);
-      }
-
-      if (professionistaFilter !== "all") {
-        query = query.eq("utente_professionista_id", professionistaFilter);
-      }
-
-      const { data, error } = await query;
+        .select("*")
+        .order("nominativo", { ascending: true });
 
       if (error) throw error;
-
-      const mappedData = (data || []).map(record => ({
-        ...record,
-        nominativo: record.cliente?.ragione_sociale || record.nominativo || "-",
-        utente_operatore_nome: record.cliente?.utente_operatore 
-          ? `${record.cliente.utente_operatore.cognome} ${record.cliente.utente_operatore.nome}`
-          : "-",
-        utente_professionista_nome: record.cliente?.utente_professionista 
-          ? `${record.cliente.utente_professionista.cognome} ${record.cliente.utente_professionista.nome}`
-          : "-"
-      }));
-
-      const sortedData = mappedData.sort((a, b) => {
-        const nameA = a.nominativo || "";
-        const nameB = b.nominativo || "";
-        return nameA.localeCompare(nameB);
-      });
-
-      setLipeRecords(sortedData);
+      setRecords(data || []);
     } catch (error) {
       console.error("Errore caricamento LIPE:", error);
       toast({
@@ -141,378 +67,361 @@ export default function Lipe() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function loadStats(studioId: string) {
+  const handleToggleField = async (
+    recordId: string,
+    field: keyof LipeRecord,
+    currentValue: boolean | null
+  ) => {
     try {
-      const { data, error } = await supabase
-        .from("tbscadlipe")
-        .select("*")
-        .eq("studio_id", studioId);
-
-      if (error) throw error;
-
-      const totale = data?.length || 0;
-      const inviate = data?.filter(r => r.lipe1t && r.lipe2t && r.lipe3t && r.lipe4t).length || 0;
-      const nonInviate = totale - inviate;
-
-      setStats({ totale, inviate, nonInviate });
-    } catch (error) {
-      console.error("Errore caricamento stats:", error);
-    }
-  }
-
-  async function loadOperatori(studioId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("tbutenti")
-        .select("id, nome, cognome")
-        .eq("studio_id", studioId)
-        .order("cognome");
-
-      if (error) throw error;
-      setOperatori(data || []);
-    } catch (error) {
-      console.error("Errore caricamento operatori:", error);
-    }
-  }
-
-  async function loadProfessionisti(studioId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("tbutenti")
-        .select("id, nome, cognome")
-        .eq("studio_id", studioId)
-        .order("cognome");
-
-      if (error) throw error;
-      setProfessionisti(data || []);
-    } catch (error) {
-      console.error("Errore caricamento professionisti:", error);
-    }
-  }
-
-  async function handleCheckboxChange(recordId: string, field: string, value: boolean) {
-    try {
+      const newValue = !currentValue;
       const { error } = await supabase
         .from("tbscadlipe")
-        .update({ [field]: value })
+        .update({ [field]: newValue })
         .eq("id", recordId);
 
       if (error) throw error;
 
-      setLipeRecords(prev =>
-        prev.map(r => r.id === recordId ? { ...r, [field]: value } : r)
+      setRecords((prev) =>
+        prev.map((r) => (r.id === recordId ? { ...r, [field]: newValue } : r))
       );
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: userData } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("id", session.user.id)
-          .single();
-
-        if (userData?.studio_id) {
-          loadStats(userData.studio_id);
-        }
-      }
+      toast({
+        title: "Aggiornato",
+        description: `Campo ${field} aggiornato con successo`,
+      });
     } catch (error) {
-      console.error("Errore aggiornamento:", error);
+      console.error(`Errore aggiornamento ${field}:`, error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare il dato",
+        description: `Impossibile aggiornare ${field}`,
         variant: "destructive",
       });
     }
-  }
+  };
 
-  async function handleSelectChange(recordId: string, field: string, value: string) {
+  const handleUpdateValue = async (
+    recordId: string,
+    field: keyof LipeRecord,
+    value: string
+  ) => {
     try {
       const { error } = await supabase
         .from("tbscadlipe")
-        .update({ [field]: value })
+        .update({ [field]: value || null })
         .eq("id", recordId);
 
       if (error) throw error;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: userData } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("id", session.user.id)
-          .single();
-
-        if (userData?.studio_id) {
-          loadLipeRecords(userData.studio_id);
-        }
-      }
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il dato",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function handleDateChange(recordId: string, field: string, value: string) {
-    // Logica maschera: accetta solo numeri e formatta come 00/00/0000
-    const numericValue = value.replace(/\D/g, "");
-    const truncatedValue = numericValue.slice(0, 8);
-    
-    let formattedValue = truncatedValue;
-    if (truncatedValue.length >= 3) {
-      formattedValue = `${truncatedValue.slice(0, 2)}/${truncatedValue.slice(2)}`;
-    }
-    if (truncatedValue.length >= 5) {
-      formattedValue = `${formattedValue.slice(0, 5)}/${truncatedValue.slice(4)}`;
-    }
-
-    const key = `${recordId}-${field}`;
-    setEditingDates(prev => ({ ...prev, [key]: formattedValue }));
-  }
-
-  async function handleDateBlur(recordId: string, field: string, value: string) {
-    try {
-      let dateValue: string | null = value.trim();
-      
-      if (dateValue === "") {
-        dateValue = null;
-      } else if (dateValue.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-        const [day, month, year] = dateValue.split("/");
-        dateValue = `${year}-${month}-${day}`;
-      }
-
-      const { error } = await supabase
-        .from("tbscadlipe")
-        .update({ [field]: dateValue })
-        .eq("id", recordId);
-
-      if (error) throw error;
-
-      setLipeRecords(prev =>
-        prev.map(r => r.id === recordId ? { ...r, [field]: dateValue } : r)
+      setRecords((prev) =>
+        prev.map((r) => (r.id === recordId ? { ...r, [field]: value } : r))
       );
 
-      const key = `${recordId}-${field}`;
-      setEditingDates(prev => {
-        const newState = { ...prev };
-        delete newState[key];
-        return newState;
-      });
-
       toast({
-        title: "Successo",
-        description: "Data aggiornata con successo",
+        title: "Aggiornato",
+        description: `Campo ${field} aggiornato con successo`,
       });
     } catch (error) {
-      console.error("Errore aggiornamento data:", error);
+      console.error(`Errore aggiornamento ${field}:`, error);
       toast({
         title: "Errore",
-        description: "Impossibile aggiornare la data. Verifica il formato gg/mm/aaaa",
+        description: `Impossibile aggiornare ${field}`,
         variant: "destructive",
       });
     }
-  }
+  };
 
-  function getDateDisplayValue(recordId: string, field: string, dbValue: string | null): string {
-    const key = `${recordId}-${field}`;
-    
-    if (editingDates[key] !== undefined) {
-      return editingDates[key];
-    }
-    
-    if (!dbValue) return "";
-    
-    if (dbValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [year, month, day] = dbValue.split("-");
-      return `${day}/${month}/${year}`;
-    }
-    
-    return dbValue;
-  }
+  const filteredRecords = records.filter((record) =>
+    record.nominativo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  async function handleDelete(recordId: string) {
-    if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("tbscadlipe")
-        .delete()
-        .eq("id", recordId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Successo",
-        description: "Record eliminato con successo",
-      });
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: userData } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("id", session.user.id)
-          .single();
-
-        if (userData?.studio_id) {
-          loadLipeRecords(userData.studio_id);
-          loadStats(userData.studio_id);
-        }
-      }
-    } catch (error) {
-      console.error("Errore eliminazione:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare il record",
-        variant: "destructive",
-      });
-    }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Caricamento LIPE...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="text-sm font-medium text-muted-foreground">Totale Dichiarazioni</div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totale}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="text-sm font-medium text-muted-foreground">LIPE Inviate</div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.inviate}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="text-sm font-medium text-muted-foreground">LIPE Non Inviate</div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.nonInviate}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <h3 className="text-lg font-semibold">Filtri e Ricerca</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Cerca Nominativo</label>
-              <Input
-                placeholder="Cerca..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Utente Operatore</label>
-              <Select value={operatoreFilter} onValueChange={setOperatoreFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  {operatori.map(op => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.cognome} {op.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Utente Professionista</label>
-              <Select value={professionistaFilter} onValueChange={setProfessionistaFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tutti" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  {professionisti.map(prof => (
-                    <SelectItem key={prof.id} value={prof.id}>
-                      {prof.cognome} {prof.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+    <div className="container mx-auto py-6">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Riepilogo LIPE</CardTitle>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>Totale: {lipeRecords.length}</span>
-              <span className="mx-2">|</span>
-              <span>Inviate: {lipeRecords.filter(r => r.inviata).length}</span>
+            <CardTitle>Scadenzario LIPE</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca per nominativo..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 w-64"
+                />
+              </div>
+              <Button onClick={loadRecords} variant="outline">
+                Ricarica
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] border-r" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>Professionista</th>
-                  {PERIODI_LIPE.map((periodo) => (
-                    <th key={periodo.key} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-r border-gray-100 bg-gray-50/50">
-                      {periodo.label}
-                    </th>
-                  ))}
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white">
+                <tr className="border-b transition-colors hover:bg-muted/50">
+                  <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
+                    Nominativo
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Gen</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Feb</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Mar</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 1T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 1T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Apr</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Mag</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Giu</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 2T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 2T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Lug</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Ago</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Set</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 3T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 3T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Ott</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Nov</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Dic</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">Acconto</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Acconto Com</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 4T</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 4T</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-                {lipeRecords.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={6} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={23} className="p-4 text-center text-muted-foreground">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
-                  lipeRecords.map((record) => (
-                    <tr key={record.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                  filteredRecords.map((record) => (
+                    <tr
+                      key={record.id}
+                      className="border-b transition-colors hover:bg-green-50"
+                    >
+                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px]">
                         {record.nominativo}
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] border-r text-gray-600" style={{ width: "189px", minWidth: "189px", maxWidth: "189px" }}>
-                        {record.professionista || "-"}
+                      
+                      {/* Mesi Trimestre 1 */}
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.gen || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "gen", record.gen || false)
+                          }
+                        />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            if (confirm("Eliminare tutte le LIPE per questo cliente?")) {
-                              // Logica eliminazione (da implementare se necessaria)
-                              toast({ title: "Info", description: "Funzionalità da implementare per eliminazione multipla" });
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.feb || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "feb", record.feb || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.mar || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "mar", record.mar || false)
+                          }
+                        />
+                      </td>
+                      
+                      {/* LIPE 1T */}
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        <Checkbox
+                          checked={record.lipe1t || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "lipe1t", record.lipe1t || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle min-w-[140px]">
+                        <Input
+                          type="date"
+                          value={record.lipe1t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(record.id, "lipe1t_invio", e.target.value)
+                          }
+                          className="h-8 text-xs"
+                        />
+                      </td>
+
+                      {/* Mesi Trimestre 2 */}
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.apr || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "apr", record.apr || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.mag || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "mag", record.mag || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.giu || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "giu", record.giu || false)
+                          }
+                        />
+                      </td>
+
+                      {/* LIPE 2T */}
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        <Checkbox
+                          checked={record.lipe2t || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "lipe2t", record.lipe2t || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle min-w-[140px]">
+                        <Input
+                          type="date"
+                          value={record.lipe2t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(record.id, "lipe2t_invio", e.target.value)
+                          }
+                          className="h-8 text-xs"
+                        />
+                      </td>
+
+                      {/* Mesi Trimestre 3 */}
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.lug || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "lug", record.lug || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.ago || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "ago", record.ago || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.set || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "set", record.set || false)
+                          }
+                        />
+                      </td>
+
+                      {/* LIPE 3T */}
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        <Checkbox
+                          checked={record.lipe3t || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "lipe3t", record.lipe3t || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle min-w-[140px]">
+                        <Input
+                          type="date"
+                          value={record.lipe3t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(record.id, "lipe3t_invio", e.target.value)
+                          }
+                          className="h-8 text-xs"
+                        />
+                      </td>
+
+                      {/* Mesi Trimestre 4 */}
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.ott || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "ott", record.ott || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.nov || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "nov", record.nov || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[60px]">
+                        <Checkbox
+                          checked={record.dic || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "dic", record.dic || false)
+                          }
+                        />
+                      </td>
+
+                      {/* Acconto */}
+                      <td className="p-2 align-middle min-w-[120px]">
+                        <Input
+                          type="text"
+                          value={record.acconto || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(record.id, "acconto", e.target.value)
+                          }
+                          className="h-8 text-xs"
+                          placeholder="Metodo"
+                        />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[100px]">
+                        <Checkbox
+                          checked={record.acconto_com || false}
+                          onCheckedChange={() =>
+                            handleToggleField(
+                              record.id,
+                              "acconto_com",
+                              record.acconto_com || false
+                            )
+                          }
+                        />
+                      </td>
+
+                      {/* LIPE 4T */}
+                      <td className="p-2 align-middle text-center min-w-[80px]">
+                        <Checkbox
+                          checked={record.lipe4t || false}
+                          onCheckedChange={() =>
+                            handleToggleField(record.id, "lipe4t", record.lipe4t || false)
+                          }
+                        />
+                      </td>
+                      <td className="p-2 align-middle min-w-[140px]">
+                        <Input
+                          type="date"
+                          value={record.lipe4t_invio || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(record.id, "lipe4t_invio", e.target.value)
+                          }
+                          className="h-8 text-xs"
+                        />
                       </td>
                     </tr>
                   ))
