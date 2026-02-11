@@ -30,7 +30,7 @@ export default function ScadenzeIvaPage() {
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
   
-  const [localNotes, setLocalNotes] = useState<Record<string, string>>({]);
+  const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
   const [stats, setStats] = useState({
@@ -354,32 +354,32 @@ export default function ScadenzeIvaPage() {
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                <tr className="border-b transition-colors hover:bg-muted/50">
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">Nominativo</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Mod. Predisposto</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Mod. Definitivo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">Asseverazione</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Mod. Predisposto</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Mod. Definitivo</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Asseverazione</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Importo Credito</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Mod. Inviato</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Mod. Inviato</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data Invio</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Ricevuta</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Ricevuta</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">Note</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Conferma</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">Azioni</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Conferma</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Azioni</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b transition-colors hover:bg-muted/50">
                     <td colSpan={13} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50">
                       <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
