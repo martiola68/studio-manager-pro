@@ -6,12 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/lib/supabase/client";
 import { Search, Loader2 } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"] & {
   utente_fiscale?: { nome: string; cognome: string } | null;
   utente_payroll?: { nome: string; cognome: string } | null;
-  // Estensione opzionale per gestire i flag come stato
-  scadenze?: Record<string, boolean | null>;
 };
 
 const TIPI_SCADENZE = [
@@ -33,16 +32,11 @@ export default function ElencoGenerale() {
   const [filtroUtenteFiscale, setFiltroUtenteFiscale] = useState<string>("tutti");
   const [filtroUtentePayroll, setFiltroUtentePayroll] = useState<string>("tutti");
   const [updating, setUpdating] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadClienti();
   }, []);
-
-  const renderStatoCell = (active: boolean | null | undefined) => {
-    if (active === true) return <span className="text-green-600 font-bold">●</span>;
-    if (active === false) return <span className="text-red-300">○</span>;
-    return <span className="text-gray-200">-</span>;
-  };
 
   useEffect(() => {
     let filtered = clienti;
@@ -133,14 +127,21 @@ export default function ElencoGenerale() {
       setFilteredClienti(data || []);
     } catch (error) {
       console.error("Errore caricamento clienti:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile caricare i clienti",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  async function updateScadenzario(clienteId: string, field: keyof Cliente, value: boolean) {
+  async function handleToggleFlag(clienteId: string, field: keyof Cliente, checked: boolean | "indeterminate") {
     try {
       setUpdating(clienteId);
+
+      const value = checked === true ? true : false;
 
       const { error } = await supabase
         .from("tbclienti")
@@ -152,23 +153,22 @@ export default function ElencoGenerale() {
       setClienti(prev =>
         prev.map(c => (c.id === clienteId ? { ...c, [field]: value } : c))
       );
+
+      toast({
+        title: "Aggiornato",
+        description: `Flag ${field.replace("flag_", "").toUpperCase()} aggiornato con successo`,
+      });
     } catch (error) {
-      console.error("Errore aggiornamento scadenzario:", error);
+      console.error("Errore aggiornamento flag:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare il flag",
+        variant: "destructive"
+      });
     } finally {
       setUpdating(null);
     }
   }
-
-  const scadenzari = [
-    { label: "LIPE", field: "flag_lipe" as keyof Cliente },
-    { label: "Bilancio", field: "flag_bilancio" as keyof Cliente },
-    { label: "IVA", field: "flag_iva" as keyof Cliente },
-    { label: "CCGG", field: "flag_ccgg" as keyof Cliente },
-    { label: "Esterometro", field: "flag_esterometro" as keyof Cliente },
-    { label: "770", field: "flag_770" as keyof Cliente },
-    { label: "Fiscali", field: "flag_fiscali" as keyof Cliente },
-    { label: "IMU", field: "flag_imu" as keyof Cliente }
-  ];
 
   if (loading) {
     return (
@@ -196,46 +196,54 @@ export default function ElencoGenerale() {
             </div>
           </div>
         </CardHeader>
-        <div className="relative w-full overflow-auto max-h-[600px]">
-          <table className="w-full caption-bottom text-sm">
-            <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-              <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Cliente</th>
-                <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Utente Fiscale</th>
-                {TIPI_SCADENZE.map(tipo => (
-                  <th key={tipo.id} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
-                    {tipo.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="[&_tr:last-child]:border-0">
-              {filteredClienti.length === 0 ? (
+        <CardContent>
+          <div className="relative w-full overflow-auto max-h-[600px]">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <td colSpan={2 + TIPI_SCADENZE.length} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
-                    Nessun dato trovato
-                  </td>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Cliente</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Utente Fiscale</th>
+                  {TIPI_SCADENZE.map(tipo => (
+                    <th key={tipo.id} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
+                      {tipo.label}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filteredClienti.map((cliente) => (
-                  <tr key={cliente.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
-                      {cliente.ragione_sociale}
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {filteredClienti.length === 0 ? (
+                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <td colSpan={2 + TIPI_SCADENZE.length} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                      Nessun dato trovato
                     </td>
-                    <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-sm text-gray-600 min-w-[150px]">
-                      {cliente.utente_fiscale ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` : "-"}
-                    </td>
-                    {TIPI_SCADENZE.map(tipo => (
-                      <td key={tipo.id} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
-                        {renderStatoCell(cliente[tipo.id as keyof Cliente] as boolean)}
-                      </td>
-                    ))}
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredClienti.map((cliente) => (
+                    <tr key={cliente.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                        {cliente.ragione_sociale}
+                      </td>
+                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-sm text-gray-600 min-w-[150px]">
+                        {cliente.utente_fiscale ? `${cliente.utente_fiscale.nome} ${cliente.utente_fiscale.cognome}` : "-"}
+                      </td>
+                      {TIPI_SCADENZE.map(tipo => (
+                        <td key={tipo.id} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px] border-l">
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={cliente[tipo.id as keyof Cliente] === true}
+                              onCheckedChange={(checked) => handleToggleFlag(cliente.id, tipo.id as keyof Cliente, checked)}
+                              disabled={updating === cliente.id}
+                            />
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );
