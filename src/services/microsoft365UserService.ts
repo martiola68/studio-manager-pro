@@ -15,8 +15,9 @@ export interface UserConnectionStatus {
  */
 export async function getUserConnectionStatus(userId: string): Promise<UserConnectionStatus> {
   try {
+    // Cast a any per permettere la selezione di colonne che verranno aggiunte con la migration successiva
     const { data, error } = await supabase
-      .from("tbmicrosoft_tokens")
+      .from("tbmicrosoft_tokens" as any)
       .select("microsoft_user_id, expires_at, created_at, updated_at")
       .eq("user_id", userId)
       .maybeSingle();
