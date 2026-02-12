@@ -8,11 +8,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle2, XCircle, AlertCircle, Info, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
-import { 
-  getUserConnectionStatus, 
-  disconnectMicrosoft365,
-  type UserConnectionStatus 
-} from "@/services/microsoft365UserService";
 
 const M365ConfigSchema = z.object({
   client_id: z.string(),
@@ -27,6 +22,11 @@ interface TestResult {
   message?: string;
   organization?: string;
   error?: string;
+}
+
+interface UserConnectionStatus {
+  isConnected: boolean;
+  lastConnection?: Date;
 }
 
 export default function Microsoft365Settings() {
@@ -127,10 +127,23 @@ export default function Microsoft365Settings() {
     if (!userId) return;
     
     try {
-      const status = await getUserConnectionStatus(userId);
-      setUserConnection(status);
+      const { data: tokenData } = await supabase
+        .from("tbmicrosoft_tokens")
+        .select("created_at, updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (tokenData) {
+        setUserConnection({
+          isConnected: true,
+          lastConnection: new Date(tokenData.updated_at || tokenData.created_at),
+        });
+      } else {
+        setUserConnection({ isConnected: false });
+      }
     } catch (err) {
       console.error("Error loading user connection status:", err);
+      setUserConnection({ isConnected: false });
     }
   }
 
@@ -163,7 +176,7 @@ export default function Microsoft365Settings() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch(`${window.location.origin}/api/microsoft365/save-config`, {
+      const response = await fetch("/api/microsoft365/save-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +218,7 @@ export default function Microsoft365Settings() {
     setTestResult(null);
 
     try {
-      const response = await fetch(`${window.location.origin}/api/microsoft365/test-connection`, {
+      const response = await fetch("/api/microsoft365/test-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studioId }),
@@ -266,9 +279,14 @@ export default function Microsoft365Settings() {
     setSuccessMessage(null);
 
     try {
-      const result = await disconnectMicrosoft365(userId);
+      const response = await fetch("/api/microsoft365/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
 
-      if (!result.success) {
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
         throw new Error(result.error || "Errore durante la disconnessione");
       }
 
