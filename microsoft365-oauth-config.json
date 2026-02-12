@@ -1,0 +1,578 @@
+{
+  "metadata": {
+    "application": "Studio Manager Pro",
+    "version": "1.0.0",
+    "generated_at": "2026-02-12T18:43:49Z",
+    "purpose": "OAuth Microsoft 365 configuration documentation",
+    "environment": "production",
+    "base_url": "https://studio-manager-pro.vercel.app"
+  },
+  
+  "oauth_core": {
+    "authority": "https://login.microsoftonline.com",
+    "oauth_version": "2.0",
+    "authorization_endpoint": "https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize",
+    "token_endpoint": "https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token",
+    "tenant_id": {
+      "source": "database",
+      "table": "microsoft365_config",
+      "column": "tenant_id",
+      "format": "UUID",
+      "example": "7aa03348-fa29-4f5f-bcf3-81698de3da7a",
+      "note": "Tenant ID specifico per ogni studio (multi-tenant support)"
+    },
+    "client_id": {
+      "source": "database",
+      "table": "microsoft365_config",
+      "column": "client_id",
+      "format": "UUID",
+      "example": "f1c170be-096d-4fe6-b0a8-ec3cd05f2f9c",
+      "note": "Application (client) ID registrato in Azure AD per ogni studio"
+    },
+    "client_secret": {
+      "source": "database",
+      "table": "microsoft365_config",
+      "column": "client_secret",
+      "storage": "encrypted",
+      "encryption": {
+        "algorithm": "AES-256-GCM",
+        "format": "iv:authTag:ciphertext",
+        "encoding": "hex",
+        "key_source": "env_var",
+        "key_name": "ENCRYPTION_KEY_M365"
+      },
+      "note": "Client secret cifrato a riposo nel database"
+    },
+    "redirect_uri": {
+      "production": "https://studio-manager-pro.vercel.app/api/auth/microsoft/callback",
+      "source": "environment_variable_or_hardcoded",
+      "env_vars_checked": [
+        "NEXT_PUBLIC_SITE_URL",
+        "NEXT_PUBLIC_APP_URL"
+      ],
+      "fallback": "https://studio-manager-pro.vercel.app",
+      "path": "/api/auth/microsoft/callback",
+      "note": "Deve essere registrato in Azure AD App Registration → Authentication → Redirect URIs"
+    },
+    "response_type": "code",
+    "response_mode": "query",
+    "grant_type": "authorization_code"
+  },
+
+  "pkce": {
+    "enabled": true,
+    "code_challenge_method": "S256",
+    "code_verifier": {
+      "generation": "crypto.randomBytes(32).toString('base64url')",
+      "length": 43,
+      "storage": "httponly_cookie",
+      "cookie_name": "oauth_code_verifier",
+      "max_age": 600
+    },
+    "code_challenge": {
+      "algorithm": "SHA-256",
+      "generation": "crypto.createHash('sha256').update(codeVerifier).digest('base64url')",
+      "sent_in": "authorization_request"
+    },
+    "note": "PKCE (Proof Key for Code Exchange) obbligatorio per sicurezza OAuth 2.0"
+  },
+
+  "state_parameter": {
+    "enabled": true,
+    "anti_csrf": true,
+    "generation": "crypto.randomBytes(32).toString('hex')",
+    "length": 64,
+    "storage": "httponly_cookie",
+    "cookie_name": "oauth_state",
+    "max_age": 600,
+    "validation": "callback verifica che state ricevuto == state salvato in cookie",
+    "note": "Protezione contro CSRF attacks"
+  },
+
+  "scopes_requested": {
+    "delegated_permissions": [
+      "User.Read",
+      "Calendars.ReadWrite",
+      "Contacts.ReadWrite",
+      "Mail.Send",
+      "OnlineMeetings.ReadWrite",
+      "offline_access",
+      "openid",
+      "profile",
+      "email"
+    ],
+    "scope_format": "space_separated",
+    "scope_string": "User.Read Calendars.ReadWrite Contacts.ReadWrite Mail.Send OnlineMeetings.ReadWrite offline_access openid profile email",
+    "details": {
+      "User.Read": "Lettura profilo utente Microsoft (nome, email, foto)",
+      "Calendars.ReadWrite": "Lettura e scrittura calendario utente (eventi, riunioni)",
+      "Contacts.ReadWrite": "Lettura e scrittura contatti utente",
+      "Mail.Send": "Invio email per conto dell'utente autenticato",
+      "OnlineMeetings.ReadWrite": "Creazione e gestione meeting Teams",
+      "offline_access": "Permette refresh token per accesso offline",
+      "openid": "OpenID Connect authentication",
+      "profile": "Lettura profilo base utente",
+      "email": "Lettura indirizzo email utente"
+    },
+    "admin_consent_required": true,
+    "consent_type": "delegated",
+    "note": "Tutti gli scope richiedono consenso utente. Admin consent dato a livello tenant per l'app."
+  },
+
+  "token_handling": {
+    "storage": {
+      "type": "database",
+      "table": "microsoft365_tokens",
+      "per_user": true,
+      "schema": {
+        "user_id": "UUID (foreign key to auth.users)",
+        "access_token": "TEXT (encrypted)",
+        "refresh_token": "TEXT (encrypted)",
+        "token_expires_at": "TIMESTAMP WITH TIME ZONE",
+        "scope": "TEXT",
+        "token_type": "TEXT (default: Bearer)",
+        "created_at": "TIMESTAMP WITH TIME ZONE",
+        "last_refreshed": "TIMESTAMP WITH TIME ZONE"
+      }
+    },
+    "encryption_at_rest": {
+      "enabled": true,
+      "algorithm": "AES-256-GCM",
+      "fields_encrypted": [
+        "access_token",
+        "refresh_token"
+      ],
+      "format": "iv:authTag:ciphertext",
+      "encoding": "hex",
+      "key_source": "environment_variable",
+      "key_name": "ENCRYPTION_KEY_M365",
+      "key_rotation": "manual"
+    },
+    "access_token": {
+      "format": "JWT",
+      "lifetime": "3600 seconds (1 hour)",
+      "expires_at_tracking": true,
+      "buffer_before_refresh": "300 seconds (5 minutes)",
+      "automatic_refresh": true
+    },
+    "refresh_token": {
+      "format": "opaque_string",
+      "lifetime": "90 days (Microsoft default)",
+      "rotation_on_refresh": false,
+      "automatic_refresh": true,
+      "refresh_trigger": "access_token expires in < 5 minutes"
+    },
+    "token_refresh_flow": {
+      "endpoint": "https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token",
+      "grant_type": "refresh_token",
+      "parameters": {
+        "client_id": "from database config",
+        "client_secret": "from database config (decrypted)",
+        "refresh_token": "from database tokens (decrypted)",
+        "scope": "original scopes"
+      },
+      "on_success": "update access_token, token_expires_at, last_refreshed in DB",
+      "on_failure": "require user re-authentication"
+    }
+  },
+
+  "authentication_flow": {
+    "type": "delegated",
+    "description": "User delegates permissions to application",
+    "steps": [
+      {
+        "step": 1,
+        "name": "Authorization Request",
+        "endpoint": "/api/auth/microsoft/login",
+        "method": "GET",
+        "authentication": "Supabase session (cookie-based)",
+        "actions": [
+          "Verifica sessione utente Supabase",
+          "Recupera studio_id da database (tbutenti)",
+          "Carica config Microsoft (client_id, tenant_id) da microsoft365_config",
+          "Genera state (random 32 bytes hex)",
+          "Genera PKCE code_verifier (random 32 bytes base64url)",
+          "Calcola PKCE code_challenge (SHA-256 hash di code_verifier)",
+          "Salva state, code_verifier, user_id in httponly cookies",
+          "Costruisce authorization URL",
+          "Redirect 302 a Microsoft login"
+        ]
+      },
+      {
+        "step": 2,
+        "name": "User Consent",
+        "location": "Microsoft login page",
+        "url_pattern": "https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/authorize?...",
+        "actions": [
+          "Utente fa login Microsoft (se non già autenticato)",
+          "Utente vede schermata consenso permessi",
+          "Utente accetta o rifiuta",
+          "Microsoft genera authorization code",
+          "Microsoft redirect a callback URL con code + state"
+        ]
+      },
+      {
+        "step": 3,
+        "name": "Token Exchange",
+        "endpoint": "/api/auth/microsoft/callback",
+        "method": "GET",
+        "query_params": ["code", "state", "session_state"],
+        "actions": [
+          "Verifica state (anti-CSRF)",
+          "Recupera code_verifier da cookie",
+          "Recupera user_id da cookie",
+          "Exchange authorization code for tokens (POST a token_endpoint)",
+          "Cifra access_token e refresh_token",
+          "Salva tokens in microsoft365_tokens table",
+          "Cancella cookies temporanei (state, code_verifier)",
+          "Redirect a /impostazioni/microsoft365?success=true"
+        ]
+      }
+    ]
+  },
+
+  "post_authentication_validation": {
+    "endpoint": "https://graph.microsoft.com/v1.0/me",
+    "method": "GET",
+    "authentication": "Bearer {access_token}",
+    "purpose": "Verifica validità token e identità utente",
+    "response_expected": {
+      "id": "User Object ID",
+      "displayName": "Nome utente",
+      "mail": "Email principale",
+      "userPrincipalName": "UPN"
+    },
+    "on_success": "Token valido, utente autenticato",
+    "on_failure": "Token scaduto o invalido, trigger refresh o re-auth",
+    "used_in": [
+      "/api/microsoft365/test-connection",
+      "Automatic token validation prima di ogni Graph API call"
+    ]
+  },
+
+  "graph_api_usage": {
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "authentication_type": "delegated",
+    "authorization_header": "Bearer {access_token}",
+    "endpoints_used": [
+      {
+        "endpoint": "/me",
+        "method": "GET",
+        "scope_required": "User.Read",
+        "purpose": "Verifica connessione e lettura profilo utente"
+      },
+      {
+        "endpoint": "/me/sendMail",
+        "method": "POST",
+        "scope_required": "Mail.Send",
+        "purpose": "Invio email per conto utente"
+      },
+      {
+        "endpoint": "/me/calendar/events",
+        "method": "GET/POST/PATCH/DELETE",
+        "scope_required": "Calendars.ReadWrite",
+        "purpose": "Gestione eventi calendario"
+      },
+      {
+        "endpoint": "/me/contacts",
+        "method": "GET/POST/PATCH/DELETE",
+        "scope_required": "Contacts.ReadWrite",
+        "purpose": "Gestione contatti"
+      },
+      {
+        "endpoint": "/me/onlineMeetings",
+        "method": "POST",
+        "scope_required": "OnlineMeetings.ReadWrite",
+        "purpose": "Creazione meeting Teams"
+      }
+    ],
+    "error_handling": {
+      "401_unauthorized": "Token scaduto → automatic refresh → retry",
+      "403_forbidden": "Permessi insufficienti → log error + notify user",
+      "429_rate_limit": "Retry con exponential backoff",
+      "500_server_error": "Retry con backoff + log error"
+    }
+  },
+
+  "disconnection": {
+    "trigger": "Click su pulsante 'Disconnetti Account'",
+    "endpoint": "/api/microsoft365/disconnect (non implementato) o gestito frontend",
+    "actions": [
+      "DELETE tokens da microsoft365_tokens WHERE user_id = current_user",
+      "Cancella access_token e refresh_token cifrati",
+      "NON modifica microsoft365_config (mantiene client_id/tenant_id)",
+      "NON revoca token su Microsoft (token expires naturalmente)"
+    ],
+    "scope": "per_user",
+    "note": "Disconnessione locale, non revoca permessi su Microsoft (utente deve farlo manualmente da account.microsoft.com)",
+    "ui_behavior": {
+      "before": "Card mostra 'Connesso' con timestamp ultima connessione",
+      "after": "Card mostra 'Non connesso', pulsante 'Connetti Microsoft 365' riabilitato"
+    }
+  },
+
+  "security": {
+    "cookies": {
+      "oauth_state": {
+        "httponly": true,
+        "secure": true,
+        "samesite": "Lax",
+        "max_age": 600,
+        "purpose": "Anti-CSRF protection"
+      },
+      "oauth_code_verifier": {
+        "httponly": true,
+        "secure": true,
+        "samesite": "Lax",
+        "max_age": 600,
+        "purpose": "PKCE code verifier"
+      },
+      "oauth_user_id": {
+        "httponly": true,
+        "secure": true,
+        "samesite": "Lax",
+        "max_age": 600,
+        "purpose": "Associate callback with user session"
+      }
+    },
+    "encryption": {
+      "algorithm": "AES-256-GCM",
+      "key_length": 256,
+      "iv_length": 16,
+      "auth_tag_length": 16,
+      "key_derivation": "direct from ENCRYPTION_KEY_M365 env var (hex)",
+      "note": "GCM mode provides authenticated encryption"
+    },
+    "token_storage": {
+      "location": "PostgreSQL database (Supabase)",
+      "encryption": "at_rest via AES-256-GCM",
+      "access_control": "RLS policies (Row Level Security)",
+      "rls_policy": "Users can only access their own tokens"
+    },
+    "https_only": true,
+    "csrf_protection": "state parameter",
+    "pkce_enabled": true
+  },
+
+  "multi_tenant_support": {
+    "enabled": true,
+    "implementation": "Per-studio configuration",
+    "details": {
+      "microsoft365_config_table": "One row per studio_id",
+      "microsoft365_tokens_table": "One row per user_id (users belong to studios)",
+      "isolation": "Each studio has separate Azure AD app registration",
+      "sharing": "Users within same studio share config, but have separate tokens"
+    }
+  },
+
+  "logging": {
+    "enabled": true,
+    "environment": "production (Vercel)",
+    "log_points": [
+      {
+        "location": "/api/auth/microsoft/login",
+        "logs": [
+          "Request received (host, origin, cookies present)",
+          "Session check (user authenticated, user_id, email)",
+          "Studio lookup (studio_id found)",
+          "Config loaded (tenant_id, client_id length)",
+          "Redirect URI constructed",
+          "Authorization URL generated",
+          "Redirect 302 executed"
+        ]
+      },
+      {
+        "location": "/api/auth/microsoft/callback",
+        "logs": [
+          "Callback received (code present, state present)",
+          "State validation (match result)",
+          "Token exchange request",
+          "Token exchange response (success/error)",
+          "Token save to database (success/error)",
+          "Final redirect"
+        ]
+      }
+    ],
+    "sensitive_data_handling": "Never log tokens, secrets, or full config. Log only lengths, prefixes, success/failure."
+  },
+
+  "error_handling": {
+    "authentication_errors": {
+      "no_session": {
+        "status": 401,
+        "error": "Non autenticato",
+        "details": "Sessione non valida. Effettua il login.",
+        "user_action": "Re-login to application"
+      },
+      "no_studio": {
+        "status": 400,
+        "error": "Studio non trovato",
+        "details": "Configurazione studio mancante.",
+        "user_action": "Contact administrator"
+      },
+      "no_config": {
+        "status": 400,
+        "error": "Microsoft 365 non configurato",
+        "details": "Chiedi all'amministratore di configurare Microsoft 365",
+        "user_action": "Administrator must configure M365 in settings"
+      }
+    },
+    "oauth_errors": {
+      "state_mismatch": {
+        "status": 400,
+        "error": "State mismatch",
+        "details": "CSRF attack detected or session expired",
+        "user_action": "Restart OAuth flow"
+      },
+      "token_exchange_failed": {
+        "status": 500,
+        "error": "Token exchange failed",
+        "details": "Microsoft token endpoint error",
+        "user_action": "Retry or check Azure AD configuration"
+      },
+      "encryption_failed": {
+        "status": 500,
+        "error": "Failed to encrypt tokens",
+        "details": "ENCRYPTION_KEY_M365 missing or invalid",
+        "user_action": "Contact administrator"
+      }
+    }
+  },
+
+  "environment_variables": {
+    "required": [
+      {
+        "name": "NEXT_PUBLIC_SUPABASE_URL",
+        "purpose": "Supabase project URL",
+        "example": "https://xxx.supabase.co"
+      },
+      {
+        "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "purpose": "Supabase anonymous key (public)",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      },
+      {
+        "name": "SUPABASE_SERVICE_ROLE_KEY",
+        "purpose": "Supabase service role key (admin)",
+        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "security": "Never expose to client"
+      },
+      {
+        "name": "ENCRYPTION_KEY_M365",
+        "purpose": "AES-256 encryption key for Microsoft tokens",
+        "format": "64 hex characters (32 bytes)",
+        "example": "a1b2c3d4e5f6...0123456789abcdef",
+        "generation": "openssl rand -hex 32",
+        "security": "Never expose, rotate periodically"
+      }
+    ],
+    "optional": [
+      {
+        "name": "NEXT_PUBLIC_SITE_URL",
+        "purpose": "Production site URL (for redirect URI)",
+        "example": "https://studio-manager-pro.vercel.app",
+        "fallback": "Hardcoded to studio-manager-pro.vercel.app"
+      },
+      {
+        "name": "NEXT_PUBLIC_APP_URL",
+        "purpose": "Alternative site URL (for redirect URI)",
+        "example": "https://studio-manager-pro.vercel.app",
+        "fallback": "Hardcoded to studio-manager-pro.vercel.app"
+      }
+    ]
+  },
+
+  "azure_ad_configuration_required": {
+    "app_registration": {
+      "name": "Studio Manager Pro (per studio)",
+      "application_type": "Web",
+      "supported_account_types": "Single tenant (organization specific)",
+      "redirect_uris": [
+        "https://studio-manager-pro.vercel.app/api/auth/microsoft/callback"
+      ],
+      "implicit_grant": {
+        "access_tokens": false,
+        "id_tokens": false
+      },
+      "authentication": {
+        "allow_public_client_flows": false
+      }
+    },
+    "api_permissions": {
+      "microsoft_graph_delegated": [
+        "User.Read",
+        "Calendars.ReadWrite",
+        "Contacts.ReadWrite",
+        "Mail.Send",
+        "OnlineMeetings.ReadWrite",
+        "offline_access",
+        "openid",
+        "profile",
+        "email"
+      ],
+      "admin_consent_status": "Required and granted"
+    },
+    "certificates_and_secrets": {
+      "client_secrets": "One active secret per studio app",
+      "secret_expiration": "24 months recommended",
+      "secret_rotation": "Manual before expiration"
+    }
+  },
+
+  "compliance_and_data_handling": {
+    "data_stored": [
+      "User access tokens (encrypted)",
+      "User refresh tokens (encrypted)",
+      "Token expiration timestamps",
+      "OAuth state (temporary, 10 minutes)",
+      "PKCE code verifier (temporary, 10 minutes)"
+    ],
+    "data_not_stored": [
+      "User Microsoft passwords",
+      "Authorization codes (exchanged immediately)",
+      "Unencrypted tokens"
+    ],
+    "gdpr_compliance": {
+      "data_minimization": "Only necessary OAuth data stored",
+      "encryption": "All sensitive data encrypted at rest",
+      "user_control": "User can disconnect anytime (deletes their tokens)",
+      "data_retention": "Tokens stored until user disconnects or 90 days (refresh token expiry)"
+    }
+  },
+
+  "testing_and_validation": {
+    "test_connection_endpoint": "/api/microsoft365/test-connection",
+    "validation_steps": [
+      "Load user tokens from database",
+      "Decrypt access token",
+      "Check token expiration",
+      "If expired: refresh token automatically",
+      "Call Microsoft Graph /me endpoint",
+      "Return success with user info or error"
+    ],
+    "success_response": {
+      "success": true,
+      "message": "Microsoft 365 connection successful",
+      "organization": "User organization name from Graph API"
+    }
+  },
+
+  "known_limitations": {
+    "token_revocation": "Application does not revoke tokens on Microsoft side on disconnect (user must do manually)",
+    "refresh_token_rotation": "Not implemented (Microsoft does not rotate refresh tokens by default)",
+    "multi_factor_authentication": "Handled by Microsoft, transparent to application",
+    "conditional_access_policies": "Enforced by Microsoft, may require additional user actions"
+  },
+
+  "references": {
+    "microsoft_docs": [
+      "https://docs.microsoft.com/en-us/graph/auth-v2-user",
+      "https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow",
+      "https://docs.microsoft.com/en-us/graph/api/overview"
+    ],
+    "oauth_specs": [
+      "https://tools.ietf.org/html/rfc6749 (OAuth 2.0)",
+      "https://tools.ietf.org/html/rfc7636 (PKCE)"
+    ]
+  }
+}
