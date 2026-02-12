@@ -1,8 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
+import { decrypt } from "@/lib/encryption365";
 
 /**
- * Microsoft Graph API Service
- * Gestisce autenticazione, refresh token e chiamate API
+ * Microsoft Graph API Service - DELEGATED ONLY
+ * 
+ * Uses OAuth 2.0 delegated permissions (user tokens).
+ * NO app-only fallback - all operations require authenticated user.
+ * 
+ * Token refresh is automatic when token expires.
  */
 
 interface GraphTokenResponse {
@@ -12,12 +17,10 @@ interface GraphTokenResponse {
 }
 
 /**
- * Ottiene il token valido per l'utente
- * Rinnova automaticamente se scaduto
+ * Get valid token for user (with automatic refresh)
  */
 async function getValidToken(userId: string): Promise<string | null> {
   try {
-    // Recupera il token dal database
     const { data: tokenData, error } = await supabase
       .from("tbmicrosoft_tokens")
       .select("access_token, refresh_token, expires_at")
@@ -25,121 +28,161 @@ async function getValidToken(userId: string): Promise<string | null> {
       .maybeSingle();
 
     if (error) {
-      console.error("❌ Errore recupero token:", error);
+      console.error("[Graph Service] Database error:", error);
       return null;
     }
 
     if (!tokenData) {
-      console.log("⚠️  Nessun token trovato per utente:", userId);
+      console.log("[Graph Service] No token found for user:", userId);
       return null;
     }
 
-    // ✅ VALIDAZIONE AGGIUNTA: Verifica che il token sia una stringa valida
-    if (!tokenData.access_token || typeof tokenData.access_token !== "string" || tokenData.access_token.trim().length === 0) {
-      console.error("❌ Token access_token non valido o vuoto");
+    const accessToken = decrypt(tokenData.access_token);
+    
+    if (!accessToken || typeof accessToken !== "string" || accessToken.trim().length === 0) {
+      console.error("[Graph Service] Invalid access token (empty or corrupted)");
+      await cleanupInvalidToken(userId);
       return null;
     }
 
-    // ✅ VALIDAZIONE AGGIUNTA: Verifica formato JWT (deve contenere almeno 2 punti)
-    const tokenParts = tokenData.access_token.split(".");
+    const tokenParts = accessToken.split(".");
     if (tokenParts.length !== 3) {
-      console.error("❌ Token non è un JWT valido (formato errato)");
+      console.error("[Graph Service] Invalid JWT format");
+      await cleanupInvalidToken(userId);
       return null;
     }
 
     const expiresAt = new Date(tokenData.expires_at);
     const now = new Date();
 
-    // Se il token è ancora valido (con margine di 5 minuti), ritornalo
     if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
-      return tokenData.access_token;
+      return accessToken;
     }
 
-    // Token scaduto, prova a rinnovarlo
-    console.log("🔄 Token scaduto, tentativo refresh...");
+    console.log("[Graph Service] Token expired, attempting refresh...");
     
+    if (!tokenData.refresh_token) {
+      console.error("[Graph Service] No refresh token available");
+      await cleanupInvalidToken(userId);
+      return null;
+    }
+
     const newAccessToken = await refreshToken(userId, tokenData.refresh_token);
     return newAccessToken;
   } catch (error) {
-    console.error("❌ Errore in getValidToken:", error);
+    console.error("[Graph Service] Error in getValidToken:", error);
     return null;
   }
 }
 
 /**
- * Rinnova il token usando refresh_token (se disponibile) o client_credentials
+ * Cleanup invalid/corrupted tokens from database
  */
-async function refreshToken(userId: string, refreshToken: string | null): Promise<string> {
-  const { data: configData, error } = await supabase
-    .from("microsoft365_config" as any)
-    .select("client_id, client_secret, tenant_id")
-    .limit(1)
-    .maybeSingle();
-
-  const config = configData as any;
-
-  if (error || !config) {
-    throw new Error("Configurazione Microsoft 365 mancante");
+async function cleanupInvalidToken(userId: string): Promise<void> {
+  try {
+    await supabase
+      .from("tbmicrosoft_tokens")
+      .delete()
+      .eq("user_id", userId);
+    
+    console.log("[Graph Service] Cleaned up invalid token for user:", userId);
+  } catch (error) {
+    console.error("[Graph Service] Failed to cleanup token:", error);
   }
-
-  const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
-
-  const params = new URLSearchParams();
-  params.append("client_id", config.client_id);
-  params.append("client_secret", config.client_secret);
-
-  // Se esiste refresh_token, usa il flusso authorization_code
-  // Altrimenti usa client_credentials (app-only)
-  if (refreshToken) {
-    params.append("refresh_token", refreshToken);
-    params.append("grant_type", "refresh_token");
-  } else {
-    // Flusso client_credentials (app-only)
-    params.append("grant_type", "client_credentials");
-    params.append("scope", "https://graph.microsoft.com/.default");
-  }
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params.toString(),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("❌ Refresh token failed:", errorText);
-    throw new Error("Impossibile rinnovare il token Microsoft. Riconnetti l'account.");
-  }
-
-  const tokenData: GraphTokenResponse = await response.json();
-
-  // Calcola scadenza
-  const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-
-  // Aggiorna token nel database
-  const { error: updateError } = await supabase
-    .from("tbmicrosoft_tokens")
-    .update({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token || refreshToken,
-      expires_at: expiresAt.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId);
-
-  if (updateError) {
-    console.error("❌ Errore aggiornamento token:", updateError);
-    throw new Error("Errore durante il salvataggio del nuovo token");
-  }
-
-  console.log("✅ Token rinnovato con successo");
-  return tokenData.access_token;
 }
 
 /**
- * Esegue una chiamata autenticata a Microsoft Graph API
+ * Refresh access token using refresh_token
+ */
+async function refreshToken(userId: string, encryptedRefreshToken: string): Promise<string> {
+  try {
+    const refreshTokenValue = decrypt(encryptedRefreshToken);
+    
+    if (!refreshTokenValue) {
+      throw new Error("Invalid refresh token (decryption failed)");
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", userId)
+      .single();
+
+    if (userError || !userData?.studio_id) {
+      throw new Error("Studio not found for user");
+    }
+
+    const { data: configData, error: configError } = await supabase
+      .from("tbmicrosoft365_config" as any)
+      .select("client_id, client_secret_encrypted, tenant_id")
+      .eq("studio_id", userData.studio_id)
+      .single();
+
+    if (configError || !configData) {
+      throw new Error("Microsoft 365 configuration not found");
+    }
+
+    const clientSecret = decrypt(configData.client_secret_encrypted);
+
+    const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
+
+    const params = new URLSearchParams({
+      client_id: configData.client_id,
+      client_secret: clientSecret,
+      refresh_token: refreshTokenValue,
+      grant_type: "refresh_token"
+    });
+
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString()
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Graph Service] Refresh token failed:", errorText);
+      
+      await cleanupInvalidToken(userId);
+      
+      throw new Error("Token refresh failed. Please reconnect your Microsoft 365 account.");
+    }
+
+    const tokenData: GraphTokenResponse = await response.json();
+
+    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+
+    const { encrypt } = await import("@/lib/encryption365");
+    const encryptedAccessToken = encrypt(tokenData.access_token);
+    const newEncryptedRefreshToken = tokenData.refresh_token ? encrypt(tokenData.refresh_token) : encryptedRefreshToken;
+
+    const { error: updateError } = await supabase
+      .from("tbmicrosoft_tokens")
+      .update({
+        access_token: encryptedAccessToken,
+        refresh_token: newEncryptedRefreshToken,
+        expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", userId);
+
+    if (updateError) {
+      console.error("[Graph Service] Failed to update token:", updateError);
+      throw new Error("Failed to save refreshed token");
+    }
+
+    console.log("[Graph Service] Token refreshed successfully");
+    return tokenData.access_token;
+  } catch (error) {
+    console.error("[Graph Service] Refresh error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Make authenticated Graph API call
  */
 async function graphApiCall<T = any>(
   userId: string,
@@ -149,11 +192,15 @@ async function graphApiCall<T = any>(
   const token = await getValidToken(userId);
 
   if (!token) {
-    console.error("❌ Impossibile ottenere token valido per chiamata Graph API");
-    throw new Error("Microsoft 365 non configurato o token non valido. Configura l'integrazione in Impostazioni → Microsoft 365");
+    throw new Error(
+      "Microsoft 365 non configurato o token non valido. " +
+      "Connetti il tuo account in Impostazioni → Microsoft 365"
+    );
   }
 
-  const url = `https://graph.microsoft.com/v1.0${endpoint}`;
+  const url = endpoint.startsWith("https://")
+    ? endpoint
+    : `https://graph.microsoft.com/v1.0${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
@@ -166,7 +213,7 @@ async function graphApiCall<T = any>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`❌ Graph API Error (${response.status}):`, errorText);
+    console.error(`[Graph Service] API error (${response.status}):`, errorText);
     throw new Error(`Microsoft Graph API error: ${errorText}`);
   }
 
@@ -174,7 +221,7 @@ async function graphApiCall<T = any>(
 }
 
 /**
- * Verifica se l'utente ha Microsoft 365 configurato
+ * Check if user has Microsoft 365 connected
  */
 async function hasMicrosoft365(userId: string): Promise<boolean> {
   const { data, error } = await supabase
@@ -186,11 +233,25 @@ async function hasMicrosoft365(userId: string): Promise<boolean> {
   return !error && !!data;
 }
 
-// Wrapper object per mantenere compatibilità con le chiamate esistenti
+/**
+ * Disconnect Microsoft 365 account
+ */
+async function disconnectAccount(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("tbmicrosoft_tokens")
+    .delete()
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error("Failed to disconnect Microsoft 365 account");
+  }
+
+  console.log("[Graph Service] User disconnected:", userId);
+}
+
 export const microsoftGraphService = {
-  // Metodi base
   getValidToken,
-  graphApiCall, // Alias per uso diretto
+  graphApiCall,
   graphRequest: async (userId: string, endpoint: string, method: string = "GET", body?: any) => {
     return graphApiCall(userId, endpoint, {
       method,
@@ -198,28 +259,16 @@ export const microsoftGraphService = {
     });
   },
   
-  // Metodi utility
   isConnected: hasMicrosoft365,
-  
-  disconnectAccount: async (userId: string) => {
-    const { error } = await supabase
-      .from("tbmicrosoft_tokens")
-      .delete()
-      .eq("user_id", userId);
-      
-    if (error) throw error;
-  },
+  disconnectAccount,
 
-  // Teams methods
   getTeamsWithChannels: async (userId: string) => {
     try {
-      // 1. Get joined teams
       const teamsResponse = await graphApiCall<{ value: any[] }>(userId, "/me/joinedTeams");
       const teams = teamsResponse.value || [];
       
       const teamsWithChannels = [];
       
-      // 2. Get channels for each team
       for (const team of teams) {
         try {
           const channelsResponse = await graphApiCall<{ value: any[] }>(
@@ -268,7 +317,6 @@ export const microsoftGraphService = {
     }
   },
 
-  // Email methods
   sendEmail: async (userId: string, message: any) => {
     return graphApiCall(userId, "/me/sendMail", {
       method: "POST",
@@ -280,5 +328,4 @@ export const microsoftGraphService = {
   }
 };
 
-// Esporta anche le funzioni singole per chi le usa direttamente
 export { getValidToken, graphApiCall, hasMicrosoft365 };
