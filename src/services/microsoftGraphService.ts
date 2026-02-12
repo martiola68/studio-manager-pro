@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/encryption365";
 
 /**
@@ -6,6 +7,7 @@ import { decrypt } from "@/lib/encryption365";
  * 
  * Uses OAuth 2.0 delegated permissions (user tokens).
  * NO app-only fallback - all operations require authenticated user.
+ * Uses supabaseAdmin (service role) to bypass RLS when reading config.
  * 
  * Token refresh is automatic when token expires.
  */
@@ -16,9 +18,6 @@ interface GraphTokenResponse {
   expires_in: number;
 }
 
-/**
- * Get valid token for user (with automatic refresh)
- */
 async function getValidToken(userId: string): Promise<string | null> {
   try {
     const { data: tokenData, error } = await supabase
@@ -75,9 +74,6 @@ async function getValidToken(userId: string): Promise<string | null> {
   }
 }
 
-/**
- * Cleanup invalid/corrupted tokens from database
- */
 async function cleanupInvalidToken(userId: string): Promise<void> {
   try {
     await supabase
@@ -91,9 +87,6 @@ async function cleanupInvalidToken(userId: string): Promise<void> {
   }
 }
 
-/**
- * Refresh access token using refresh_token
- */
 async function refreshToken(userId: string, encryptedRefreshToken: string): Promise<string> {
   try {
     const refreshTokenValue = decrypt(encryptedRefreshToken);
@@ -112,9 +105,9 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
       throw new Error("Studio not found for user");
     }
 
-    const { data: rawConfigData, error: configError } = await supabase
+    const { data: rawConfigData, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, client_secret_encrypted, tenant_id")
+      .select("client_id, client_secret, tenant_id")
       .eq("studio_id", userData.studio_id)
       .single();
 
@@ -122,14 +115,13 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
       throw new Error("Microsoft 365 configuration not found");
     }
 
-    // Cast esplicito per risolvere errori TypeScript
     const configData = rawConfigData as unknown as {
       client_id: string;
-      client_secret_encrypted: string;
+      client_secret: string;
       tenant_id: string;
     };
 
-    const clientSecret = decrypt(configData.client_secret_encrypted);
+    const clientSecret = decrypt(configData.client_secret);
 
     const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
 
@@ -188,9 +180,6 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
   }
 }
 
-/**
- * Make authenticated Graph API call
- */
 async function graphApiCall<T = any>(
   userId: string,
   endpoint: string,
@@ -227,9 +216,6 @@ async function graphApiCall<T = any>(
   return response.json();
 }
 
-/**
- * Check if user has Microsoft 365 connected
- */
 async function hasMicrosoft365(userId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from("tbmicrosoft_tokens")
@@ -240,9 +226,6 @@ async function hasMicrosoft365(userId: string): Promise<boolean> {
   return !error && !!data;
 }
 
-/**
- * Disconnect Microsoft 365 account
- */
 async function disconnectAccount(userId: string): Promise<void> {
   const { error } = await supabase
     .from("tbmicrosoft_tokens")

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
 
 /**
@@ -11,6 +12,7 @@ import crypto from "crypto";
  * - Redirect a Microsoft login
  * 
  * Pattern: Authorization Code Flow with PKCE
+ * Uses supabaseAdmin (service role) to bypass RLS.
  */
 
 interface ErrorResponse {
@@ -27,7 +29,6 @@ export default async function handler(
   }
 
   try {
-    // 1. Verifica sessione utente
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace("Bearer ", "");
 
@@ -47,7 +48,6 @@ export default async function handler(
       });
     }
 
-    // 2. Recupera configurazione studio
     const { data: userData, error: studioError } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -63,8 +63,7 @@ export default async function handler(
 
     const studioId = userData.studio_id;
 
-    // 3. Recupera configurazione Microsoft 365
-    const { data: rawConfigData, error: configError } = await supabase
+    const { data: rawConfigData, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, tenant_id, enabled")
       .eq("studio_id", studioId)
@@ -77,7 +76,6 @@ export default async function handler(
       });
     }
 
-    // Cast esplicito per risolvere errori TypeScript
     const configData = rawConfigData as unknown as {
       client_id: string;
       tenant_id: string;
@@ -91,26 +89,19 @@ export default async function handler(
       });
     }
 
-    // 4. Genera State anti-CSRF (32 bytes random hex)
     const state = crypto.randomBytes(32).toString("hex");
-
-    // 5. Genera PKCE Code Verifier (43-128 chars, base64url)
     const codeVerifier = crypto.randomBytes(32).toString("base64url");
-
-    // 6. Genera PKCE Code Challenge (SHA-256 hash del verifier)
     const codeChallenge = crypto
       .createHash("sha256")
       .update(codeVerifier)
       .digest("base64url");
 
-    // 7. Salva state + codeVerifier in cookie (HTTPOnly, Secure, SameSite)
     res.setHeader("Set-Cookie", [
       `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_code_verifier=${codeVerifier}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_user_id=${user.id}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
     ]);
 
-    // 8. Costruisci URL autorizzazione Microsoft
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
 
     const scopes = [
@@ -144,7 +135,6 @@ export default async function handler(
       hasPKCE: true
     });
 
-    // 9. Redirect a Microsoft login
     res.redirect(302, authUrl.toString());
 
   } catch (error) {

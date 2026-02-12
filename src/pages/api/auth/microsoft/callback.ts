@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/encryption365";
 
 /**
@@ -15,6 +16,8 @@ import { encrypt } from "@/lib/encryption365";
  * - State validation (anti-CSRF)
  * - PKCE validation (code_verifier)
  * - Token encryption (AES-256-GCM)
+ * 
+ * Uses supabaseAdmin (service role) to bypass RLS.
  */
 
 interface TokenResponse {
@@ -42,10 +45,8 @@ export default async function handler(
   }
 
   try {
-    // 1. Recupera parametri callback
     const { code, state, error, error_description } = req.query;
 
-    // 2. Gestione errori Microsoft
     if (error) {
       console.error("[OAuth Callback] Microsoft error:", error, error_description);
       return res.redirect(
@@ -60,13 +61,11 @@ export default async function handler(
       );
     }
 
-    // 3. Recupera cookies (state, code_verifier, user_id)
     const cookies = parseCookies(req.headers.cookie || "");
     const savedState = cookies.oauth_state;
     const codeVerifier = cookies.oauth_code_verifier;
     const userId = cookies.oauth_user_id;
 
-    // 4. Valida state anti-CSRF
     if (!savedState || savedState !== state) {
       console.error("[OAuth Callback] State mismatch:", { savedState, receivedState: state });
       return res.redirect(
@@ -81,7 +80,6 @@ export default async function handler(
       );
     }
 
-    // 5. Recupera configurazione studio
     const { data: userData, error: userError } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -97,10 +95,9 @@ export default async function handler(
 
     const studioId = userData.studio_id;
 
-    // 6. Recupera configurazione Microsoft 365
-    const { data: rawConfigData, error: configError } = await supabase
+    const { data: rawConfigData, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, client_secret_encrypted, tenant_id")
+      .select("client_id, client_secret, tenant_id")
       .eq("studio_id", studioId)
       .single();
 
@@ -111,18 +108,15 @@ export default async function handler(
       );
     }
 
-    // Cast esplicito per risolvere errori TypeScript
     const configData = rawConfigData as unknown as {
       client_id: string;
-      client_secret_encrypted: string;
+      client_secret: string;
       tenant_id: string;
     };
 
-    // 7. Decifra client_secret
     const { decrypt } = await import("@/lib/encryption365");
-    const clientSecret = decrypt(configData.client_secret_encrypted);
+    const clientSecret = decrypt(configData.client_secret);
 
-    // 8. Scambia authorization code → access_token
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
 
     const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
@@ -162,7 +156,6 @@ export default async function handler(
       expiresIn: tokens.expires_in
     });
 
-    // 9. Recupera informazioni utente Microsoft
     let microsoftUserId: string | null = null;
 
     try {
@@ -185,16 +178,13 @@ export default async function handler(
       console.warn("[OAuth Callback] Failed to fetch user info (non-critical):", error);
     }
 
-    // 10. Cifra token (AES-256-GCM)
     const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
     console.log("[OAuth Callback] Tokens encrypted successfully");
 
-    // 11. Calcola scadenza
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // 12. Salva o aggiorna token in database
     const { error: upsertError } = await supabase
       .from("tbmicrosoft_tokens")
       .upsert({
@@ -217,14 +207,12 @@ export default async function handler(
 
     console.log("[OAuth Callback] Token saved successfully for user:", userId);
 
-    // 13. Pulisci cookies
     res.setHeader("Set-Cookie", [
       "oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
       "oauth_code_verifier=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
       "oauth_user_id=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
     ]);
 
-    // 14. Redirect a pagina impostazioni con successo
     res.redirect("/impostazioni/microsoft365?success=true");
 
   } catch (error) {
@@ -235,9 +223,6 @@ export default async function handler(
   }
 }
 
-/**
- * Parse cookies from Cookie header
- */
 function parseCookies(cookieHeader: string): Record<string, string> {
   return cookieHeader.split(";").reduce((cookies, cookie) => {
     const [name, value] = cookie.trim().split("=");

@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/encryption365";
 import { z } from "zod";
 
 /**
  * API: Test Microsoft 365 Connection
  * Tests client_credentials flow.
+ * Uses supabaseAdmin (service role) to bypass RLS.
  */
 
 const TestRequestSchema = z.object({
@@ -14,7 +15,7 @@ const TestRequestSchema = z.object({
 
 const DBConfigSchema = z.object({
   client_id: z.string(),
-  client_secret_encrypted: z.string(),
+  client_secret: z.string(),
   tenant_id: z.string(),
   enabled: z.boolean(),
 });
@@ -48,10 +49,9 @@ export default async function handler(
 
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
-    // Get config from DB
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, client_secret_encrypted, tenant_id, enabled")
+      .select("client_id, client_secret, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();
 
@@ -63,7 +63,6 @@ export default async function handler(
       });
     }
 
-    // Validate DB data
     const dbParse = DBConfigSchema.safeParse(data);
     if (!dbParse.success) {
       return res.status(500).json({ error: "Invalid database configuration data" });
@@ -77,10 +76,8 @@ export default async function handler(
       });
     }
 
-    // Decrypt
-    const clientSecret = decrypt(config.client_secret_encrypted);
+    const clientSecret = decrypt(config.client_secret);
 
-    // Request Token
     console.log("[M365 Test] Obtaining access token...");
     const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
 
@@ -113,7 +110,6 @@ export default async function handler(
     }
     const { access_token, expires_in } = tokenParsed.data;
 
-    // Test Graph API
     console.log("[M365 Test] Testing Graph API call...");
     const graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
       headers: { Authorization: `Bearer ${access_token}` },
