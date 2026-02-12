@@ -22,16 +22,6 @@ const SaveConfigRequestSchema = z.object({
   organizerEmail: z.string().email().optional().or(z.literal("")),
 });
 
-const ConfigRowSchema = z.object({
-  id: z.string(),
-  studio_id: z.string(),
-  client_id: z.string(),
-  tenant_id: z.string(),
-  organizer_email: z.string().nullable(),
-  enabled: z.boolean(),
-  client_secret: z.string(),
-});
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -74,8 +64,6 @@ export default async function handler(
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    let resultData: unknown;
-
     if (existingData) {
       const updateData: {
         client_id: string;
@@ -92,17 +80,15 @@ export default async function handler(
         updateData.client_secret = encrypt(clientSecret);
       }
 
-      const { data: updatedConfig, error: updateError } = await supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("microsoft365_config")
         .update(updateData)
-        .eq("studio_id", studioId)
-        .select()
-        .single();
+        .eq("studio_id", studioId);
 
       if (updateError) {
+        console.error("[M365 Config] Update error:", updateError);
         throw updateError;
       }
-      resultData = updatedConfig;
     } else {
       if (!clientSecret) {
         return res.status(400).json({
@@ -110,7 +96,7 @@ export default async function handler(
         });
       }
 
-      const { data: newConfig, error: insertError } = await supabaseAdmin
+      const { error: insertError } = await supabaseAdmin
         .from("microsoft365_config")
         .insert({
           studio_id: studioId,
@@ -118,23 +104,24 @@ export default async function handler(
           client_secret: encrypt(clientSecret),
           tenant_id: tenantId,
           enabled: true,
-        })
-        .select()
-        .single();
+        });
 
       if (insertError) {
+        console.error("[M365 Config] Insert error:", insertError);
         throw insertError;
       }
-      resultData = newConfig;
     }
 
-    const parsedDB = ConfigRowSchema.safeParse(resultData);
-    if (!parsedDB.success) {
-      console.error("Database mismatch:", parsedDB.error);
-      throw new Error("Database returned unexpected data shape");
+    const { data: savedConfig, error: selectError } = await supabaseAdmin
+      .from("microsoft365_config")
+      .select("id, studio_id, client_id, tenant_id, organizer_email, enabled")
+      .eq("studio_id", studioId)
+      .single();
+
+    if (selectError || !savedConfig) {
+      console.error("[M365 Config] Select error after save:", selectError);
+      throw new Error("Failed to retrieve saved configuration");
     }
-    
-    const result = parsedDB.data;
 
     tokenCache.invalidate(studioId);
     console.log("[M365 Config] Token cache invalidated for studio:", studioId);
@@ -143,12 +130,12 @@ export default async function handler(
       success: true,
       message: "Microsoft 365 configuration saved successfully",
       config: {
-        id: result.id,
-        studio_id: result.studio_id,
-        client_id: result.client_id,
-        tenant_id: result.tenant_id,
-        organizer_email: result.organizer_email,
-        enabled: result.enabled,
+        id: savedConfig.id,
+        studio_id: savedConfig.studio_id,
+        client_id: savedConfig.client_id,
+        tenant_id: savedConfig.tenant_id,
+        organizer_email: savedConfig.organizer_email,
+        enabled: savedConfig.enabled,
       },
     });
 
