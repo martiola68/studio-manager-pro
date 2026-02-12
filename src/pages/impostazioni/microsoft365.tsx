@@ -5,15 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle2, XCircle, AlertCircle, Info } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Info, UserCheck, UserX } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
+import { 
+  getUserConnectionStatus, 
+  disconnectMicrosoft365, 
+  startMicrosoftOAuthFlow,
+  type UserConnectionStatus 
+} from "@/services/microsoft365UserService";
 
-// Shared Zod Schema (can be imported, but defining here for client-side use)
 const M365ConfigSchema = z.object({
   client_id: z.string(),
   tenant_id: z.string(),
-  organizer_email: z.string().nullable().optional(),
   enabled: z.boolean(),
 });
 
@@ -29,24 +33,41 @@ interface TestResult {
 export default function Microsoft365Settings() {
   const router = useRouter();
   const [studioId, setStudioId] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   
-  // Form fields
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [tenantId, setTenantId] = useState("");
-  const [organizerEmail, setOrganizerEmail] = useState("");
   
-  // Status
   const [config, setConfig] = useState<M365Config | null>(null);
+  const [userConnection, setUserConnection] = useState<UserConnectionStatus>({ isConnected: false });
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserAndConfig();
   }, []);
+
+  useEffect(() => {
+    if (router.query.success === "true") {
+      setSuccessMessage("✅ Microsoft 365 connesso con successo!");
+      loadUserConnectionStatus();
+      router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
+    }
+    
+    if (router.query.error) {
+      const errorMsg = router.query.message 
+        ? decodeURIComponent(router.query.message as string)
+        : "Errore durante la connessione";
+      setError(`❌ ${errorMsg}`);
+      router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
+    }
+  }, [router.query]);
 
   async function loadUserAndConfig() {
     try {
@@ -57,10 +78,13 @@ export default function Microsoft365Settings() {
         return;
       }
 
+      const currentUserId = session.user.id;
+      setUserId(currentUserId);
+
       const { data: user } = await supabase
         .from("tbutenti")
         .select("studio_id")
-        .eq("id", session.user.id)
+        .eq("id", currentUserId)
         .single();
 
       if (!user?.studio_id) {
@@ -71,33 +95,43 @@ export default function Microsoft365Settings() {
 
       setStudioId(user.studio_id);
 
-      // Load existing config using Supabase with manual cast bypass + Zod validation
       const { data: rawData } = await supabase
         .from("tbmicrosoft365_config" as any)
-        .select("client_id, tenant_id, organizer_email, enabled")
+        .select("client_id, tenant_id, enabled")
         .eq("studio_id", user.studio_id)
         .maybeSingle();
 
       if (rawData) {
-        // Validate with Zod
         const parsed = M365ConfigSchema.safeParse(rawData);
         if (parsed.success) {
           const validConfig = parsed.data;
           setConfig(validConfig);
           setClientId(validConfig.client_id);
           setTenantId(validConfig.tenant_id);
-          setOrganizerEmail(validConfig.organizer_email || "");
         } else {
           console.error("Invalid config data in DB:", parsed.error);
           setError("Configurazione nel database corrotta o non valida");
         }
       }
 
+      await loadUserConnectionStatus();
+
       setLoading(false);
     } catch (err) {
       console.error("Error loading config:", err);
       setError("Errore nel caricamento della configurazione");
       setLoading(false);
+    }
+  }
+
+  async function loadUserConnectionStatus() {
+    if (!userId) return;
+    
+    try {
+      const status = await getUserConnectionStatus(userId);
+      setUserConnection(status);
+    } catch (err) {
+      console.error("Error loading user connection status:", err);
     }
   }
 
@@ -127,6 +161,7 @@ export default function Microsoft365Settings() {
     setSaving(true);
     setError(null);
     setTestResult(null);
+    setSuccessMessage(null);
 
     try {
       const response = await fetch("/api/microsoft365/save-config", {
@@ -137,7 +172,6 @@ export default function Microsoft365Settings() {
           clientId,
           clientSecret: clientSecret || undefined,
           tenantId,
-          organizerEmail: organizerEmail || undefined,
         }),
       });
 
@@ -147,11 +181,10 @@ export default function Microsoft365Settings() {
         throw new Error(result.error || "Errore nel salvataggio");
       }
 
-      // Result config is already validated by API
       setConfig(result.config);
       setClientSecret(""); 
+      setSuccessMessage("✅ Configurazione salvata con successo!");
       
-      // Auto-test after save
       await handleTest();
       
     } catch (err) {
@@ -204,6 +237,52 @@ export default function Microsoft365Settings() {
     }
   }
 
+  async function handleConnect() {
+    if (!config) {
+      setError("Configura prima l'app Azure AD (Client ID, Tenant ID, Secret)");
+      return;
+    }
+
+    if (!config.enabled) {
+      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+    startMicrosoftOAuthFlow();
+  }
+
+  async function handleDisconnect() {
+    const confirmed = window.confirm(
+      "Sei sicuro di voler disconnettere il tuo account Microsoft 365?\n\n" +
+      "Perderai l'accesso a Teams, Mail e Calendar finché non ti riconnetti."
+    );
+
+    if (!confirmed) return;
+
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await disconnectMicrosoft365(userId);
+
+      if (!result.success) {
+        throw new Error(result.error || "Errore durante la disconnessione");
+      }
+
+      setUserConnection({ isConnected: false });
+      setSuccessMessage("✅ Account Microsoft 365 disconnesso con successo");
+      
+    } catch (err) {
+      console.error("Disconnect error:", err);
+      setError(err instanceof Error ? err.message : "Errore durante la disconnessione");
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -220,7 +299,20 @@ export default function Microsoft365Settings() {
         <p className="text-muted-foreground">Configura l&apos;integrazione con Microsoft 365 per il tuo studio</p>
       </div>
 
-      {/* Info Card */}
+      {successMessage && (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
@@ -229,7 +321,6 @@ export default function Microsoft365Settings() {
         </AlertDescription>
       </Alert>
 
-      {/* Status Card */}
       {config && (
         <Card>
           <CardHeader>
@@ -253,7 +344,92 @@ export default function Microsoft365Settings() {
         </Card>
       )}
 
-      {/* Test Result */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {userConnection.isConnected ? (
+              <>
+                <UserCheck className="h-5 w-5 text-green-500" />
+                Account Connesso
+              </>
+            ) : (
+              <>
+                <UserX className="h-5 w-5 text-gray-400" />
+                Account Non Connesso
+              </>
+            )}
+          </CardTitle>
+          <CardDescription>
+            Stato della tua connessione personale a Microsoft 365
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {userConnection.isConnected ? (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">✅ Connesso</span>
+                </div>
+                {userConnection.lastConnection && (
+                  <p className="text-sm text-muted-foreground">
+                    Ultima connessione: {userConnection.lastConnection.toLocaleString("it-IT", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })}
+                  </p>
+                )}
+                {userConnection.microsoftUserId && (
+                  <p className="text-xs text-muted-foreground">
+                    ID Microsoft: {userConnection.microsoftUserId}
+                  </p>
+                )}
+              </div>
+              
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnect}
+                  disabled={disconnecting}
+                >
+                  {disconnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Disconnetti Account
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">⚠️ Non connesso</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Connetti il tuo account Microsoft per accedere a Teams, Mail e Calendar
+                </p>
+              </div>
+              
+              <div className="pt-2">
+                <Button
+                  onClick={handleConnect}
+                  disabled={!config || !config.enabled}
+                >
+                  Connetti Microsoft 365
+                </Button>
+                {!config && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    ⚠️ Prima configura l&apos;app Azure AD nella sezione sottostante
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {testResult && (
         <Alert variant={testResult.success ? "default" : "destructive"}>
           {testResult.success ? (
@@ -279,18 +455,9 @@ export default function Microsoft365Settings() {
         </Alert>
       )}
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Configuration Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Credenziali Azure AD</CardTitle>
+          <CardTitle>Credenziali Azure AD (Configurazione Studio)</CardTitle>
           <CardDescription>
             Configura l&apos;applicazione Microsoft 365 per il tuo studio.
             <a 
@@ -340,20 +507,6 @@ export default function Microsoft365Settings() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="organizerEmail">Email Organizer (Opzionale)</Label>
-            <Input
-              id="organizerEmail"
-              type="email"
-              placeholder="agenda@tuostudio.com"
-              value={organizerEmail}
-              onChange={(e) => setOrganizerEmail(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Email usata come organizzatore per eventi e meeting Teams
-            </p>
-          </div>
-
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleSave}
@@ -378,7 +531,6 @@ export default function Microsoft365Settings() {
         </CardContent>
       </Card>
 
-      {/* Setup Guide Link */}
       <Card>
         <CardHeader>
           <CardTitle>Guida alla Configurazione</CardTitle>
