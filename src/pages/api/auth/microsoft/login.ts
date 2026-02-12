@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
+import type { Database } from "@/integrations/supabase/types";
 
 /**
  * Microsoft OAuth Login Endpoint
@@ -20,6 +21,23 @@ interface ErrorResponse {
   details?: string;
 }
 
+/**
+ * Helper per leggere i cookie di autenticazione Supabase
+ */
+function getSupabaseAuthCookies(req: NextApiRequest): string {
+  const cookies = req.cookies;
+  const authCookies: string[] = [];
+  
+  // Supabase usa cookie con pattern: sb-<project-ref>-auth-token
+  Object.keys(cookies).forEach((key) => {
+    if (key.startsWith("sb-") && key.includes("-auth-token")) {
+      authCookies.push(`${key}=${cookies[key]}`);
+    }
+  });
+  
+  return authCookies.join("; ");
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ErrorResponse>
@@ -31,19 +49,26 @@ export default async function handler(
   try {
     // ✅ LOGGING INIZIALE
     console.log("[OAuth Login] Request received:", {
+      method: req.method,
       host: req.headers.host,
       origin: req.headers.origin,
       referer: req.headers.referer,
-      cookies: !!req.headers.cookie,
+      userAgent: req.headers["user-agent"],
+      hasCookies: !!req.headers.cookie,
+      cookieKeys: Object.keys(req.cookies || {}).filter(k => k.startsWith("sb-")),
     });
 
-    // ✅ 1. Crea client Supabase con cookie support (auth-helpers)
-    const supabase = createServerClient(
+    // ✅ 1. Crea client Supabase con cookie support manuale
+    const supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        req,
-        res,
+        global: {
+          headers: {
+            // Passa i cookie di auth al client Supabase
+            cookie: getSupabaseAuthCookies(req),
+          },
+        },
       }
     );
     
@@ -53,16 +78,26 @@ export default async function handler(
     console.log("[OAuth Login] Session check:", {
       hasUser: !!user,
       userId: user?.id,
+      userEmail: user?.email,
       error: userError?.message,
+      errorCode: userError?.status,
     });
 
     if (userError || !user) {
-      console.error("[OAuth Login] Auth error:", userError);
+      console.error("[OAuth Login] Auth error:", {
+        error: userError,
+        message: "No valid session found in cookies"
+      });
       return res.status(401).json({ 
         error: "Non autenticato",
         details: "Sessione non valida. Effettua il login."
       });
     }
+
+    console.log("[OAuth Login] User authenticated:", {
+      userId: user.id,
+      email: user.email,
+    });
 
     // ✅ 3. Recupera studio_id dell'utente
     const { data: userData, error: studioError } = await supabase
@@ -70,6 +105,12 @@ export default async function handler(
       .select("studio_id")
       .eq("id", user.id)
       .single();
+
+    console.log("[OAuth Login] Studio lookup:", {
+      found: !!userData?.studio_id,
+      studioId: userData?.studio_id,
+      error: studioError?.message,
+    });
 
     if (studioError || !userData?.studio_id) {
       console.error("[OAuth Login] Studio lookup failed:", studioError);
@@ -80,18 +121,28 @@ export default async function handler(
     }
 
     const studioId = userData.studio_id;
-    console.log("[OAuth Login] Studio found:", studioId);
 
     // ✅ 4. Recupera config M365 per lo studio
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: config } = await supabaseAdmin
+    const { data: config, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, tenant_id")
       .eq("studio_id", studioId)
       .single();
 
-    if (!config) {
-      console.error("[OAuth Login] No M365 config found for studio:", studioId);
+    console.log("[OAuth Login] Config lookup:", {
+      found: !!config,
+      studioId,
+      hasClientId: !!config?.client_id,
+      hasTenantId: !!config?.tenant_id,
+      error: configError?.message,
+    });
+
+    if (configError || !config) {
+      console.error("[OAuth Login] No M365 config found:", {
+        studioId,
+        error: configError
+      });
       return res.status(400).json({ 
         error: "Microsoft 365 non configurato",
         details: "Chiedi all'amministratore di configurare Microsoft 365 in Impostazioni → Microsoft 365"
@@ -106,7 +157,8 @@ export default async function handler(
     console.log("[OAuth Login] Config loaded:", {
       studioId,
       tenantId: configData.tenant_id,
-      hasClientId: !!configData.client_id
+      clientIdLength: configData.client_id.length,
+      clientIdPrefix: configData.client_id.substring(0, 8) + "...",
     });
 
     // ✅ 5. Genera parametri OAuth (PKCE, State)
@@ -126,12 +178,19 @@ export default async function handler(
     ]);
 
     // ✅ 7. Costruisci Redirect URI
-    // Priorità: NEXT_PUBLIC_SITE_URL (Prod) > NEXT_PUBLIC_APP_URL > Default Vercel
+    // FORZA dominio production da env, fallback a studio-manager-pro.vercel.app
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
       || process.env.NEXT_PUBLIC_APP_URL 
       || "https://studio-manager-pro.vercel.app";
     
     const redirectUri = `${baseUrl}/api/auth/microsoft/callback`;
+
+    console.log("[OAuth Login] Redirect URI:", {
+      baseUrl,
+      redirectUri,
+      envSiteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+      envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+    });
 
     // ✅ 8. Scopes richiesti
     const scopes = [
@@ -158,20 +217,27 @@ export default async function handler(
     authUrl.searchParams.set("code_challenge_method", "S256");
     authUrl.searchParams.set("response_mode", "query");
 
-    console.log("[OAuth Login] Redirecting to Microsoft:", {
+    console.log("[OAuth Login] Authorization URL generated:", {
       userId: user.id,
       studioId,
       tenantId: configData.tenant_id,
       redirectUri,
-      authUrl: authUrl.toString().substring(0, 100) + "...", // Log parziale per sicurezza
-      hasPKCE: true
+      authUrlLength: authUrl.toString().length,
+      authUrlStart: authUrl.toString().substring(0, 100) + "...",
+      hasPKCE: true,
+      hasState: true,
     });
 
     // ✅ 10. Esegui Redirect 302
+    console.log("[OAuth Login] Redirecting to Microsoft (302)");
     res.redirect(302, authUrl.toString());
 
   } catch (error) {
-    console.error("[OAuth Login] Unexpected error:", error);
+    console.error("[OAuth Login] Unexpected error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return res.status(500).json({ 
       error: "Errore interno del server",
       details: error instanceof Error ? error.message : "Errore sconosciuto"
