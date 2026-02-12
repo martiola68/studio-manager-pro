@@ -1,105 +1,52 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
-import type { Database } from "@/integrations/supabase/types";
-
-/**
- * Microsoft OAuth Login Endpoint
- * 
- * Inizia il flusso OAuth 2.0 con:
- * - State anti-CSRF (generato e salvato in cookie)
- * - PKCE (Code Verifier + Code Challenge)
- * - Redirect a Microsoft login
- * 
- * Pattern: Authorization Code Flow with PKCE
- * Uses cookie-based auth for session validation.
- */
-
-interface ErrorResponse {
-  error: string;
-  details?: string;
-}
-
-/**
- * Helper per leggere i cookie di autenticazione Supabase
- */
-function getSupabaseAuthCookies(req: NextApiRequest): string {
-  const cookies = req.cookies;
-  const authCookies: string[] = [];
-  
-  // Supabase usa cookie con pattern: sb-<project-ref>-auth-token
-  Object.keys(cookies).forEach((key) => {
-    if (key.startsWith("sb-") && key.includes("-auth-token")) {
-      authCookies.push(`${key}=${cookies[key]}`);
-    }
-  });
-  
-  return authCookies.join("; ");
-}
+import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ErrorResponse>
+  res: NextApiResponse
 ) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // ✅ LOGGING INIZIALE
     console.log("[OAuth Login] Request received:", {
-      method: req.method,
       host: req.headers.host,
       origin: req.headers.origin,
-      referer: req.headers.referer,
-      userAgent: req.headers["user-agent"],
-      hasCookies: !!req.headers.cookie,
-      cookieKeys: Object.keys(req.cookies || {}).filter(k => k.startsWith("sb-")),
+      cookies: Object.keys(req.cookies),
     });
 
-    // ✅ 1. Crea client Supabase con cookie support manuale
-    const supabase = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            // Passa i cookie di auth al client Supabase
-            cookie: getSupabaseAuthCookies(req),
-          },
-        },
-      }
-    );
-    
-    // ✅ 2. Leggi utente autenticato da cookies
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const supabase = createClient(req, res);
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
     console.log("[OAuth Login] Session check:", {
-      hasUser: !!user,
-      userId: user?.id,
-      userEmail: user?.email,
-      error: userError?.message,
-      errorCode: userError?.status,
+      authenticated: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      sessionError: sessionError?.message,
     });
 
-    if (userError || !user) {
-      console.error("[OAuth Login] Auth error:", {
-        error: userError,
-        message: "No valid session found in cookies"
-      });
-      return res.status(401).json({ 
+    if (!session) {
+      console.log("[OAuth Login] No session - returning 401");
+      return res.status(401).json({
         error: "Non autenticato",
-        details: "Sessione non valida. Effettua il login."
+        details: "Sessione non valida. Effettua il login.",
       });
     }
+
+    const user = session.user;
 
     console.log("[OAuth Login] User authenticated:", {
       userId: user.id,
       email: user.email,
     });
 
-    // ✅ 3. Recupera studio_id dell'utente
     const { data: userData, error: studioError } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -122,7 +69,6 @@ export default async function handler(
 
     const studioId = userData.studio_id;
 
-    // ✅ 4. Recupera config M365 per lo studio
     const supabaseAdmin = getSupabaseAdmin();
     const { data: config, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
@@ -161,7 +107,6 @@ export default async function handler(
       clientIdPrefix: configData.client_id.substring(0, 8) + "...",
     });
 
-    // ✅ 5. Genera parametri OAuth (PKCE, State)
     const state = crypto.randomBytes(32).toString("hex");
     const codeVerifier = crypto.randomBytes(32).toString("base64url");
     const codeChallenge = crypto
@@ -169,16 +114,12 @@ export default async function handler(
       .update(codeVerifier)
       .digest("base64url");
 
-    // ✅ 6. Setta cookies per callback
-    // Usa SameSite=Lax per permettere il ritorno dopo redirect esterno
     res.setHeader("Set-Cookie", [
       `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_code_verifier=${codeVerifier}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_user_id=${user.id}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
     ]);
 
-    // ✅ 7. Costruisci Redirect URI
-    // FORZA dominio production da env, fallback a studio-manager-pro.vercel.app
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
       || process.env.NEXT_PUBLIC_APP_URL 
       || "https://studio-manager-pro.vercel.app";
@@ -192,7 +133,6 @@ export default async function handler(
       envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
     });
 
-    // ✅ 8. Scopes richiesti
     const scopes = [
       "User.Read",
       "Calendars.ReadWrite",
@@ -205,7 +145,6 @@ export default async function handler(
       "email"
     ].join(" ");
 
-    // ✅ 9. Costruisci Authorization URL
     const authUrl = new URL(`https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/authorize`);
     
     authUrl.searchParams.set("client_id", configData.client_id);
@@ -228,7 +167,6 @@ export default async function handler(
       hasState: true,
     });
 
-    // ✅ 10. Esegui Redirect 302
     console.log("[OAuth Login] Redirecting to Microsoft (302)");
     res.redirect(302, authUrl.toString());
 

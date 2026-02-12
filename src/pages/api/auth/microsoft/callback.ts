@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
+import { encrypt, decrypt } from "@/lib/encryption365";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { encrypt } from "@/lib/encryption365";
 
 /**
  * Microsoft OAuth Callback Endpoint
@@ -41,10 +41,37 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method !== "GET") {
-    return res.status(405).send("Method not allowed");
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
+    console.log("[OAuth Callback] Request received:", {
+      code: !!req.query.code,
+      state: !!req.query.state,
+      cookies: Object.keys(req.cookies),
+    });
+
+    const supabase = createClient(req, res);
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    console.log("[OAuth Callback] Session check:", {
+      authenticated: !!session,
+      userId: session?.user?.id,
+      sessionError: sessionError?.message,
+    });
+
+    if (!session) {
+      console.log("[OAuth Callback] No session - returning 401");
+      return res.status(401).json({
+        error: "Non autenticato",
+        details: "Sessione non valida per OAuth callback.",
+      });
+    }
+
     const { code, state, error, error_description } = req.query;
 
     if (error) {
@@ -115,7 +142,6 @@ export default async function handler(
       tenant_id: string;
     };
 
-    const { decrypt } = await import("@/lib/encryption365");
     const clientSecret = decrypt(configData.client_secret);
 
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
