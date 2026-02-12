@@ -123,7 +123,7 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
     }
 
     // Cast esplicito per risolvere errori TypeScript
-    const configData = rawConfigData as {
+    const configData = rawConfigData as unknown as {
       client_id: string;
       client_secret_encrypted: string;
       tenant_id: string;
