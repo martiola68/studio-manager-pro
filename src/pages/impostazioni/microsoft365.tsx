@@ -164,7 +164,7 @@ export default function Microsoft365Settings() {
     setSuccessMessage(null);
 
     try {
-      const response = await fetch("/api/microsoft365/save-config", {
+      const response = await fetch(`${window.location.origin}/api/microsoft365/save-config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -206,7 +206,7 @@ export default function Microsoft365Settings() {
     setTestResult(null);
 
     try {
-      const response = await fetch("/api/microsoft365/test-connection", {
+      const response = await fetch(`${window.location.origin}/api/microsoft365/test-connection`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studioId }),
