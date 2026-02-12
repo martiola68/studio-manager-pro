@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/encryption365";
 
 /**
@@ -105,6 +105,7 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
       throw new Error("Studio not found for user");
     }
 
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: rawConfigData, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, client_secret, tenant_id")

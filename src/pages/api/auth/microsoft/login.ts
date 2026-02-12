@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { decrypt } from "@/lib/encryption365";
 import crypto from "crypto";
 
 /**
@@ -63,31 +64,24 @@ export default async function handler(
 
     const studioId = userData.studio_id;
 
-    const { data: rawConfigData, error: configError } = await supabaseAdmin
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: config } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, tenant_id, enabled")
+      .select("client_id, tenant_id")
       .eq("studio_id", studioId)
-      .maybeSingle();
+      .single();
 
-    if (configError || !rawConfigData) {
+    if (!config) {
       return res.status(400).json({ 
         error: "Microsoft 365 non configurato",
         details: "Chiedi all'amministratore di configurare Microsoft 365 in Impostazioni → Microsoft 365"
       });
     }
 
-    const configData = rawConfigData as unknown as {
+    const configData = config as unknown as {
       client_id: string;
       tenant_id: string;
-      enabled: boolean;
     };
-
-    if (!configData.enabled) {
-      return res.status(400).json({ 
-        error: "Microsoft 365 disabilitato",
-        details: "L'integrazione Microsoft 365 è disabilitata per questo studio."
-      });
-    }
 
     const state = crypto.randomBytes(32).toString("hex");
     const codeVerifier = crypto.randomBytes(32).toString("base64url");

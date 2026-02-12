@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/encryption365";
 import { tokenCache } from "@/services/tokenCacheService";
 import { z } from "zod";
@@ -67,42 +67,42 @@ export default async function handler(
       return res.status(404).json({ error: "Studio not found" });
     }
 
-    const { data: existingData, error: checkError } = await supabaseAdmin
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: existingData } = await supabaseAdmin
       .from("microsoft365_config")
       .select("id")
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    if (checkError) {
-      throw checkError;
-    }
-
     let resultData: unknown;
 
     if (existingData) {
-      const updateData: Record<string, unknown> = {
+      const updateData: {
+        client_id: string;
+        tenant_id: string;
+        enabled: boolean;
+        client_secret?: string;
+      } = {
         client_id: clientId,
         tenant_id: tenantId,
-        organizer_email: organizerEmail || null,
         enabled: true,
-        updated_at: new Date().toISOString(),
       };
 
       if (clientSecret) {
         updateData.client_secret = encrypt(clientSecret);
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data: updatedConfig, error: updateError } = await supabaseAdmin
         .from("microsoft365_config")
         .update(updateData)
         .eq("studio_id", studioId)
         .select()
         .single();
 
-      if (error) {
-        throw error;
+      if (updateError) {
+        throw updateError;
       }
-      resultData = data;
+      resultData = updatedConfig;
     } else {
       if (!clientSecret) {
         return res.status(400).json({
@@ -110,25 +110,22 @@ export default async function handler(
         });
       }
 
-      const encryptedSecret = encrypt(clientSecret);
-
-      const { data, error } = await supabaseAdmin
+      const { data: newConfig, error: insertError } = await supabaseAdmin
         .from("microsoft365_config")
         .insert({
           studio_id: studioId,
           client_id: clientId,
-          client_secret: encryptedSecret,
+          client_secret: encrypt(clientSecret),
           tenant_id: tenantId,
-          organizer_email: organizerEmail || null,
           enabled: true,
         })
         .select()
         .single();
 
-      if (error) {
-        throw error;
+      if (insertError) {
+        throw insertError;
       }
-      resultData = data;
+      resultData = newConfig;
     }
 
     const parsedDB = ConfigRowSchema.safeParse(resultData);

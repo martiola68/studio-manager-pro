@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { supabase } from "@/lib/supabase/client";
 import { decrypt } from "@/lib/encryption365";
 import { z } from "zod";
 
@@ -49,40 +50,41 @@ export default async function handler(
 
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
-    const { data, error } = await supabaseAdmin
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: config, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, client_secret, tenant_id, enabled")
+      .select("client_id, client_secret, tenant_id")
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    if (error) throw error;
-    if (!data) {
+    if (configError) throw configError;
+    if (!config) {
       return res.status(404).json({
         success: false,
         error: "Microsoft 365 not configured for this studio",
       });
     }
 
-    const dbParse = DBConfigSchema.safeParse(data);
+    const dbParse = DBConfigSchema.safeParse(config);
     if (!dbParse.success) {
       return res.status(500).json({ error: "Invalid database configuration data" });
     }
-    const config = dbParse.data;
+    const configData = dbParse.data;
 
-    if (!config.enabled) {
+    if (!configData.enabled) {
       return res.status(400).json({
         success: false,
         error: "Microsoft 365 integration is disabled",
       });
     }
 
-    const clientSecret = decrypt(config.client_secret);
+    const clientSecret = decrypt(configData.client_secret);
 
     console.log("[M365 Test] Obtaining access token...");
-    const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
+    const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
 
     const params = new URLSearchParams({
-      client_id: config.client_id,
+      client_id: configData.client_id,
       client_secret: clientSecret,
       scope: "https://graph.microsoft.com/.default",
       grant_type: "client_credentials",
@@ -135,7 +137,7 @@ export default async function handler(
       success: true,
       message: "Microsoft 365 connection successful",
       organization: orgName,
-      tenant_id: config.tenant_id,
+      tenant_id: configData.tenant_id,
       expires_in,
     });
 

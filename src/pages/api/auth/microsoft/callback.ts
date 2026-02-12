@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/lib/supabase/client";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/encryption365";
 
 /**
@@ -95,6 +95,7 @@ export default async function handler(
 
     const studioId = userData.studio_id;
 
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: rawConfigData, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, client_secret, tenant_id")
