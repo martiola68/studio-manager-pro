@@ -473,7 +473,7 @@ export default function Microsoft365Settings() {
               placeholder="12345678-1234-1234-1234-123456789abc"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              autocomplete="off"
+              autoComplete="off"
             />
           </div>
 
@@ -487,7 +487,7 @@ export default function Microsoft365Settings() {
               placeholder={config ? "••••••••••••••••" : "Client Secret"}
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
-              autocomplete="new-password"
+              autoComplete="new-password"
             />
             <p className="text-xs text-muted-foreground">
               Il secret viene cifrato con AES-256-GCM prima del salvataggio.
@@ -501,7 +501,7 @@ export default function Microsoft365Settings() {
               placeholder="12345678-1234-1234-1234-123456789abc"
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}
-              autocomplete="off"
+              autoComplete="off"
             />
           </div>
 
