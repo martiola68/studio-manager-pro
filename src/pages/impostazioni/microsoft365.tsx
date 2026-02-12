@@ -10,8 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 import { 
   getUserConnectionStatus, 
-  disconnectMicrosoft365, 
-  startMicrosoftOAuthFlow,
+  disconnectMicrosoft365,
   type UserConnectionStatus 
 } from "@/services/microsoft365UserService";
 
@@ -250,7 +249,8 @@ export default function Microsoft365Settings() {
 
     setError(null);
     setSuccessMessage(null);
-    startMicrosoftOAuthFlow();
+    
+    window.location.href = "/api/auth/microsoft/login";
   }
 
   async function handleDisconnect() {

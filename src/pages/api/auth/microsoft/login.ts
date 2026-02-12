@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { decrypt } from "@/lib/encryption365";
 import crypto from "crypto";
 
 /**
@@ -13,7 +12,7 @@ import crypto from "crypto";
  * - Redirect a Microsoft login
  * 
  * Pattern: Authorization Code Flow with PKCE
- * Uses supabaseAdmin (service role) to bypass RLS.
+ * Uses cookie-based auth for session validation.
  */
 
 interface ErrorResponse {
@@ -30,21 +29,22 @@ export default async function handler(
   }
 
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.replace("Bearer ", "");
+    const supabase = createPagesServerClient({ req, res });
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (!token) {
-      return res.status(401).json({ 
-        error: "Non autenticato",
-        details: "Sessione non valida. Effettua il login."
-      });
-    }
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    console.log("[OAuth Login] Session check:", {
+      hasUser: !!user,
+      userId: user?.id,
+      error: userError?.message,
+      host: req.headers.host,
+      origin: req.headers.origin,
+    });
 
     if (userError || !user) {
+      console.error("[OAuth Login] Auth error:", userError);
       return res.status(401).json({ 
-        error: "Utente non trovato",
+        error: "Non autenticato",
         details: "Sessione non valida. Effettua il login."
       });
     }
@@ -56,6 +56,7 @@ export default async function handler(
       .single();
 
     if (studioError || !userData?.studio_id) {
+      console.error("[OAuth Login] Studio lookup failed:", studioError);
       return res.status(400).json({ 
         error: "Studio non trovato",
         details: "Configurazione studio mancante."
@@ -63,6 +64,7 @@ export default async function handler(
     }
 
     const studioId = userData.studio_id;
+    console.log("[OAuth Login] Studio found:", studioId);
 
     const supabaseAdmin = getSupabaseAdmin();
     const { data: config } = await supabaseAdmin
@@ -72,6 +74,7 @@ export default async function handler(
       .single();
 
     if (!config) {
+      console.error("[OAuth Login] No M365 config found for studio:", studioId);
       return res.status(400).json({ 
         error: "Microsoft 365 non configurato",
         details: "Chiedi all'amministratore di configurare Microsoft 365 in Impostazioni → Microsoft 365"
@@ -82,6 +85,12 @@ export default async function handler(
       client_id: string;
       tenant_id: string;
     };
+
+    console.log("[OAuth Login] Config loaded:", {
+      studioId,
+      tenantId: configData.tenant_id,
+      hasClientId: !!configData.client_id
+    });
 
     const state = crypto.randomBytes(32).toString("hex");
     const codeVerifier = crypto.randomBytes(32).toString("base64url");
@@ -96,7 +105,11 @@ export default async function handler(
       `oauth_user_id=${user.id}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
     ]);
 
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
+      || process.env.NEXT_PUBLIC_APP_URL 
+      || "https://studio-manager-pro.vercel.app";
+    
+    const redirectUri = `${baseUrl}/api/auth/microsoft/callback`;
 
     const scopes = [
       "User.Read",
@@ -126,6 +139,7 @@ export default async function handler(
       studioId,
       tenantId: configData.tenant_id,
       redirectUri,
+      authUrl: authUrl.toString().substring(0, 100) + "...",
       hasPKCE: true
     });
 
