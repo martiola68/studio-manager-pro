@@ -59,6 +59,17 @@ export default async function handler(
       organizerEmail,
     } = parseResult.data;
 
+    // 🔍 DEBUG LOG 1: Request data (TEMPORARY - REMOVE AFTER DEBUG)
+    console.log("========================================");
+    console.log("🔍 [SAVE CONFIG DEBUG] Request received:");
+    console.log("  studioId:", studioId);
+    console.log("  clientId:", clientId);
+    console.log("  tenantId:", tenantId);
+    console.log("  organizerEmail:", organizerEmail);
+    console.log("  clientSecret provided:", clientSecret ? "YES (length: " + clientSecret.length + ")" : "NO");
+    console.log("  req.body keys:", Object.keys(req.body));
+    console.log("========================================");
+
     // 2. Validate Studio Existence
     const { data: studio, error: studioError } = await supabase
       .from("tbstudio")
@@ -67,8 +78,11 @@ export default async function handler(
       .single();
 
     if (studioError || !studio) {
+      console.log("❌ [SAVE CONFIG DEBUG] Studio not found:", studioId);
       return res.status(404).json({ error: "Studio not found" });
     }
+
+    console.log("✅ [SAVE CONFIG DEBUG] Studio found:", studio.id);
 
     // 3. Check for existing config
     const { data: existingData, error: checkError } = await supabase
@@ -77,7 +91,17 @@ export default async function handler(
       .eq("studio_id", studioId)
       .maybeSingle();
 
+    // 🔍 DEBUG LOG 2: Existing config query result (TEMPORARY - REMOVE AFTER DEBUG)
+    console.log("========================================");
+    console.log("🔍 [SAVE CONFIG DEBUG] Existing config query:");
+    console.log("  Query filter: studio_id =", studioId);
+    console.log("  existingData:", existingData);
+    console.log("  checkError:", checkError);
+    console.log("  Found existing config?", existingData ? "YES (id: " + existingData.id + ")" : "NO");
+    console.log("========================================");
+
     if (checkError) {
+      console.log("❌ [SAVE CONFIG DEBUG] Query error:", checkError);
       throw checkError;
     }
 
@@ -85,7 +109,7 @@ export default async function handler(
 
     // 4. Update or Insert
     if (existingData) {
-      console.log("[M365 Config] Updating existing config for studio:", studioId);
+      console.log("🔄 [SAVE CONFIG DEBUG] UPDATING existing config for studio:", studioId);
       
       const updateData: Record<string, unknown> = {
         client_id: clientId,
@@ -97,7 +121,12 @@ export default async function handler(
 
       if (clientSecret) {
         updateData.client_secret_encrypted = encrypt(clientSecret);
+        console.log("🔐 [SAVE CONFIG DEBUG] Encrypting and updating client_secret");
+      } else {
+        console.log("⚠️ [SAVE CONFIG DEBUG] No client_secret provided - keeping existing");
       }
+
+      console.log("📝 [SAVE CONFIG DEBUG] Update data keys:", Object.keys(updateData));
 
       const { data, error } = await supabase
         .from("microsoft365_config")
@@ -106,17 +135,23 @@ export default async function handler(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.log("❌ [SAVE CONFIG DEBUG] UPDATE failed:", error);
+        throw error;
+      }
+      console.log("✅ [SAVE CONFIG DEBUG] UPDATE successful");
       resultData = data;
     } else {
       if (!clientSecret) {
+        console.log("❌ [SAVE CONFIG DEBUG] INSERT blocked - client_secret required for new config");
         return res.status(400).json({
           error: "Client secret is required for new configuration",
         });
       }
 
-      console.log("[M365 Config] Creating new config for studio:", studioId);
+      console.log("➕ [SAVE CONFIG DEBUG] INSERTING new config for studio:", studioId);
       const encryptedSecret = encrypt(clientSecret);
+      console.log("🔐 [SAVE CONFIG DEBUG] Client secret encrypted (length:", encryptedSecret.length, ")");
 
       const { data, error } = await supabase
         .from("microsoft365_config")
@@ -131,7 +166,11 @@ export default async function handler(
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.log("❌ [SAVE CONFIG DEBUG] INSERT failed:", error);
+        throw error;
+      }
+      console.log("✅ [SAVE CONFIG DEBUG] INSERT successful");
       resultData = data;
     }
 
