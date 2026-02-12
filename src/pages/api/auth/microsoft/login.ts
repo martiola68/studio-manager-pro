@@ -29,16 +29,24 @@ export default async function handler(
   }
 
   try {
+    // ✅ LOGGING INIZIALE
+    console.log("[OAuth Login] Request received:", {
+      host: req.headers.host,
+      origin: req.headers.origin,
+      referer: req.headers.referer,
+      cookies: !!req.headers.cookie,
+    });
+
+    // ✅ 1. Crea client Supabase con cookie support (auth-helpers)
     const supabase = createPagesServerClient({ req, res });
     
+    // ✅ 2. Leggi utente autenticato da cookies
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     console.log("[OAuth Login] Session check:", {
       hasUser: !!user,
       userId: user?.id,
       error: userError?.message,
-      host: req.headers.host,
-      origin: req.headers.origin,
     });
 
     if (userError || !user) {
@@ -49,6 +57,7 @@ export default async function handler(
       });
     }
 
+    // ✅ 3. Recupera studio_id dell'utente
     const { data: userData, error: studioError } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -66,6 +75,7 @@ export default async function handler(
     const studioId = userData.studio_id;
     console.log("[OAuth Login] Studio found:", studioId);
 
+    // ✅ 4. Recupera config M365 per lo studio
     const supabaseAdmin = getSupabaseAdmin();
     const { data: config } = await supabaseAdmin
       .from("microsoft365_config")
@@ -92,6 +102,7 @@ export default async function handler(
       hasClientId: !!configData.client_id
     });
 
+    // ✅ 5. Genera parametri OAuth (PKCE, State)
     const state = crypto.randomBytes(32).toString("hex");
     const codeVerifier = crypto.randomBytes(32).toString("base64url");
     const codeChallenge = crypto
@@ -99,18 +110,23 @@ export default async function handler(
       .update(codeVerifier)
       .digest("base64url");
 
+    // ✅ 6. Setta cookies per callback
+    // Usa SameSite=Lax per permettere il ritorno dopo redirect esterno
     res.setHeader("Set-Cookie", [
       `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_code_verifier=${codeVerifier}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
       `oauth_user_id=${user.id}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
     ]);
 
+    // ✅ 7. Costruisci Redirect URI
+    // Priorità: NEXT_PUBLIC_SITE_URL (Prod) > NEXT_PUBLIC_APP_URL > Default Vercel
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL 
       || process.env.NEXT_PUBLIC_APP_URL 
       || "https://studio-manager-pro.vercel.app";
     
     const redirectUri = `${baseUrl}/api/auth/microsoft/callback`;
 
+    // ✅ 8. Scopes richiesti
     const scopes = [
       "User.Read",
       "Calendars.ReadWrite",
@@ -123,6 +139,7 @@ export default async function handler(
       "email"
     ].join(" ");
 
+    // ✅ 9. Costruisci Authorization URL
     const authUrl = new URL(`https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/authorize`);
     
     authUrl.searchParams.set("client_id", configData.client_id);
@@ -139,10 +156,11 @@ export default async function handler(
       studioId,
       tenantId: configData.tenant_id,
       redirectUri,
-      authUrl: authUrl.toString().substring(0, 100) + "...",
+      authUrl: authUrl.toString().substring(0, 100) + "...", // Log parziale per sicurezza
       hasPKCE: true
     });
 
+    // ✅ 10. Esegui Redirect 302
     res.redirect(302, authUrl.toString());
 
   } catch (error) {
