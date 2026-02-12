@@ -98,18 +98,25 @@ export default async function handler(
     const studioId = userData.studio_id;
 
     // 6. Recupera configurazione Microsoft 365
-    const { data: configData, error: configError } = await supabase
+    const { data: rawConfigData, error: configError } = await supabase
       .from("microsoft365_config")
       .select("client_id, client_secret_encrypted, tenant_id")
       .eq("studio_id", studioId)
       .single();
 
-    if (configError || !configData) {
+    if (configError || !rawConfigData) {
       console.error("[OAuth Callback] Config not found:", configError);
       return res.redirect(
         "/impostazioni/microsoft365?error=config_not_found&message=Configurazione+non+trovata"
       );
     }
+
+    // Cast esplicito per risolvere errori TypeScript
+    const configData = rawConfigData as unknown as {
+      client_id: string;
+      client_secret_encrypted: string;
+      tenant_id: string;
+    };
 
     // 7. Decifra client_secret
     const { decrypt } = await import("@/lib/encryption365");
