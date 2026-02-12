@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createPagesServerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import crypto from "crypto";
 
@@ -38,7 +38,14 @@ export default async function handler(
     });
 
     // ✅ 1. Crea client Supabase con cookie support (auth-helpers)
-    const supabase = createPagesServerClient({ req, res });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        req,
+        res,
+      }
+    );
     
     // ✅ 2. Leggi utente autenticato da cookies
     const { data: { user }, error: userError } = await supabase.auth.getUser();
