@@ -382,11 +382,6 @@ export default function Microsoft365Settings() {
                     })}
                   </p>
                 )}
-                {userConnection.microsoftUserId && (
-                  <p className="text-xs text-muted-foreground">
-                    ID Microsoft: {userConnection.microsoftUserId}
-                  </p>
-                )}
               </div>
               
               <div className="pt-2">

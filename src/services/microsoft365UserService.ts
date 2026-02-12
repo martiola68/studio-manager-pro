@@ -5,20 +5,21 @@ import { supabase } from "@/lib/supabase/client";
  */
 export interface UserConnectionStatus {
   isConnected: boolean;
-  microsoftUserId?: string;
   lastConnection?: Date;
   expiresAt?: Date;
 }
 
 /**
  * Recupera lo stato della connessione Microsoft 365 per l'utente corrente
+ * 
+ * NOTA: Usa SOLO campi esistenti nel DB oggi (expires_at, created_at)
+ * Dopo migration, potremo aggiungere microsoft_user_id e updated_at
  */
 export async function getUserConnectionStatus(userId: string): Promise<UserConnectionStatus> {
   try {
-    // Cast a any per permettere la selezione di colonne che verranno aggiunte con la migration successiva
-    const { data: rawData, error } = await supabase
-      .from("tbmicrosoft_tokens" as any)
-      .select("microsoft_user_id, expires_at, created_at, updated_at")
+    const { data, error } = await supabase
+      .from("tbmicrosoft_tokens")
+      .select("expires_at, created_at")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -27,22 +28,13 @@ export async function getUserConnectionStatus(userId: string): Promise<UserConne
       return { isConnected: false };
     }
 
-    if (!rawData) {
+    if (!data) {
       return { isConnected: false };
     }
 
-    // Cast esplicito dei dati ritornati
-    const data = rawData as unknown as {
-      microsoft_user_id: string | null;
-      expires_at: string;
-      created_at: string;
-      updated_at: string;
-    };
-
     return {
       isConnected: true,
-      microsoftUserId: data.microsoft_user_id || undefined,
-      lastConnection: data.updated_at ? new Date(data.updated_at) : new Date(data.created_at),
+      lastConnection: data.created_at ? new Date(data.created_at) : undefined,
       expiresAt: data.expires_at ? new Date(data.expires_at) : undefined,
     };
   } catch (err) {
