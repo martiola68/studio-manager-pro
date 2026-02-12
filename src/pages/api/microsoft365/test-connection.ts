@@ -50,7 +50,7 @@ export default async function handler(
 
     // Get config from DB
     const { data, error } = await supabase
-      .from("tbmicrosoft365_config" as any)
+      .from("microsoft365_config")
       .select("client_id, client_secret_encrypted, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();

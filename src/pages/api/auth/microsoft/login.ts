@@ -64,25 +64,18 @@ export default async function handler(
     const studioId = userData.studio_id;
 
     // 3. Recupera configurazione Microsoft 365
-    const { data: rawConfigData, error: configError } = await supabase
-      .from("tbmicrosoft365_config" as any)
+    const { data: configData, error: configError } = await supabase
+      .from("microsoft365_config")
       .select("client_id, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    if (configError || !rawConfigData) {
+    if (configError || !configData) {
       return res.status(400).json({ 
         error: "Microsoft 365 non configurato",
         details: "Chiedi all'amministratore di configurare Microsoft 365 in Impostazioni → Microsoft 365"
       });
     }
-
-    // Cast esplicito per risolvere errori TypeScript
-    const configData = rawConfigData as unknown as { 
-      client_id: string; 
-      tenant_id: string; 
-      enabled: boolean; 
-    };
 
     if (!configData.enabled) {
       return res.status(400).json({ 

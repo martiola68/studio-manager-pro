@@ -72,7 +72,7 @@ export default async function handler(
 
     // 3. Check for existing config
     const { data: existingData, error: checkError } = await supabase
-      .from("tbmicrosoft365_config" as any)
+      .from("microsoft365_config")
       .select("id")
       .eq("studio_id", studioId)
       .maybeSingle();
@@ -100,7 +100,7 @@ export default async function handler(
       }
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("microsoft365_config")
         .update(updateData)
         .eq("studio_id", studioId)
         .select()
@@ -119,7 +119,7 @@ export default async function handler(
       const encryptedSecret = encrypt(clientSecret);
 
       const { data, error } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("microsoft365_config")
         .insert({
           studio_id: studioId,
           client_id: clientId,

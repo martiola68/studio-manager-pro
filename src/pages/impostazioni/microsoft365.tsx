@@ -96,7 +96,7 @@ export default function Microsoft365Settings() {
       setStudioId(user.studio_id);
 
       const { data: rawData } = await supabase
-        .from("tbmicrosoft365_config" as any)
+        .from("microsoft365_config")
         .select("client_id, tenant_id, enabled")
         .eq("studio_id", user.studio_id)
         .maybeSingle();

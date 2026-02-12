@@ -112,22 +112,15 @@ async function refreshToken(userId: string, encryptedRefreshToken: string): Prom
       throw new Error("Studio not found for user");
     }
 
-    const { data: rawConfigData, error: configError } = await supabase
-      .from("tbmicrosoft365_config" as any)
+    const { data: configData, error: configError } = await supabase
+      .from("microsoft365_config")
       .select("client_id, client_secret_encrypted, tenant_id")
       .eq("studio_id", userData.studio_id)
       .single();
 
-    if (configError || !rawConfigData) {
+    if (configError || !configData) {
       throw new Error("Microsoft 365 configuration not found");
     }
-
-    // Cast esplicito per risolvere errori TypeScript
-    const configData = rawConfigData as unknown as {
-      client_id: string;
-      client_secret_encrypted: string;
-      tenant_id: string;
-    };
 
     const clientSecret = decrypt(configData.client_secret_encrypted);
 
