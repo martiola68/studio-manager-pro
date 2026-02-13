@@ -176,7 +176,13 @@ export async function encryptCassettoPasswords(cassetto: {
 }> {
   const key = getStoredEncryptionKey();
   if (!key) {
-    throw new Error("ENCRYPTION_KEY_LOST");  // ✅ FIX: Errore specifico
+    // Master Password not configured → Return plaintext
+    return {
+      password1: cassetto.password1,
+      password2: cassetto.password2,
+      pin: cassetto.pin,
+      pw_iniziale: cassetto.pw_iniziale,
+    };
   }
 
   return {
