@@ -18,6 +18,14 @@ function getSupabaseBrowserClient(): SupabaseClient<Database> | null {
       return null;
     }
 
+    // Validate URL to prevent crash with placeholders (common in sandbox)
+    try {
+      new URL(supabaseUrl);
+    } catch (error) {
+      console.warn("Invalid Supabase URL provided (likely placeholder). Client initialization skipped.");
+      return null;
+    }
+
     supabaseInstance = createBrowserClient<Database>(
       supabaseUrl,
       supabaseAnonKey
