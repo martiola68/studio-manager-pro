@@ -1,85 +1,169 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogIn, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export default function Login() {
-  const router = useRouter();
-  const { toast } = useToast();
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    checkSession();
+  }, []);
+
+  const checkSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         router.push("/dashboard");
       }
-    });
-  }, [router]);
+    } catch (error) {
+      console.error("Error checking session:", error);
+    } finally {
+      setCheckingSession(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast({
+        title: "Errore",
+        description: "Inserisci email e password",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
       });
 
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Errore di autenticazione",
+          description: error.message === "Invalid login credentials" 
+            ? "Email o password non corretti"
+            : error.message,
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
 
-      router.push("/dashboard");
+      if (data.session) {
+        toast({
+          title: "Accesso effettuato",
+          description: "Benvenuto in Studio Manager Pro"
+        });
+        router.push("/dashboard");
+      }
     } catch (error) {
+      console.error("Errore login:", error);
       toast({
-        variant: "destructive",
         title: "Errore",
-        description: error instanceof Error ? error.message : "Errore durante il login",
+        description: "Si è verificato un errore durante l'accesso",
+        variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
 
+  if (checkingSession) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Studio Manager Pro</CardTitle>
-          <CardDescription className="text-center">
-            Accedi al tuo account
-          </CardDescription>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+      <Card className="w-full max-w-md shadow-2xl border-0">
+        <CardHeader className="space-y-4 text-center pb-8">
+          <div className="mx-auto w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
+            <img 
+              src="/logo-elma.png" 
+              alt="Studio Manager Pro" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div>
+            <CardTitle className="text-3xl font-bold text-gray-900">
+              Studio Manager Pro
+            </CardTitle>
+            <CardDescription className="text-base mt-2">
+              Sistema Gestionale Integrato per Studi Commerciali
+            </CardDescription>
+          </div>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="space-y-6">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="nome@studio.it"
+                placeholder="utente@studio.it"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
+                disabled={loading}
+                className="h-11"
+                autoComplete="email"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
+                disabled={loading}
+                className="h-11"
+                autoComplete="current-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Accesso in corso..." : "Accedi"}
+
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Accesso in corso...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5 mr-2" />
+                  Accedi
+                </>
+              )}
             </Button>
           </form>
         </CardContent>

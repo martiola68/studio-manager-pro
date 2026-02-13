@@ -5,52 +5,77 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { supabase } from "@/lib/supabase/client";
+import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
+import { supabase } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   
+  // Pagine pubbliche che non devono mostrare il layout
   const isPublicPage = router.pathname === "/login" || 
                        router.pathname === "/auth/callback" ||
                        router.pathname === "/404";
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && !isPublicPage) {
+    // Setup session refresh e gestione errori
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      if (event === "SIGNED_OUT") {
+        // Pulizia completa su logout/cancellazione
+        localStorage.clear();
+        sessionStorage.clear();
         router.push("/login");
+      }
+
+      if (event === "TOKEN_REFRESHED") {
+        console.log("Token refreshed successfully");
+      }
+
+      // Gestione errori sessione
+      if (event === "SIGNED_OUT" && !session) {
+        const currentPath = router.pathname;
+        // Evita loop se già su login
+        if (currentPath !== "/login") {
+          router.push("/login");
+        }
       }
     });
 
-    return () => data.subscription.unsubscribe();
-  }, [router, isPublicPage]);
+    // Setup refresh automatico token ogni 50 minuti (prima della scadenza 60min)
+    const refreshInterval = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.error("Token refresh failed:", error);
+          // Se refresh fallisce, redirect a login
+          router.push("/login");
+        }
+      }
+    }, 50 * 60 * 1000); // 50 minuti
 
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes("error=")) {
-      const params = new URLSearchParams(hash.substring(1));
-      const error = params.get("error");
-      const errorDescription = params.get("error_description");
-      
-      console.error("Microsoft OAuth Error:", {
-        error,
-        errorDescription
-      });
-    }
+    return () => {
+      authListener?.subscription.unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, [router]);
 
   return (
     <ThemeProvider>
       <StudioProvider>
         {isPublicPage ? (
-          <div className="min-h-screen bg-background">
+          // Pagine pubbliche: solo il componente senza layout
+          <>
             <Component {...pageProps} />
             <Toaster />
-          </div>
+          </>
         ) : (
-          <div className="min-h-screen bg-background">
+          // Pagine private: con layout completo (Header + TopNavBar)
+          <div className="flex flex-col min-h-screen bg-gray-50">
+            <Header onMenuToggle={() => {}} />
             <TopNavBar />
-            <main className="p-6">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
               <Component {...pageProps} />
             </main>
             <Toaster />
