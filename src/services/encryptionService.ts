@@ -176,7 +176,7 @@ export async function encryptCassettoPasswords(cassetto: {
 }> {
   const key = getStoredEncryptionKey();
   if (!key) {
-    throw new Error("Cassetti locked - unlock first");
+    throw new Error("ENCRYPTION_KEY_LOST");  // ✅ FIX: Errore specifico
   }
 
   return {

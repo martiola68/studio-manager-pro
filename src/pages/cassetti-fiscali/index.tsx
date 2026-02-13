@@ -307,6 +307,18 @@ export default function CassettiFiscaliPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      // ✅ FIX: Verifica unlock prima di procedere
+      if (!isUnlocked) {
+        toast({
+          variant: "destructive",
+          title: "Cassetti Bloccati",
+          description: "Sblocca i cassetti prima di salvare",
+        });
+        setDialogOpen(false);
+        setShowUnlockDialog(true);
+        return;
+      }
+
       // Encrypt passwords (Master Password system)
       const encrypted = await encryptCassettoPasswords({
         password1: values.password1,
@@ -342,6 +354,20 @@ export default function CassettiFiscaliPage() {
       await loadCassetti();
     } catch (error) {
       console.error("Errore salvataggio:", error);
+      
+      // ✅ FIX: Gestione specifica perdita chiave encryption
+      if (error instanceof Error && error.message === "ENCRYPTION_KEY_LOST") {
+        toast({
+          variant: "destructive",
+          title: "Sessione Scaduta",
+          description: "Sblocca nuovamente i cassetti per continuare",
+        });
+        setIsUnlocked(false);
+        setDialogOpen(false);
+        setShowUnlockDialog(true);
+        return;
+      }
+      
       toast({
         variant: "destructive",
         title: "Errore",
