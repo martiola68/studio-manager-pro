@@ -7,7 +7,6 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { TopNavBar } from "@/components/TopNavBar";
-import { Sidebar } from "@/components/Sidebar";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -26,7 +25,6 @@ export default function App({ Component, pageProps }: AppProps) {
     return () => data.subscription.unsubscribe();
   }, [router, isPublicPage]);
 
-  // Check for Microsoft OAuth callback errors
   useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("error=")) {
@@ -52,12 +50,9 @@ export default function App({ Component, pageProps }: AppProps) {
         ) : (
           <div className="min-h-screen bg-background">
             <TopNavBar />
-            <div className="flex h-[calc(100vh-4rem)]">
-              <Sidebar />
-              <main className="flex-1 overflow-auto p-6">
-                <Component {...pageProps} />
-              </main>
-            </div>
+            <main className="p-6">
+              <Component {...pageProps} />
+            </main>
             <Toaster />
           </div>
         )}

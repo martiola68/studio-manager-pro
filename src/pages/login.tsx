@@ -46,10 +46,6 @@ export default function Login() {
     }
   };
 
-  const handleMicrosoftLogin = () => {
-    window.location.href = "/api/auth/microsoft/login";
-  };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
       <Card className="w-full max-w-md">
@@ -86,32 +82,6 @@ export default function Login() {
               {loading ? "Accesso in corso..." : "Accedi"}
             </Button>
           </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Oppure
-              </span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleMicrosoftLogin}
-          >
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">
-              <path fill="#f35325" d="M0 0h11v11H0z" />
-              <path fill="#81bc06" d="M12 0h11v11H12z" />
-              <path fill="#05a6f0" d="M0 12h11v11H0z" />
-              <path fill="#ffba08" d="M12 12h11v11H12z" />
-            </svg>
-            Accedi con Microsoft 365
-          </Button>
         </CardContent>
       </Card>
     </div>
