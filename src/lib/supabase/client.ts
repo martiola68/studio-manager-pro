@@ -35,6 +35,15 @@ function getSupabaseBrowserClient(): SupabaseClient<Database> | null {
   return supabaseInstance;
 }
 
+// Mock object to prevent app crashes when Supabase is not configured (e.g. sandbox)
+const mockAuth = {
+  onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+  getSession: async () => ({ data: { session: null }, error: null }),
+  getUser: async () => ({ data: { user: null }, error: null }),
+  signInWithPassword: async () => ({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+  signOut: async () => ({ error: null }),
+};
+
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, prop) {
     const client = getSupabaseBrowserClient();
@@ -46,6 +55,12 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
           "This is expected during build/SSR and will be initialized client-side."
         );
       }
+      
+      // Return mock auth to prevent crash in _app.tsx onAuthStateChange
+      if (prop === "auth") {
+        return mockAuth;
+      }
+      
       return undefined;
     }
 
