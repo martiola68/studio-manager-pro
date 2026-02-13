@@ -4,14 +4,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { supabase } from "@/lib/supabase/client";
-import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   
   // Pagine pubbliche che non devono mostrare il layout
   const isPublicPage = router.pathname === "/login" || 
@@ -19,7 +21,50 @@ export default function App({ Component, pageProps }: AppProps) {
                        router.pathname === "/404";
 
   useEffect(() => {
-    // Setup session refresh e gestione errori
+    // ✅ FIX: Design Mode per Softgen Sandbox
+    // Detection affidabile basata sulla presenza/validità della URL Supabase
+    // Vercel (Production) ha SEMPRE queste variabili valorizzate correttamente
+    // Softgen Sandbox le ha vuote o placeholder
+    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
+                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
+    
+    if (isSandbox) {
+      console.log("Softgen Sandbox detected: Enabling Design Mode (Mock Session)");
+      // Sandbox: Mock session per design/UI preview
+      setUser({
+        id: "sandbox-user-preview",
+        email: "preview@softgen.sandbox",
+        app_metadata: {},
+        user_metadata: { 
+          full_name: "Design Preview Mode" 
+        },
+        aud: "authenticated",
+        created_at: new Date().toISOString()
+      } as User);
+      setLoading(false);
+      return; // ⛔ STOP: Non inizializzare listener Supabase reale in Sandbox
+    }
+
+    // ✅ Vercel/Production: Auth listener Supabase normale
+    // Questo codice viene eseguito SOLO su Vercel dove le env vars sono corrette
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Skip completo in sandbox
+    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
+                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
+    
+    if (isSandbox) return;
+
+    // Setup session refresh e gestione errori (SOLO VERCEL)
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (event === "SIGNED_OUT") {
         // Pulizia completa su logout/cancellazione

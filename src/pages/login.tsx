@@ -17,21 +17,28 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    checkSession();
-  }, []);
+    // ✅ FIX: Design Mode per Softgen Sandbox
+    // Detection affidabile basata sulla presenza/validità della URL Supabase
+    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
+                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
 
-  const checkSession = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+    if (isSandbox) {
+      console.log("Softgen Sandbox detected: Bypassing Login (Design Mode)");
+      // Sandbox: Bypass login → Dashboard (design mode)
+      // Permette accesso UI immediato senza credenziali
+      router.push("/dashboard");
+      return; // ⛔ STOP: Non fare check session reale in Sandbox
+    }
+
+    // ✅ Vercel/Production: Comportamento normale
+    // Verifica sessione reale Supabase
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.push("/dashboard");
       }
-    } catch (error) {
-      console.error("Error checking session:", error);
-    } finally {
-      setCheckingSession(false);
-    }
-  };
+    });
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -70,6 +70,22 @@ const mockQueryBuilder = {
   then: (resolve: any) => resolve({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
 };
 
+// Mock for other Supabase methods (rpc, channel, storage, etc.)
+const mockRpc = async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } });
+const mockChannel = () => ({
+  on: () => mockChannel(),
+  subscribe: () => ({ unsubscribe: () => {} }),
+});
+const mockStorage = {
+  from: () => ({
+    upload: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+    download: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+    list: async () => ({ data: [], error: null }),
+    remove: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+    getPublicUrl: () => ({ data: { publicUrl: "" } }),
+  }),
+};
+
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, prop) {
     const client = getSupabaseBrowserClient();
@@ -90,6 +106,25 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
       // Return mock query builder for DB operations
       if (prop === "from") {
         return () => mockQueryBuilder;
+      }
+
+      // Return mock for RPC calls
+      if (prop === "rpc") {
+        return mockRpc;
+      }
+
+      // Return mock for realtime channels
+      if (prop === "channel") {
+        return mockChannel;
+      }
+
+      if (prop === "removeChannel") {
+        return () => {};
+      }
+
+      // Return mock for storage
+      if (prop === "storage") {
+        return mockStorage;
       }
       
       return undefined;
