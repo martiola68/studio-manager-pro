@@ -44,6 +44,32 @@ const mockAuth = {
   signOut: async () => ({ error: null }),
 };
 
+// Mock Query Builder for database operations
+const mockQueryBuilder = {
+  select: () => mockQueryBuilder,
+  insert: () => mockQueryBuilder,
+  update: () => mockQueryBuilder,
+  delete: () => mockQueryBuilder,
+  eq: () => mockQueryBuilder,
+  neq: () => mockQueryBuilder,
+  gt: () => mockQueryBuilder,
+  lt: () => mockQueryBuilder,
+  gte: () => mockQueryBuilder,
+  lte: () => mockQueryBuilder,
+  like: () => mockQueryBuilder,
+  ilike: () => mockQueryBuilder,
+  is: () => mockQueryBuilder,
+  in: () => mockQueryBuilder,
+  contains: () => mockQueryBuilder,
+  range: () => mockQueryBuilder,
+  order: () => mockQueryBuilder,
+  limit: () => mockQueryBuilder,
+  single: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+  maybeSingle: async () => ({ data: null, error: null }),
+  // Allow awaiting the builder directly
+  then: (resolve: any) => resolve({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+};
+
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, prop) {
     const client = getSupabaseBrowserClient();
@@ -59,6 +85,11 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
       // Return mock auth to prevent crash in _app.tsx onAuthStateChange
       if (prop === "auth") {
         return mockAuth;
+      }
+
+      // Return mock query builder for DB operations
+      if (prop === "from") {
+        return () => mockQueryBuilder;
       }
       
       return undefined;
