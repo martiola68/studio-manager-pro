@@ -136,13 +136,13 @@ export default function Microsoft365Settings() {
       if (tokenData) {
         setUserConnection({
           isConnected: true,
-          lastConnection: new Date(tokenData.updated_at || tokenData.created_at),
+          lastConnection: tokenData.updated_at ? new Date(tokenData.updated_at) : undefined,
         });
       } else {
         setUserConnection({ isConnected: false });
       }
-    } catch (err) {
-      console.error("Error loading user connection status:", err);
+    } catch (error) {
+      console.error("Error loading user connection status:", error);
       setUserConnection({ isConnected: false });
     }
   }
