@@ -5,9 +5,8 @@ import type { Database } from "./types";
 let supabaseInstance: SupabaseClient<Database> | null = null;
 
 function getSupabaseBrowserClient(): SupabaseClient<Database> | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
+  // SSR/build: niente client browser
+  if (typeof window === "undefined") return null;
 
   if (!supabaseInstance) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,34 +17,54 @@ function getSupabaseBrowserClient(): SupabaseClient<Database> | null {
       return null;
     }
 
-    // Validate URL to prevent crash with placeholders (common in sandbox)
+    // Validate URL to prevent crash with placeholders
     try {
       new URL(supabaseUrl);
-    } catch (error) {
-      console.warn("Invalid Supabase URL provided (likely placeholder). Client initialization skipped.");
+    } catch {
+      console.warn(
+        "Invalid Supabase URL provided (likely placeholder). Client initialization skipped."
+      );
       return null;
     }
 
-    supabaseInstance = createBrowserClient<Database>(
-      supabaseUrl,
-      supabaseAnonKey
-    );
+    supabaseInstance = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
   }
 
   return supabaseInstance;
 }
 
-// Mock object to prevent app crashes when Supabase is not configured (e.g. sandbox)
-const mockAuth = {
+function supabaseNotConfiguredError(): Error {
+  return new Error(
+    "Supabase non configurato: verifica NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  );
+}
+
+/**
+ * SSR/build auth stub: evita crash durante build/SSR.
+ * (Non deve bypassare login; è solo un no-op minimo.)
+ */
+const ssrAuthStub = {
   onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
   getSession: async () => ({ data: { session: null }, error: null }),
-  getUser: async () => ({ data: { user: null }, error: null }),
-  signInWithPassword: async () => ({ data: { user: null, session: null }, error: { message: "Supabase not configured" } }),
+};
+
+/**
+ * Browser auth fallback: nessun bypass, nessun mock “silenzioso”.
+ * Se Supabase non è configurato, restituiamo errori espliciti ma lasciamo la UI viva.
+ */
+const browserAuthFallback = {
+  onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+  getSession: async () => ({ data: { session: null }, error: supabaseNotConfiguredError() }),
+  getUser: async () => ({ data: { user: null }, error: supabaseNotConfiguredError() }),
+  signInWithPassword: async () => ({
+    data: { user: null, session: null },
+    error: { message: supabaseNotConfiguredError().message } as any,
+  }),
   signOut: async () => ({ error: null }),
 };
 
-// Mock Query Builder for database operations
-const mockQueryBuilder = {
+// Mock Query Builder for database operations (safe fallback)
+const mockQueryBuilder: any = {
   select: () => mockQueryBuilder,
   insert: () => mockQueryBuilder,
   update: () => mockQueryBuilder,
@@ -64,24 +83,44 @@ const mockQueryBuilder = {
   range: () => mockQueryBuilder,
   order: () => mockQueryBuilder,
   limit: () => mockQueryBuilder,
-  single: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+  single: async () => ({
+    data: null,
+    error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+  }),
   maybeSingle: async () => ({ data: null, error: null }),
   // Allow awaiting the builder directly
-  then: (resolve: any) => resolve({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+  then: (resolve: any) =>
+    resolve({
+      data: null,
+      error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+    }),
 };
 
-// Mock for other Supabase methods (rpc, channel, storage, etc.)
-const mockRpc = async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } });
+const mockRpc = async () => ({
+  data: null,
+  error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+});
+
 const mockChannel = () => ({
   on: () => mockChannel(),
   subscribe: () => ({ unsubscribe: () => {} }),
 });
+
 const mockStorage = {
   from: () => ({
-    upload: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
-    download: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+    upload: async () => ({
+      data: null,
+      error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+    }),
+    download: async () => ({
+      data: null,
+      error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+    }),
     list: async () => ({ data: [], error: null }),
-    remove: async () => ({ data: null, error: { message: "Supabase not configured (Sandbox)" } }),
+    remove: async () => ({
+      data: null,
+      error: { message: "Supabase non configurato (Sandbox/Env mancante)" },
+    }),
     getPublicUrl: () => ({ data: { publicUrl: "" } }),
   }),
 };
@@ -89,53 +128,40 @@ const mockStorage = {
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_target, prop) {
     const client = getSupabaseBrowserClient();
-    
+
+    // Se il client non esiste (SSR o ENV mancanti), gestiamo in modo esplicito e NON bypassiamo il login
     if (!client) {
+      // SSR/build
       if (typeof window === "undefined") {
         console.warn(
           `Supabase client accessed during SSR (property: ${String(prop)}). ` +
-          "This is expected during build/SSR and will be initialized client-side."
+            "This is expected during build/SSR and will be initialized client-side."
         );
-      }
-      
-      // Return mock auth to prevent crash in _app.tsx onAuthStateChange
-      if (prop === "auth") {
-        return mockAuth;
+
+        if (prop === "auth") return ssrAuthStub as any;
+        return undefined;
       }
 
-      // Return mock query builder for DB operations
-      if (prop === "from") {
-        return () => mockQueryBuilder;
-      }
+      // Browser
+      if (prop === "auth") return browserAuthFallback as any;
 
-      // Return mock for RPC calls
-      if (prop === "rpc") {
-        return mockRpc;
-      }
+      // Manteniamo fallback sicuri per operazioni DB/realtime/storage senza far crashare la UI
+      if (prop === "from") return () => mockQueryBuilder;
+      if (prop === "rpc") return mockRpc as any;
+      if (prop === "channel") return mockChannel as any;
+      if (prop === "removeChannel") return () => {};
+      if (prop === "storage") return mockStorage as any;
 
-      // Return mock for realtime channels
-      if (prop === "channel") {
-        return mockChannel;
-      }
-
-      if (prop === "removeChannel") {
-        return () => {};
-      }
-
-      // Return mock for storage
-      if (prop === "storage") {
-        return mockStorage;
-      }
-      
       return undefined;
     }
 
-    const value = client[prop as keyof SupabaseClient<Database>];
-    
+    // Client valido: passthrough al vero SupabaseClient
+    const value = (client as any)[prop];
+
     if (typeof value === "function") {
       return value.bind(client);
     }
-    
+
     return value;
   },
 });
