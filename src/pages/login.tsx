@@ -1,148 +1,157 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LogIn, Building2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [checking, setChecking] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // 1) Bootstrap: se già loggato, vai a dashboard
   useEffect(() => {
-    // ✅ FIX: Design Mode per Softgen Sandbox
-    // Detection affidabile basata sulla presenza/validità della URL Supabase
-    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
+    let cancelled = false;
 
-    if (isSandbox) {
-      console.log("Softgen Sandbox detected: Bypassing Login (Design Mode)");
-      // Sandbox: Bypass login → Dashboard (design mode)
-      // Permette accesso UI immediato senza credenziali
-      router.push("/dashboard");
-      return; // ⛔ STOP: Non fare check session reale in Sandbox
-    }
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (cancelled) return;
 
-    // ✅ Vercel/Production: Comportamento normale
-    // Verifica sessione reale Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push("/dashboard");
+        if (error) {
+          console.error("[Login] getSession error:", error);
+        }
+
+        if (data?.session?.access_token) {
+          console.log("[Login] Session already present → /dashboard");
+          router.replace("/dashboard");
+          return;
+        }
+      } finally {
+        if (!cancelled) setChecking(false);
       }
-    });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
         title: "Errore",
         description: "Inserisci email e password",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
+    console.log("[Login] Attempting signInWithPassword:", email);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password
+        email,
+        password,
       });
 
       if (error) {
+        console.error("[Login] ❌ signIn error:", error);
         toast({
           title: "Errore di autenticazione",
-          description: error.message === "Invalid login credentials" 
-            ? "Email o password non corretti"
-            : error.message,
-          variant: "destructive"
+          description: error.message,
+          variant: "destructive",
         });
-        setLoading(false);
         return;
       }
 
-      if (data.session) {
+      if (!data.session?.access_token) {
+        console.error("[Login] ❌ No session after login");
         toast({
-          title: "Accesso effettuato",
-          description: "Benvenuto in Studio Manager Pro"
+          title: "Errore",
+          description: "Nessuna sessione creata",
+          variant: "destructive",
         });
-        router.push("/dashboard");
+        return;
       }
-    } catch (error) {
-      console.error("Errore login:", error);
+
+      toast({
+        title: "Accesso effettuato",
+        description: "Benvenuto!",
+      });
+
+      console.log("[Login] ✅ Login OK → /dashboard");
+      router.replace("/dashboard");
+    } catch (err: any) {
+      console.error("[Login] ❌ Unexpected error:", err);
       toast({
         title: "Errore",
-        description: "Si è verificato un errore durante l'accesso",
-        variant: "destructive"
+        description: err?.message || "Errore durante il login",
+        variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
 
-  if (checkingSession) {
+  // Loading mentre controlla sessione
+  if (checking) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
-        <div className="text-center">
-          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <span className="ml-3 text-gray-600">Caricamento...</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
+  // Form login
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0">
-        <CardHeader className="space-y-4 text-center pb-8">
-          <div className="mx-auto w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2">
-            <img 
-              src="/logo-elma.png" 
-              alt="Studio Manager Pro" 
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div>
-            <CardTitle className="text-3xl font-bold text-gray-900">
-              Studio Manager Pro
-            </CardTitle>
-            <CardDescription className="text-base mt-2">
-              Sistema Gestionale Integrato per Studi Commerciali
-            </CardDescription>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-3xl font-bold text-gray-900">
+            Studio Manager Pro
+          </CardTitle>
+          <p className="text-gray-600">Accedi al tuo account</p>
         </CardHeader>
-
-        <CardContent className="space-y-6">
+        <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
+              <label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email
-              </Label>
+              </label>
               <Input
                 id="email"
                 type="email"
-                placeholder="utente@studio.it"
+                placeholder="nome@studio.it"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className="h-11"
-                autoComplete="email"
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
                 Password
-              </Label>
+              </label>
               <Input
                 id="password"
                 type="password"
@@ -150,27 +159,12 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="h-11"
-                autoComplete="current-password"
+                required
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full h-11 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Accesso in corso...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-5 w-5 mr-2" />
-                  Accedi
-                </>
-              )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Accesso in corso..." : "Accedi"}
             </Button>
           </form>
         </CardContent>
