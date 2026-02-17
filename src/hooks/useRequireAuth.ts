@@ -16,7 +16,7 @@ export function useRequireAuth(): UseRequireAuthResult {
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    const sync = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (cancelled) return;
@@ -26,7 +26,7 @@ export function useRequireAuth(): UseRequireAuthResult {
         const s = data?.session ?? null;
         setSession(s);
 
-        // Se NON c'è sessione → vai a /login e stop
+        // ✅ redirect auth SOLO QUI
         if (!s?.access_token) {
           router.replace("/login");
           return;
@@ -34,10 +34,24 @@ export function useRequireAuth(): UseRequireAuthResult {
       } finally {
         if (!cancelled) setReady(true);
       }
-    })();
+    };
+
+    sync();
+
+    // ✅ tieni allineato lo stato quando cambia auth
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (cancelled) return;
+
+      setSession(newSession ?? null);
+
+      if (!newSession?.access_token) {
+        router.replace("/login");
+      }
+    });
 
     return () => {
       cancelled = true;
+      listener.subscription.unsubscribe();
     };
   }, [router]);
 
