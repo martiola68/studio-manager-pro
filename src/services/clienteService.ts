@@ -4,8 +4,35 @@ import { teamsNotificationService } from "./teamsNotificationService";
 
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 // Omit studio_id because it's handled server-side
-type ClienteInsert = Omit<Database["public"]["Tables"]["tbclienti"]["Insert"], "studio_id">;
-type ClienteUpdate = Omit<Database["public"]["Tables"]["tbclienti"]["Update"], "studio_id">;
+type ClienteInsert = Omit<
+  Database["public"]["Tables"]["tbclienti"]["Insert"],
+  "studio_id"
+>;
+type ClienteUpdate = Omit<
+  Database["public"]["Tables"]["tbclienti"]["Update"],
+  "studio_id"
+>;
+
+/**
+ * ✅ Single place to read the session token (Supabase v2 safe)
+ */
+async function getAuthToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    console.error("[clienteService] ❌ getSession error:", error);
+    throw new Error("Auth session error");
+  }
+
+  const token = data?.session?.access_token;
+
+  if (!token) {
+    console.error("[clienteService] ❌ No session found - user not authenticated");
+    throw new Error("No session found (user not authenticated)");
+  }
+
+  return token;
+}
 
 export const clienteService = {
   async getClienti() {
@@ -33,30 +60,30 @@ export const clienteService = {
   },
 
   async createCliente(cliente: ClienteInsert) {
-    // Get current session token for API authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // ✅ Get current session token for API authentication
+    const token = await getAuthToken();
 
-    if (!token) throw new Error("Utente non autenticato");
-
-    // Call API endpoint
     const response = await fetch("/api/clienti/create", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(cliente)
+      body: JSON.stringify(cliente),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Errore durante la creazione del cliente");
+      let errorMsg = "Errore durante la creazione del cliente";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData?.error || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
     }
 
     const newCliente = await response.json();
 
-    // Invia notifica Teams
+    // Invia notifica Teams (non bloccare se fallisce)
     try {
       await teamsNotificationService.sendNuovoClienteNotification(
         cliente.ragione_sociale || "Nuovo Cliente"
@@ -69,25 +96,25 @@ export const clienteService = {
   },
 
   async updateCliente(id: string, updates: ClienteUpdate) {
-    // Get current session token for API authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    // ✅ Get current session token for API authentication
+    const token = await getAuthToken();
 
-    if (!token) throw new Error("Utente non autenticato");
-
-    // Call API endpoint
     const response = await fetch("/api/clienti/update", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ id, ...updates })
+      body: JSON.stringify({ id, ...updates }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Errore durante l'aggiornamento del cliente");
+      let errorMsg = "Errore durante l'aggiornamento del cliente";
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData?.error || errorMsg;
+      } catch {}
+      throw new Error(errorMsg);
     }
 
     return await response.json();
@@ -104,15 +131,12 @@ export const clienteService = {
       supabase.from("tbscadcu").delete().eq("id", id),
       supabase.from("tbscadbilanci").delete().eq("id", id),
       supabase.from("tbscadccgg").delete().eq("id", id),
-      supabase.from("tbscadfiscali").delete().eq("id", id)
+      supabase.from("tbscadfiscali").delete().eq("id", id),
     ];
 
     await Promise.all(deletePromises);
 
-    const { error } = await supabase
-      .from("tbclienti")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("tbclienti").delete().eq("id", id);
 
     if (error) throw error;
   },
@@ -121,7 +145,9 @@ export const clienteService = {
     let supabaseQuery = supabase
       .from("tbclienti")
       .select("*")
-      .or(`ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`)
+      .or(
+        `ragione_sociale.ilike.%${query}%,partita_iva.ilike.%${query}%,codice_fiscale.ilike.%${query}%`
+      )
       .order("ragione_sociale");
 
     if (studioId) {
@@ -138,7 +164,9 @@ export const clienteService = {
     let query = supabase
       .from("tbclienti")
       .select("*")
-      .or(`utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`)
+      .or(
+        `utente_operatore_id.eq.${utenteId},utente_professionista_id.eq.${utenteId}`
+      )
       .order("ragione_sociale");
 
     if (studioId) {
@@ -166,5 +194,5 @@ export const clienteService = {
 
     if (error) throw error;
     return data || [];
-  }
+  },
 };
