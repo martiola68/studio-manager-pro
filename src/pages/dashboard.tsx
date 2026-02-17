@@ -1,23 +1,49 @@
+// src/pages/dashboard.tsx
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
 import { scadenzaService } from "@/services/scadenzaService";
-import { scadenzaAlertService, type ScadenzaAlert } from "@/services/scadenzaAlertService";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, FileText, CheckCircle, Clock, TrendingUp, MessageSquare, Mail, BookOpen, Lock } from "lucide-react";
+import {
+  scadenzaAlertService,
+  type ScadenzaAlert,
+} from "@/services/scadenzaAlertService";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Users,
+  Calendar,
+  FileText,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  MessageSquare,
+  Mail,
+  BookOpen,
+  Lock,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AlertScadenze } from "@/components/AlertScadenze";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  // ✅ SINGLE SOURCE OF TRUTH for auth
+  const { ready, session } = useRequireAuth();
+
   const [loading, setLoading] = useState(true);
   const [scadenzeAlert, setScadenzeAlert] = useState<ScadenzaAlert[]>([]);
   const [stats, setStats] = useState({
@@ -28,39 +54,30 @@ export default function DashboardPage() {
     scadenzeCCGGConfermate: 0,
     scadenze770Confermate: 0,
     scadenzeCUConfermate: 0,
-    scadenzeBilanciConfermate: 0
+    scadenzeBilanciConfermate: 0,
   });
-  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>([]);
+  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<
+    EventoAgenda[]
+  >([]);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
 
+  /**
+   * ✅ Load profile + alerts + dashboard data ONLY when:
+   * - auth check is ready
+   * - session exists
+   */
   useEffect(() => {
-    checkAuthAndLoadData();
-  }, []);
+    if (!ready) return;
+    if (!session?.user?.email) return;
 
-  useEffect(() => {
-    if (currentUserId) {
-      loadDashboardData();
-      const interval = setInterval(async () => {
-        const { messaggioService } = await import("@/services/messaggioService");
-        const nonLetti = await messaggioService.getMessaggiNonLettiCount(currentUserId);
-        setMessaggiNonLetti(nonLetti);
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [currentUserId]);
+    let cancelled = false;
 
-  const checkAuthAndLoadData = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+    (async () => {
+      try {
+        setLoading(true);
 
-      if (session.user.email) {
         const { data: userData, error: userError } = await supabase
           .from("tbutenti")
           .select("id, tipo_utente, studio_id")
@@ -69,60 +86,111 @@ export default function DashboardPage() {
 
         if (userError || !userData) {
           console.error("Errore recupero utente:", userError);
-          router.push("/login");
+          // ⚠️ NO redirect here (avoid ping-pong). useRequireAuth already handles missing session.
           return;
         }
 
-        // Verifica se è Admin o Partner
+        if (cancelled) return;
+
         const isPartnerUser = userData.tipo_utente === "Admin";
         setCurrentUserId(userData.id);
         setIsPartner(isPartnerUser);
-        
-        // Carica scadenze urgenti
+
+        // Alerts
         if (userData.studio_id) {
           const alerts = await scadenzaAlertService.getScadenzeInArrivo(
-            userData.id, 
-            isPartnerUser, 
+            userData.id,
+            isPartnerUser,
             userData.studio_id
           );
-          setScadenzeAlert(alerts);
+          if (!cancelled) setScadenzeAlert(alerts);
         }
+
+        // Dashboard data
+        await loadDashboardData(userData.id);
+
+        // Unread messages
+        try {
+          const { messaggioService } = await import("@/services/messaggioService");
+          const nonLetti = await messaggioService.getMessaggiNonLettiCount(
+            userData.id
+          );
+          if (!cancelled) setMessaggiNonLetti(nonLetti);
+        } catch (e) {
+          console.warn("Messaggi service non disponibile:", e);
+        }
+      } catch (error) {
+        console.error("Errore nel caricamento dashboard:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    })();
 
-      await loadDashboardData();
-    } catch (error) {
-      console.error("Errore nel caricamento:", error);
-      router.push("/login");
-    }
-  };
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, session?.user?.email]);
 
-  const loadDashboardData = async () => {
+  /**
+   * ✅ Poll messaggi non letti (solo quando abbiamo userId)
+   */
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { messaggioService } = await import("@/services/messaggioService");
+        const nonLetti = await messaggioService.getMessaggiNonLettiCount(
+          currentUserId
+        );
+        setMessaggiNonLetti(nonLetti);
+      } catch (e) {
+        // non bloccare UI se manca
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  /**
+   * ✅ Load dashboard stats, clienti, eventi, scadenze
+   * (NOT doing auth redirects here)
+   */
+  const loadDashboardData = async (userIdForMessages?: string) => {
     try {
-      setLoading(true);
-
       const clienti = await clienteService.getClienti();
       const appuntamenti = await eventoService.getEventi();
-      
-      const clientiAttivi = clienti.filter(c => c.attivo).length;
-      
+
+      const clientiAttivi = clienti.filter((c: any) => c.attivo).length;
+
       const oggi = new Date();
       const setteDopo = new Date();
       setteDopo.setDate(oggi.getDate() + 7);
-      
-      const prossimi = appuntamenti.filter(app => {
-        const dataApp = new Date(app.data_inizio);
-        return dataApp >= oggi && dataApp <= setteDopo;
-      }).sort((a, b) => new Date(a.data_inizio).getTime() - new Date(b.data_inizio).getTime());
+
+      const prossimi = appuntamenti
+        .filter((app: any) => {
+          const dataApp = new Date(app.data_inizio);
+          return dataApp >= oggi && dataApp <= setteDopo;
+        })
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.data_inizio).getTime() - new Date(b.data_inizio).getTime()
+        );
 
       setProssimiAppuntamenti(prossimi.slice(0, 5));
 
       const counts = await scadenzaService.getAllScadenzeCounts();
 
-      // Carica messaggi non letti
-      if (currentUserId) {
-        const { messaggioService } = await import("@/services/messaggioService");
-        const nonLetti = await messaggioService.getMessaggiNonLettiCount(currentUserId);
-        setMessaggiNonLetti(nonLetti);
+      // (optional) refresh unread count once here as well
+      if (userIdForMessages) {
+        try {
+          const { messaggioService } = await import("@/services/messaggioService");
+          const nonLetti = await messaggioService.getMessaggiNonLettiCount(
+            userIdForMessages
+          );
+          setMessaggiNonLetti(nonLetti);
+        } catch {}
       }
 
       setStats({
@@ -133,41 +201,65 @@ export default function DashboardPage() {
         scadenzeCCGGConfermate: counts.ccgg,
         scadenze770Confermate: counts.sette70,
         scadenzeCUConfermate: counts.cu,
-        scadenzeBilanciConfermate: counts.bilanci
+        scadenzeBilanciConfermate: counts.bilanci,
       });
     } catch (error) {
-      console.error("Errore nel caricamento dei dati:", error);
-    } finally {
-      setLoading(false);
+      console.error("Errore nel caricamento dei dati dashboard:", error);
     }
   };
 
   const handleDismissAlert = (id: string) => {
     scadenzaAlertService.dismissAlert(id);
-    setScadenzeAlert(prev => prev.filter(s => s.id !== id));
-    toast({ title: "Notifica rimossa", description: "La scadenza non verrà più mostrata tra gli alert." });
+    setScadenzeAlert((prev) => prev.filter((s) => s.id !== id));
+    toast({
+      title: "Notifica rimossa",
+      description: "La scadenza non verrà più mostrata tra gli alert.",
+    });
   };
 
   const handleNotifyTeams = async (scadenza: ScadenzaAlert) => {
     if (!currentUserId) return;
-    
-    // Cast sicuro per compatibilità tra tipi UI e Service
+
     const scadenzaServiceType = {
       ...scadenza,
-      tabella_origine: scadenza.tabella_origine || ""
+      tabella_origine: scadenza.tabella_origine || "",
     } as import("@/services/scadenzaAlertService").ScadenzaAlert;
 
-    toast({ title: "Invio in corso...", description: "Sto inviando la notifica su Teams." });
-    
-    const success = await scadenzaAlertService.sendTeamsAlert(scadenzaServiceType, currentUserId);
-    
+    toast({
+      title: "Invio in corso...",
+      description: "Sto inviando la notifica.",
+    });
+
+    const success = await scadenzaAlertService.sendTeamsAlert(
+      scadenzaServiceType,
+      currentUserId
+    );
+
     if (success) {
-      toast({ title: "Inviato!", description: "Notifica Teams inviata con successo." });
+      toast({ title: "Inviato!", description: "Notifica inviata con successo." });
     } else {
-      toast({ title: "Errore", description: "Impossibile inviare notifica Teams. Verifica la configurazione Microsoft 365.", variant: "destructive" });
+      toast({
+        title: "Errore",
+        description:
+          "Impossibile inviare notifica (integrazione non configurata o disabilitata).",
+        variant: "destructive",
+      });
     }
   };
 
+  // ✅ Auth still checking
+  if (!ready) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Data loading
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -187,7 +279,7 @@ export default function DashboardPage() {
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
       });
     } catch {
       return dateString;
@@ -203,12 +295,11 @@ export default function DashboardPage() {
 
       {scadenzeAlert.length > 0 && (
         <div className="mb-8">
-          <AlertScadenze 
-            scadenze={scadenzeAlert} 
+          <AlertScadenze
+            scadenze={scadenzeAlert}
             isPartner={isPartner}
             onDismiss={handleDismissAlert}
-            onViewDetails={(id, tipo) => {
-              // Redirect alla pagina corretta in base al tipo
+            onViewDetails={(_id, tipo) => {
               if (tipo === "IVA") router.push(`/scadenze/iva`);
               else if (tipo === "Fiscale") router.push(`/scadenze/fiscale`);
               else if (tipo === "Bilancio") router.push(`/scadenze/bilanci`);
@@ -222,13 +313,20 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card className="border-l-4 border-l-blue-600">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Clienti Attivi</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Clienti Attivi
+            </CardTitle>
             <Users className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.clientiAttivi}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.clientiAttivi}
+            </div>
             <Link href="/clienti">
-              <Button variant="link" className="p-0 h-auto text-sm text-blue-600 mt-2">
+              <Button
+                variant="link"
+                className="p-0 h-auto text-sm text-blue-600 mt-2"
+              >
                 Gestisci clienti →
               </Button>
             </Link>
@@ -237,33 +335,45 @@ export default function DashboardPage() {
 
         <Card className="border-l-4 border-l-green-600">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Appuntamenti Prossimi</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Appuntamenti Prossimi
+            </CardTitle>
             <Calendar className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.appuntamentiProssimi}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.appuntamentiProssimi}
+            </div>
             <p className="text-xs text-gray-500 mt-2">Prossimi 7 giorni</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-purple-600">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Scadenze IVA</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Scadenze IVA
+            </CardTitle>
             <FileText className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.scadenzeIvaConfermate}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.scadenzeIvaConfermate}
+            </div>
             <p className="text-xs text-gray-500 mt-2">Confermate</p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-orange-600">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Scadenze Fiscali</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Scadenze Fiscali
+            </CardTitle>
             <TrendingUp className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.scadenzeFiscaliConfermate}</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {stats.scadenzeFiscaliConfermate}
+            </div>
             <p className="text-xs text-gray-500 mt-2">Confermate</p>
           </CardContent>
         </Card>
@@ -282,28 +392,36 @@ export default function DashboardPage() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">CCGG</span>
                 </div>
-                <span className="text-sm font-bold">{stats.scadenzeCCGGConfermate}</span>
+                <span className="text-sm font-bold">
+                  {stats.scadenzeCCGGConfermate}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">CU</span>
                 </div>
-                <span className="text-sm font-bold">{stats.scadenzeCUConfermate}</span>
+                <span className="text-sm font-bold">
+                  {stats.scadenzeCUConfermate}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">Bilanci</span>
                 </div>
-                <span className="text-sm font-bold">{stats.scadenzeBilanciConfermate}</span>
+                <span className="text-sm font-bold">
+                  {stats.scadenzeBilanciConfermate}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">770</span>
                 </div>
-                <span className="text-sm font-bold">{stats.scadenze770Confermate}</span>
+                <span className="text-sm font-bold">
+                  {stats.scadenze770Confermate}
+                </span>
               </div>
             </div>
             <Link href="/scadenze/iva">
@@ -328,12 +446,27 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {prossimiAppuntamenti.map((app) => (
-                  <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${app.in_sede ? "bg-green-500" : "bg-red-500"}`}></div>
+                  <div
+                    key={app.id}
+                    className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full mt-2 ${
+                        app.in_sede ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
-                      <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
-                      {app.sala && <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>}
+                      <p className="font-medium text-sm text-gray-900 truncate">
+                        {app.titolo}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDateTime(app.data_inizio)}
+                      </p>
+                      {app.sala && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Sala: {app.sala}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -356,25 +489,39 @@ export default function DashboardPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/messaggi">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col gap-2"
+              >
                 <MessageSquare className="h-8 w-8 text-blue-600" />
-                <span className="text-sm font-medium">Messaggi</span>
+                <span className="text-sm font-medium">
+                  Messaggi {messaggiNonLetti > 0 ? `(${messaggiNonLetti})` : ""}
+                </span>
               </Button>
             </Link>
             <Link href="/agenda">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col gap-2"
+              >
                 <Calendar className="h-8 w-8 text-green-600" />
                 <span className="text-sm font-medium">Agenda</span>
               </Button>
             </Link>
             <Link href="/contatti">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col gap-2"
+              >
                 <Users className="h-8 w-8 text-purple-600" />
                 <span className="text-sm font-medium">Contatti</span>
               </Button>
             </Link>
             <Link href="/comunicazioni">
-              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-24 flex flex-col gap-2"
+              >
                 <Mail className="h-8 w-8 text-orange-600" />
                 <span className="text-sm font-medium">Comunicazioni</span>
               </Button>
@@ -391,49 +538,22 @@ export default function DashboardPage() {
             </div>
             <div>
               <CardTitle className="text-blue-900">📚 Manuale Utente Completo</CardTitle>
-              <CardDescription className="text-blue-700">Guida completa all'utilizzo di Studio Manager Pro</CardDescription>
+              <CardDescription className="text-blue-700">
+                Guida completa all'utilizzo di Studio Manager Pro
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700 mb-4">
-            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria, Rubrica, Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
+            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria,
+            Rubrica, Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs text-gray-600">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Agenda & Eventi</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Messaggi & Chat</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Promemoria</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Rubrica & Clienti</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Accesso Portali</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Cassetti Fiscali</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Scadenzari</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>Best Practices</span>
-            </div>
-          </div>
-          <a href="/guide/MANUALE_UTENTE_COMPLETO.html" target="_blank" rel="noopener noreferrer">
+          <a
+            href="/guide/MANUALE_UTENTE_COMPLETO.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               <BookOpen className="h-5 w-5 mr-2" />
               Apri Manuale Completo
@@ -449,50 +569,25 @@ export default function DashboardPage() {
               <Lock className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-amber-900">🔐 Guida Master Password - Gestione Sicura Dati</CardTitle>
-              <CardDescription className="text-amber-700">Impara a configurare e utilizzare la Master Password per proteggere i dati sensibili dello studio</CardDescription>
+              <CardTitle className="text-amber-900">
+                🔐 Guida Master Password - Gestione Sicura Dati
+              </CardTitle>
+              <CardDescription className="text-amber-700">
+                Impara a configurare e utilizzare la Master Password
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700 mb-4">
-            Guida completa per configurare, utilizzare e gestire la Master Password in modo sicuro e autonomo. Ogni membro del team potrà lavorare senza dipendere da altri.
+            Guida completa per configurare, utilizzare e gestire la Master Password
+            in modo sicuro e autonomo.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-xs text-gray-600">
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Setup iniziale</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Uso quotidiano</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Condivisione sicura</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Best practices</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Troubleshooting</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>FAQ complete</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Checklist operative</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-amber-600" />
-              <span>Regole team</span>
-            </div>
-          </div>
-          <a href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html" target="_blank" rel="noopener noreferrer">
+          <a
+            href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
               <Lock className="h-5 w-5 mr-2" />
               Apri Guida Master Password
