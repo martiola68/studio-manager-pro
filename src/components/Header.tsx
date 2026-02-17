@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
-import { utenteService } from "@/services/utenteService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/supabase/types";
@@ -38,7 +37,10 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   const loadUserAndStudio = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+      if (!session) {
+  setCurrentUser(null);
+  return;
+}
       if (session?.user?.email) {
         const { data: utente } = await supabase
           .from("tbutenti")
@@ -69,8 +71,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       }
       
       console.log("✅ Logout completato");
-      
-      // Force reload per cancellare ogni stato cached
       
     } catch (error) {
       console.error("💥 Errore critico logout:", error);
