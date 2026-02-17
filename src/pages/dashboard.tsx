@@ -67,20 +67,22 @@ export default function DashboardPage() {
    * - session exists
    */
   useEffect(() => {
-    if (!ready) return;
-    if (!session?.user?.email) return;
+  if (!ready) return;
 
-    let cancelled = false;
+  const email = session?.user?.email;
+  if (!email) return;
 
-    (async () => {
-      try {
-        setLoading(true);
+  let cancelled = false;
 
-        const { data: userData, error: userError } = await supabase
-          .from("tbutenti")
-          .select("id, tipo_utente, studio_id")
-          .eq("email", session.user.email)
-          .single();
+  (async () => {
+    try {
+      setLoading(true);
+
+      const { data: userData, error: userError } = await supabase
+        .from("tbutenti")
+        .select("id, tipo_utente, studio_id")
+        .eq("email", email)
+        .single();
 
         if (userError || !userData) {
           console.error("Errore recupero utente:", userError);
