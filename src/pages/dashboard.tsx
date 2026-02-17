@@ -39,7 +39,7 @@ type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 export default function DashboardPage() {
   const { toast } = useToast();
 
-  // ✅ SINGLE SOURCE OF TRUTH for auth
+  // ✅ auth guard: redirects live ONLY inside useRequireAuth
   const { ready, session } = useRequireAuth();
 
   const [loading, setLoading] = useState(true);
@@ -54,9 +54,9 @@ export default function DashboardPage() {
     scadenzeCUConfermate: 0,
     scadenzeBilanciConfermate: 0,
   });
-  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<
-    EventoAgenda[]
-  >([]);
+  const [prossimiAppuntamenti, setProssimiAppuntamenti] = useState<EventoAgenda[]>(
+    []
+  );
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
         if (userError || !userData) {
           console.error("Errore recupero utente:", userError);
-          // ⚠️ NO redirect here (avoid ping-pong). useRequireAuth already handles missing session.
+          // ✅ NO redirect here: useRequireAuth handles auth redirects.
           return;
         }
 
@@ -127,7 +127,6 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, session?.user?.email]);
 
   /**
@@ -143,7 +142,7 @@ export default function DashboardPage() {
           currentUserId
         );
         setMessaggiNonLetti(nonLetti);
-      } catch (e) {
+      } catch {
         // non bloccare UI se manca
       }
     }, 30000);
@@ -245,6 +244,21 @@ export default function DashboardPage() {
     }
   };
 
+  const formatDateTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
   // ✅ Auth still checking
   if (!ready) {
     return (
@@ -269,21 +283,6 @@ export default function DashboardPage() {
     );
   }
 
-  const formatDateTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString("it-IT", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="mb-8">
@@ -298,17 +297,18 @@ export default function DashboardPage() {
             isPartner={isPartner}
             onDismiss={handleDismissAlert}
             onViewDetails={(_id, tipo) => {
-  const target =
-    tipo === "IVA"
-      ? "/scadenze/iva"
-      : tipo === "Fiscale"
-      ? "/scadenze/fiscale"
-      : tipo === "Bilancio"
-      ? "/scadenze/bilanci"
-      : "/scadenze/calendario";
+              const target =
+                tipo === "IVA"
+                  ? "/scadenze/iva"
+                  : tipo === "Fiscale"
+                  ? "/scadenze/fiscale"
+                  : tipo === "Bilancio"
+                  ? "/scadenze/bilanci"
+                  : "/scadenze/calendario";
 
-  window.location.assign(target);
-}}
+              // ⚠️ Not auth redirect. Only navigation from user action.
+              window.location.assign(target);
+            }}
             onNotifyTeams={handleNotifyTeams}
           />
         </div>
@@ -323,14 +323,9 @@ export default function DashboardPage() {
             <Users className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
-              {stats.clientiAttivi}
-            </div>
+            <div className="text-3xl font-bold text-gray-900">{stats.clientiAttivi}</div>
             <Link href="/clienti">
-              <Button
-                variant="link"
-                className="p-0 h-auto text-sm text-blue-600 mt-2"
-              >
+              <Button variant="link" className="p-0 h-auto text-sm text-blue-600 mt-2">
                 Gestisci clienti →
               </Button>
             </Link>
@@ -396,36 +391,28 @@ export default function DashboardPage() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">CCGG</span>
                 </div>
-                <span className="text-sm font-bold">
-                  {stats.scadenzeCCGGConfermate}
-                </span>
+                <span className="text-sm font-bold">{stats.scadenzeCCGGConfermate}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">CU</span>
                 </div>
-                <span className="text-sm font-bold">
-                  {stats.scadenzeCUConfermate}
-                </span>
+                <span className="text-sm font-bold">{stats.scadenzeCUConfermate}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">Bilanci</span>
                 </div>
-                <span className="text-sm font-bold">
-                  {stats.scadenzeBilanciConfermate}
-                </span>
+                <span className="text-sm font-medium">{stats.scadenzeBilanciConfermate}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium">770</span>
                 </div>
-                <span className="text-sm font-bold">
-                  {stats.scadenze770Confermate}
-                </span>
+                <span className="text-sm font-bold">{stats.scadenze770Confermate}</span>
               </div>
             </div>
             <Link href="/scadenze/iva">
@@ -450,26 +437,17 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {prossimiAppuntamenti.map((app) => (
-                  <div
-                    key={app.id}
-                    className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
-                  >
+                  <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                     <div
                       className={`w-2 h-2 rounded-full mt-2 ${
                         app.in_sede ? "bg-green-500" : "bg-red-500"
                       }`}
-                    ></div>
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-900 truncate">
-                        {app.titolo}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatDateTime(app.data_inizio)}
-                      </p>
+                      <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
+                      <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
                       {app.sala && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Sala: {app.sala}
-                        </p>
+                        <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>
                       )}
                     </div>
                   </div>
@@ -493,10 +471,7 @@ export default function DashboardPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link href="/messaggi">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2"
-              >
+              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <MessageSquare className="h-8 w-8 text-blue-600" />
                 <span className="text-sm font-medium">
                   Messaggi {messaggiNonLetti > 0 ? `(${messaggiNonLetti})` : ""}
@@ -504,28 +479,19 @@ export default function DashboardPage() {
               </Button>
             </Link>
             <Link href="/agenda">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2"
-              >
+              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <Calendar className="h-8 w-8 text-green-600" />
                 <span className="text-sm font-medium">Agenda</span>
               </Button>
             </Link>
             <Link href="/contatti">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2"
-              >
+              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <Users className="h-8 w-8 text-purple-600" />
                 <span className="text-sm font-medium">Contatti</span>
               </Button>
             </Link>
             <Link href="/comunicazioni">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2"
-              >
+              <Button variant="outline" className="w-full h-24 flex flex-col gap-2">
                 <Mail className="h-8 w-8 text-orange-600" />
                 <span className="text-sm font-medium">Comunicazioni</span>
               </Button>
@@ -550,14 +516,10 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700 mb-4">
-            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria,
-            Rubrica, Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
+            Scopri tutte le funzionalità del sistema: Agenda, Messaggi, Promemoria, Rubrica,
+            Clienti, Accesso Portali, Cassetti Fiscali e Scadenzari.
           </p>
-          <a
-            href="/guide/MANUALE_UTENTE_COMPLETO.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="/guide/MANUALE_UTENTE_COMPLETO.html" target="_blank" rel="noopener noreferrer">
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               <BookOpen className="h-5 w-5 mr-2" />
               Apri Manuale Completo
@@ -573,9 +535,7 @@ export default function DashboardPage() {
               <Lock className="h-6 w-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-amber-900">
-                🔐 Guida Master Password - Gestione Sicura Dati
-              </CardTitle>
+              <CardTitle className="text-amber-900">🔐 Guida Master Password - Gestione Sicura Dati</CardTitle>
               <CardDescription className="text-amber-700">
                 Impara a configurare e utilizzare la Master Password
               </CardDescription>
@@ -584,14 +544,9 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-700 mb-4">
-            Guida completa per configurare, utilizzare e gestire la Master Password
-            in modo sicuro e autonomo.
+            Guida completa per configurare, utilizzare e gestire la Master Password in modo sicuro e autonomo.
           </p>
-          <a
-            href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="/guide/GUIDA_MASTER_PASSWORD_TEAM.html" target="_blank" rel="noopener noreferrer">
             <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white">
               <Lock className="h-5 w-5 mr-2" />
               Apri Guida Master Password
