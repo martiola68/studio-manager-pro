@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
+import type React from "react";
 import type { Database } from "@/lib/supabase/types";
 import {
   LayoutDashboard,
@@ -47,13 +48,13 @@ interface MenuItem {
 }
 
 export function TopNavBar() {
-  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
   const [eventiImminenti, setEventiImminenti] = useState(0);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (currentUser) {
@@ -281,7 +282,7 @@ export function TopNavBar() {
     }
   ];
 
-  const isActive = (href: string) => router.pathname === href;
+  const isActive = (href: string) => pathname === href;
 
   const renderMenuItem = (item: MenuItem) => {
     if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
