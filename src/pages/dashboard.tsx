@@ -1,6 +1,5 @@
 // src/pages/dashboard.tsx
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
 import { clienteService } from "@/services/clienteService";
 import { eventoService } from "@/services/eventoService";
@@ -38,7 +37,6 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { toast } = useToast();
 
   // ✅ SINGLE SOURCE OF TRUTH for auth
@@ -300,11 +298,17 @@ export default function DashboardPage() {
             isPartner={isPartner}
             onDismiss={handleDismissAlert}
             onViewDetails={(_id, tipo) => {
-              if (tipo === "IVA") router.push(`/scadenze/iva`);
-              else if (tipo === "Fiscale") router.push(`/scadenze/fiscale`);
-              else if (tipo === "Bilancio") router.push(`/scadenze/bilanci`);
-              else router.push(`/scadenze/calendario`);
-            }}
+  const target =
+    tipo === "IVA"
+      ? "/scadenze/iva"
+      : tipo === "Fiscale"
+      ? "/scadenze/fiscale"
+      : tipo === "Bilancio"
+      ? "/scadenze/bilanci"
+      : "/scadenze/calendario";
+
+  window.location.assign(target);
+}}
             onNotifyTeams={handleNotifyTeams}
           />
         </div>
