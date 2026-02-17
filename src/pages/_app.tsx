@@ -4,119 +4,92 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
 import { TopNavBar } from "@/components/TopNavBar";
 import { supabase } from "@/lib/supabase/client";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
+
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  // Pagine pubbliche che non devono mostrare il layout
-  const isPublicPage = router.pathname === "/login" || 
-                       router.pathname === "/auth/callback" ||
-                       router.pathname === "/404";
+  const [isReady, setIsReady] = useState(false);
+
+  // Public routes (no layout, no auth required)
+  const isPublicPage = useMemo(() => {
+    return router.pathname === "/login" || router.pathname === "/auth/callback";
+  }, [router.pathname]);
 
   useEffect(() => {
-    // ✅ FIX: Design Mode per Softgen Sandbox
-    // Detection affidabile basata sulla presenza/validità della URL Supabase
-    // Vercel (Production) ha SEMPRE queste variabili valorizzate correttamente
-    // Softgen Sandbox le ha vuote o placeholder
-    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
-    
-    if (isSandbox) {
-      console.log("Softgen Sandbox detected: Enabling Design Mode (Mock Session)");
-      // Sandbox: Mock session per design/UI preview
-      setUser({
-        id: "sandbox-user-preview",
-        email: "preview@softgen.sandbox",
-        app_metadata: {},
-        user_metadata: { 
-          full_name: "Design Preview Mode" 
-        },
-        aud: "authenticated",
-        created_at: new Date().toISOString()
-      } as User);
-      setLoading(false);
-      return; // ⛔ STOP: Non inizializzare listener Supabase reale in Sandbox
-    }
+    let alive = true;
 
-    // ✅ Vercel/Production: Auth listener Supabase normale
-    // Questo codice viene eseguito SOLO su Vercel dove le env vars sono corrette
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    (async () => {
+      try {
+        // ✅ CRITICAL: getSession must run once on boot
+        const { data, error } = await supabase.auth.getSession();
+        if (!alive) return;
 
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Skip completo in sandbox
-    const isSandbox = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                      process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-                      process.env.NEXT_PUBLIC_SUPABASE_URL === "";
-    
-    if (isSandbox) return;
-
-    // Setup session refresh e gestione errori (SOLO VERCEL)
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      if (event === "SIGNED_OUT") {
-        // Pulizia completa su logout/cancellazione
-        localStorage.clear();
-        sessionStorage.clear();
-        router.push("/login");
-      }
-
-      if (event === "TOKEN_REFRESHED") {
-        console.log("Token refreshed successfully");
-      }
-
-      // Gestione errori sessione
-      if (event === "SIGNED_OUT" && !session) {
-        const currentPath = router.pathname;
-        // Evita loop se già su login
-        if (currentPath !== "/login") {
-          router.push("/login");
-        }
-      }
-    });
-
-    // Setup refresh automatico token ogni 50 minuti (prima della scadenza 60min)
-    const refreshInterval = setInterval(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { error } = await supabase.auth.refreshSession();
         if (error) {
-          console.error("Token refresh failed:", error);
-          // Se refresh fallisce, redirect a login
-          router.push("/login");
+          console.error("[Auth] getSession error:", error.message);
+          setUser(null);
+        } else {
+          setUser(data.session?.user ?? null);
         }
+      } finally {
+        if (alive) setIsReady(true);
       }
-    }, 50 * 60 * 1000); // 50 minuti
+    })();
+
+    // ✅ Single listener only
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
+      if (!alive) return;
+      setUser(session?.user ?? null);
+    });
 
     return () => {
-      authListener?.subscription.unsubscribe();
-      clearInterval(refreshInterval);
+      alive = false;
+      sub.subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
+
+  // ✅ AuthGate: single redirect point
+  useEffect(() => {
+    if (!isReady) return;
+
+    const isAuthed = !!user;
+
+    // If not authed and trying to access private page -> go login
+    if (!isAuthed && !isPublicPage) {
+      router.replace("/login");
+      return;
+    }
+
+    // If authed and on login -> go dashboard
+    if (isAuthed && router.pathname === "/login") {
+      router.replace("/dashboard");
+      return;
+    }
+  }, [isReady, user, isPublicPage, router]);
+
+  // Loading screen while auth is resolving
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <ThemeProvider>
       <StudioProvider>
         {isPublicPage ? (
-          // Pagine pubbliche: solo il componente senza layout
           <>
             <Component {...pageProps} />
             <Toaster />
           </>
         ) : (
-          // Pagine private: con layout completo (Header + TopNavBar)
           <div className="flex flex-col min-h-screen bg-gray-50">
             <Header onMenuToggle={() => {}} />
             <TopNavBar />
