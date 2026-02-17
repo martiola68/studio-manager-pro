@@ -66,7 +66,7 @@ export default function DashboardPage() {
    * - auth check is ready
    * - session exists
    */
-  useEffect(() => {
+ useEffect(() => {
   if (!ready) return;
 
   const email = session?.user?.email;
