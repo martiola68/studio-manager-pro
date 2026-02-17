@@ -104,9 +104,6 @@ export default function CassettiFiscaliPage() {
   };
 
   // Check encryption status - SOLO ALL'INIZIO
-  useEffect(() => {
-    checkEncryptionStatus();
-  }, []);
 
   // Load cassetti quando isUnlocked cambia a true
   useEffect(() => {
