@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // 1) Bootstrap: se già loggato, vai a dashboard
+  // ✅ se già loggato → /dashboard (redirect SOLO QUI)
   useEffect(() => {
     let cancelled = false;
 
@@ -26,12 +26,9 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.getSession();
         if (cancelled) return;
 
-        if (error) {
-          console.error("[Login] getSession error:", error);
-        }
+        if (error) console.error("[Login] getSession error:", error);
 
         if (data?.session?.access_token) {
-          console.log("[Login] Session already present → /dashboard");
           router.replace("/dashboard");
           return;
         }
@@ -58,7 +55,6 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    console.log("[Login] Attempting signInWithPassword:", email);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -67,7 +63,6 @@ export default function LoginPage() {
       });
 
       if (error) {
-        console.error("[Login] ❌ signIn error:", error);
         toast({
           title: "Errore di autenticazione",
           description: error.message,
@@ -77,7 +72,6 @@ export default function LoginPage() {
       }
 
       if (!data.session?.access_token) {
-        console.error("[Login] ❌ No session after login");
         toast({
           title: "Errore",
           description: "Nessuna sessione creata",
@@ -86,15 +80,11 @@ export default function LoginPage() {
         return;
       }
 
-      toast({
-        title: "Accesso effettuato",
-        description: "Benvenuto!",
-      });
+      toast({ title: "Accesso effettuato", description: "Benvenuto!" });
 
-      console.log("[Login] ✅ Login OK → /dashboard");
+      // ✅ redirect SOLO QUI
       router.replace("/dashboard");
     } catch (err: any) {
-      console.error("[Login] ❌ Unexpected error:", err);
       toast({
         title: "Errore",
         description: err?.message || "Errore durante il login",
@@ -105,7 +95,6 @@ export default function LoginPage() {
     }
   };
 
-  // Loading mentre controlla sessione
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -121,7 +110,6 @@ export default function LoginPage() {
     );
   }
 
-  // Form login
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md shadow-xl">
