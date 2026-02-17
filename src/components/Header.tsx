@@ -37,21 +37,23 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   const loadUserAndStudio = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+
+if (!session) {
   setCurrentUser(null);
   return;
 }
-      if (session?.user?.email) {
-        const { data: utente } = await supabase
-          .from("tbutenti")
-          .select("*")
-          .eq("email", session.user.email)
-          .single();
-        
-        if (utente) {
-          setCurrentUser(utente);
-        }
-      }
+
+if (session.user.email) {
+  const { data: utente } = await supabase
+    .from("tbutenti")
+    .select("*")
+    .eq("email", session.user.email)
+    .single();
+
+  if (utente) {
+    setCurrentUser(utente);
+  }
+}
 
       const studioData = await studioService.getStudio();
       setStudio(studioData);
