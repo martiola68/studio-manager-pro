@@ -36,7 +36,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
   const loadUserAndStudio = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+     const { data: { session } } = await supabase.auth.getSession();
 
 if (!session) {
   setCurrentUser(null);
