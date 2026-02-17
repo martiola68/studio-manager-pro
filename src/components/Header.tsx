@@ -4,7 +4,6 @@ import { studioService } from "@/services/studioService";
 import { utenteService } from "@/services/utenteService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/router";
 import type { Database } from "@/lib/supabase/types";
 import { authService } from "@/services/authService";
 
@@ -19,15 +18,13 @@ interface HeaderProps {
 export default function Header({ onMenuToggle, title }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
-  const router = useRouter();
-
+  
   useEffect(() => {
     loadUserAndStudio();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         setCurrentUser(null);
-        router.push("/login");
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         loadUserAndStudio();
       }
@@ -71,10 +68,10 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         return;
       }
       
-      console.log("✅ Logout completato, redirect a /login");
+      console.log("✅ Logout completato");
       
       // Force reload per cancellare ogni stato cached
-      window.location.href = "/login";
+      
     } catch (error) {
       console.error("💥 Errore critico logout:", error);
     }
