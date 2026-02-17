@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -31,21 +30,32 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Search, Plus, Copy, Eye, EyeOff, Edit, Trash2, Lock, Unlock, ExternalLink } from "lucide-react";
-import { cassettiFiscaliService, type CassettoFiscale } from "@/services/cassettiFiscaliService";
+import {
+  Loader2,
+  Search,
+  Plus,
+  Copy,
+  Eye,
+  EyeOff,
+  Edit,
+  Trash2,
+  Lock,
+  Unlock,
+  ExternalLink,
+} from "lucide-react";
+
+import {
+  cassettiFiscaliService,
+  type CassettoFiscale,
+} from "@/services/cassettiFiscaliService";
+
 import {
   isEncryptionEnabled,
-  areCassettiUnlocked,
   encryptCassettoPasswords,
-  migrateAllCassettiToEncrypted,
   unlockCassetti,
-  lockCassetti,
 } from "@/services/encryptionService";
-import { 
-  isEncrypted, 
-  decryptData,
-  getStoredEncryptionKey 
-} from "@/lib/encryption";
+
+import { isEncrypted, decryptData, getStoredEncryptionKey } from "@/lib/encryption";
 
 const formSchema = z.object({
   nominativo: z.string().min(2, "Il nominativo è obbligatorio"),
@@ -61,6 +71,26 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+type PendingAction =
+  | { type: "reveal"; payload: { id: string; field: "pw1" | "pw2" | "pin" | "pw_init" } }
+  | { type: "copy"; payload: { text: string; label: string } }
+  | { type: "submit"; payload: { values: FormValues } }
+  | null;
+
+function isSensitiveEncrypted(item: CassettoFiscale) {
+  return (
+    (item.password1 && isEncrypted(item.password1)) ||
+    (item.password2 && isEncrypted(item.password2)) ||
+    (item.pin && isEncrypted(item.pin)) ||
+    (item.pw_iniziale && isEncrypted(item.pw_iniziale)) ||
+    (item.username && isEncrypted(item.username))
+  );
+}
+
+function hasKey() {
+  return Boolean(getStoredEncryptionKey());
+}
+
 export default function CassettiFiscaliPage() {
   const [cassetti, setCassetti] = useState<CassettoFiscale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,14 +98,13 @@ export default function CassettiFiscaliPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCassetto, setEditingCassetto] = useState<CassettoFiscale | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  
-  // Encryption states - SOLO unlock iniziale
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
-  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+
+  // Encryption (non blocca la UI)
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
   const [unlockPassword, setUnlockPassword] = useState("");
-  const [migrating, setMigrating] = useState(false);
-  
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -103,114 +132,81 @@ export default function CassettiFiscaliPage() {
     if (checked) form.setValue("pw_attiva1", false);
   };
 
-  // Check encryption status - SOLO ALL'INIZIO
+  const studioId = useMemo(() => localStorage.getItem("studio_id") || "", []);
 
-  // Load cassetti quando isUnlocked cambia a true
-  useEffect(() => {
-    if (isUnlocked) {
-      loadCassetti();
-    }
-  }, [isUnlocked]);
-
-  const checkEncryptionStatus = async () => {
+  const refreshEncryptionEnabled = async () => {
     try {
-      const studioId = localStorage.getItem("studio_id");
       if (!studioId) {
-        setIsUnlocked(true);
+        setEncryptionEnabled(false);
         return;
       }
-
-      // Verifica se la cifratura è abilitata
       const enabled = await isEncryptionEnabled(studioId);
-      
-      if (!enabled) {
-        // Master Password NON configurata → Accesso libero
-        setIsUnlocked(true);
-        return;
-      }
-
-      // Master Password configurata → Mostra dialog per sbloccare
-      setIsUnlocked(false);
-      setShowUnlockDialog(true);
-    } catch (error) {
-      console.error("Error checking encryption:", error);
-      // In caso di errore, permetti comunque l'accesso
-      setIsUnlocked(true);
+      setEncryptionEnabled(Boolean(enabled));
+    } catch (e) {
+      console.error("Error checking encryption enabled:", e);
+      // non blocchiamo mai la UI
+      setEncryptionEnabled(false);
     }
   };
 
-  const handleUnlock = async () => {
+  const loadCassetti = async () => {
     try {
-      const studioId = localStorage.getItem("studio_id");
-      if (!studioId) return;
-      
-      const result = await unlockCassetti(studioId, unlockPassword);
-      
-      if (result.success) {
-        setIsUnlocked(true);
-        setShowUnlockDialog(false);
-        setUnlockPassword("");
-        
-        toast({
-          title: "🔓 Cassetti Sbloccati",
-          description: "Accesso consentito ai cassetti fiscali",
-        });
-        
-        loadCassetti();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Errore",
-          description: result.error || "Password errata",
-        });
-      }
-    } catch (error) {
-      console.error("Unlock error:", error);
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: "Impossibile sbloccare i cassetti",
+      setLoading(true);
+      const data = await cassettiFiscaliService.getCassettiFiscali(studioId || null);
+
+      const key = getStoredEncryptionKey();
+
+      // Se ho la key -> decifro e mostro chiaro
+      // Se NON ho la key -> NON blocco la lista: mostro comunque nominativo e maschero i campi sensibili
+      const hydrated = data.map((item) => {
+        if (!key) return item;
+
+        try {
+          const decryptedUsername =
+            item.username && isEncrypted(item.username) ? decryptData(item.username, key) : item.username;
+
+          const decryptedPassword1 =
+            item.password1 && isEncrypted(item.password1) ? decryptData(item.password1, key) : item.password1;
+
+          const decryptedPassword2 =
+            item.password2 && isEncrypted(item.password2) ? decryptData(item.password2, key) : item.password2;
+
+          const decryptedPin = item.pin && isEncrypted(item.pin) ? decryptData(item.pin, key) : item.pin;
+
+          const decryptedPwInit =
+            item.pw_iniziale && isEncrypted(item.pw_iniziale) ? decryptData(item.pw_iniziale, key) : item.pw_iniziale;
+
+          return {
+            ...item,
+            username: decryptedUsername,
+            password1: decryptedPassword1,
+            password2: decryptedPassword2,
+            pin: decryptedPin,
+            pw_iniziale: decryptedPwInit,
+          };
+        } catch (e) {
+          console.error("Error decrypting item:", item.id, e);
+          return item;
+        }
       });
-    }
-  };
 
-  const handleMigrate = async () => {
-    try {
-      setMigrating(true);
-      const studioId = localStorage.getItem("studio_id");
-      if (!studioId) return;
-      
-      const result = await migrateAllCassettiToEncrypted(studioId);
-      
-      if (result.success) {
-        toast({
-          title: "✅ Migrazione Completata",
-          description: `${result.migrated} cassetti migrati con successo`,
-        });
-        
-        setShowMigrationDialog(false);
-        loadCassetti();
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Errore",
-          description: "Errore durante la migrazione",
-        });
-      }
+      setCassetti(hydrated);
     } catch (error) {
-      console.error("Migration error:", error);
+      console.error("Error loading cassetti:", error);
       toast({
         variant: "destructive",
         title: "Errore",
-        description: "Impossibile migrare i cassetti",
+        description: "Impossibile caricare i cassetti fiscali",
       });
     } finally {
-      setMigrating(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
+    refreshEncryptionEnabled();
     loadCassetti();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -241,79 +237,127 @@ export default function CassettiFiscaliPage() {
     }
   }, [editingCassetto, form]);
 
-  const loadCassetti = async () => {
+  const requireUnlock = (action: PendingAction) => {
+    setPendingAction(action);
+    setUnlockDialogOpen(true);
+  };
+
+  const handleUnlock = async () => {
     try {
-      const studioId = localStorage.getItem("studio_id");
-      setLoading(true);
+      if (!studioId) return;
 
-      const data = await cassettiFiscaliService.getCassettiFiscali(studioId);
-      const key = getStoredEncryptionKey();
-      
-      // Decrypt passwords if encrypted
-      const decryptedData = data.map((item) => {
-        // Se non abbiamo la chiave ma i dati sono criptati, ritorniamo i dati criptati (non dovremmo essere qui se isUnlocked è false)
-        if (!key) return item;
+      const result = await unlockCassetti(studioId, unlockPassword);
 
-        try {
-          const decryptedUsername = item.username && isEncrypted(item.username) 
-            ? decryptData(item.username, key) 
-            : item.username;
-            
-          const decryptedPassword1 = item.password1 && isEncrypted(item.password1) 
-            ? decryptData(item.password1, key) 
-            : item.password1;
-            
-          const decryptedPassword2 = item.password2 && isEncrypted(item.password2) 
-            ? decryptData(item.password2, key) 
-            : item.password2;
-            
-          const decryptedPin = item.pin && isEncrypted(item.pin) 
-            ? decryptData(item.pin, key) 
-            : item.pin;
-            
-          const decryptedPasswordIniziale = item.pw_iniziale && isEncrypted(item.pw_iniziale) 
-            ? decryptData(item.pw_iniziale, key) 
-            : item.pw_iniziale;
+      if (!result.success) {
+        toast({
+          variant: "destructive",
+          title: "Errore",
+          description: result.error || "Password errata",
+        });
+        return;
+      }
 
-          return {
-            ...item,
-            username: decryptedUsername,
-            password1: decryptedPassword1,
-            password2: decryptedPassword2,
-            pin: decryptedPin,
-            pw_iniziale: decryptedPasswordIniziale,
-          };
-        } catch (e) {
-          console.error("Error decrypting item:", item.id, e);
-          return item;
-        }
+      setUnlockDialogOpen(false);
+      setUnlockPassword("");
+
+      toast({
+        title: "🔓 Sbloccato",
+        description: "Ora puoi visualizzare/copiare/salvare i dati cifrati.",
       });
 
-      setCassetti(decryptedData);
+      // ricarico per mostrare i valori decifrati
+      await loadCassetti();
+
+      // rieseguo l’azione pending
+      const next = pendingAction;
+      setPendingAction(null);
+
+      if (!next) return;
+
+      if (next.type === "reveal") {
+        const { id, field } = next.payload;
+        togglePasswordVisibility(id, field, true);
+      } else if (next.type === "copy") {
+        const { text, label } = next.payload;
+        doCopy(text, label);
+      } else if (next.type === "submit") {
+        await doSubmit(next.payload.values);
+      }
     } catch (error) {
-      console.error("Error loading cassetti:", error);
+      console.error("Unlock error:", error);
       toast({
         variant: "destructive",
         title: "Errore",
-        description: "Impossibile caricare i cassetti fiscali",
+        description: "Impossibile sbloccare i cassetti",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const onSubmit = async (values: FormValues) => {
+  const doCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ description: `${label} copiata negli appunti`, duration: 2000 });
+
+    setTimeout(() => {
+      navigator.clipboard.writeText("");
+    }, 10000);
+  };
+
+  const copyToClipboard = (text: string | null | undefined, label: string) => {
+    if (!text) return;
+
+    // Se cifratura attiva e non abbiamo key (quindi con buona probabilità è cifrato) -> unlock on-demand
+    if (encryptionEnabled && !hasKey() && isEncrypted(text)) {
+      requireUnlock({ type: "copy", payload: { text, label } });
+      return;
+    }
+
+    doCopy(text, label);
+  };
+
+  const togglePasswordVisibility = (id: string, field: "pw1" | "pw2" | "pin" | "pw_init", forceShow?: boolean) => {
+    // Se cifratura attiva e non ho key -> chiedo unlock ma NON blocco la pagina
+    if (encryptionEnabled && !hasKey()) {
+      requireUnlock({ type: "reveal", payload: { id, field } });
+      return;
+    }
+
+    const key = `${id}_${field}`;
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [key]: forceShow ? true : !prev[key],
+    }));
+
+    const willShow = forceShow ? true : !visiblePasswords[key];
+
+    // Auto-hide after 30 seconds
+    if (willShow) {
+      setTimeout(() => {
+        setVisiblePasswords((prev) => ({ ...prev, [key]: false }));
+      }, 30000);
+    }
+  };
+
+  const doSubmit = async (values: FormValues) => {
     try {
-      // Encrypt passwords (Master Password system)
-      const encrypted = await encryptCassettoPasswords({
-        password1: values.password1,
-        password2: values.password2,
-        pin: values.pin,
-        pw_iniziale: values.pw_iniziale,
-      });
-      
-      const dataToSave = { ...values, ...encrypted };
-      
+      // Se cifratura attiva ma non sbloccato -> chiedi unlock on-demand SOLO per il salvataggio
+      if (encryptionEnabled && !hasKey()) {
+        requireUnlock({ type: "submit", payload: { values } });
+        return;
+      }
+
+      // Encrypt passwords (Master Password system) se attivo
+      let dataToSave: any = { ...values };
+
+      if (encryptionEnabled) {
+        const encrypted = await encryptCassettoPasswords({
+          password1: values.password1,
+          password2: values.password2,
+          pin: values.pin,
+          pw_iniziale: values.pw_iniziale,
+        });
+        dataToSave = { ...values, ...encrypted };
+      }
+
       if (editingCassetto) {
         await cassettiFiscaliService.update(editingCassetto.id, dataToSave);
         toast({ title: "Successo", description: "Cassetto fiscale aggiornato" });
@@ -321,7 +365,7 @@ export default function CassettiFiscaliPage() {
         await cassettiFiscaliService.create(dataToSave);
         toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
       }
-      
+
       form.reset({
         nominativo: "",
         username: "",
@@ -333,7 +377,7 @@ export default function CassettiFiscaliPage() {
         pw_iniziale: "",
         note: "",
       });
-      
+
       setDialogOpen(false);
       setEditingCassetto(null);
       await loadCassetti();
@@ -345,6 +389,10 @@ export default function CassettiFiscaliPage() {
         description: "Impossibile salvare i dati",
       });
     }
+  };
+
+  const onSubmit = async (values: FormValues) => {
+    await doSubmit(values);
   };
 
   const handleDelete = async (id: string) => {
@@ -363,55 +411,81 @@ export default function CassettiFiscaliPage() {
     }
   };
 
-  const copyToClipboard = (text: string | null | undefined, label: string) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    toast({
-      description: `${label} copiata negli appunti`,
-      duration: 2000,
+  const filteredCassetti = useMemo(() => {
+    return cassetti.filter((cassetto) => {
+      if (searchTerm === "") return true;
+
+      if (searchTerm.length === 1 && /^[A-Z]$/i.test(searchTerm)) {
+        return cassetto.nominativo?.toUpperCase().startsWith(searchTerm.toUpperCase());
+      }
+
+      // Se username è cifrato e non ho key, la ricerca su username non ha senso:
+      // non blocco nulla, semplicemente cerco su nominativo e su eventuali campi già in chiaro.
+      const term = searchTerm.toLowerCase();
+
+      const nominativoMatch = cassetto.nominativo?.toLowerCase().includes(term);
+      const usernameMatch = cassetto.username && !isEncrypted(cassetto.username) ? cassetto.username.toLowerCase().includes(term) : false;
+      const pinMatch = cassetto.pin && !isEncrypted(cassetto.pin) ? cassetto.pin.toLowerCase().includes(term) : false;
+
+      return Boolean(nominativoMatch || usernameMatch || pinMatch);
     });
-    
-    // Auto-clear clipboard after 10 seconds for security
-    setTimeout(() => {
-      navigator.clipboard.writeText("");
-    }, 10000);
-  };
-
-  const togglePasswordVisibility = (id: string, field: string) => {
-    const key = `${id}_${field}`;
-    setVisiblePasswords(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-    
-    // Auto-hide after 30 seconds
-    if (!visiblePasswords[key]) {
-      setTimeout(() => {
-        setVisiblePasswords(prev => ({
-          ...prev,
-          [key]: false
-        }));
-      }, 30000);
-    }
-  };
-
-  const filteredCassetti = cassetti.filter((cassetto) => {
-    if (searchTerm === "") {
-      return true;
-    }
-    
-    if (searchTerm.length === 1 && /^[A-Z]$/i.test(searchTerm)) {
-      return cassetto.nominativo?.toUpperCase().startsWith(searchTerm.toUpperCase());
-    }
-    
-    return (
-      cassetto.nominativo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cassetto.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cassetto.pin?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  }, [cassetti, searchTerm]);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  const renderSensitiveCell = (cassetto: CassettoFiscale, field: "pw1" | "pw2" | "pin" | "pw_init") => {
+    const map: Record<typeof field, { value?: string | null; mask: string; label: string }> = {
+      pw1: { value: cassetto.password1, mask: "••••••••", label: "Password 1" },
+      pw2: { value: cassetto.password2, mask: "••••••••", label: "Password 2" },
+      pin: { value: cassetto.pin, mask: "••••", label: "PIN" },
+      pw_init: { value: cassetto.pw_iniziale, mask: "••••••••", label: "Password Iniziale" },
+    };
+
+    const { value, mask, label } = map[field];
+    const key = `${cassetto.id}_${field}`;
+    const isVisible = Boolean(visiblePasswords[key]);
+
+    // Se cifrato e non ho key -> non mostro valore, ma consento click per sbloccare on-demand
+    const locked = encryptionEnabled && !hasKey() && value && isEncrypted(value);
+
+    const display = !value ? "-" : locked ? "🔒" : isVisible ? value : mask;
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-mono">{display}</span>
+
+        {value && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => togglePasswordVisibility(cassetto.id, field)}
+              title={locked ? "Sblocca per visualizzare" : isVisible ? "Nascondi" : "Mostra"}
+            >
+              {locked ? (
+                <Lock className="h-3 w-3" />
+              ) : isVisible ? (
+                <EyeOff className="h-3 w-3" />
+              ) : (
+                <Eye className="h-3 w-3" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => copyToClipboard(value, label)}
+              title={locked ? "Sblocca per copiare" : "Copia"}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
@@ -419,17 +493,38 @@ export default function CassettiFiscaliPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
           <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
+
+          {encryptionEnabled && !hasKey() && (
+            <p className="text-xs text-orange-600 mt-2">
+              🔒 Cifratura attiva: i campi sensibili restano mascherati finché non sblocchi (la lista NON è bloccata).
+            </p>
+          )}
         </div>
+
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => window.open("https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate", "_blank")}
+            onClick={() =>
+              window.open(
+                "https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate",
+                "_blank"
+              )
+            }
           >
             <ExternalLink className="mr-2 h-4 w-4" /> Agenzia delle Entrate
           </Button>
-          <Button 
-            onClick={() => { setEditingCassetto(null); setDialogOpen(true); }}
-            disabled={!isUnlocked}
+
+          {encryptionEnabled && !hasKey() && (
+            <Button variant="outline" onClick={() => setUnlockDialogOpen(true)}>
+              <Unlock className="mr-2 h-4 w-4" /> Sblocca
+            </Button>
+          )}
+
+          <Button
+            onClick={() => {
+              setEditingCassetto(null);
+              setDialogOpen(true);
+            }}
           >
             <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
           </Button>
@@ -445,15 +540,14 @@ export default function CassettiFiscaliPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-8"
-              disabled={!isUnlocked}
             />
           </div>
+
           <div className="flex flex-wrap gap-1">
             <Button
               variant={searchTerm === "" ? "default" : "outline"}
               size="sm"
               onClick={() => setSearchTerm("")}
-              disabled={!isUnlocked}
             >
               Tutti
             </Button>
@@ -464,7 +558,6 @@ export default function CassettiFiscaliPage() {
                 size="sm"
                 className="w-8 px-0"
                 onClick={() => setSearchTerm(letter)}
-                disabled={!isUnlocked}
               >
                 {letter}
               </Button>
@@ -475,470 +568,4 @@ export default function CassettiFiscaliPage() {
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
-              <TableHeader className="sticky top-0 z-30 bg-white shadow-sm">
-                <TableRow>
-                  <TableHead className="sticky-col-header bg-white">Nominativo</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Password 1</TableHead>
-                  <TableHead>Password 2</TableHead>
-                  <TableHead>PIN</TableHead>
-                  <TableHead>Password Iniziale</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                    </TableCell>
-                  </TableRow>
-                ) : !isUnlocked ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <Lock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                      <p className="text-muted-foreground mb-2">Cassetti bloccati. Inserisci la Master Password per visualizzare.</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredCassetti.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nessun cassetto fiscale trovato
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredCassetti.map((cassetto) => (
-                    <TableRow key={cassetto.id}>
-                      <TableCell className="sticky-col-cell font-medium bg-white">{cassetto.nominativo}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">{cassetto.username || "-"}</span>
-                          {cassetto.username && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => copyToClipboard(cassetto.username, "Username")}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">
-                            {cassetto.password1 ? (
-                              visiblePasswords[`${cassetto.id}_pw1`] ? cassetto.password1 : "••••••••"
-                            ) : "-"}
-                          </span>
-                          {cassetto.password1 && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => togglePasswordVisibility(cassetto.id, "pw1")}
-                              >
-                                {visiblePasswords[`${cassetto.id}_pw1`] ? (
-                                  <EyeOff className="h-3 w-3" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(cassetto.password1, "Password 1")}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">
-                            {cassetto.password2 ? (
-                              visiblePasswords[`${cassetto.id}_pw2`] ? cassetto.password2 : "••••••••"
-                            ) : "-"}
-                          </span>
-                          {cassetto.password2 && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => togglePasswordVisibility(cassetto.id, "pw2")}
-                              >
-                                {visiblePasswords[`${cassetto.id}_pw2`] ? (
-                                  <EyeOff className="h-3 w-3" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(cassetto.password2, "Password 2")}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">
-                            {cassetto.pin ? (
-                              visiblePasswords[`${cassetto.id}_pin`] ? cassetto.pin : "••••"
-                            ) : "-"}
-                          </span>
-                          {cassetto.pin && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => togglePasswordVisibility(cassetto.id, "pin")}
-                              >
-                                {visiblePasswords[`${cassetto.id}_pin`] ? (
-                                  <EyeOff className="h-3 w-3" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(cassetto.pin, "PIN")}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">
-                            {cassetto.pw_iniziale ? (
-                              visiblePasswords[`${cassetto.id}_pw_init`] ? cassetto.pw_iniziale : "••••••••"
-                            ) : "-"}
-                          </span>
-                          {cassetto.pw_iniziale && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => togglePasswordVisibility(cassetto.id, "pw_init")}
-                              >
-                                {visiblePasswords[`${cassetto.id}_pw_init`] ? (
-                                  <EyeOff className="h-3 w-3" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => copyToClipboard(cassetto.pw_iniziale, "Password Iniziale")}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => { setEditingCassetto(cassetto); setDialogOpen(true); }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(cassetto.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Unlock Dialog */}
-      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>🔒 Sblocca Cassetti Fiscali</DialogTitle>
-            <DialogDescription>
-              Inserisci la Master Password per accedere alle credenziali dei cassetti fiscali.
-              <br />
-              <span className="text-sm text-orange-600 mt-2 block">
-                💡 Se non hai ancora configurato la Master Password, vai in: <strong>Impostazioni → Dati Studio</strong>
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Master Password</label>
-              <Input
-                type="password"
-                value={unlockPassword}
-                onChange={(e) => setUnlockPassword(e.target.value)}
-                placeholder="Inserisci Master Password"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleUnlock();
-                  }
-                }}
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button onClick={handleUnlock}>
-              <Unlock className="mr-2 h-4 w-4" /> Sblocca
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Migration Dialog */}
-      <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>🔄 Migrazione Necessaria</DialogTitle>
-            <DialogDescription>
-              Sono presenti cassetti con password non criptate. È necessario migrarle al sistema Master Password.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Questa operazione cifrerà tutte le password esistenti utilizzando la Master Password.
-              L'operazione è sicura e reversibile.
-            </p>
-            
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-              <p className="text-sm text-yellow-800">
-                ⚠️ Durante la migrazione, i cassetti potrebbero non essere accessibili per qualche secondo.
-              </p>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMigrationDialog(false)} disabled={migrating}>
-              Dopo
-            </Button>
-            <Button onClick={handleMigrate} disabled={migrating}>
-              {migrating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Migrazione in corso...
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Migra Ora
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit/Create Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingCassetto ? "Modifica Cassetto Fiscale" : "Nuovo Cassetto Fiscale"}</DialogTitle>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="nominativo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nominativo / Cliente</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Es. Mario Rossi" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Username..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="pin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>PIN</FormLabel>
-                      <FormControl>
-                        <Input placeholder="PIN..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className={`p-4 border rounded-md ${form.watch("pw_attiva1") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Password 1</h4>
-                  <FormField
-                    control={form.control}
-                    name="pw_attiva1"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={handlePw1Change}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          Attiva
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="password1"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input 
-                          placeholder="Password 1..." 
-                          {...field} 
-                          disabled={!form.watch("pw_attiva1") && form.watch("pw_attiva2")}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className={`p-4 border rounded-md ${form.watch("pw_attiva2") ? "bg-blue-50 border-blue-200" : "bg-gray-50"}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-semibold">Password 2</h4>
-                  <FormField
-                    control={form.control}
-                    name="pw_attiva2"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={handlePw2Change}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          Attiva
-                        </FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="password2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input 
-                          placeholder="Password 2..." 
-                          {...field}
-                          disabled={!form.watch("pw_attiva2") && form.watch("pw_attiva1")}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="pw_iniziale"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password Iniziale</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Password iniziale..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="note"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Note</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Note aggiuntive..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Annulla
-                </Button>
-                <Button type="submit">
-                  {editingCassetto ? "Salva Modifiche" : "Crea Cassetto"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+              <TableHeader className="sticky t
