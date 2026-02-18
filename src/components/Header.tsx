@@ -5,6 +5,7 @@ import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Database } from "@/lib/supabase/types";
 import { authService } from "@/services/authService";
+import { hardLogout } from "@/services/logoutService";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -63,9 +64,9 @@ if (session.user.email) {
   };
 
   const handleLogout = async () => {
-    try {
-      console.log("🚪 Logout in corso...");
-      const { error } = await authService.signOut();
+  console.log("🚪 Logout HARD in corso...");
+  await hardLogout("/login");
+};
       
       if (error) {
         console.error("❌ Errore durante il logout:", error);
