@@ -40,7 +40,10 @@ export const eventoService = {
     return data;
   },
 
-  async getEventiByUtente(utenteId: string, studioId?: string | null): Promise<EventoAgenda[]> {
+  async getEventiByUtente(
+    utenteId: string,
+    studioId?: string | null
+  ): Promise<EventoAgenda[]> {
     let query = supabase
       .from("tbagenda")
       .select("*")
@@ -60,7 +63,10 @@ export const eventoService = {
     return data || [];
   },
 
-  async getEventiByCliente(clienteId: string, studioId?: string | null): Promise<EventoAgenda[]> {
+  async getEventiByCliente(
+    clienteId: string,
+    studioId?: string | null
+  ): Promise<EventoAgenda[]> {
     let query = supabase
       .from("tbagenda")
       .select("*")
@@ -80,7 +86,11 @@ export const eventoService = {
     return data || [];
   },
 
-  async getEventiByDateRange(startDate: string, endDate: string, studioId?: string | null): Promise<EventoAgenda[]> {
+  async getEventiByDateRange(
+    startDate: string,
+    endDate: string,
+    studioId?: string | null
+  ): Promise<EventoAgenda[]> {
     let query = supabase
       .from("tbagenda")
       .select("*")
@@ -150,9 +160,9 @@ export const eventoService = {
       // Recupera i dati dei partecipanti (se presenti)
       let partecipantiEmails: string[] = [];
       let partecipantiNomi: string[] = [];
-      
-      const partecipantiIds = Array.isArray(evento.partecipanti) 
-        ? (evento.partecipanti as string[]) 
+
+      const partecipantiIds = Array.isArray(evento.partecipanti)
+        ? (evento.partecipanti as string[])
         : [];
 
       if (partecipantiIds.length > 0) {
@@ -163,10 +173,14 @@ export const eventoService = {
 
         if (partecipanti) {
           partecipantiEmails = partecipanti
-            .filter(p => p.email)
-            .map(p => p.email!);
-          partecipantiNomi = partecipanti.map(p => 
-            `${p.nome || ""} ${p.cognome || ""}`.trim() || p.email || "Utente"
+            .filter((p) => p.email)
+            .map((p) => p.email!);
+
+          partecipantiNomi = partecipanti.map(
+            (p) =>
+              `${p.nome || ""} ${p.cognome || ""}`.trim() ||
+              p.email ||
+              "Utente"
           );
         }
       }
@@ -191,15 +205,18 @@ export const eventoService = {
       // Helper per formattare data e ora
       const formatDate = (dateStr: string) => {
         try {
-          return new Date(dateStr).toLocaleDateString('it-IT');
+          return new Date(dateStr).toLocaleDateString("it-IT");
         } catch (e) {
           return dateStr;
         }
       };
-      
+
       const formatTime = (dateStr: string) => {
         try {
-          return new Date(dateStr).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+          return new Date(dateStr).toLocaleTimeString("it-IT", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
         } catch (e) {
           return "00:00";
         }
@@ -210,22 +227,28 @@ export const eventoService = {
         eventoId: evento.id,
         eventoTitolo: evento.titolo || "Evento senza titolo",
         eventoData: formatDate(evento.data_inizio),
-        eventoOraInizio: evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : formatTime(evento.data_inizio),
-        eventoOraFine: evento.ora_fine ? evento.ora_fine.substring(0, 5) : formatTime(evento.data_fine),
+        eventoOraInizio: evento.ora_inizio
+          ? evento.ora_inizio.substring(0, 5)
+          : formatTime(evento.data_inizio),
+        eventoOraFine: evento.ora_fine
+          ? evento.ora_fine.substring(0, 5)
+          : formatTime(evento.data_fine),
         eventoLuogo: evento.luogo || undefined,
         eventoDescrizione: evento.descrizione || undefined,
         eventoInSede: evento.in_sede || false,
         responsabileEmail: responsabile.email,
-        responsabileNome: `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() || responsabile.email,
+        responsabileNome:
+          `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
+          responsabile.email,
         partecipantiEmails,
         partecipantiNomi,
         clienteEmail,
-        clienteNome
+        clienteNome,
       };
 
       console.log("📧 Sending notification via emailService");
       const result = await emailService.sendEventNotification(emailData);
-      
+
       if (result.success) {
         console.log("✅ Event notification sent successfully:", result);
       } else {
@@ -237,7 +260,10 @@ export const eventoService = {
     }
   },
 
-  async updateEvento(id: string, updates: EventoAgendaUpdate): Promise<EventoAgenda | null> {
+  async updateEvento(
+    id: string,
+    updates: EventoAgendaUpdate
+  ): Promise<EventoAgenda | null> {
     const { data, error } = await supabase
       .from("tbagenda")
       .update(updates)
@@ -248,6 +274,11 @@ export const eventoService = {
     if (error) {
       console.error("Error updating evento:", error);
       throw error;
+    }
+
+    // 🔔 AVVISA IL BADGE AGENDA (SUBITO dopo update OK)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("agenda-updated"));
     }
 
     // Invia notifica email dopo l'aggiornamento dell'evento
@@ -263,15 +294,12 @@ export const eventoService = {
   },
 
   async deleteEvento(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from("tbagenda")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("tbagenda").delete().eq("id", id);
 
     if (error) {
       console.error("Error deleting evento:", error);
       return false;
     }
     return true;
-  }
+  },
 };
