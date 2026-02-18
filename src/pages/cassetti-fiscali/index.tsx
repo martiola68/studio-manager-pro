@@ -626,7 +626,9 @@ export default function CassettiFiscaliPage() {
                   <TableHead>Password 1</TableHead>
                   <TableHead>Password 2</TableHead>
                   <TableHead>PIN</TableHead>
-                  <TableHead>Password Iniziale</TableHead>
+                 <TableHead>
+                      {viewMode === "societa" ? "Codice fiscale" : "Password Iniziale"}
+                    </TableHead>
                   <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
