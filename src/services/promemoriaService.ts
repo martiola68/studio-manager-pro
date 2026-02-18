@@ -330,7 +330,7 @@ export const promemoriaService = {
       console.error("Errore aggiornamento promemoria:", error);
       throw error;
     }
-
+window.dispatchEvent(new Event("promemoria-updated"));
     return data;
   },
 
