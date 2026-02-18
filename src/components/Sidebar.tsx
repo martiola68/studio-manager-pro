@@ -68,6 +68,18 @@ export function Sidebar({
     }
   }, [currentUser]);
 
+  useEffect(() => {
+  const handler = () => {
+    loadPromemoriaAttivi();
+  };
+
+  window.addEventListener("promemoria-updated", handler);
+
+  return () => {
+    window.removeEventListener("promemoria-updated", handler);
+  };
+}, []);
+
   const loadCurrentUser = async () => {
     try {
       const {
