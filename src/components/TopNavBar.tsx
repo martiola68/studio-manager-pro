@@ -128,6 +128,19 @@ export function TopNavBar() {
     }
   }, [currentUser]);
 
+useEffect(() => {
+  if (!currentUser) return;
+
+  const handler = () => {
+    loadPromemoriaAttivi();
+  };
+
+  window.addEventListener("promemoria-updated", handler);
+  return () => {
+    window.removeEventListener("promemoria-updated", handler);
+  };
+}, [currentUser]);
+  
 const loadPromemoriaAttivi = async () => {
   if (!currentUser) {
     setPromemoriaAttivi(0);
