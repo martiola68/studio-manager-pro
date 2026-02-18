@@ -16,10 +16,8 @@ import {
   Building2,
   MessageSquare,
   X,
-  Menu,
   Key,
   FolderOpen,
-  Bell
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,9 +37,9 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({ 
-  mobileOpen = false, 
-  onClose = () => {} 
+export function Sidebar({
+  mobileOpen = false,
+  onClose = () => {},
 }: SidebarProps) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
@@ -52,32 +50,37 @@ export function Sidebar({
 
   useEffect(() => {
     loadCurrentUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (currentUser) {
       loadMessaggiNonLetti();
       loadPromemoriaAttivi();
+
       // Aggiorna ogni 30 secondi
       const interval = setInterval(() => {
         loadMessaggiNonLetti();
         loadPromemoriaAttivi();
       }, 30000);
+
       return () => clearInterval(interval);
     }
   }, [currentUser]);
 
   const loadCurrentUser = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session?.user?.email) {
         const { data: utente } = await supabase
           .from("tbutenti")
           .select("*")
           .eq("email", session.user.email)
           .single();
-        
+
         if (utente) {
           setCurrentUser(utente);
         }
@@ -91,10 +94,12 @@ export function Sidebar({
 
   const loadMessaggiNonLetti = async () => {
     if (!currentUser) return;
-    
+
     try {
       const { messaggioService } = await import("@/services/messaggioService");
-      const count = await messaggioService.getMessaggiNonLettiCount(currentUser.id);
+      const count = await messaggioService.getMessaggiNonLettiCount(
+        currentUser.id
+      );
       setMessaggiNonLetti(count);
     } catch (error) {
       console.error("Errore caricamento messaggi non letti:", error);
@@ -103,30 +108,36 @@ export function Sidebar({
 
   const loadPromemoriaAttivi = async () => {
     try {
-      // Ottieni l'utente corrente
-      const { data: { user } } = await supabase.auth.getUser();
+      // Ottieni l'utente corrente (auth.users)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         setPromemoriaAttivi(0);
         return;
       }
 
-      // Query per contare i promemoria destinati all'utente loggato
-      // Badge NASCOSTO quando working_progress = "Presa visione"
+      // Conta SOLO i promemoria con working_progress = "Aperto"
       const { count, error } = await supabase
-  .from("tbpromemoria")
-  .select("*", { count: "exact", head: true })
-  .eq("working_progress", "Aperto")
-  .eq("destinatario_id", user.id);
+        .from("tbpromemoria")
+        .select("*", { count: "exact", head: true })
+        .eq("working_progress", "Aperto")
+        .eq("destinatario_id", user.id);
 
-if (error) throw error;
-setPromemoriaAttivi(count ?? 0);
+      if (error) throw error;
+
+      setPromemoriaAttivi(count ?? 0);
+    } catch (error) {
+      console.error("Errore caricamento promemoria attivi (gestito):", error);
+      setPromemoriaAttivi(0);
     }
   };
 
   const toggleMenu = (label: string) => {
-    setExpandedMenus(prev => 
-      prev.includes(label) 
-        ? prev.filter(item => item !== label)
+    setExpandedMenus((prev) =>
+      prev.includes(label)
+        ? prev.filter((item) => item !== label)
         : [...prev, label]
     );
   };
@@ -135,7 +146,7 @@ setPromemoriaAttivi(count ?? 0);
     {
       label: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
-      href: "/dashboard"
+      href: "/dashboard",
     },
     {
       label: "Messaggi",
@@ -145,17 +156,17 @@ setPromemoriaAttivi(count ?? 0);
     {
       label: "Agenda",
       icon: <Calendar className="h-5 w-5" />,
-      href: "/agenda"
+      href: "/agenda",
     },
     {
       label: "Contatti",
       icon: <UserCircle className="h-5 w-5" />,
-      href: "/contatti"
+      href: "/contatti",
     },
     {
       label: "Promemoria",
       icon: <FileText className="h-5 w-5" />,
-      href: "/promemoria"
+      href: "/promemoria",
     },
     {
       label: "Scadenzario",
@@ -173,28 +184,28 @@ setPromemoriaAttivi(count ?? 0);
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
         { label: "Proforma", href: "/scadenze/proforma", icon: null },
-        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null }
-      ]
+        { label: "Antiriciclaggio", href: "/scadenze/antiriciclaggio", icon: null },
+      ],
     },
     {
       label: "Comunicazioni",
       icon: <Mail className="h-5 w-5" />,
-      href: "/comunicazioni"
+      href: "/comunicazioni",
     },
     {
       label: "Accesso Portali",
       icon: <Key className="h-5 w-5" />,
-      href: "/accesso-portali"
+      href: "/accesso-portali",
     },
     {
       label: "Cassetti Fiscali",
       icon: <FolderOpen className="h-5 w-5" />,
-      href: "/cassetti-fiscali"
+      href: "/cassetti-fiscali",
     },
     {
       label: "Clienti",
       icon: <Users className="h-5 w-5" />,
-      href: "/clienti"
+      href: "/clienti",
     },
     {
       label: "Impostazioni",
@@ -208,15 +219,14 @@ setPromemoriaAttivi(count ?? 0);
         { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-        { label: "Cassetti Fiscali", href: "/impostazioni/cassetti-fiscali", icon: <Key className="h-4 w-4" /> }
-      ]
-    }
+        { label: "Cassetti Fiscali", href: "/impostazioni/cassetti-fiscali", icon: <Key className="h-4 w-4" /> },
+      ],
+    },
   ];
 
   const isActive = (href: string) => router.pathname === href;
 
   const renderMenuItem = (item: MenuItem, depth: number = 0) => {
-    // Se è un menu solo per admin e l'utente non è admin, non mostrarlo
     if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
       return null;
     }
@@ -246,14 +256,13 @@ setPromemoriaAttivi(count ?? 0);
           </button>
           {isExpanded && (
             <div className="ml-4 mt-1 space-y-1">
-              {item.children?.map(child => renderMenuItem(child, depth + 1))}
+              {item.children?.map((child) => renderMenuItem(child, depth + 1))}
             </div>
           )}
         </div>
       );
     }
 
-    // Badge per messaggi non letti
     const showBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
     const hasNotification = showBadge || showPromemoriaAlert;
@@ -275,11 +284,13 @@ setPromemoriaAttivi(count ?? 0);
       >
         {item.icon}
         <span className={depth === 0 ? "font-medium" : ""}>{item.label}</span>
+
         {showBadge && (
           <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
           </span>
         )}
+
         {showPromemoriaAlert && (
           <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
             {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
@@ -301,7 +312,6 @@ setPromemoriaAttivi(count ?? 0);
 
   return (
     <>
-      {/* Mobile Overlay */}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -309,13 +319,13 @@ setPromemoriaAttivi(count ?? 0);
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={cn(
-        "w-64 bg-white border-r border-gray-200 h-screen flex flex-col transition-transform duration-300 lg:relative lg:translate-x-0",
-        "fixed inset-y-0 left-0 z-40",
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        {/* Mobile Close Button */}
+      <aside
+        className={cn(
+          "w-64 bg-white border-r border-gray-200 h-screen flex flex-col transition-transform duration-300 lg:relative lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -326,7 +336,7 @@ setPromemoriaAttivi(count ?? 0);
         </Button>
 
         <nav className="space-y-2 p-4 flex-1 overflow-y-auto">
-          {menuItems.map(item => renderMenuItem(item))}
+          {menuItems.map((item) => renderMenuItem(item))}
         </nav>
       </aside>
     </>
