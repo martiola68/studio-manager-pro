@@ -9,7 +9,7 @@ import { authService } from "@/services/authService";
  */
 export async function hardLogout(redirectTo = "/login") {
   try {
-    await authService.signOut(); // <-- deve esistere in authService.ts
+    await authService.logout();; // <-- deve esistere in authService.ts
   } catch (e) {
     console.error("Logout error:", e);
   }
