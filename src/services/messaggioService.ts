@@ -105,15 +105,24 @@ export const messaggioService = {
     return data;
   },
 
-  async segnaComeLetto(conversazioneId: string, utenteId: string) {
-    const { error } = await supabase
-      .from("tbconversazioni_utenti")
-      .update({ ultimo_letto_at: new Date().toISOString() })
-      .eq("conversazione_id", conversazioneId)
-      .eq("utente_id", utenteId);
+async segnaComeLetto(conversazioneId: string, utenteId: string) {
+  const { error } = await supabase
+    .from("tbconversazioni_utenti")
+    .update({ ultimo_letto_at: new Date().toISOString() })
+    .eq("conversazione_id", conversazioneId)
+    .eq("utente_id", utenteId);
 
-    if (error) console.error("Errore aggiornamento lettura:", error);
-  },
+  if (error) {
+    console.error("Errore aggiornamento lettura:", error);
+    return;
+  }
+
+  // 🔔 AVVISA IL BADGE MESSAGGI
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("messaggi-updated"));
+  }
+},
+
 
   async getOrCreateConversazioneDiretta(
     userId1: string,
