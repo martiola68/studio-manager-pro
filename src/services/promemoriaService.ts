@@ -319,21 +319,20 @@ export const promemoriaService = {
     settore?: string;
     tipo_promemoria_id?: string | null;
   }) {
-    const { data, error } = await supabase
-      .from("tbpromemoria")
-      .update(promemoria)
-      .eq("id", id)
-      .select()
-      .single();
-    window.dispatchEvent(new Event("promemoria-updated"));
+   const { data, error } = await supabase
+  .from("tbpromemoria")
+  .update(promemoria)
+  .eq("id", id)
+  .select()
+  .single();
 
+if (error) throw error;
 
-    if (error) {
-      console.error("Errore aggiornamento promemoria:", error);
-      throw error;
-    }
-window.dispatchEvent(new Event("promemoria-updated"));
-    return data;
+if (typeof window !== "undefined") {
+  window.dispatchEvent(new Event("promemoria-updated"));
+}
+
+return data;
   },
 
   async deletePromemoria(id: string): Promise<void> {
