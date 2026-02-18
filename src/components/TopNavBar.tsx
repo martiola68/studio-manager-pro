@@ -128,30 +128,29 @@ export function TopNavBar() {
     }
   }, [currentUser]);
 
-  const loadPromemoriaAttivi = async () => {
-    try {
-      // Ottieni l'utente corrente
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setPromemoriaAttivi(0);
-        return;
-      }
+const loadPromemoriaAttivi = async () => {
+  if (!currentUser) {
+    setPromemoriaAttivi(0);
+    return;
+  }
 
-      // Query per contare i promemoria destinati all'utente loggato
-      // Badge NASCOSTO quando working_progress = "Presa visione"
-      const { data, error } = await supabase
-        .from("tbpromemoria")
-        .select("id", { count: "exact", head: false })
-        .neq("working_progress", "Presa visione")
-        .eq("destinatario_id", user.id);
+  try {
+    // Conta SOLO i promemoria "Aperto" destinati all'utente loggato (tbutenti.id)
+    const { count, error } = await supabase
+      .from("tbpromemoria")
+      .select("*", { count: "exact", head: true })
+      .eq("working_progress", "Aperto")
+      .eq("destinatario_id", currentUser.id);
 
-      if (error) throw error;
-      setPromemoriaAttivi(data?.length || 0);
-    } catch (error) {
-      console.error("Errore caricamento promemoria attivi (gestito):", error);
-      setPromemoriaAttivi(0);
-    }
-  };
+    if (error) throw error;
+
+    setPromemoriaAttivi(count ?? 0);
+  } catch (error) {
+    console.error("Errore caricamento promemoria attivi (gestito):", error);
+    setPromemoriaAttivi(0);
+  }
+};
+
 
   const loadPromemoriaRicevuti = async () => {
     if (!currentUser) return;
