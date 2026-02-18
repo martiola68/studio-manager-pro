@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
+import { ShieldCheck } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
 import {
   LayoutDashboard,
@@ -213,6 +214,11 @@ export function Sidebar({
       label: "Cassetti Fiscali",
       icon: <FolderOpen className="h-5 w-5" />,
       href: "/cassetti-fiscali",
+    },
+    {
+  label: "Antiriciclaggio",
+  icon: <ShieldCheck className="h-4 w-4" />,
+  href: "/antiriciclaggio"
     },
     {
       label: "Clienti",
