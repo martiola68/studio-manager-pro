@@ -59,7 +59,7 @@ export default function CassettiFiscaliImpostazioniPage() {
     try {
       setLoading(true);
       const data = await cassettiFiscaliService.getCassettiFiscali();
-      setCassetti(data);
+      setCassetti(((data ?? []) as unknown) as CassettoFiscale[]);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
