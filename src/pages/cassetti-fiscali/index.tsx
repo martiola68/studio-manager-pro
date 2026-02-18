@@ -101,6 +101,8 @@ export default function CassettiFiscaliPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCassetto, setEditingCassetto] = useState<CassettoFiscale | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  type ViewMode = "gestori" | "societa";
+  const [viewMode, setViewMode] = useState<ViewMode>("gestori");
 
   // Encryption (non blocca la UI)
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
