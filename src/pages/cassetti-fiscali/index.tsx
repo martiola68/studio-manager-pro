@@ -157,10 +157,11 @@ export default function CassettiFiscaliPage() {
   studioId || null,
   viewMode
 );
+      const rows = (data ?? []) as CassettoFiscale[];
 
       const key = getStoredEncryptionKey();
 
-      const hydrated = data.map((item: CassettoFiscale) => {
+      const hydrated = rows.map((item) => {
         if (!key) return item;
 
         try {
