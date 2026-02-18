@@ -503,112 +503,113 @@ export default function CassettiFiscaliPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
-          <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
+  <div className="max-w-7xl mx-auto p-4 md:p-8">
+    <div className="flex justify-between items-center mb-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Cassetti Fiscali</h1>
+        <p className="text-muted-foreground">Gestione credenziali cassetti fiscali</p>
 
-          {encryptionEnabled && !hasKey() && (
-            <p className="text-xs text-orange-600 mt-2">
-              🔒 Cifratura attiva: i campi sensibili restano mascherati finché non sblocchi (la lista NON è bloccata).
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() =>
-              window.open(
-                "https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate",
-                "_blank"
-              )
-            }
-          >
-            <ExternalLink className="mr-2 h-4 w-4" /> Agenzia delle Entrate
-          </Button>
-
-          {encryptionEnabled && !hasKey() && (
-            <Button variant="outline" onClick={() => setUnlockDialogOpen(true)}>
-              <Unlock className="mr-2 h-4 w-4" /> Sblocca
-            </Button>
-          )}
-
-          <Button
-            onClick={() => {
-              setEditingCassetto(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
-          </Button>
-        </div>
+        {encryptionEnabled && !hasKey() && (
+          <p className="text-xs text-orange-600 mt-2">
+            🔒 Cifratura attiva: i campi sensibili restano mascherati finché non sblocchi (la lista NON è bloccata).
+          </p>
+        )}
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
- 
-          <div className="flex items-center gap-2 mb-2">
-  <Button
-    type="button"
-    onClick={() => setViewMode("gestori")}
-    className={`border border-red-600 ${
-      viewMode === "gestori"
-        ? "bg-red-600 text-white hover:bg-red-700"
-        : "bg-white text-red-600 hover:bg-red-50"
-    }`}
-  >
-    Gestori
-  </Button>
+      <div className="flex gap-2 flex-wrap items-center">
+        {/* Toggle vista (spostato QUI, non dentro il bottone Agenzia) */}
+        <Button
+          type="button"
+          onClick={() => setViewMode("gestori")}
+          className={`text-white ${
+            viewMode === "gestori"
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-red-600 hover:bg-red-700"
+          }`}
+        >
+          Gestori
+        </Button>
 
-  <Button
-    type="button"
-    onClick={() => setViewMode("societa")}
-    className={`border border-red-600 ${
-      viewMode === "societa"
-        ? "bg-red-600 text-white hover:bg-red-700"
-        : "bg-white text-red-600 hover:bg-red-50"
-    }`}
-  >
-    Società collegate
-  </Button>
-</div>
-<Input
-  placeholder={
-    viewMode === "gestori"
-      ? "Cerca per nominativo o username..."
-      : "Cerca per ragione sociale o gestore..."
-  }
-  value={searchTerm}
-  onChange={(e) => setSearchTerm(e.target.value)}
-  className="pl-8"
-/>
-</div>
+        <Button
+          type="button"
+          onClick={() => setViewMode("societa")}
+          className={`text-white ${
+            viewMode === "societa"
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-red-600 hover:bg-red-700"
+          }`}
+        >
+          Società collegate
+        </Button>
 
-          <div className="flex flex-wrap gap-1">
-            <Button
-              variant={searchTerm === "" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSearchTerm("")}
-            >
-              Tutti
-            </Button>
-            {alphabet.map((letter) => (
-              <Button
-                key={letter}
-                variant={searchTerm.startsWith(letter) ? "default" : "outline"}
-                size="sm"
-                className="w-8 px-0"
-                onClick={() => setSearchTerm(letter)}
-              >
-                {letter}
-              </Button>
-            ))}
-          </div>
+        <Button
+          variant="outline"
+          onClick={() =>
+            window.open(
+              "https://iampe.agenziaentrate.gov.it/sam/UI/Login?realm=/agenziaentrate",
+              "_blank"
+            )
+          }
+        >
+          <ExternalLink className="mr-2 h-4 w-4" /> Agenzia delle Entrate
+        </Button>
+
+        {encryptionEnabled && !hasKey() && (
+          <Button variant="outline" onClick={() => setUnlockDialogOpen(true)}>
+            <Unlock className="mr-2 h-4 w-4" /> Sblocca
+          </Button>
+        )}
+
+        <Button
+          onClick={() => {
+            setEditingCassetto(null);
+            setDialogOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nuovo Cassetto
+        </Button>
+      </div>
+    </div>
+
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+
+          {/* Toggle duplicato RIMOSSO da qui: resta solo l'Input */}
+          <Input
+            placeholder={
+              viewMode === "gestori"
+                ? "Cerca per nominativo o username..."
+                : "Cerca per ragione sociale o gestore..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
         </div>
+
+        <div className="flex flex-wrap gap-1">
+          <Button
+            variant={searchTerm === "" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSearchTerm("")}
+          >
+            Tutti
+          </Button>
+          {alphabet.map((letter) => (
+            <Button
+              key={letter}
+              variant={searchTerm.startsWith(letter) ? "default" : "outline"}
+              size="sm"
+              className="w-8 px-0"
+              onClick={() => setSearchTerm(letter)}
+            >
+              {letter}
+            </Button>
+          ))}
+        </div>
+      </div>
 
         <div className="rounded-md border bg-white shadow-sm overflow-hidden">
           <div className="relative w-full overflow-auto max-h-[600px]">
