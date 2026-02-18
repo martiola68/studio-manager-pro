@@ -232,7 +232,7 @@ export default function ClientiPage() {
       setClienti(clientiData);
       setContatti(contattiData);
       setUtenti(utentiData);
-      setCassettiFiscali(cassettiData);
+      setCassettiFiscali((cassettiData ?? []) as CassettoFiscale[]);
       setPrestazioni(prestazioniData.data || []);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
