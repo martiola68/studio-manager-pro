@@ -33,11 +33,14 @@ async function getAuthToken(): Promise<string> {
 export const cassettiFiscaliService = {
   // ✅ lettura: puoi lasciarla così (RLS dovrebbe filtrare)
   // Nota: NON serve più studioId da localStorage. Se vuoi, puoi toglierlo anche dal chiamante.
-  async getCassettiFiscali(studioId?: string | null) {
-    let query = supabase
-      .from("tbcassetti_fiscali")
-      .select("*")
-      .order("nominativo");
+  async getCassettiFiscali(
+    studioId?: string | null,
+    viewMode: "gestori" | "societa" = "gestori"
+  ) {
+    const source =
+      viewMode === "gestori" ? "v_cassetti_fiscali" : "v_clienti_con_cassetto";
+
+    let query = supabase.from(source).select("*").order("nominativo");
 
     if (studioId) query = query.eq("studio_id", studioId);
 
