@@ -529,7 +529,7 @@ export default function CassettiFiscaliPage() {
           className={`text-white ${
             viewMode === "gestori"
               ? "bg-green-600 hover:bg-green-700"
-              : "bg-red-600 hover:bg-red-700"
+              : "bg-black hover:bg-gray-800"
           }`}
         >
           Gestori
@@ -541,7 +541,7 @@ export default function CassettiFiscaliPage() {
           className={`text-white ${
             viewMode === "societa"
               ? "bg-green-600 hover:bg-green-700"
-              : "bg-red-600 hover:bg-red-700"
+              : "bg-black hover:bg-gray-800"
           }`}
         >
           Società collegate
@@ -897,19 +897,28 @@ export default function CassettiFiscaliPage() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="pw_iniziale"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password Iniziale</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Password iniziale..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+  control={form.control}
+  name="pw_iniziale"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>
+        {viewMode === "societa" ? "Codice fiscale" : "Password iniziale"}
+      </FormLabel>
+      <FormControl>
+        <Input
+          placeholder={
+            viewMode === "societa"
+              ? "Codice fiscale..."
+              : "Password iniziale..."
+          }
+          {...field}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
               <FormField
                 control={form.control}
