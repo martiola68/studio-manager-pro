@@ -40,7 +40,7 @@ export const cassettiFiscaliService = {
     const source =
       viewMode === "gestori" ? "v_cassetti_fiscali" : "v_clienti_con_cassetto";
 
-    let query = supabase.from(source).select("*").order("nominativo");
+    let query = (supabase as any).from(source).select("*").order("nominativo");
 
     if (studioId) query = query.eq("studio_id", studioId);
 
