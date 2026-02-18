@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase/client";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import type { Database } from "@/lib/supabase/types";
+import { ShieldCheck } from "lucide-react";
 import {
   LayoutDashboard,
   Users,
@@ -268,15 +269,20 @@ const loadPromemoriaAttivi = async () => {
       href: "/cassetti-fiscali"
     },
     {
-      label: "Comunicazioni",
-      icon: <Mail className="h-4 w-4" />,
-      href: "/comunicazioni"
-    },
-    {
-      label: "Clienti",
-      icon: <Users className="h-4 w-4" />,
-      href: "/clienti"
-    },
+  label: "Comunicazioni",
+  icon: <Mail className="h-4 w-4" />,
+  href: "/comunicazioni"
+},
+{
+  label: "Antiriciclaggio",
+  icon: <ShieldCheck className="h-4 w-4" />,
+  href: "/antiriciclaggio"
+},
+{
+  label: "Clienti",
+  icon: <Users className="h-4 w-4" />,
+  href: "/clienti"
+},
     {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
