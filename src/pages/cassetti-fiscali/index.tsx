@@ -550,19 +550,28 @@ export default function CassettiFiscaliPage() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-  <div className="flex items-center gap-2 mb-2">
+ 
+           <div className="flex items-center gap-2 mb-2">
   <Button
     type="button"
-    variant={viewMode === "gestori" ? "default" : "outline"}
     onClick={() => setViewMode("gestori")}
+    className={
+      viewMode === "gestori"
+        ? "bg-red-600 hover:bg-red-700 text-white"
+        : "border border-red-600 text-red-600 hover:bg-red-50"
+    }
   >
     Gestori
   </Button>
 
   <Button
     type="button"
-    variant={viewMode === "societa" ? "default" : "outline"}
     onClick={() => setViewMode("societa")}
+    className={
+      viewMode === "societa"
+        ? "bg-red-600 hover:bg-red-700 text-white"
+        : "border border-red-600 text-red-600 hover:bg-red-50"
+    }
   >
     Società collegate
   </Button>
