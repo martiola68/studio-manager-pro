@@ -153,7 +153,10 @@ export default function CassettiFiscaliPage() {
       setLoading(true);
 
       // Se studioId non è ancora pronto, carico comunque (se il tuo service accetta null)
-      const data = await cassettiFiscaliService.getCassettiFiscali(studioId || null);
+      const data = await cassettiFiscaliService.getCassettiFiscali(
+  studioId || null,
+  viewMode
+);
 
       const key = getStoredEncryptionKey();
 
@@ -203,11 +206,12 @@ export default function CassettiFiscaliPage() {
   };
 
   // Carico dati quando studioId è disponibile (e anche al primo render client)
-  useEffect(() => {
-    refreshEncryptionEnabled();
-    loadCassetti();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studioId]);
+ useEffect(() => {
+  refreshEncryptionEnabled();
+  loadCassetti();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [studioId, viewMode]);
+
 
   useEffect(() => {
     if (editingCassetto) {
