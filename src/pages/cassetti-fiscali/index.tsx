@@ -550,13 +550,35 @@ export default function CassettiFiscaliPage() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca per nominativo o username..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
+  <div className="flex items-center gap-2 mb-2">
+  <Button
+    type="button"
+    variant={viewMode === "gestori" ? "default" : "outline"}
+    onClick={() => setViewMode("gestori")}
+  >
+    Gestori
+  </Button>
+
+  <Button
+    type="button"
+    variant={viewMode === "societa" ? "default" : "outline"}
+    onClick={() => setViewMode("societa")}
+  >
+    Società collegate
+  </Button>
+</div>
+
+<Input
+  placeholder={
+    viewMode === "gestori"
+      ? "Cerca per nominativo o username..."
+      : "Cerca per ragione sociale o gestore..."
+  }
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  className="pl-8"
+/>
+</div>
 
           <div className="flex flex-wrap gap-1">
             <Button
