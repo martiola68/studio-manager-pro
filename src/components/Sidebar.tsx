@@ -218,7 +218,7 @@ export function Sidebar({
     {
   label: "Antiriciclaggio",
   icon: <ShieldCheck className="h-4 w-4" />,
-  href: "/antiriciclaggio"
+  href: "/antiriciclaggio",
       disabled: true
     },
     {
