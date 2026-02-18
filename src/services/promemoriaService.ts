@@ -325,6 +325,8 @@ export const promemoriaService = {
       .eq("id", id)
       .select()
       .single();
+    window.dispatchEvent(new Event("promemoria-updated"));
+
 
     if (error) {
       console.error("Errore aggiornamento promemoria:", error);
