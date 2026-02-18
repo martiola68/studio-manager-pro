@@ -277,7 +277,6 @@ const loadPromemoriaAttivi = async () => {
   label: "Antiriciclaggio",
   icon: <ShieldCheck className="h-4 w-4" />,
   href: "/antiriciclaggio",
-  disabled: true
 },
 {
   label: "Clienti",
