@@ -112,17 +112,14 @@ export function Sidebar({
 
       // Query per contare i promemoria destinati all'utente loggato
       // Badge NASCOSTO quando working_progress = "Presa visione"
-      const { data, error } = await supabase
-        .from("tbpromemoria")
-        .select("id", { count: "exact", head: false })
-        .neq("working_progress", "Presa visione")
-        .eq("destinatario_id", user.id);
+      const { count, error } = await supabase
+  .from("tbpromemoria")
+  .select("*", { count: "exact", head: true })
+  .eq("working_progress", "Aperto")
+  .eq("destinatario_id", user.id);
 
-      if (error) throw error;
-      setPromemoriaAttivi(data?.length || 0);
-    } catch (error) {
-      console.error("Errore caricamento promemoria attivi (gestito):", error);
-      setPromemoriaAttivi(0);
+if (error) throw error;
+setPromemoriaAttivi(count ?? 0);
     }
   };
 
