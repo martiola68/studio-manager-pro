@@ -1657,7 +1657,7 @@ export default function ClientiPage() {
       <Checkbox
         checked={!!formData.flag_mail_attivo}
         onCheckedChange={(v) =>
-          setFormData((p) => ({ ...p, flag_mail_attivo: v === true }))
+          setFormData({ ...formData, flag_mail_attivo: v === true })
         }
       />
       <span className="text-sm">Mail attive</span>
@@ -1667,7 +1667,7 @@ export default function ClientiPage() {
       <Checkbox
         checked={!!formData.flag_mail_scadenze}
         onCheckedChange={(v) =>
-          setFormData((p) => ({ ...p, flag_mail_scadenze: v === true }))
+          setFormData({ ...formData, flag_mail_scadenze: v === true })
         }
       />
       <span className="text-sm">Invia mail scadenze</span>
@@ -1677,7 +1677,7 @@ export default function ClientiPage() {
       <Checkbox
         checked={!!formData.flag_mail_newsletter}
         onCheckedChange={(v) =>
-          setFormData((p) => ({ ...p, flag_mail_newsletter: v === true }))
+          setFormData({ ...formData, flag_mail_newsletter: v === true })
         }
       />
       <span className="text-sm">Iscritto newsletter</span>
