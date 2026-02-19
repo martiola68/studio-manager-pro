@@ -1176,237 +1176,249 @@ const resetForm = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          {filteredClienti.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm || selectedLetter !== "Tutti" || selectedUtenteFiscale !== "all" || selectedUtentePayroll !== "all"
-                  ? "Prova a modificare i filtri di ricerca"
-                  : "Inizia aggiungendo il tuo primo cliente"}
-              </p>
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Aggiungi Cliente
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-       {vistaClienti === "clienti" ? (
+<Card>
+  <CardContent className="p-0">
+    {filteredClienti.length === 0 ? (
+      <div className="text-center py-12">
+        <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+        <p className="text-muted-foreground mb-6">
+          {searchTerm ||
+          selectedLetter !== "Tutti" ||
+          selectedUtenteFiscale !== "all" ||
+          selectedUtentePayroll !== "all"
+            ? "Prova a modificare i filtri di ricerca"
+            : "Inizia aggiungendo il tuo primo cliente"}
+        </p>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Aggiungi Cliente
+        </Button>
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        {vistaClienti === "clienti" ? (
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+              <TableRow>
+                <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[120px] min-w-[120px] max-w-[120px]">
+                  Cod. Cliente
+                </TableHead>
+                <TableHead className="sticky left-[120px] bg-background z-20 shadow-r w-[250px] min-w-[250px] max-w-[250px]">
+                  Ragione Sociale
+                </TableHead>
+                <TableHead className="min-w-[220px] pl-6">
+                  Utente Fiscale
+                </TableHead>
+                <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
+                <TableHead className="min-w-[100px]">Stato</TableHead>
+                <TableHead className="text-center">Scadenzari</TableHead>
+                <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">
+                  Azioni
+                </TableHead>
+              </TableRow>
+            </TableHeader>
 
-  <Table>
-    <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-      <TableRow>
-        <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[120px] min-w-[120px] max-w-[120px]">
-          Cod. Cliente
-        </TableHead>
-        <TableHead className="sticky left-[120px] bg-background z-20 shadow-r w-[250px] min-w-[250px] max-w-[250px]">
-          Ragione Sociale
-        </TableHead>
-        <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
-        <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
-        <TableHead className="min-w-[100px]">Stato</TableHead>
-        <TableHead className="text-center">Scadenzari</TableHead>
-        <TableHead className="sticky right-0 bg-background z-20 shadow-l text-right">
-          Azioni
-        </TableHead>
-      </TableRow>
-    </TableHeader>
-
-    <TableBody>
-      {filteredClienti.map((cliente) => (
-        <TableRow key={cliente.id}>
-          <TableCell
-            className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] min-w-[120px] max-w-[120px] truncate"
-            title={cliente.cod_cliente || cliente.id}
-          >
-            {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
-          </TableCell>
-
-          <TableCell
-            className="sticky left-[120px] bg-background z-10 font-medium w-[250px] min-w-[250px] max-w-[250px] truncate"
-            title={cliente.ragione_sociale || ""}
-          >
-            {cliente.ragione_sociale}
-          </TableCell>
-
-          <TableCell className="min-w-[220px] pl-6">
-            {getUtenteNome(cliente.utente_operatore_id)}
-          </TableCell>
-
-          <TableCell className="min-w-[200px]">
-            {getUtenteNome(cliente.utente_payroll_id)}
-          </TableCell>
-
-          <TableCell>
-            {cliente.attivo ? (
-              <Badge variant="default" className="bg-green-600">
-                Attivo
-              </Badge>
-            ) : (
-              <Badge variant="secondary">Inattivo</Badge>
-            )}
-          </TableCell>
-
-          <TableCell className="text-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleInsertIntoScadenzari(cliente)}
-              title="Inserisci negli Scadenzari"
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
-          </TableCell>
-
-          <TableCell className="sticky right-0 bg-background z-10 text-right">
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(cliente)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDelete(cliente.id)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-
-) : (
-
-  <div className="overflow-x-auto">
-    <Table>
-      <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-        <TableRow>
-          <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[350px] min-w-[350px]">
-            Cliente
-          </TableHead>
-
-          <TableHead className="min-w-[220px]">
-            Utente Fiscale
-          </TableHead>
-
-          <TableHead className="text-center min-w-[90px]">IVA</TableHead>
-          <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
-          <TableHead className="text-center min-w-[100px]">Bilancio</TableHead>
-          <TableHead className="text-center min-w-[90px]">770</TableHead>
-          <TableHead className="text-center min-w-[90px]">IMU</TableHead>
-          <TableHead className="text-center min-w-[90px]">CU</TableHead>
-          <TableHead className="text-center min-w-[110px]">Fiscali</TableHead>
-          <TableHead className="text-center min-w-[130px]">Esterometro</TableHead>
-          <TableHead className="text-center min-w-[100px]">CCGG</TableHead>
-        </TableRow>
-      </TableHeader>
-
-      <TableBody>
-        {filteredClienti.map((cliente) => (
-          <TableRow key={cliente.id}>
-            <TableCell className="sticky left-0 bg-background z-10 font-medium">
-              {cliente.ragione_sociale}
-            </TableCell>
-
-            <TableCell>
-              {cliente.utente_operatore_id ?? "-"}
-            </TableCell>
-
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_iva} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_lipe} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_bilancio} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_770} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_imu} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_cu} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_fiscali} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_esterometro} disabled />
-            </TableCell>
-            <TableCell className="text-center">
-              <Checkbox checked={!!cliente.flag_ccgg} disabled />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  </div>
-
-)}
-
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
-              <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
-              <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
-              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-              <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
-              <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="anagrafica" className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
-                  <Input
-                    id="cod_cliente"
-                    value={formData.cod_cliente}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cod_cliente: e.target.value })
-                    }
-                    disabled
-                    placeholder="Generato automaticamente"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
-                  <Select
-                    value={formData.tipo_cliente}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_cliente: value })
-                    }
+            <TableBody>
+              {filteredClienti.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell
+                    className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] min-w-[120px] max-w-[120px] truncate"
+                    title={cliente.cod_cliente || cliente.id}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
-                      <SelectItem value="Altro">Altro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {cliente.cod_cliente ||
+                      cliente.id.substring(0, 8).toUpperCase()}
+                  </TableCell>
+
+                  <TableCell
+                    className="sticky left-[120px] bg-background z-10 font-medium w-[250px] min-w-[250px] max-w-[250px] truncate"
+                    title={cliente.ragione_sociale || ""}
+                  >
+                    {cliente.ragione_sociale}
+                  </TableCell>
+
+                  <TableCell className="min-w-[220px] pl-6">
+                    {getUtenteNome(cliente.utente_operatore_id)}
+                  </TableCell>
+
+                  <TableCell className="min-w-[200px]">
+                    {getUtenteNome(cliente.utente_payroll_id)}
+                  </TableCell>
+
+                  <TableCell>
+                    {cliente.attivo ? (
+                      <Badge variant="default" className="bg-green-600">
+                        Attivo
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Inattivo</Badge>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleInsertIntoScadenzari(cliente)}
+                      title="Inserisci negli Scadenzari"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+
+                  <TableCell className="sticky right-0 bg-background z-10 text-right">
+                    <div className="flex justify-end gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(cliente)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(cliente.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+              <TableRow>
+                <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[350px] min-w-[350px]">
+                  Cliente
+                </TableHead>
+
+                <TableHead className="min-w-[220px]">Utente Fiscale</TableHead>
+
+                <TableHead className="text-center min-w-[90px]">IVA</TableHead>
+                <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  Bilancio
+                </TableHead>
+                <TableHead className="text-center min-w-[90px]">770</TableHead>
+                <TableHead className="text-center min-w-[90px]">IMU</TableHead>
+                <TableHead className="text-center min-w-[90px]">CU</TableHead>
+                <TableHead className="text-center min-w-[110px]">
+                  Fiscali
+                </TableHead>
+                <TableHead className="text-center min-w-[130px]">
+                  Esterometro
+                </TableHead>
+                <TableHead className="text-center min-w-[100px]">CCGG</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {filteredClienti.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                    {cliente.ragione_sociale}
+                  </TableCell>
+
+                  <TableCell>{cliente.utente_operatore_id ?? "-"}</TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_iva} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_lipe} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_bilancio} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_770} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_imu} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_cu} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_fiscali} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_esterometro} disabled />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Checkbox checked={!!cliente.flag_ccgg} disabled />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    )}
+
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue="anagrafica" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+            <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+            <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+            <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+            <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
+            <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="anagrafica" className="space-y-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="cod_cliente">Codice Cliente</Label>
+                <Input
+                  id="cod_cliente"
+                  value={formData.cod_cliente}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cod_cliente: e.target.value })
+                  }
+                  disabled
+                  placeholder="Generato automaticamente"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+                <Select
+                  value={formData.tipo_cliente}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, tipo_cliente: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+                    <SelectItem value="Altro">Altro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ...da qui continua il resto del tuo form... */}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  </CardContent>
+</Card>
 
                 <div>
                   <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
