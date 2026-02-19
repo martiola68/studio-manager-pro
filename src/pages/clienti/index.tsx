@@ -310,6 +310,52 @@ export default function ClientiPage() {
         (c) => c.utente_payroll_id === selectedUtentePayroll
       );
     }
+const toggleClienteFlag = async (
+  clienteId: string,
+  field:
+    | "flag_iva"
+    | "flag_lipe"
+    | "flag_bilancio"
+    | "flag_770"
+    | "flag_imu"
+    | "flag_cu"
+    | "flag_fiscali"
+    | "flag_esterometro"
+    | "flag_ccgg",
+  nextValue: boolean
+) => {
+  // 1) UI ottimistica
+  setClienti((prev) =>
+    prev.map((c) => (c.id === clienteId ? ({ ...c, [field]: nextValue } as any) : c))
+  );
+
+  try {
+    const { error } = await supabase
+      .from("tbclienti")
+      .update({ [field]: nextValue } as any)
+      .eq("id", clienteId);
+
+    if (error) throw error;
+
+    toast({
+      title: "Aggiornato",
+      description: "Scadenzario aggiornato correttamente",
+    });
+  } catch (e: any) {
+    // rollback UI se fallisce
+    setClienti((prev) =>
+      prev.map((c) =>
+        c.id === clienteId ? ({ ...c, [field]: !nextValue } as any) : c
+      )
+    );
+
+    toast({
+      title: "Errore",
+      description: e?.message || "Impossibile aggiornare lo scadenzario",
+      variant: "destructive",
+    });
+  }
+};
 
     return filtered;
   }, [
