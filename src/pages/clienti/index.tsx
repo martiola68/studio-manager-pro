@@ -177,7 +177,7 @@ useEffect(() => {
   });
 
   setComunicazioni({
-    mail_attive: !!editingCliente.flag_mail_attive,
+    mail_attive: !!editingCliente.flag_mail_attivo,
     invia_mail_scadenze: !!editingCliente.flag_invia_mail_scadenze,
     iscritto_newsletter: !!editingCliente.flag_iscritto_newsletter,
   });
