@@ -571,120 +571,164 @@ useEffect(() => {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = async (cliente: Cliente) => {
-    setEditingCliente(cliente);
-    
-    let clienteData = { ...cliente };
-    
-    // Decrypt sensitive fields if encryption is enabled and unlocked
-    if (encryptionEnabled && !encryptionLocked) {
-      try {
-        const decrypted = await decryptClienteSensitiveData({
-          codice_fiscale: cliente.codice_fiscale,
-          partita_iva: cliente.partita_iva,
-          matricola_inps: cliente.matricola_inps,
-          pat_inail: cliente.pat_inail,
-          codice_ditta_ce: cliente.codice_ditta_ce,
-          note: cliente.note,
-        });
-        
-        clienteData = { ...clienteData, ...decrypted };
-      } catch (error) {
-        console.error("Decryption error:", error);
-      }
-    }
-    
-    setFormData({
-      cod_cliente: clienteData.cod_cliente || "",
-      tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
-      tipologia_cliente: (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
-      settore_fiscale: clienteData.settore_fiscale ?? true,
-      settore_lavoro: clienteData.settore_lavoro ?? false,
-      settore_consulenza: clienteData.settore_consulenza ?? false,
-      ragione_sociale: clienteData.ragione_sociale || "",
-      partita_iva: clienteData.partita_iva || "",
-      codice_fiscale: clienteData.codice_fiscale || "",
-      indirizzo: clienteData.indirizzo || "",
-      cap: clienteData.cap || "",
-      citta: clienteData.citta || "",
-      provincia: clienteData.provincia || "",
-      email: clienteData.email || "",
-      attivo: clienteData.attivo ?? false,
-      cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
-      matricola_inps: clienteData.matricola_inps || "",
-      pat_inail: clienteData.pat_inail || "",
-      codice_ditta_ce: clienteData.codice_ditta_ce || "",
-      utente_operatore_id: clienteData.utente_operatore_id || "",
-      utente_professionista_id: clienteData.utente_professionista_id || "",
-      utente_payroll_id: clienteData.utente_payroll_id || "",
-      professionista_payroll_id: clienteData.professionista_payroll_id || "",
-      contatto1_id: clienteData.contatto1_id || "",
-      referente_esterno: clienteData.referente_esterno || "",
-      tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
-      tipo_redditi: (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
-      note: clienteData.note || "",
-    });
-    
-    setScadenzari({
-      iva: clienteData.flag_iva ?? false,
-      cu: clienteData.flag_cu ?? false,
-      bilancio: clienteData.flag_bilancio ?? false,
-      fiscali: clienteData.flag_fiscali ?? false,
-      lipe: clienteData.flag_lipe ?? false,
-      modello_770: clienteData.flag_770 ?? false,
-      esterometro: clienteData.flag_esterometro ?? false,
-      ccgg: clienteData.flag_ccgg ?? false,
-      proforma: clienteData.flag_proforma ?? false,
-      imu: clienteData.flag_imu ?? false,
-    });
-    setIsDialogOpen(true);
-  };
+ const handleEdit = async (cliente: Cliente) => {
+  // 1) apro subito la modale (così l’utente vede che sta lavorando)
+  setIsDialogOpen(true);
 
-  const resetForm = () => {
-    setEditingCliente(null);
-    setFormData({
-      cod_cliente: "",
-      tipo_cliente: "Persona fisica",
-      tipologia_cliente: "Interno",
-      settore_fiscale: true,
-      settore_lavoro: false,
-      settore_consulenza: false,
-      ragione_sociale: "",
-      partita_iva: "",
-      codice_fiscale: "",
-      indirizzo: "",
-      cap: "",
-      citta: "",
-      provincia: "",
-      email: "",
-      attivo: true,
-      cassetto_fiscale_id: "",
-      matricola_inps: "",
-      pat_inail: "",
-      codice_ditta_ce: "",
-      utente_operatore_id: "",
-      utente_professionista_id: "",
-      utente_payroll_id: "",
-      professionista_payroll_id: "",
-      contatto1_id: "",
-      referente_esterno: "",
-      tipo_prestazione_id: "",
-      tipo_redditi: undefined,
-      note: "",
-    });
-    setScadenzari({
-      iva: true,
-      cu: true,
-      bilancio: true,
-      fiscali: true,
-      lipe: true,
-      modello_770: true,
-      esterometro: true,
-      ccgg: true,
-      proforma: true,
-      imu: true,
-    });
-  };
+  // 2) metto comunque il cliente “base” (poi lo sostituisco con quello completo dal DB)
+  setEditingCliente(cliente);
+
+  // 3) rileggo il cliente COMPLETO dal DB (tbclienti), così i flag TRUE si vedono
+  let clienteDb: any = cliente;
+  try {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("id", cliente.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Errore lettura cliente da DB:", error);
+    } else if (data) {
+      clienteDb = data;
+      setEditingCliente(data);
+    }
+  } catch (e) {
+    console.error("Errore imprevisto lettura cliente:", e);
+  }
+
+  let clienteData = { ...clienteDb };
+
+  // 4) Decrypt sensitive fields if encryption is enabled and unlocked
+  if (encryptionEnabled && !encryptionLocked) {
+    try {
+      const decrypted = await decryptClienteSensitiveData({
+        codice_fiscale: clienteData.codice_fiscale,
+        partita_iva: clienteData.partita_iva,
+        matricola_inps: clienteData.matricola_inps,
+        pat_inail: clienteData.pat_inail,
+        codice_ditta_ce: clienteData.codice_ditta_ce,
+        note: clienteData.note,
+      });
+
+      clienteData = { ...clienteData, ...decrypted };
+    } catch (error) {
+      console.error("Decryption error:", error);
+    }
+  }
+
+  // 5) formData
+  setFormData({
+    cod_cliente: clienteData.cod_cliente || "",
+    tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
+    tipologia_cliente: (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
+    settore_fiscale: clienteData.settore_fiscale ?? true,
+    settore_lavoro: clienteData.settore_lavoro ?? false,
+    settore_consulenza: clienteData.settore_consulenza ?? false,
+    ragione_sociale: clienteData.ragione_sociale || "",
+    partita_iva: clienteData.partita_iva || "",
+    codice_fiscale: clienteData.codice_fiscale || "",
+    indirizzo: clienteData.indirizzo || "",
+    cap: clienteData.cap || "",
+    citta: clienteData.citta || "",
+    provincia: clienteData.provincia || "",
+    email: clienteData.email || "",
+    attivo: clienteData.attivo ?? false,
+    cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
+    matricola_inps: clienteData.matricola_inps || "",
+    pat_inail: clienteData.pat_inail || "",
+    codice_ditta_ce: clienteData.codice_ditta_ce || "",
+    utente_operatore_id: clienteData.utente_operatore_id || "",
+    utente_professionista_id: clienteData.utente_professionista_id || "",
+    utente_payroll_id: clienteData.utente_payroll_id || "",
+    professionista_payroll_id: clienteData.professionista_payroll_id || "",
+    contatto1_id: clienteData.contatto1_id || "",
+    referente_esterno: clienteData.referente_esterno || "",
+    tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
+    tipo_redditi: (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
+    note: clienteData.note || "",
+  });
+
+  // 6) scadenzari (dal DB completo)
+  setScadenzari({
+    iva: clienteData.flag_iva ?? false,
+    cu: clienteData.flag_cu ?? false,
+    bilancio: clienteData.flag_bilancio ?? false,
+    fiscali: clienteData.flag_fiscali ?? false,
+    lipe: clienteData.flag_lipe ?? false,
+    modello_770: clienteData.flag_770 ?? false,
+    esterometro: clienteData.flag_esterometro ?? false,
+    ccgg: clienteData.flag_ccgg ?? false,
+    proforma: clienteData.flag_proforma ?? false,
+    imu: clienteData.flag_imu ?? false,
+  });
+
+  // 7) comunicazioni (dal DB completo)
+  setComunicazioni({
+    mail_attive: clienteData.flag_mail_attivo ?? false,
+    invia_mail_scadenze: clienteData.flag_mail_scadenze ?? false,
+    // ⚠️ QUI devi usare il nome reale nel tuo DB per newsletter:
+    // se NON ESISTE flag_iscritto_newsletter, metti quello corretto (es. flag_newsletter)
+    iscritto_newsletter: (clienteData.flag_newsletter ?? false),
+  });
+};
+
+const resetForm = () => {
+  setEditingCliente(null);
+
+  setFormData({
+    cod_cliente: "",
+    tipo_cliente: "Persona fisica",
+    tipologia_cliente: "Interno",
+    settore_fiscale: true,
+    settore_lavoro: false,
+    settore_consulenza: false,
+    ragione_sociale: "",
+    partita_iva: "",
+    codice_fiscale: "",
+    indirizzo: "",
+    cap: "",
+    citta: "",
+    provincia: "",
+    email: "",
+    attivo: true,
+    cassetto_fiscale_id: "",
+    matricola_inps: "",
+    pat_inail: "",
+    codice_ditta_ce: "",
+    utente_operatore_id: "",
+    utente_professionista_id: "",
+    utente_payroll_id: "",
+    professionista_payroll_id: "",
+    contatto1_id: "",
+    referente_esterno: "",
+    tipo_prestazione_id: "",
+    tipo_redditi: undefined,
+    note: "",
+  });
+
+  // ✅ reset scadenzari: meglio FALSE per un nuovo cliente
+  setScadenzari({
+    iva: false,
+    cu: false,
+    bilancio: false,
+    fiscali: false,
+    lipe: false,
+    modello_770: false,
+    esterometro: false,
+    ccgg: false,
+    proforma: false,
+    imu: false,
+  });
+
+  // ✅ reset comunicazioni
+  setComunicazioni({
+    mail_attive: false,
+    invia_mail_scadenze: false,
+    iscritto_newsletter: false,
+  });
+};
+
 
   const downloadTemplate = () => {
     const headers = [
