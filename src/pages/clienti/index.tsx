@@ -367,6 +367,9 @@ useEffect(() => {
   flag_770: scadenzari.modello_770,
   flag_ccgg: scadenzari.ccgg,
   flag_imu: scadenzari.imu,
+  flag_mail_attivo: comunicazioni.mail_attive,
+  flag_invia_mail_scadenze: comunicazioni.invia_mail_scadenze,
+  flag_iscritto_newsletter: comunicazioni.iscritto_newsletter,
 };
 
 
