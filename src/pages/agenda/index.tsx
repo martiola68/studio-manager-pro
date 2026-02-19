@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { 
   ChevronLeft, 
@@ -71,7 +72,7 @@ export default function AgendaPage() {
   const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [filtroUtente, setFiltroUtente] = useState<string>("tutti");
+  const [filtroUtenti, setFiltroUtenti] = useState<string[]>([]);
   
   // Stati dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -657,7 +658,8 @@ export default function AgendaPage() {
     return summary;
   };
 
-  const filteredEvents = eventi.filter(e => filtroUtente === "tutti" || e.utente_id === filtroUtente);
+  const filteredEvents = eventi.filter(e => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
+
 
   // --- RENDERERS ---
 
@@ -892,10 +894,49 @@ export default function AgendaPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
-            <Select value={filtroUtente} onValueChange={setFiltroUtente}>
-              <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtra utente" /></SelectTrigger>
-              <SelectContent><SelectItem value="tutti">Tutti gli utenti</SelectItem>{utenti.map(u => <SelectItem key={u.id} value={u.id}>{u.cognome} {u.nome}</SelectItem>)}</SelectContent>
-            </Select>
+           <Popover>
+  <PopoverTrigger asChild>
+    <Button variant="outline" className="w-[200px] justify-between">
+      {filtroUtenti.length === 0 ? "Tutti gli utenti" : `${filtroUtenti.length} selezionati`}
+    </Button>
+  </PopoverTrigger>
+
+  <PopoverContent className="w-[260px] p-2">
+    {/* Tutti gli utenti */}
+    <div
+      className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+      onClick={() => setFiltroUtenti([])}
+    >
+      <Checkbox checked={filtroUtenti.length === 0} />
+      <span>Tutti gli utenti</span>
+    </div>
+
+    <div className="my-2 border-t" />
+
+    {/* Lista utenti */}
+    <div className="max-h-[260px] overflow-auto">
+      {utenti.map((u) => {
+        const checked = filtroUtenti.includes(u.id);
+
+        return (
+          <div
+            key={u.id}
+            className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+            onClick={() => {
+              setFiltroUtenti((prev) =>
+                prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+              );
+            }}
+          >
+            <Checkbox checked={checked} />
+            <span>{u.cognome} {u.nome}</span>
+          </div>
+        );
+      })}
+    </div>
+  </PopoverContent>
+</Popover>
+
           </div>
           <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
             <div className="flex gap-2">
