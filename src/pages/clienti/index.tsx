@@ -669,7 +669,7 @@ useEffect(() => {
     invia_mail_scadenze: clienteData.flag_mail_scadenze ?? false,
     // ⚠️ QUI devi usare il nome reale nel tuo DB per newsletter:
     // se NON ESISTE flag_iscritto_newsletter, metti quello corretto (es. flag_newsletter)
-    iscritto_newsletter: (clienteData.flag_newsletter ?? false),
+    iscritto_newsletter: (clienteData.flag_mail_newsletter ?? false),
   });
 };
 
