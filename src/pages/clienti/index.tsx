@@ -150,7 +150,11 @@ export default function ClientiPage() {
     imu: true,
   });
 
-  const initialFormData: ClienteFormData = {
+  const initialFormData: ClienteFormData & {
+      flag_mail_attivo: boolean;
+  flag_mail_scadenze: boolean;
+  flag_mail_newsletter: boolean;
+   } = { 
     cod_cliente: "",
     tipo_cliente: "Persona fisica",
     tipologia_cliente: "Interno",
