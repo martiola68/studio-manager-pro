@@ -1261,7 +1261,7 @@ const resetForm = () => {
           </DialogHeader>
 
           <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
               <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
