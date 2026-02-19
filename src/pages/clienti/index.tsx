@@ -179,7 +179,6 @@ export default function ClientiPage() {
     tipo_prestazione_id: "",
     tipo_redditi: undefined,
     note: "",
-     // ✅ AGGIUNGI QUESTE
   flag_mail_attivo: false,
   flag_mail_scadenze: false,
   flag_mail_newsletter: false,
