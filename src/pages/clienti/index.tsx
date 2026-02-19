@@ -176,7 +176,7 @@ useEffect(() => {
     imu: !!editingCliente.flag_imu,
   });
 
-  setFormData((prev) => ({
+  setFormData((prev: any) => ({
   ...prev,
   flag_mail_attivo: !!editingCliente.flag_mail_attivo,
   flag_mail_scadenze: !!editingCliente.flag_mail_scadenze,
