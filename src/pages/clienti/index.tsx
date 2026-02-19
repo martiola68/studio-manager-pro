@@ -1795,7 +1795,7 @@ useEffect(() => {
                     id="scad_lipe"
                     checked={scadenzari.lipe}
                     onCheckedChange={(checked) =>
-                      ssetScadenzari(s => ({ ...s, lipe: checked === true }))
+                      setScadenzari(s => ({ ...s, lipe: checked === true }))
                     }
                   />
                   <Label htmlFor="scad_lipe">Lipe</Label>
