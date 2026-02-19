@@ -324,7 +324,7 @@ export default function ClientiPage() {
   flag_esterometro: scadenzari.esterometro,
   flag_proforma: scadenzari.proforma,
   flag_fiscali: scadenzari.fiscali,
-  flag_770: scadenzari.770,
+  flag_770: scadenzari.["770"],
   flag_ccgg: scadenzari.ccgg,
   flag_imu: scadenzari.imu,
 };
