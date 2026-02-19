@@ -83,7 +83,7 @@ const flagKeys = [
   // ✅ comunicazioni
   "flag_mail_attivo",
   "flag_mail_scadenze",
-  "flag_iscritto_newsletter",
+  "flag_mail_newsletter",
 ];
 
 for (const key of flagKeys) {
