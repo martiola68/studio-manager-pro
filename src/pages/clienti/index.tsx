@@ -1185,33 +1185,87 @@ export default function ClientiPage() {
 
                         <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
 
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_iva} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_lipe} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_bilancio} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_770} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_imu} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_cu} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_fiscali} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_esterometro} disabled />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox checked={!!cliente.flag_ccgg} disabled />
-                        </TableCell>
+                       <TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_iva}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_iva", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_lipe}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_lipe", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_bilancio}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_770}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_770", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_imu}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_imu", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_cu}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_cu", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_fiscali}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_esterometro}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
+    }
+  />
+</TableCell>
+
+<TableCell className="text-center">
+  <Checkbox
+    checked={!!cliente.flag_ccgg}
+    onCheckedChange={(v) =>
+      toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
+    }
+  />
+</TableCell>
+
                       </TableRow>
                     ))}
                   </TableBody>
