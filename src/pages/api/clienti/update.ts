@@ -59,9 +59,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    // 5) Body
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { id, ...updateData } = body || {};
+ // 5) Body
+const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+const { id, ...updateData } = body || {};
+
+// ✅ Remove undefined values (Supabase ignores undefined, so fields won't update)
+Object.keys(updateData).forEach((k) => {
+  if (updateData[k] === undefined) delete updateData[k];
+});
+
+// ✅ Ensure flags are booleans when present (robust even if they arrive as "true"/"false")
+const flagKeys = [
+  "flag_iva",
+  "flag_cu",
+  "flag_bilancio",
+  "flag_lipe",
+  "flag_esterometro",
+  "flag_proforma",
+  "flag_fiscali",
+  "flag_770",
+  "flag_ccgg",
+  "flag_imu",
+];
+
+for (const key of flagKeys) {
+  if (key in updateData) {
+    const v = updateData[key];
+    updateData[key] =
+      v === true || v === "true" || v === 1 || v === "1" ? true :
+      v === false || v === "false" || v === 0 || v === "0" ? false :
+      Boolean(v);
+  }
+}
 
     if (!id) {
       return res.status(400).json({ error: "Cliente ID is required" });
