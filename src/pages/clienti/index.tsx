@@ -294,32 +294,41 @@ export default function ClientiPage() {
       }
 
       let dataToSave = {
-        ...formData,
-        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-        utente_operatore_id: formData.utente_operatore_id || undefined,
-        utente_professionista_id: formData.utente_professionista_id || undefined,
-        utente_payroll_id: formData.utente_payroll_id || undefined,
-        professionista_payroll_id: formData.professionista_payroll_id || undefined,
-        contatto1_id: formData.contatto1_id || undefined,
-        referente_esterno: formData.referente_esterno || undefined,
-        tipo_prestazione_id: formData.tipo_prestazione_id || undefined,
-        tipo_redditi: formData.tipo_redditi || undefined,
-        cassetto_fiscale_id: formData.cassetto_fiscale_id || undefined,
-        tipologia_cliente: formData.tipologia_cliente || "Interno",
-        matricola_inps: formData.matricola_inps || undefined,
-        pat_inail: formData.pat_inail || undefined,
-        codice_ditta_ce: formData.codice_ditta_ce || undefined,
-        flag_iva: scadenzari.iva,
-        flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_lipe: scadenzari.lipe,
-        flag_esterometro: scadenzari.esterometro,
-        flag_proforma: scadenzari.proforma,
-        flag_fiscali: scadenzari.fiscali,
-        flag_770: scadenzari.d770,        // se nel tuo state si chiama "770" cambia in scadenzari.s770 o come l’hai chiamato
-        flag_ccgg: scadenzari.ccgg,
-        flag_imu: scadenzari.imu,
-      };
+  // 👉 tutti i campi del cliente (compresi flag_mail_*)
+  ...formData,
+
+  // 👉 campi calcolati / normalizzati
+  cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+
+  utente_operatore_id: formData.utente_operatore_id || undefined,
+  utente_professionista_id: formData.utente_professionista_id || undefined,
+  utente_payroll_id: formData.utente_payroll_id || undefined,
+  professionista_payroll_id: formData.professionista_payroll_id || undefined,
+
+  contatto1_id: formData.contatto1_id || undefined,
+  referente_esterno: formData.referente_esterno || undefined,
+  tipo_prestazione_id: formData.tipo_prestazione_id || undefined,
+  tipo_redditi: formData.tipo_redditi || undefined,
+  cassetto_fiscale_id: formData.cassetto_fiscale_id || undefined,
+  tipologia_cliente: formData.tipologia_cliente || "Interno",
+
+  matricola_inps: formData.matricola_inps || undefined,
+  pat_inail: formData.pat_inail || undefined,
+  codice_ditta_ce: formData.codice_ditta_ce || undefined,
+
+  // 👉 SCADENZARI (solo questi qui)
+  flag_iva: scadenzari.iva,
+  flag_cu: scadenzari.cu,
+  flag_bilancio: scadenzari.bilancio,
+  flag_lipe: scadenzari.lipe,
+  flag_esterometro: scadenzari.esterometro,
+  flag_proforma: scadenzari.proforma,
+  flag_fiscali: scadenzari.fiscali,
+  flag_770: scadenzari.d770,
+  flag_ccgg: scadenzari.ccgg,
+  flag_imu: scadenzari.imu,
+};
+
 
       // Encrypt sensitive fields if encryption is enabled and unlocked
       if (encryptionEnabled && !encryptionLocked) {
@@ -1174,6 +1183,7 @@ export default function ClientiPage() {
             <TabsList className="grid w-full grid-cols-4 overflow-x-auto">
               <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
               <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
               <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
               <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
             </TabsList>
@@ -1634,6 +1644,40 @@ export default function ClientiPage() {
               </div>
             </TabsContent>
 
+            <TabsContent value="comunicazioni">
+  <div className="space-y-4">
+    <div className="flex items-center gap-3">
+      <Checkbox
+        checked={!!formData.flag_mail_attivo}
+        onCheckedChange={(v) =>
+          setFormData((p) => ({ ...p, flag_mail_attivo: v === true }))
+        }
+      />
+      <span className="text-sm">Mail attive</span>
+    </div>
+
+    <div className="flex items-center gap-3">
+      <Checkbox
+        checked={!!formData.flag_mail_scadenze}
+        onCheckedChange={(v) =>
+          setFormData((p) => ({ ...p, flag_mail_scadenze: v === true }))
+        }
+      />
+      <span className="text-sm">Invia mail scadenze</span>
+    </div>
+
+    <div className="flex items-center gap-3">
+      <Checkbox
+        checked={!!formData.flag_mail_newsletter}
+        onCheckedChange={(v) =>
+          setFormData((p) => ({ ...p, flag_mail_newsletter: v === true }))
+        }
+      />
+      <span className="text-sm">Iscritto newsletter</span>
+    </div>
+  </div>
+</TabsContent>
+            
             <TabsContent value="altri_dati" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
