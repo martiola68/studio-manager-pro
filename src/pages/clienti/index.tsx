@@ -179,12 +179,12 @@ useEffect(() => {
   setComunicazioni({
     mail_attive: !!editingCliente.flag_mail_attivo,
     invia_mail_scadenze: !!editingCliente.flag_mail_scadenze,
-    iscritto_newsletter: !!editingCliente.flag_iscritto_newsletter,
+    iscritto_newsletter: !!editingCliente.flag_mail_newsletter,
   });
 }, [editingCliente]);
 
   const initialFormData: ClienteFormData & {
-      flag_mail_attivo: boolean;
+  flag_mail_attivo: boolean;
   flag_mail_scadenze: boolean;
   flag_mail_newsletter: boolean;
    } = { 
@@ -369,7 +369,7 @@ useEffect(() => {
   flag_imu: scadenzari.imu,
   flag_mail_attivo: comunicazioni.mail_attive,
   flag_mail_scadenze: comunicazioni.invia_mail_scadenze,
-  flag_iscritto_newsletter: comunicazioni.iscritto_newsletter,
+  flag_mail_newsletter: comunicazioni.iscritto_newsletter,
 };
 
 
