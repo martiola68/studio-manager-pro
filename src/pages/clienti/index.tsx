@@ -311,6 +311,14 @@ export default function ClientiPage() {
         codice_ditta_ce: formData.codice_ditta_ce || undefined,
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
+        flag_bilancio: scadenzari.bilanci,
+        flag_lipe: scadenzari.lipe,
+        flag_esterometro: scadenzari.esterometro,
+        flag_proforma: scadenzari.proforma,
+        flag_fiscali: scadenzari.fiscali,
+        flag_770: scadenzari.d770,        // se nel tuo state si chiama "770" cambia in scadenzari.s770 o come l’hai chiamato
+        flag_ccgg: scadenzari.ccgg,
+        flag_imu: scadenzari.imu,
       };
 
       // Encrypt sensitive fields if encryption is enabled and unlocked
