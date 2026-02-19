@@ -80,6 +80,10 @@ const flagKeys = [
   "flag_770",
   "flag_ccgg",
   "flag_imu",
+  // ✅ comunicazioni
+  "flag_mail_attivo",
+  "flag_invia_mail_scadenze",
+  "flag_iscritto_newsletter",
 ];
 
 for (const key of flagKeys) {
