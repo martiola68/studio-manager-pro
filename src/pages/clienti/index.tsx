@@ -110,6 +110,11 @@ type ScadenzariSelezionati = {
   proforma: boolean;
   imu: boolean;
 };
+type ComunicazioniSelezionate = {
+  mail_attive: boolean;
+  invia_mail_scadenze: boolean;
+  iscritto_newsletter: boolean;
+};
 
 export default function ClientiPage() {
   const { toast } = useToast();
@@ -149,8 +154,12 @@ const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
   proforma: false,
   imu: false,
 });
+  const [comunicazioni, setComunicazioni] = useState<ComunicazioniSelezionate>({
+  mail_attive: false,
+  invia_mail_scadenze: false,
+  iscritto_newsletter: false,
+});
 
-// 🔥 SYNC AUTOMATICO QUANDO APRI "MODIFICA CLIENTE"
 useEffect(() => {
   if (!editingCliente) return;
 
@@ -160,14 +169,19 @@ useEffect(() => {
     bilancio: !!editingCliente.flag_bilancio,
     fiscali: !!editingCliente.flag_fiscali,
     lipe: !!editingCliente.flag_lipe,
-    modello_770: !!editingCliente.flag_770, // o flag_modello_770 se così nel tipo Cliente
+    modello_770: !!editingCliente.flag_770,
     esterometro: !!editingCliente.flag_esterometro,
     ccgg: !!editingCliente.flag_ccgg,
     proforma: !!editingCliente.flag_proforma,
     imu: !!editingCliente.flag_imu,
   });
-}, [editingCliente]);
 
+  setComunicazioni({
+    mail_attive: !!editingCliente.flag_mail_attive,
+    invia_mail_scadenze: !!editingCliente.flag_invia_mail_scadenze,
+    iscritto_newsletter: !!editingCliente.flag_iscritto_newsletter,
+  });
+}, [editingCliente]);
 
   const initialFormData: ClienteFormData & {
       flag_mail_attivo: boolean;
