@@ -176,11 +176,12 @@ useEffect(() => {
     imu: !!editingCliente.flag_imu,
   });
 
-  setComunicazioni({
-    mail_attive: !!editingCliente.flag_mail_attivo,
-    invia_mail_scadenze: !!editingCliente.flag_mail_scadenze,
-    iscritto_newsletter: !!editingCliente.flag_mail_newsletter,
-  });
+  setFormData((prev) => ({
+  ...prev,
+  flag_mail_attivo: !!editingCliente.flag_mail_attivo,
+  flag_mail_scadenze: !!editingCliente.flag_mail_scadenze,
+  flag_mail_newsletter: !!editingCliente.flag_mail_newsletter,
+}));
 }, [editingCliente]);
 
   const initialFormData: ClienteFormData & {
@@ -367,9 +368,9 @@ useEffect(() => {
   flag_770: scadenzari.modello_770,
   flag_ccgg: scadenzari.ccgg,
   flag_imu: scadenzari.imu,
-  flag_mail_attivo: comunicazioni.mail_attive,
-  flag_mail_scadenze: comunicazioni.invia_mail_scadenze,
-  flag_mail_newsletter: comunicazioni.iscritto_newsletter,
+  flag_mail_attivo: formData.flag_mail_attivo,
+  flag_mail_scadenze: formData.flag_mail_scadenze,
+  flag_mail_newsletter: formData.flag_mail_newsletter,
 };
 
 
@@ -721,14 +722,7 @@ const resetForm = () => {
     imu: false,
   });
 
-  // ✅ reset comunicazioni
-  setComunicazioni({
-    mail_attive: false,
-    invia_mail_scadenze: false,
-    iscritto_newsletter: false,
-  });
 };
-
 
   const downloadTemplate = () => {
     const headers = [
