@@ -121,6 +121,7 @@ export default function ClientiPage() {
   const { studioId } = useStudio();
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [filteredClienti, setFilteredClienti] = useState<Cliente[]>([]);
+  const [vistaClienti, setVistaClienti] = useState<"clienti" | "elenco_generale">("clienti");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [selectedUtenteFiscale, setSelectedUtenteFiscale] = useState<string>("all");
@@ -945,6 +946,19 @@ const resetForm = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+  variant={vistaClienti === "clienti" ? "default" : "outline"}
+  onClick={() => setVistaClienti("clienti")}
+>
+  Clienti
+</Button>
+
+<Button
+  variant={vistaClienti === "elenco_generale" ? "default" : "outline"}
+  onClick={() => setVistaClienti("elenco_generale")}
+>
+  Elenco Generale Scadenzari
+</Button>
             {encryptionEnabled && (
               <Button
                 variant="outline"
@@ -1180,6 +1194,8 @@ const resetForm = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
+        {vistaClienti === "clienti" ? (
+
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                   <TableRow>
@@ -1247,6 +1263,36 @@ const resetForm = () => {
                   ))}
                 </TableBody>
               </Table>
+              ) : (
+   <Table>
+  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+    <TableRow>
+      <TableHead className="sticky left-0 bg-background z-20 shadow-r w-[350px] min-w-[350px]">
+        Cliente
+      </TableHead>
+      <TableHead className="min-w-[220px]">
+        Utente Fiscale
+      </TableHead>
+    </TableRow>
+  </TableHeader>
+
+  <TableBody>
+    {filteredClienti.map((cliente) => (
+      <TableRow key={cliente.id}>
+        <TableCell className="sticky left-0 bg-background z-10 font-medium">
+          {cliente.ragione_sociale}
+        </TableCell>
+        <TableCell>
+          {/* mettiamo per ora l’id o il nome se già disponibile */}
+          {cliente.utente_fiscale_nome ?? cliente.utente_operatore_id ?? "-"}
+        </TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+
+)}
+
             </div>
           )}
         </CardContent>
