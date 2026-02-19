@@ -311,7 +311,7 @@ export default function ClientiPage() {
         codice_ditta_ce: formData.codice_ditta_ce || undefined,
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilanci,
+        flag_bilancio: scadenzari.bilancio,
         flag_lipe: scadenzari.lipe,
         flag_esterometro: scadenzari.esterometro,
         flag_proforma: scadenzari.proforma,
