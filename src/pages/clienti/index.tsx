@@ -120,35 +120,54 @@ export default function ClientiPage() {
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [selectedUtenteFiscale, setSelectedUtenteFiscale] = useState<string>("all");
   const [selectedUtentePayroll, setSelectedUtentePayroll] = useState<string>("all");
-  
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [importLoading, setImportLoading] = useState(false);
-  const [contatti, setContatti] = useState<Contatto[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
-  const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
-  const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
+const [isDialogOpen, setIsDialogOpen] = useState(false);
+const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+const [importDialogOpen, setImportDialogOpen] = useState(false);
+const [loading, setLoading] = useState(true);
+const [importLoading, setImportLoading] = useState(false);
+const [contatti, setContatti] = useState<Contatto[]>([]);
+const [utenti, setUtenti] = useState<Utente[]>([]);
+const [cassettiFiscali, setCassettiFiscali] = useState<CassettoFiscale[]>([]);
+const [prestazioni, setPrestazioni] = useState<Prestazione[]>([]);
 
-  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
-  const [encryptionLocked, setEncryptionLocked] = useState(true);
-  const [showSensitiveData, setShowSensitiveData] = useState<{[key: string]: boolean}>({});
-  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
-  const [unlockPassword, setUnlockPassword] = useState("");
+const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+const [encryptionLocked, setEncryptionLocked] = useState(true);
+const [showSensitiveData, setShowSensitiveData] = useState<{ [key: string]: boolean }>({});
+const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+const [unlockPassword, setUnlockPassword] = useState("");
 
-  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
-    iva: true,
-    cu: true,
-    bilancio: true,
-    fiscali: true,
-    lipe: true,
-    modello_770: true,
-    esterometro: true,
-    ccgg: true,
-    proforma: true,
-    imu: true,
+// ✅ STATE SCADENZARI (corretto)
+const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>({
+  iva: false,
+  cu: false,
+  bilancio: false,
+  fiscali: false,
+  lipe: false,
+  modello_770: false,
+  esterometro: false,
+  ccgg: false,
+  proforma: false,
+  imu: false,
+});
+
+// 🔥 SYNC AUTOMATICO QUANDO APRI "MODIFICA CLIENTE"
+useEffect(() => {
+  if (!editingCliente) return;
+
+  setScadenzari({
+    iva: !!editingCliente.flag_iva,
+    cu: !!editingCliente.flag_cu,
+    bilancio: !!editingCliente.flag_bilancio,
+    fiscali: !!editingCliente.flag_fiscali,
+    lipe: !!editingCliente.flag_lipe,
+    modello_770: !!editingCliente.flag_770, // o flag_modello_770 se così nel tipo Cliente
+    esterometro: !!editingCliente.flag_esterometro,
+    ccgg: !!editingCliente.flag_ccgg,
+    proforma: !!editingCliente.flag_proforma,
+    imu: !!editingCliente.flag_imu,
   });
+}, [editingCliente]);
+
 
   const initialFormData: ClienteFormData & {
       flag_mail_attivo: boolean;
@@ -1732,7 +1751,7 @@ export default function ClientiPage() {
                     id="scad_iva"
                     checked={scadenzari.iva}
                     onCheckedChange={(checked) =>
-                      setScadenzari({ ...scadenzari, iva: checked as boolean })
+                      ssetScadenzari(s => ({ ...s, iva: checked === true }))
                     }
                   />
                   <Label htmlFor="scad_iva">IVA</Label>
@@ -1776,7 +1795,7 @@ export default function ClientiPage() {
                     id="scad_lipe"
                     checked={scadenzari.lipe}
                     onCheckedChange={(checked) =>
-                      setScadenzari({ ...scadenzari, lipe: checked as boolean })
+                      ssetScadenzari(s => ({ ...s, lipe: checked === true }))
                     }
                   />
                   <Label htmlFor="scad_lipe">Lipe</Label>
@@ -1798,7 +1817,7 @@ export default function ClientiPage() {
                     id="scad_esterometro"
                     checked={scadenzari.esterometro}
                     onCheckedChange={(checked) =>
-                      setScadenzari({ ...scadenzari, esterometro: checked as boolean })
+                      setScadenzari(s => ({ ...s, esterometro: checked === true }))
                     }
                   />
                   <Label htmlFor="scad_esterometro">Esterometro</Label>
