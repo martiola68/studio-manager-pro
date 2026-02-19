@@ -1284,7 +1284,7 @@ const resetForm = () => {
         </TableCell>
         <TableCell>
           {/* mettiamo per ora l’id o il nome se già disponibile */}
-          {cliente.utente_fiscale_nome ?? cliente.utente_operatore_id ?? "-"}
+          {cliente.utente_operatore_id ?? "-"}
         </TableCell>
       </TableRow>
     ))}
