@@ -178,7 +178,7 @@ useEffect(() => {
 
   setComunicazioni({
     mail_attive: !!editingCliente.flag_mail_attivo,
-    invia_mail_scadenze: !!editingCliente.flag_invia_mail_scadenze,
+    invia_mail_scadenze: !!editingCliente.flag_mail_scadenze,
     iscritto_newsletter: !!editingCliente.flag_iscritto_newsletter,
   });
 }, [editingCliente]);
@@ -368,7 +368,7 @@ useEffect(() => {
   flag_ccgg: scadenzari.ccgg,
   flag_imu: scadenzari.imu,
   flag_mail_attivo: comunicazioni.mail_attive,
-  flag_invia_mail_scadenze: comunicazioni.invia_mail_scadenze,
+  flag_mail_scadenze: comunicazioni.invia_mail_scadenze,
   flag_iscritto_newsletter: comunicazioni.iscritto_newsletter,
 };
 
