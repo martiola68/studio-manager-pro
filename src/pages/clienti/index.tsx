@@ -1751,7 +1751,7 @@ useEffect(() => {
                     id="scad_iva"
                     checked={scadenzari.iva}
                     onCheckedChange={(checked) =>
-                      ssetScadenzari(s => ({ ...s, iva: checked === true }))
+                      setScadenzari(s => ({ ...s, iva: checked === true }))
                     }
                   />
                   <Label htmlFor="scad_iva">IVA</Label>
