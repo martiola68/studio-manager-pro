@@ -1171,23 +1171,25 @@ export default function ClientiPage() {
                   <TableBody>
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
-                        <TableCell
-                          className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate"
-                          title={cliente.cod_cliente || cliente.id}
+                       <TableCell
+                        className="sticky left-0 bg-background z-30 font-mono text-sm w-[120px] truncate border-r"
+                        title={cliente.cod_cliente || cliente.id}
                         >
-                          {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
+                        {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
                         </TableCell>
 
                         <TableCell
-                          className="sticky left-[120px] bg-background z-10 font-medium w-[250px] truncate"
+                        className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r"
                           title={cliente.ragione_sociale || ""}
-                        >
-                          {cliente.ragione_sociale}
-                        </TableCell>
+                            >
+                        {cliente.ragione_sociale}
+                            </TableCell>
 
-                        <TableCell className="min-w-[220px] px-3 text-left">
-                          {getUtenteNome(cliente.utente_operatore_id) ?? "-"}  
-                        </TableCell>
+                       <TableCell className="min-w-[220px] pl-6 pr-3 text-left align-middle relative z-0">
+                      <div className="w-full whitespace-nowrap text-left">
+                      {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
+                      </div>
+                      </TableCell>
 
                         <TableCell className="min-w-[200px]">
                           {getUtenteNome(cliente.utente_payroll_id)}
