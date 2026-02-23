@@ -209,7 +209,9 @@ if (!cfIsValid) {
         allegato_doc: form.allegato_doc || null,
       };
 
-      const { error } = await supabase.from("rapp_legali").insert(payload);
+      const { error } = await (supabase as any)
+  .from("rapp_legali")
+  .insert(payload);
       if (error) throw error;
 
     console.log("Rappresentante legale inserito correttamente.");
