@@ -1185,7 +1185,7 @@ export default function ClientiPage() {
                         {cliente.ragione_sociale}
                             </TableCell>
 
-                      <TableCell className="min-w-[200px]">
+                      <TableCell className="min-w-[220px]">
                       {getUtenteNome(cliente.utente_operatore_id)}
                       </TableCell>
 
