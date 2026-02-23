@@ -215,11 +215,32 @@ export function Sidebar({
       icon: <FolderOpen className="h-5 w-5" />,
       href: "/cassetti-fiscali",
     },
-    {
+   {
   label: "Antiriciclaggio",
   icon: <ShieldCheck className="h-4 w-4" />,
-  href: "/antiriciclaggio",
+  children: [
+    {
+      label: "Rappresentanti",
+      href: "/antiriciclaggio/rappresentanti",
+      icon: null,
     },
+    {
+      label: "Modello AV1",
+      href: "/antiriciclaggio/modello-av1",
+      icon: null,
+    },
+    {
+      label: "Modello AV4",
+      href: "/antiriciclaggio/modello-av4",
+      icon: null,
+    },
+    {
+      label: "Elenco antiriciclaggio",
+      href: "/antiriciclaggio/elenco",
+      icon: null,
+    },
+  ],
+},
     {
       label: "Clienti",
       icon: <Users className="h-5 w-5" />,
