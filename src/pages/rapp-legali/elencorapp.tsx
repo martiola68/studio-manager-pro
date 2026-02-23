@@ -161,7 +161,7 @@ console.log("Documento caricato correttamente:", path);
       .createSignedUrl(form.allegato_doc, 60 * 10); // 10 minuti
 
     if (error) {
-      toast({ title: "Errore apertura", description: error.message, variant: "destructive" });
+      console.error("Errore apertura documento:", error.message);
       return;
     }
     window.open(data.signedUrl, "_blank");
