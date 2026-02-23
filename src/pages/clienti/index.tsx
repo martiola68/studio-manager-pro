@@ -1172,26 +1172,28 @@ export default function ClientiPage() {
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
                        <TableCell
-                        className="sticky left-0 bg-background z-30 font-mono text-sm w-[120px] truncate border-r"
-                        title={cliente.cod_cliente || cliente.id}
-                        >
-                        {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
-                        </TableCell>
+                         className="sticky left-0 bg-background z-30 font-mono text-sm w-[120px] truncate border-r"
+  title={cliente.cod_cliente || cliente.id}
+>
+  {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
+</TableCell>
 
-                        <TableCell
-                        className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r"
-                          title={cliente.ragione_sociale || ""}
-                            >
-                        {cliente.ragione_sociale}
-                            </TableCell>
+<TableCell
+  className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r"
+  title={cliente.ragione_sociale || ""}
+>
+  {cliente.ragione_sociale}
+</TableCell>
 
-                      <TableCell className="min-w-[220px]" pl-6">
-                      {getUtenteNome(cliente.utente_operatore_id)}
-                      </TableCell>
+<TableCell className="min-w-[220px] pl-6 pr-3 text-left align-middle relative z-0">
+  <div className="w-full whitespace-nowrap text-left">
+    {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
+  </div>
+</TableCell>
 
-                        <TableCell className="min-w-[200px]">
-                          {getUtenteNome(cliente.utente_payroll_id)}
-                        </TableCell>
+<TableCell className="min-w-[200px] px-3 text-left align-middle">
+  {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
+</TableCell>
 
                         <TableCell>
                           {cliente.attivo ? (
