@@ -1864,3 +1864,6 @@ export default function ClientiPage() {
     </div>
   </DialogContent>
 </Dialog>
+</div>
+);
+}
