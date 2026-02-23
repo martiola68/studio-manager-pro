@@ -1829,9 +1829,64 @@ export default function ClientiPage() {
 </TabsContent>
 
             {/* COMUNICAZIONI */}
-            <TabsContent value="comunicazioni" className="pt-4">
-              {/* ... (tutto uguale al tuo blocco comunicazioni) ... */}
-            </TabsContent>
+           {/* COMUNICAZIONI */}
+<TabsContent value="comunicazioni" className="pt-4">
+  <div className="space-y-4">
+    <div className="flex items-center justify-between border rounded-md p-4">
+      <div className="space-y-1">
+        <Label htmlFor="flag_mail_attivo" className="font-medium">
+          Email Attive
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          Abilita l’invio delle comunicazioni email al cliente
+        </p>
+      </div>
+      <Switch
+        id="flag_mail_attivo"
+        checked={formData.flag_mail_attivo}
+        onCheckedChange={(checked) =>
+          setFormData({ ...formData, flag_mail_attivo: checked })
+        }
+      />
+    </div>
+
+    <div className="flex items-center justify-between border rounded-md p-4">
+      <div className="space-y-1">
+        <Label htmlFor="flag_mail_scadenze" className="font-medium">
+          Email Scadenze
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          Invia notifiche email per le scadenze fiscali
+        </p>
+      </div>
+      <Switch
+        id="flag_mail_scadenze"
+        checked={formData.flag_mail_scadenze}
+        onCheckedChange={(checked) =>
+          setFormData({ ...formData, flag_mail_scadenze: checked })
+        }
+      />
+    </div>
+
+    <div className="flex items-center justify-between border rounded-md p-4">
+      <div className="space-y-1">
+        <Label htmlFor="flag_mail_newsletter" className="font-medium">
+          Newsletter
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          Abilita l’invio di newsletter e comunicazioni informative
+        </p>
+      </div>
+      <Switch
+        id="flag_mail_newsletter"
+        checked={formData.flag_mail_newsletter}
+        onCheckedChange={(checked) =>
+          setFormData({ ...formData, flag_mail_newsletter: checked })
+        }
+      />
+    </div>
+  </div>
+</TabsContent>
 
             {/* ALTRI DATI */}
           <TabsContent value="altri_dati" className="space-y-4 pt-4">
