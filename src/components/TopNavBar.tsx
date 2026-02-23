@@ -275,8 +275,13 @@ const loadPromemoriaAttivi = async () => {
 },
 {
   label: "Antiriciclaggio",
-  icon: <ShieldCheck className="h-4 w-4" />,
-  href: "/antiriciclaggio",
+  icon: <ShieldCheck className="h-5 w-5" />,
+  children: [
+    { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
+    { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
+    { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
+    { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
+  ],
 },
 {
   label: "Clienti",
