@@ -1375,14 +1375,458 @@ export default function ClientiPage() {
             </TabsList>
 
             {/* ANAGRAFICA */}
-            <TabsContent value="anagrafica" className="space-y-4 pt-4">
-              {/* ... (tutto uguale al tuo blocco anagrafica) ... */}
-            </TabsContent>
+          <TabsContent value="anagrafica" className="space-y-4 pt-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <Label htmlFor="cod_cliente">Codice Cliente</Label>
+      <Input
+        id="cod_cliente"
+        value={formData.cod_cliente}
+        onChange={(e) => setFormData({ ...formData, cod_cliente: e.target.value })}
+        disabled
+        placeholder="Generato automaticamente"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+      <Select
+        value={formData.tipo_cliente}
+        onValueChange={(value) => setFormData({ ...formData, tipo_cliente: value })}
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+          <SelectItem value="Altro">Altro</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
+      <Select
+        value={formData.tipologia_cliente || undefined}
+        onValueChange={(value: string) =>
+          setFormData({ ...formData, tipologia_cliente: value as "Interno" | "Esterno" })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona tipologia" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Interno">Interno</SelectItem>
+          <SelectItem value="Esterno">Esterno</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div className="md:col-span-2 space-y-2">
+      <Label>Settori *</Label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="settore-fiscale"
+            checked={formData.settore_fiscale}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, settore_fiscale: checked as boolean })
+            }
+          />
+          <Label htmlFor="settore-fiscale" className="font-medium cursor-pointer">
+            Settore Fiscale
+          </Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="settore-lavoro"
+            checked={formData.settore_lavoro}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, settore_lavoro: checked as boolean })
+            }
+          />
+          <Label htmlFor="settore-lavoro" className="font-medium cursor-pointer">
+            Settore Lavoro
+          </Label>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="settore-consulenza"
+            checked={formData.settore_consulenza}
+            onCheckedChange={(checked) =>
+              setFormData({ ...formData, settore_consulenza: checked as boolean })
+            }
+          />
+          <Label htmlFor="settore-consulenza" className="font-medium cursor-pointer">
+            Settore Consulenza
+          </Label>
+        </div>
+      </div>
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="ragione_sociale">
+        Ragione Sociale <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        id="ragione_sociale"
+        value={formData.ragione_sociale}
+        onChange={(e) => setFormData({ ...formData, ragione_sociale: e.target.value })}
+        placeholder="Ragione sociale..."
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="partita_iva">P.IVA</Label>
+      <div className="relative">
+        <Input
+          id="partita_iva"
+          value={formData.partita_iva}
+          onChange={(e) => setFormData({ ...formData, partita_iva: e.target.value })}
+          placeholder="01234567890"
+        />
+        {encryptionEnabled && encryptionLocked && formData.partita_iva && (
+          <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div>
+      <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
+      <div className="relative">
+        <Input
+          id="codice_fiscale"
+          value={formData.codice_fiscale}
+          onChange={(e) => setFormData({ ...formData, codice_fiscale: e.target.value })}
+          placeholder="RSSMRA80A01H501U"
+        />
+        {encryptionEnabled && encryptionLocked && formData.codice_fiscale && (
+          <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="indirizzo">Indirizzo</Label>
+      <Input
+        id="indirizzo"
+        value={formData.indirizzo}
+        onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
+        placeholder="Via Roma, 123"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="cap">CAP</Label>
+      <Input
+        id="cap"
+        value={formData.cap}
+        onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+        placeholder="00100"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="citta">Città</Label>
+      <Input
+        id="citta"
+        value={formData.citta}
+        onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+        placeholder="Roma"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="provincia">Provincia</Label>
+      <Input
+        id="provincia"
+        value={formData.provincia}
+        onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
+        placeholder="RM"
+        maxLength={2}
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="email">
+        Email <span className="text-red-500">*</span>
+      </Label>
+      <Input
+        id="email"
+        type="email"
+        value={formData.email}
+        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+        placeholder="info@azienda.it"
+      />
+    </div>
+
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="attivo"
+        checked={formData.attivo}
+        onCheckedChange={(checked) => setFormData({ ...formData, attivo: checked })}
+      />
+      <Label htmlFor="attivo">Cliente Attivo</Label>
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="note">Note</Label>
+      <Textarea
+        id="note"
+        value={formData.note}
+        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+        placeholder="Note aggiuntive..."
+        rows={4}
+      />
+    </div>
+  </div>
+</TabsContent>
 
             {/* RIFERIMENTI */}
-            <TabsContent value="riferimenti" className="space-y-6 pt-4">
-              {/* ... (tutto uguale al tuo blocco riferimenti) ... */}
-            </TabsContent>
+           <TabsContent value="riferimenti" className="space-y-6 pt-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
+      <Select
+        value={formData.utente_operatore_id || "none"}
+        onValueChange={(value) =>
+          setFormData({ ...formData, utente_operatore_id: value === "none" ? "" : value })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona utente" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              (`${a.cognome} ${a.nome}`.toLowerCase()).localeCompare(
+                `${b.cognome} ${b.nome}`.toLowerCase()
+              )
+            )
+            .map((utente) => (
+              <SelectItem key={utente.id} value={utente.id}>
+                {utente.nome} {utente.cognome}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="utente_professionista_id">Professionista Fiscale</Label>
+      <Select
+        value={formData.utente_professionista_id || "none"}
+        onValueChange={(value) =>
+          setFormData({
+            ...formData,
+            utente_professionista_id: value === "none" ? "" : value,
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona professionista" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              (`${a.cognome} ${a.nome}`.toLowerCase()).localeCompare(
+                `${b.cognome} ${b.nome}`.toLowerCase()
+              )
+            )
+            .map((utente) => (
+              <SelectItem key={utente.id} value={utente.id}>
+                {utente.nome} {utente.cognome}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
+      <Select
+        value={formData.utente_payroll_id || "none"}
+        onValueChange={(value) =>
+          setFormData({ ...formData, utente_payroll_id: value === "none" ? "" : value })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona utente payroll" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              (`${a.cognome} ${a.nome}`.toLowerCase()).localeCompare(
+                `${b.cognome} ${b.nome}`.toLowerCase()
+              )
+            )
+            .map((utente) => (
+              <SelectItem key={utente.id} value={utente.id}>
+                {utente.nome} {utente.cognome}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
+      <Select
+        value={formData.professionista_payroll_id || "none"}
+        onValueChange={(value) =>
+          setFormData({
+            ...formData,
+            professionista_payroll_id: value === "none" ? "" : value,
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona professionista payroll" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              (`${a.cognome} ${a.nome}`.toLowerCase()).localeCompare(
+                `${b.cognome} ${b.nome}`.toLowerCase()
+              )
+            )
+            .map((utente) => (
+              <SelectItem key={utente.id} value={utente.id}>
+                {utente.nome} {utente.cognome}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="contatto1_id">Contatto 1</Label>
+      <Select
+        value={formData.contatto1_id || "none"}
+        onValueChange={(value) =>
+          setFormData({ ...formData, contatto1_id: value === "none" ? "" : value })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona contatto" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {contatti
+            .slice()
+            .sort((a, b) =>
+              (`${a.cognome || ""} ${a.nome || ""}`.toLowerCase()).localeCompare(
+                `${b.cognome || ""} ${b.nome || ""}`.toLowerCase()
+              )
+            )
+            .map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nome} {c.cognome}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="referente_esterno">Referente esterno</Label>
+      <Input
+        id="referente_esterno"
+        value={formData.referente_esterno}
+        onChange={(e) => setFormData({ ...formData, referente_esterno: e.target.value })}
+        placeholder="Nome referente esterno"
+      />
+    </div>
+
+    <div>
+      <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+      <Select
+        value={formData.tipo_prestazione_id || "none"}
+        onValueChange={(value) =>
+          setFormData({
+            ...formData,
+            tipo_prestazione_id: value === "none" ? "" : value,
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona prestazione" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {prestazioni.map((p) => (
+            <SelectItem key={p.id} value={p.id}>
+              {p.descrizione}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+      <Select
+        value={formData.tipo_redditi || undefined}
+        onValueChange={(value: string) =>
+          setFormData({
+            ...formData,
+            tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona tipo" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="USC">USC</SelectItem>
+          <SelectItem value="USP">USP</SelectItem>
+          <SelectItem value="ENC">ENC</SelectItem>
+          <SelectItem value="UPF">UPF</SelectItem>
+          <SelectItem value="730">730</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
+      <Select
+        value={formData.cassetto_fiscale_id || "none"}
+        onValueChange={(value) =>
+          setFormData({
+            ...formData,
+            cassetto_fiscale_id: value === "none" ? "" : value,
+          })
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Seleziona referente" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nessuno</SelectItem>
+          {cassettiFiscali.map((cassetto) => (
+            <SelectItem key={cassetto.id} value={cassetto.id}>
+              {cassetto.nominativo} ({cassetto.username})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+</TabsContent>
 
             {/* COMUNICAZIONI */}
             <TabsContent value="comunicazioni" className="pt-4">
@@ -1390,9 +1834,42 @@ export default function ClientiPage() {
             </TabsContent>
 
             {/* ALTRI DATI */}
-            <TabsContent value="altri_dati" className="space-y-4 pt-4">
-              {/* ... (tutto uguale al tuo blocco altri_dati) ... */}
-            </TabsContent>
+          <TabsContent value="altri_dati" className="space-y-4 pt-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="md:col-span-2">
+      <Label htmlFor="matricola_inps">Matricola INPS</Label>
+      <Textarea
+        id="matricola_inps"
+        value={formData.matricola_inps}
+        onChange={(e) => setFormData({ ...formData, matricola_inps: e.target.value })}
+        placeholder="Inserisci matricola INPS..."
+        rows={2}
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="pat_inail">Pat INAIL</Label>
+      <Textarea
+        id="pat_inail"
+        value={formData.pat_inail}
+        onChange={(e) => setFormData({ ...formData, pat_inail: e.target.value })}
+        placeholder="Inserisci Pat INAIL..."
+        rows={2}
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+      <Textarea
+        id="codice_ditta_ce"
+        value={formData.codice_ditta_ce}
+        onChange={(e) => setFormData({ ...formData, codice_ditta_ce: e.target.value })}
+        placeholder="Inserisci codice ditta CE..."
+        rows={2}
+      />
+    </div>
+  </div>
+</TabsContent>
 
             {/* SCADENZARI */}
             <TabsContent value="scadenzari" className="space-y-4 pt-4">
