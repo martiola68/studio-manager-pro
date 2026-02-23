@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
 
 import { useStudio } from "@/contexts/StudioContext"; // <-- esiste nel tuo progetto (lo avevi già nei Clienti)
 
@@ -143,12 +142,12 @@ export default function NuovoRappLegalePage() {
 
       if (error) throw error;
 
-      setForm((p) => ({ ...p, allegato_doc: path }));
-      toast({ title: "Documento caricato", description: "Allegato associato correttamente." });
-    } catch (e: any) {
-      toast({ title: "Errore upload", description: e?.message ?? "Upload non riuscito", variant: "destructive" });
-    } finally {
-      setUploading(false);
+  setForm((p) => ({ ...p, allegato_doc: path }));
+console.log("Documento caricato correttamente:", path);
+} catch (e: any) {
+  console.error("Errore upload documento:", e?.message ?? "Upload non riuscito");
+} finally {
+  setUploading(false);
     }
   }
 
