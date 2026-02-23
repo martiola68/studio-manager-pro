@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabaseClient"; // <-- adatta se nel tuo progetto il path è diverso
+import { supabase } from "@/path/del/tuo/file/supabase"; // <-- adatta se nel tuo progetto il path è diverso
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
