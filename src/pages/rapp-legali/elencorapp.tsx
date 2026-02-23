@@ -175,28 +175,23 @@ console.log("Documento caricato correttamente:", path);
     const cfIsValid = isValidCF(normalizeCF(form.codice_fiscale));
 
     if (!studioOk) {
-      toast({
-        title: "Studio non disponibile",
-        description: "Non riesco a leggere studio_id dall’utente loggato.",
-        variant: "destructive",
-      });
-      return;
-    }
+  console.error(
+    "Studio non disponibile: impossibile leggere studio_id dall’utente loggato."
+  );
+  return;
+}
 
-    if (!nomeOk) {
-      toast({ title: "Campo obbligatorio", description: "Inserisci Nome e Cognome.", variant: "destructive" });
-      return;
-    }
+   if (!nomeOk) {
+  console.error("Campo obbligatorio mancante: Nome e Cognome.");
+  return;
+}
 
-    if (!cfIsValid) {
-      toast({
-        title: "Codice Fiscale non valido",
-        description: "Controlla il formato o il carattere di controllo.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+if (!cfIsValid) {
+  console.error(
+    "Codice Fiscale non valido: controlla formato o carattere di controllo."
+  );
+  return;
+}
     setLoading(true);
     try {
       const payload = {
@@ -217,15 +212,15 @@ console.log("Documento caricato correttamente:", path);
       const { error } = await supabase.from("rapp_legali").insert(payload);
       if (error) throw error;
 
-      toast({ title: "Salvato", description: "Rappresentante legale inserito correttamente." });
-      router.push("/rapp-legali"); // creeremo (o collegherai) la pagina elenco
-    } catch (e: any) {
-      // caso tipico: CF univoco già presente -> error code 23505
-      const msg = e?.message ?? "Errore inserimento";
-      toast({ title: "Errore", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    console.log("Rappresentante legale inserito correttamente.");
+router.push("/rapp-legali");
+} catch (e: any) {
+  // caso tipico: CF univoco già presente -> error code 23505
+  const msg = e?.message ?? "Errore inserimento";
+  console.error("Errore inserimento rappresentante legale:", msg);
+} finally {
+  setLoading(false);
+}
   }
 
   return (
