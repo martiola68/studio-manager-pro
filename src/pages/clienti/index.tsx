@@ -1179,13 +1179,13 @@ export default function ClientiPage() {
 </TableCell>
 
 <TableCell
-  className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r"
+  className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r pr-4"
   title={cliente.ragione_sociale || ""}
 >
   {cliente.ragione_sociale}
 </TableCell>
 
-<TableCell className="min-w-[220px] pl-6 pr-3 text-left align-middle relative z-0">
+<TableCell className="min-w-[220px] pl-8 pr-3 text-left align-middle relative z-0">
   <div className="w-full whitespace-nowrap text-left">
     {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
   </div>
