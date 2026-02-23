@@ -399,5 +399,5 @@ router.push("/rapp-legali");
         </CardContent>
       </Card>
     </div>
-  );
+);
 }
