@@ -1185,10 +1185,8 @@ export default function ClientiPage() {
                         {cliente.ragione_sociale}
                             </TableCell>
 
-                       <TableCell className="min-w-[220px] pl-6 pr-3 text-left align-middle relative z-0">
-                      <div className="w-full whitespace-nowrap text-left">
-                      {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
-                      </div>
+                      <TableCell className="min-w-[200px]">
+                      {getUtenteNome(cliente.utente_operatore_id)}
                       </TableCell>
 
                         <TableCell className="min-w-[200px]">
