@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -103,46 +103,67 @@ const initialState: FormState = {
 
 export default function AntiriciclaggioRappresentanti() {
   const router = useRouter();
-  const { studioId } = useStudio() as any;
+ const { studioId } = useStudio() as any;
 
-  const [form, setForm] = useState<FormState>(initialState);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [okMsg, setOkMsg] = useState<string | null>(null);
-  const [errMsg, setErrMsg] = useState<string | null>(null);
+// ✅ studioId effettivo: prima prova dal contesto, altrimenti dall'utente loggato
+const [studioIdEffettivo, setStudioIdEffettivo] = useState<string | null>(studioId ?? null);
 
-  const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
-  const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
-
-  // DOC = opzionale: non influisce
-  const canSave = useMemo(() => {
-    return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
-  }, [studioId, form.nome_cognom, cfOk]);
-
-  async function handleUploadDoc(file: File) {
-    if (!studioId) {
-      setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
-      return;
-    }
-    setUploading(true);
-    setErrMsg(null);
-    setOkMsg(null);
-
-    try {
-      const safeName = file.name.replace(/\s+/g, "_");
-      const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
-
-      const { error } = await supabase.storage.from("documenti").upload(path, file, { upsert: true });
-      if (error) throw error;
-
-      setForm((p) => ({ ...p, allegato_doc: path }));
-      setOkMsg("✅ Documento caricato.");
-    } catch (e: any) {
-      setErrMsg(e?.message ?? "Errore upload documento");
-    } finally {
-      setUploading(false);
-    }
+useEffect(() => {
+  // se arriva dal contesto, usalo subito
+  if (studioId) {
+    setStudioIdEffettivo(studioId);
+    return;
   }
+
+  // altrimenti prova a leggerlo dall’utente loggato su Supabase
+  (async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return;
+
+    const metaStudioId = (data?.user?.user_metadata as any)?.studio_id as string | undefined;
+    if (metaStudioId) setStudioIdEffettivo(metaStudioId);
+  })();
+}, [studioId]);
+
+const [form, setForm] = useState<FormState>(initialState);
+const [saving, setSaving] = useState(false);
+const [uploading, setUploading] = useState(false);
+const [okMsg, setOkMsg] = useState<string | null>(null);
+const [errMsg, setErrMsg] = useState<string | null>(null);
+
+const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
+const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
+
+// DOC = opzionale: non influisce
+const canSave = useMemo(() => {
+  return !!studioIdEffettivo && form.nome_cognom.trim().length > 0 && cfOk;
+}, [studioIdEffettivo, form.nome_cognom, cfOk]);
+
+async function handleUploadDoc(file: File) {
+  if (!studioIdEffettivo) {
+    setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
+    return;
+  }
+
+  setUploading(true);
+  setErrMsg(null);
+  setOkMsg(null);
+
+  try {
+    const safeName = file.name.replace(/\s+/g, "_");
+    const path = `rapp_legali/${studioIdEffettivo}/${Date.now()}_${safeName}`;
+
+    const { error } = await supabase.storage.from("documenti").upload(path, file, { upsert: true });
+    if (error) throw error;
+
+    setForm((p) => ({ ...p, allegato_doc: path }));
+    setOkMsg("✅ Documento caricato.");
+  } catch (e: any) {
+    setErrMsg(e?.message ?? "Errore upload documento");
+  } finally {
+    setUploading(false);
+  }
+}
 
   async function handleOpenDoc() {
     if (!form.allegato_doc) return;
@@ -160,7 +181,7 @@ export default function AntiriciclaggioRappresentanti() {
     setOkMsg(null);
     setErrMsg(null);
 
-    if (!studioId) {
+    if (!studioIdEffettivo) {
       setErrMsg("Studio non disponibile: impossibile leggere studio_id.");
       return;
     }
@@ -172,7 +193,7 @@ export default function AntiriciclaggioRappresentanti() {
     setSaving(true);
     try {
       const payload = {
-        studio_id: studioId,
+        studio_id: studioIdEffettivo,
         nome_cognom: form.nome_cognom.trim(),
         codice_fiscale: cf,
 
@@ -329,7 +350,7 @@ export default function AntiriciclaggioRappresentanti() {
                   <Input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={uploading || !studioId}
+                    disabled={uploading || !studioIdEffettivo}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) handleUploadDoc(f);
