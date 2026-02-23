@@ -1490,7 +1490,7 @@ export default function ClientiPage() {
               <SelectItem value="">Nessuno</SelectItem>
               {cassettiFiscali.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.descrizione || c.id}
+                  {c.nominativo || c.id}
                 </SelectItem>
               ))}
             </SelectContent>
