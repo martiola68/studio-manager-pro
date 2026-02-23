@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -67,10 +68,14 @@ import {
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
-type CassettoFiscale =
-  Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
+type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 
+/**
+ * ✅ STATO LOGICO DEL FORM
+ * - qui NON usiamo "flag_*"
+ * - qui usiamo nomi puliti (iva, cu, bilancio, fiscali, lipe, modello_770, esterometro, ccgg)
+ */
 type ScadenzariSelezionati = {
   iva: boolean;
   cu: boolean;
@@ -192,16 +197,14 @@ export default function ClientiPage() {
 
   const [loading, setLoading] = useState(true);
 
-  const [vistaClienti, setVistaClienti] = useState<
-    "clienti" | "elenco_generale"
-  >("clienti");
+  const [vistaClienti, setVistaClienti] = useState<"clienti" | "elenco_generale">(
+    "clienti"
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
-  const [selectedUtenteFiscale, setSelectedUtenteFiscale] =
-    useState<string>("all");
-  const [selectedUtentePayroll, setSelectedUtentePayroll] =
-    useState<string>("all");
+  const [selectedUtenteFiscale, setSelectedUtenteFiscale] = useState<string>("all");
+  const [selectedUtentePayroll, setSelectedUtentePayroll] = useState<string>("all");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
@@ -211,8 +214,7 @@ export default function ClientiPage() {
 
   // form states
   const [formData, setFormData] = useState<ClienteFormData>(initialFormData);
-  const [scadenzari, setScadenzari] =
-    useState<ScadenzariSelezionati>(initialScadenzari);
+  const [scadenzari, setScadenzari] = useState<ScadenzariSelezionati>(initialScadenzari);
 
   // encryption
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
@@ -224,6 +226,7 @@ export default function ClientiPage() {
     () => clienti.filter((c) => c.cassetto_fiscale_id).length,
     [clienti]
   );
+
   const percentualeCassetto = useMemo(() => {
     if (!clienti.length) return 0;
     return Math.round((clientiConCassetto / clienti.length) * 100);
@@ -239,14 +242,19 @@ export default function ClientiPage() {
     try {
       setLoading(true);
 
-      const [clientiData, contattiData, utentiData, cassettiData, prestazioniRes] =
-        await Promise.all([
-          clienteService.getClienti(),
-          contattoService.getContatti(),
-          utenteService.getUtenti(),
-          cassettiFiscaliService.getCassettiFiscali(),
-          supabase.from("tbprestazioni").select("*").order("descrizione"),
-        ]);
+      const [
+        clientiData,
+        contattiData,
+        utentiData,
+        cassettiData,
+        prestazioniRes,
+      ] = await Promise.all([
+        clienteService.getClienti(),
+        contattoService.getContatti(),
+        utenteService.getUtenti(),
+        cassettiFiscaliService.getCassettiFiscali(),
+        supabase.from("tbprestazioni").select("*").order("descrizione"),
+      ]);
 
       setClienti(clientiData ?? []);
       setContatti(contattiData ?? []);
@@ -278,6 +286,59 @@ export default function ClientiPage() {
     checkEncryption();
   }, [studioId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * ✅ FUNZIONE UNICA per rendere editabili i flag direttamente dalla tabella "Elenco Generale Scadenzari"
+   * - era “dentro” il useMemo nel Word -> BUG
+   * - ora è fuori, stabile, e funziona sempre
+   */
+  const toggleClienteFlag = useCallback(
+    async (
+      clienteId: string,
+      field:
+        | "flag_iva"
+        | "flag_lipe"
+        | "flag_bilancio"
+        | "flag_770"
+        | "flag_imu"
+        | "flag_cu"
+        | "flag_fiscali"
+        | "flag_esterometro"
+        | "flag_ccgg",
+      nextValue: boolean
+    ) => {
+      // 1) UI ottimistica
+      setClienti((prev) =>
+        prev.map((c) => (c.id === clienteId ? ({ ...c, [field]: nextValue } as any) : c))
+      );
+
+      try {
+        const { error } = await supabase
+          .from("tbclienti")
+          .update({ [field]: nextValue } as any)
+          .eq("id", clienteId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Aggiornato",
+          description: "Scadenzario aggiornato correttamente",
+        });
+      } catch (e: any) {
+        // rollback UI se fallisce
+        setClienti((prev) =>
+          prev.map((c) => (c.id === clienteId ? ({ ...c, [field]: !nextValue } as any) : c))
+        );
+
+        toast({
+          title: "Errore",
+          description: e?.message || "Impossibile aggiornare lo scadenzario",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
+
   const filteredClienti = useMemo(() => {
     let filtered = [...clienti];
 
@@ -300,71 +361,15 @@ export default function ClientiPage() {
     }
 
     if (selectedUtenteFiscale !== "all") {
-      filtered = filtered.filter(
-        (c) => c.utente_operatore_id === selectedUtenteFiscale
-      );
+      filtered = filtered.filter((c) => c.utente_operatore_id === selectedUtenteFiscale);
     }
 
     if (selectedUtentePayroll !== "all") {
-      filtered = filtered.filter(
-        (c) => c.utente_payroll_id === selectedUtentePayroll
-      );
+      filtered = filtered.filter((c) => c.utente_payroll_id === selectedUtentePayroll);
     }
-const toggleClienteFlag = async (
-  clienteId: string,
-  field:
-    | "flag_iva"
-    | "flag_lipe"
-    | "flag_bilancio"
-    | "flag_770"
-    | "flag_imu"
-    | "flag_cu"
-    | "flag_fiscali"
-    | "flag_esterometro"
-    | "flag_ccgg",
-  nextValue: boolean
-) => {
-  // 1) UI ottimistica
-  setClienti((prev) =>
-    prev.map((c) => (c.id === clienteId ? ({ ...c, [field]: nextValue } as any) : c))
-  );
-
-  try {
-    const { error } = await supabase
-      .from("tbclienti")
-      .update({ [field]: nextValue } as any)
-      .eq("id", clienteId);
-
-    if (error) throw error;
-
-    toast({
-      title: "Aggiornato",
-      description: "Scadenzario aggiornato correttamente",
-    });
-  } catch (e: any) {
-    // rollback UI se fallisce
-    setClienti((prev) =>
-      prev.map((c) =>
-        c.id === clienteId ? ({ ...c, [field]: !nextValue } as any) : c
-      )
-    );
-
-    toast({
-      title: "Errore",
-      description: e?.message || "Impossibile aggiornare lo scadenzario",
-      variant: "destructive",
-    });
-  }
-};
 
     return filtered;
-  }, [
-    clienti,
-    searchTerm,
-    selectedLetter,
-    selectedUtenteFiscale,
-    selectedUtentePayroll,
-  ]);
+  }, [clienti, searchTerm, selectedLetter, selectedUtenteFiscale, selectedUtentePayroll]);
 
   const resetForm = () => {
     setEditingCliente(null);
@@ -416,8 +421,7 @@ const toggleClienteFlag = async (
     setFormData({
       cod_cliente: clienteData.cod_cliente || "",
       tipo_cliente: clienteData.tipo_cliente || "Persona fisica",
-      tipologia_cliente:
-        (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
+      tipologia_cliente: (clienteData.tipologia_cliente as "Interno" | "Esterno") || "Interno",
       settore_fiscale: clienteData.settore_fiscale ?? true,
       settore_lavoro: clienteData.settore_lavoro ?? false,
       settore_consulenza: clienteData.settore_consulenza ?? false,
@@ -446,12 +450,7 @@ const toggleClienteFlag = async (
 
       tipo_prestazione_id: clienteData.tipo_prestazione_id || "",
       tipo_redditi:
-        (clienteData.tipo_redditi as
-          | "USC"
-          | "USP"
-          | "ENC"
-          | "UPF"
-          | "730") || undefined,
+        (clienteData.tipo_redditi as "USC" | "USP" | "ENC" | "UPF" | "730") || undefined,
 
       note: clienteData.note || "",
 
@@ -460,6 +459,7 @@ const toggleClienteFlag = async (
       flag_mail_newsletter: clienteData.flag_mail_newsletter ?? false,
     });
 
+    // ✅ FIX: mappatura pulita e coerente (form state -> flag DB)
     setScadenzari({
       iva: clienteData.flag_iva ?? false,
       cu: clienteData.flag_cu ?? false,
@@ -488,14 +488,12 @@ const toggleClienteFlag = async (
       let dataToSave: any = {
         ...formData,
 
-        cod_cliente:
-          formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+        cod_cliente: formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
 
         utente_operatore_id: formData.utente_operatore_id || undefined,
         utente_professionista_id: formData.utente_professionista_id || undefined,
         utente_payroll_id: formData.utente_payroll_id || undefined,
-        professionista_payroll_id:
-          formData.professionista_payroll_id || undefined,
+        professionista_payroll_id: formData.professionista_payroll_id || undefined,
 
         contatto1_id: formData.contatto1_id || undefined,
         referente_esterno: formData.referente_esterno || undefined,
@@ -507,16 +505,16 @@ const toggleClienteFlag = async (
         pat_inail: formData.pat_inail || undefined,
         codice_ditta_ce: formData.codice_ditta_ce || undefined,
 
-        // scadenzari
+        // ✅ scadenzari: stato form -> flag DB
         flag_iva: scadenzari.iva,
         flag_cu: scadenzari.cu,
         flag_bilancio: scadenzari.bilancio,
-        flag_lipe: scadenzari.lipe,
-        flag_esterometro: scadenzari.esterometro,
-        flag_proforma: scadenzari.proforma,
         flag_fiscali: scadenzari.fiscali,
+        flag_lipe: scadenzari.lipe,
         flag_770: scadenzari.modello_770,
+        flag_esterometro: scadenzari.esterometro,
         flag_ccgg: scadenzari.ccgg,
+        flag_proforma: scadenzari.proforma,
         flag_imu: scadenzari.imu,
       };
 
@@ -601,25 +599,15 @@ const toggleClienteFlag = async (
         scadenzariAttivi.map((s) => {
           switch (s) {
             case "IVA":
-              return supabase
-                .from("tbscadiva")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
+              return supabase.from("tbscadiva").upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
             case "CU":
-              return supabase
-                .from("tbscadcu")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
+              return supabase.from("tbscadcu").upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
             case "Bilanci":
-              return supabase
-                .from("tbscadbilanci")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
+              return supabase.from("tbscadbilanci").upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
             case "Fiscali":
-              return supabase
-                .from("tbscadfiscali")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
+              return supabase.from("tbscadfiscali").upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
             case "LIPE":
-              return supabase
-                .from("tbscadlipe")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
+              return supabase.from("tbscadlipe").upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
             case "770":
               return supabase.from("tbscad770").upsert(
                 {
@@ -638,9 +626,7 @@ const toggleClienteFlag = async (
 
       toast({
         title: "Successo",
-        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
-          ", "
-        )}`,
+        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(", ")}`,
       });
     } catch (error) {
       console.error("Errore inserimento scadenzari:", error);
@@ -762,15 +748,13 @@ const toggleClienteFlag = async (
         const row: Record<string, string> = {};
         headers.forEach((h, idx) => (row[h] = values[idx] || ""));
 
-        const ragione =
-          row["ragione_sociale"] || row["Ragione Sociale"] || "";
+        const ragione = row["ragione_sociale"] || row["Ragione Sociale"] || "";
         if (!ragione) continue;
 
         try {
           const { error } = await supabase.from("tbclienti").insert({
             ragione_sociale: ragione,
-            codice_fiscale:
-              row["codice_fiscale"] || row["Codice Fiscale"] || null,
+            codice_fiscale: row["codice_fiscale"] || row["Codice Fiscale"] || null,
             partita_iva: row["partita_iva"] || row["Partita IVA"] || null,
             indirizzo: row["indirizzo"] || row["Indirizzo"] || null,
             cap: row["cap"] || row["CAP"] || null,
@@ -778,8 +762,7 @@ const toggleClienteFlag = async (
             provincia: row["provincia"] || row["Provincia"] || null,
             email: row["email"] || row["Email"] || null,
             tipo_cliente: row["tipo_cliente"] || row["Tipo Cliente"] || "Persona fisica",
-            tipologia_cliente:
-              row["tipologia_cliente"] || row["Tipologia Cliente"] || "Interno",
+            tipologia_cliente: row["tipologia_cliente"] || row["Tipologia Cliente"] || "Interno",
             studio_id: studioIdFromUser,
           });
 
@@ -816,8 +799,7 @@ const toggleClienteFlag = async (
       console.error("Errore importazione file:", error);
       toast({
         title: "Errore",
-        description:
-          "Impossibile importare il file. Verifica che sia un CSV valido.",
+        description: "Impossibile importare il file. Verifica che sia un CSV valido.",
         variant: "destructive",
       });
     } finally {
@@ -989,9 +971,7 @@ const toggleClienteFlag = async (
             <FileSpreadsheet className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-blue-600">
-              {clientiConCassetto}
-            </div>
+            <div className="text-4xl font-bold text-blue-600">{clientiConCassetto}</div>
           </CardContent>
         </Card>
 
@@ -1003,9 +983,7 @@ const toggleClienteFlag = async (
             <CheckCircle2 className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-green-600">
-              {percentualeCassetto}%
-            </div>
+            <div className="text-4xl font-bold text-green-600">{percentualeCassetto}%</div>
           </CardContent>
         </Card>
       </div>
@@ -1096,350 +1074,347 @@ const toggleClienteFlag = async (
       </Card>
 
       {/* TABELLA */}
-<Card>
-  <CardContent className="p-0">
-    {filteredClienti.length === 0 ? (
-      <div className="text-center py-12">
-        <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
-        <p className="text-muted-foreground mb-6">
-          {searchTerm ||
-          selectedLetter !== "Tutti" ||
-          selectedUtenteFiscale !== "all" ||
-          selectedUtentePayroll !== "all"
-            ? "Prova a modificare i filtri di ricerca"
-            : "Inizia aggiungendo il tuo primo cliente"}
-        </p>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Aggiungi Cliente
-        </Button>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        {vistaClienti === "clienti" ? (
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-              <TableRow>
-                <TableHead className="sticky left-0 bg-background z-20 w-[120px]">
-                  Cod. Cliente
-                </TableHead>
-                <TableHead className="sticky left-[120px] bg-background z-20 w-[250px]">
-                  Ragione Sociale
-                </TableHead>
-                <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
-                <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
-                <TableHead className="min-w-[100px]">Stato</TableHead>
-                <TableHead className="text-center">Scadenzari</TableHead>
-                <TableHead className="sticky right-0 bg-background z-20 text-right">
-                  Azioni
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filteredClienti.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell
-                    className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate"
-                    title={cliente.cod_cliente || cliente.id}
-                  >
-                    {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
-                  </TableCell>
-
-                  <TableCell
-                    className="sticky left-[120px] bg-background z-10 font-medium w-[250px] truncate"
-                    title={cliente.ragione_sociale || ""}
-                  >
-                    {cliente.ragione_sociale}
-                  </TableCell>
-
-                  <TableCell className="min-w-[220px] pl-6">
-                    {getUtenteNome(cliente.utente_operatore_id)}
-                  </TableCell>
-
-                  <TableCell className="min-w-[200px]">
-                    {getUtenteNome(cliente.utente_payroll_id)}
-                  </TableCell>
-
-                  <TableCell>
-                    {cliente.attivo ? (
-                      <Badge variant="default" className="bg-green-600">
-                        Attivo
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Inattivo</Badge>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleInsertIntoScadenzari(cliente)}
-                      title="Inserisci negli Scadenzari"
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-
-                  <TableCell className="sticky right-0 bg-background z-10 text-right">
-                    <div className="flex justify-end gap-3">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(cliente)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(cliente.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-              <TableRow>
-                <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
-                  Cliente
-                </TableHead>
-                <TableHead className="min-w-[220px]">Utente Fiscale</TableHead>
-                <TableHead className="text-center min-w-[90px]">IVA</TableHead>
-                <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
-                <TableHead className="text-center min-w-[100px]">Bilancio</TableHead>
-                <TableHead className="text-center min-w-[90px]">770</TableHead>
-                <TableHead className="text-center min-w-[90px]">IMU</TableHead>
-                <TableHead className="text-center min-w-[90px]">CU</TableHead>
-                <TableHead className="text-center min-w-[110px]">Fiscali</TableHead>
-                <TableHead className="text-center min-w-[130px]">Esterometro</TableHead>
-                <TableHead className="text-center min-w-[100px]">CCGG</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {filteredClienti.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                    {cliente.ragione_sociale}
-                  </TableCell>
-
-                  <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_iva}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_iva", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_lipe}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_lipe", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_bilancio}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_770}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_770", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_imu}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_imu", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_cu}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_cu", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_fiscali}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_esterometro}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={!!cliente.flag_ccgg}
-                      onCheckedChange={(v) =>
-                        toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
-                      }
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-    )}
-  </CardContent>
-</Card>
-
-{/* DIALOG CREAZIONE/MODIFICA */}
-<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle>{editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}</DialogTitle>
-    </DialogHeader>
-
-    <Tabs defaultValue="anagrafica" className="w-full">
-      <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
-        <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
-        <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
-        <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-        <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
-        <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-      </TabsList>
-
-      {/* ANAGRAFICA */}
-      <TabsContent value="anagrafica" className="space-y-4 pt-4">
-        {/* ... (tutto uguale al tuo blocco anagrafica) ... */}
-      </TabsContent>
-
-      {/* RIFERIMENTI */}
-      <TabsContent value="riferimenti" className="space-y-6 pt-4">
-        {/* ... (tutto uguale al tuo blocco riferimenti) ... */}
-      </TabsContent>
-
-      {/* COMUNICAZIONI */}
-      <TabsContent value="comunicazioni" className="pt-4">
-        {/* ... (tutto uguale al tuo blocco comunicazioni) ... */}
-      </TabsContent>
-
-      {/* ALTRI DATI */}
-      <TabsContent value="altri_dati" className="space-y-4 pt-4">
-        {/* ... (tutto uguale al tuo blocco altri_dati) ... */}
-      </TabsContent>
-
-      {/* SCADENZARI */}
-      <TabsContent value="scadenzari" className="space-y-4 pt-4">
-        <p className="text-sm text-muted-foreground">
-          Seleziona gli scadenzari attivi per questo cliente
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(
-            [
-              ["iva", "IVA"],
-              ["lipe", "LIPE"],
-              ["cu", "CU (Certificazione Unica)"],
-              ["bilancio", "Bilanci"],
-              ["fiscali", "Fiscali"],
-              // ✅ FIX: coerente con flag_770 (non modello_770)
-              ["flag_770", "770"],
-              ["esterometro", "Esterometro"],
-              ["ccgg", "CCGG"],
-              ["proforma", "Proforma"],
-              ["imu", "IMU"],
-            ] as const
-          ).map(([key, label]) => (
-            <div key={key} className="flex items-center space-x-2">
-              <Checkbox
-                checked={!!(scadenzari as any)[key]}
-                onCheckedChange={(checked) =>
-                  setScadenzari((s: any) => ({ ...s, [key]: checked === true }))
-                }
-              />
-              <Label>{label}</Label>
+      <Card>
+        <CardContent className="p-0">
+          {filteredClienti.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+              <p className="text-muted-foreground mb-6">
+                {searchTerm ||
+                selectedLetter !== "Tutti" ||
+                selectedUtenteFiscale !== "all" ||
+                selectedUtentePayroll !== "all"
+                  ? "Prova a modificare i filtri di ricerca"
+                  : "Inizia aggiungendo il tuo primo cliente"}
+              </p>
+              <Button onClick={handleAddNew}>
+                <Plus className="mr-2 h-4 w-4" />
+                Aggiungi Cliente
+              </Button>
             </div>
-          ))}
-        </div>
-      </TabsContent>
-    </Tabs>
+          ) : (
+            <div className="overflow-x-auto">
+              {vistaClienti === "clienti" ? (
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead className="sticky left-0 bg-background z-20 w-[120px]">
+                        Cod. Cliente
+                      </TableHead>
+                      <TableHead className="sticky left-[120px] bg-background z-20 w-[250px]">
+                        Ragione Sociale
+                      </TableHead>
+                      <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
+                      <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
+                      <TableHead className="min-w-[100px]">Stato</TableHead>
+                      <TableHead className="text-center">Scadenzari</TableHead>
+                      <TableHead className="sticky right-0 bg-background z-20 text-right">
+                        Azioni
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
 
-    <div className="flex justify-end gap-3 pt-6 border-t">
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsDialogOpen(false);
-          resetForm();
-        }}
-      >
-        Annulla
-      </Button>
-      <Button onClick={handleSave}>
-        {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
-      </Button>
+                  <TableBody>
+                    {filteredClienti.map((cliente) => (
+                      <TableRow key={cliente.id}>
+                        <TableCell
+                          className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate"
+                          title={cliente.cod_cliente || cliente.id}
+                        >
+                          {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
+                        </TableCell>
+
+                        <TableCell
+                          className="sticky left-[120px] bg-background z-10 font-medium w-[250px] truncate"
+                          title={cliente.ragione_sociale || ""}
+                        >
+                          {cliente.ragione_sociale}
+                        </TableCell>
+
+                        <TableCell className="min-w-[220px] pl-6">
+                          {getUtenteNome(cliente.utente_operatore_id)}
+                        </TableCell>
+
+                        <TableCell className="min-w-[200px]">
+                          {getUtenteNome(cliente.utente_payroll_id)}
+                        </TableCell>
+
+                        <TableCell>
+                          {cliente.attivo ? (
+                            <Badge variant="default" className="bg-green-600">
+                              Attivo
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Inattivo</Badge>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleInsertIntoScadenzari(cliente)}
+                            title="Inserisci negli Scadenzari"
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+
+                        <TableCell className="sticky right-0 bg-background z-10 text-right">
+                          <div className="flex justify-end gap-3">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(cliente)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(cliente.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
+                        Cliente
+                      </TableHead>
+                      <TableHead className="min-w-[220px]">Utente Fiscale</TableHead>
+                      <TableHead className="text-center min-w-[90px]">IVA</TableHead>
+                      <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
+                      <TableHead className="text-center min-w-[100px]">Bilancio</TableHead>
+                      <TableHead className="text-center min-w-[90px]">770</TableHead>
+                      <TableHead className="text-center min-w-[90px]">IMU</TableHead>
+                      <TableHead className="text-center min-w-[90px]">CU</TableHead>
+                      <TableHead className="text-center min-w-[110px]">Fiscali</TableHead>
+                      <TableHead className="text-center min-w-[130px]">Esterometro</TableHead>
+                      <TableHead className="text-center min-w-[100px]">CCGG</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {filteredClienti.map((cliente) => (
+                      <TableRow key={cliente.id}>
+                        <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                          {cliente.ragione_sociale}
+                        </TableCell>
+
+                        <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_iva}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_iva", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_lipe}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_lipe", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_bilancio}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_770}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_770", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_imu}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_imu", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_cu}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_cu", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_fiscali}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_esterometro}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={!!cliente.flag_ccgg}
+                            onCheckedChange={(v) =>
+                              toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* DIALOG CREAZIONE/MODIFICA */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}</DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="anagrafica" className="w-full">
+            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+              <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+              <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+              <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
+              <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+            </TabsList>
+
+            {/* ANAGRAFICA */}
+            <TabsContent value="anagrafica" className="space-y-4 pt-4">
+              {/* ... (tutto uguale al tuo blocco anagrafica) ... */}
+            </TabsContent>
+
+            {/* RIFERIMENTI */}
+            <TabsContent value="riferimenti" className="space-y-6 pt-4">
+              {/* ... (tutto uguale al tuo blocco riferimenti) ... */}
+            </TabsContent>
+
+            {/* COMUNICAZIONI */}
+            <TabsContent value="comunicazioni" className="pt-4">
+              {/* ... (tutto uguale al tuo blocco comunicazioni) ... */}
+            </TabsContent>
+
+            {/* ALTRI DATI */}
+            <TabsContent value="altri_dati" className="space-y-4 pt-4">
+              {/* ... (tutto uguale al tuo blocco altri_dati) ... */}
+            </TabsContent>
+
+            {/* SCADENZARI */}
+            <TabsContent value="scadenzari" className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Seleziona gli scadenzari attivi per questo cliente
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {([
+                  ["iva", "IVA"],
+                  ["lipe", "LIPE"],
+                  ["cu", "CU (Certificazione Unica)"],
+                  ["bilancio", "Bilanci"],
+                  ["fiscali", "Fiscali"],
+                  ["modello_770", "770"],
+                  ["esterometro", "Esterometro"],
+                  ["ccgg", "CCGG"],
+                  ["proforma", "Proforma"],
+                  ["imu", "IMU"],
+                ] as const).map(([key, label]) => (
+                  <div key={key} className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={scadenzari[key]}
+                      onCheckedChange={(checked) =>
+                        setScadenzari((s) => ({ ...s, [key]: checked === true }))
+                      }
+                    />
+                    <Label>{label}</Label>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex justify-end gap-3 pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDialogOpen(false);
+                resetForm();
+              }}
+            >
+              Annulla
+            </Button>
+            <Button onClick={handleSave}>{editingCliente ? "Salva Modifiche" : "Crea Cliente"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG SBLOCCO */}
+      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Inserisci la password principale dello studio per visualizzare e modificare i dati sensibili (CF, P.IVA, ecc).
+            </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="unlock-password">Password Principale</Label>
+              <Input
+                id="unlock-password"
+                type="password"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                placeholder="Inserisci password..."
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
+                Annulla
+              </Button>
+              <Button onClick={handleConfirmUnlock}>Sblocca</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  </DialogContent>
-</Dialog>
-
-{/* DIALOG SBLOCCO */}
-<Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
-    </DialogHeader>
-
-    <div className="space-y-4 py-4">
-      <p className="text-sm text-muted-foreground">
-        Inserisci la password principale dello studio per visualizzare e modificare i dati sensibili (CF,
-        P.IVA, ecc).
-      </p>
-
-      <div className="space-y-2">
-        <Label htmlFor="unlock-password">Password Principale</Label>
-        <Input
-          id="unlock-password"
-          type="password"
-          value={unlockPassword}
-          onChange={(e) => setUnlockPassword(e.target.value)}
-          placeholder="Inserisci password..."
-        />
-      </div>
-
-      <div className="flex justify-end gap-3 pt-4">
-        <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
-          Annulla
-        </Button>
-        <Button onClick={handleConfirmUnlock}>Sblocca</Button>
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
+  );
+}
