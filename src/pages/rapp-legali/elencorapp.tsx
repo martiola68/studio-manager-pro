@@ -93,7 +93,6 @@ type FormState = {
   citta_residenza: string;
   indirizzo_residenza: string;
   nazionalita: string;
-  carica: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string; // yyyy-mm-dd
   allegato_doc: string; // path in storage
@@ -104,7 +103,6 @@ export default function NuovoRappLegalePage() {
   const { studioId } = useStudio() as any; // nel tuo progetto dovrebbe esserci (adatta se il nome è diverso)
 
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     nome_cognome: "",
@@ -128,29 +126,7 @@ export default function NuovoRappLegalePage() {
     // (Così non blocchiamo il rendering)
   }, [studioId]);
 
-  async function handleUploadDoc(file: File) {
-    setUploading(true);
-    try {
-      // Bucket consigliato: "documenti"
-      // Path consigliata: rapp_legali/<studio_id>/<timestamp>_<filename>
-      const safeName = file.name.replace(/\s+/g, "_");
-      const path = `rapp_legali/${studioId || "no_studio"}/${Date.now()}_${safeName}`;
-
-      const { error } = await supabase.storage
-        .from("documenti")
-        .upload(path, file, { upsert: true });
-
-      if (error) throw error;
-
-  setForm((p) => ({ ...p, allegato_doc: path }));
-console.log("Documento caricato correttamente:", path);
-} catch (e: any) {
-  console.error("Errore upload documento:", e?.message ?? "Upload non riuscito");
-} finally {
-  setUploading(false);
-    }
-  }
-
+  
   async function handleOpenDoc() {
     if (!form.allegato_doc) return;
 
@@ -203,7 +179,6 @@ if (!cfIsValid) {
         citta_residenza: form.citta_residenza.trim() || null,
         indirizzo_residenza: form.indirizzo_residenza.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
-        carica: form.carica.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
@@ -310,16 +285,6 @@ router.push("/rapp-legali");
               </div>
 
               <div>
-                <Label htmlFor="carica">Carica</Label>
-                <Input
-                  id="carica"
-                  value={form.carica}
-                  onChange={(e) => setForm((p) => ({ ...p, carica: e.target.value }))}
-                  placeholder="Amministratore Unico"
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="tipo_doc">Tipo documento</Label>
                 <Select
                   value={form.tipo_doc || undefined}
@@ -345,49 +310,36 @@ router.push("/rapp-legali");
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <Label>Allegato documento</Label>
-                <div className="flex flex-col md:flex-row gap-3 md:items-center">
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={uploading || !studioId}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUploadDoc(f);
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={!form.allegato_doc}
-                      onClick={handleOpenDoc}
-                    >
-                      Apri documento
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!form.allegato_doc}
-                      onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
-                    >
-                      Rimuovi
-                    </Button>
-                  </div>
-                </div>
-                {form.allegato_doc && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Path salvata: <span className="font-mono">{form.allegato_doc}</span>
-                  </p>
-                )}
-                {!studioId && (
-                  <p className="text-sm text-red-500 mt-1">
-                    studio_id non disponibile: non posso caricare file né salvare il record.
-                  </p>
-                )}
-              </div>
-            </div>
+             <div className="md:col-span-2">
+  <Label htmlFor="allegato_doc">Allegato documento (URL)</Label>
+  <div className="flex flex-col md:flex-row gap-3 md:items-center">
+    <Input
+      id="allegato_doc"
+      type="url"
+      value={form.allegato_doc}
+      onChange={(e) => setForm((p) => ({ ...p, allegato_doc: e.target.value }))}
+      placeholder="https://..."
+    />
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={!form.allegato_doc}
+        onClick={() => window.open(form.allegato_doc, "_blank")}
+      >
+        Apri link
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={!form.allegato_doc}
+        onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
+      >
+        Rimuovi
+      </Button>
+    </div>
+  </div>
+</div>
 
             <div className="flex gap-2">
               <Button type="submit" disabled={loading || uploading}>
