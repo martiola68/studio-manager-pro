@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { comunicazioneService } from "@/services/comunicazioneService";
 import { clienteService } from "@/services/clienteService";
 import { emailService } from "@/services/emailService";
@@ -9,12 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Mail, Send, Plus, Paperclip, Search, Trash2, Eye, Users } from "lucide-react";
+import { Send, Plus, Paperclip, Search, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
@@ -25,11 +38,14 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 export default function ComunicazioniPage() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
   const [comunicazioni, setComunicazioni] = useState<Comunicazione[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -47,18 +63,27 @@ export default function ComunicazioniPage() {
 
   useEffect(() => {
     checkAuthAndLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+        error
+      } = await supabase.auth.getSession();
+
+      if (error) throw error;
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       await loadData();
     } catch (error) {
-      console.error("Errore:", error);
+      console.error("Errore auth:", error);
       router.push("/login");
     }
   };
@@ -66,11 +91,13 @@ export default function ComunicazioniPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+
       const [comunicazioniData, clientiData, utentiData] = await Promise.all([
         comunicazioneService.getComunicazioni(),
         clienteService.getClienti(),
         loadUtenti()
       ]);
+
       setComunicazioni(comunicazioniData);
       setClienti(clientiData);
       setUtenti(utentiData);
@@ -87,12 +114,14 @@ export default function ComunicazioniPage() {
   };
 
   const loadUtenti = async (): Promise<Utente[]> => {
+    const supabase = getSupabaseClient();
+
     const { data, error } = await supabase
       .from("tbutenti")
       .select("*")
       .eq("attivo", true)
       .order("cognome", { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
   };
@@ -103,23 +132,35 @@ export default function ComunicazioniPage() {
     }
   };
 
-  const uploadAllegato = async (): Promise<any> => {
+  const uploadAllegato = async (): Promise<{
+    nome: string;
+    url: string;
+    tipo: string;
+    dimensione: number;
+  } | null> => {
     if (!selectedFile) return null;
 
     try {
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const supabase = getSupabaseClient();
+
+      const fileExt = selectedFile.name.split(".").pop() || "bin";
+      const safeName = selectedFile.name.replace(/[^\w.\-]+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
       const filePath = `allegati/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("comunicazioni-assets")
-        .upload(filePath, selectedFile);
+        .upload(filePath, selectedFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: selectedFile.type || undefined
+        });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("comunicazioni-assets")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl }
+      } = supabase.storage.from("comunicazioni-assets").getPublicUrl(filePath);
 
       return {
         nome: selectedFile.name,
@@ -166,24 +207,27 @@ export default function ComunicazioniPage() {
     try {
       setSending(true);
 
-      let allegati = null;
+      let allegati: any[] | null = null;
       if (selectedFile) {
         const fileData = await uploadAllegato();
-        allegati = [fileData];
+        allegati = fileData ? [fileData] : null;
       }
 
       let destinatariCount = 0;
       if (formData.tipo === "singola") {
         destinatariCount = 1;
       } else if (formData.tipo === "newsletter") {
-        destinatariCount = clienti.filter(c => c.attivo && c.flag_mail_attivo && c.flag_mail_newsletter).length;
+        destinatariCount = clienti.filter(
+          (c) => c.attivo && c.flag_mail_attivo && c.flag_mail_newsletter
+        ).length;
       } else if (formData.tipo === "scadenze") {
-        destinatariCount = clienti.filter(c => c.attivo && c.flag_mail_attivo && c.flag_mail_scadenze).length;
+        destinatariCount = clienti.filter(
+          (c) => c.attivo && c.flag_mail_attivo && c.flag_mail_scadenze
+        ).length;
       } else if (formData.tipo === "interna") {
-        destinatariCount = multiDestinatari ? selectedDestinatari.length : utenti.filter(u => u.attivo).length;
+        destinatariCount = multiDestinatari ? selectedDestinatari.length : utenti.filter((u) => u.attivo).length;
       }
 
-      // 1. Salva il record nel database
       await comunicazioneService.createComunicazione({
         tipo: formData.tipo,
         oggetto: formData.oggetto,
@@ -194,7 +238,6 @@ export default function ComunicazioniPage() {
         data_invio: new Date().toISOString()
       });
 
-      // 2. Invia effettivamente le email
       const emailResult = await emailService.sendComunicazioneEmail({
         tipo: formData.tipo,
         destinatarioId: formData.tipo === "singola" ? formData.destinatario_id : undefined,
@@ -204,12 +247,14 @@ export default function ComunicazioniPage() {
         allegati: allegati
       });
 
-      if (emailResult.success) {
+      if (emailResult?.success) {
         const details = [
           `${emailResult.sent} inviate`,
           emailResult.failed > 0 ? `${emailResult.failed} fallite` : null,
           emailResult.skipped > 0 ? `${emailResult.skipped} escluse (formato invalido)` : null
-        ].filter(Boolean).join(", ");
+        ]
+          .filter(Boolean)
+          .join(", ");
 
         toast({
           title: "Comunicazione inviata",
@@ -218,7 +263,7 @@ export default function ComunicazioniPage() {
       } else {
         toast({
           title: "Errore parziale",
-          description: emailResult.error || "Alcune email non sono state inviate",
+          description: emailResult?.error || "Alcune email non sono state inviate",
           variant: "destructive"
         });
       }
@@ -226,7 +271,6 @@ export default function ComunicazioniPage() {
       setDialogOpen(false);
       resetForm();
       await loadData();
-
     } catch (error) {
       console.error("Errore invio:", error);
       toast({
@@ -273,27 +317,24 @@ export default function ComunicazioniPage() {
   };
 
   const handleDestinatarioToggle = (utenteId: string) => {
-    setSelectedDestinatari(prev =>
-      prev.includes(utenteId)
-        ? prev.filter(id => id !== utenteId)
-        : [...prev, utenteId]
+    setSelectedDestinatari((prev) =>
+      prev.includes(utenteId) ? prev.filter((id) => id !== utenteId) : [...prev, utenteId]
     );
   };
 
   const handleSelezionaTuttiSettore = (settore: string) => {
-    const utentiFiltrati = utenti.filter(u => {
+    const utentiFiltrati = utenti.filter((u) => {
       if (settore === "tutti") return true;
-      return u.settore?.toLowerCase() === settore.toLowerCase();
+      return (u.settore || "").toLowerCase() === settore.toLowerCase();
     });
-    const nuoviIds = utentiFiltrati.map(u => u.id);
-    
+
+    const nuoviIds = utentiFiltrati.map((u) => u.id);
+
     // AGGIUNGI invece di sostituire
-    setSelectedDestinatari(prev => {
+    setSelectedDestinatari((prev) => {
       const newSelection = [...prev];
-      nuoviIds.forEach(id => {
-        if (!newSelection.includes(id)) {
-          newSelection.push(id);
-        }
+      nuoviIds.forEach((id) => {
+        if (!newSelection.includes(id)) newSelection.push(id);
       });
       return newSelection;
     });
@@ -304,19 +345,16 @@ export default function ComunicazioniPage() {
   };
 
   const getUtentiFiltrati = () => {
-    // Mostra TUTTI gli utenti, filtra solo per ricerca testuale
-    return utenti.filter(u => {
-      const matchSearch = searchDestinatari === "" || 
-        `${u.nome} ${u.cognome}`.toLowerCase().includes(searchDestinatari.toLowerCase());
-      
-      return matchSearch;
+    return utenti.filter((u) => {
+      const fullName = `${u.nome} ${u.cognome}`.toLowerCase();
+      return searchDestinatari === "" || fullName.includes(searchDestinatari.toLowerCase());
     });
   };
 
-  const filteredComunicazioni = comunicazioni.filter(c =>
-    c.oggetto.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.messaggio.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredComunicazioni = comunicazioni.filter((c) => {
+    const q = searchQuery.toLowerCase();
+    return (c.oggetto || "").toLowerCase().includes(q) || (c.messaggio || "").toLowerCase().includes(q);
+  });
 
   if (loading) {
     return (
@@ -336,23 +374,27 @@ export default function ComunicazioniPage() {
           <h1 className="text-3xl font-bold text-gray-900">Comunicazioni</h1>
           <p className="text-gray-500 mt-1">Gestione invio email e comunicazioni massive</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Nuova Comunicazione
             </Button>
           </DialogTrigger>
+
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nuova Comunicazione</DialogTitle>
-              <DialogDescription>
-                Invia email a singoli clienti o gruppi di distribuzione
-              </DialogDescription>
+              <DialogDescription>Invia email a singoli clienti o gruppi di distribuzione</DialogDescription>
             </DialogHeader>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo Invio</Label>
@@ -387,11 +429,13 @@ export default function ComunicazioniPage() {
                       <SelectValue placeholder="Seleziona cliente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clienti.filter(c => c.attivo).map((cliente) => (
-                        <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.ragione_sociale}
-                        </SelectItem>
-                      ))}
+                      {clienti
+                        .filter((c) => c.attivo)
+                        .map((cliente) => (
+                          <SelectItem key={cliente.id} value={cliente.id}>
+                            {cliente.ragione_sociale}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -425,20 +469,10 @@ export default function ComunicazioniPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSelezionaTuttiSettore("lavoro")}
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("lavoro")}>
                           Settore Lavoro
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSelezionaTuttiSettore("fiscale")}
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("fiscale")}>
                           Settore Fiscale
                         </Button>
                         <Button
@@ -449,44 +483,26 @@ export default function ComunicazioniPage() {
                         >
                           Settore Consulenza
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSelezionaTuttiSettore("tutti")}
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelezionaTuttiSettore("tutti")}>
                           Tutti
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDeselezionaTutti}
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={handleDeselezionaTutti}>
                           Deseleziona Tutti
                         </Button>
                       </div>
 
                       <div className="border rounded-md max-h-[300px] overflow-y-auto p-2 bg-white">
                         {getUtentiFiltrati().map((utente) => (
-                          <div
-                            key={utente.id}
-                            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
-                          >
+                          <div key={utente.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                             <Checkbox
                               id={`utente-${utente.id}`}
                               checked={selectedDestinatari.includes(utente.id)}
                               onCheckedChange={() => handleDestinatarioToggle(utente.id)}
                             />
-                            <Label
-                              htmlFor={`utente-${utente.id}`}
-                              className="flex-1 cursor-pointer"
-                            >
-                              {utente.nome} {utente.cognome} 
+                            <Label htmlFor={`utente-${utente.id}`} className="flex-1 cursor-pointer">
+                              {utente.nome} {utente.cognome}
                               {utente.settore && (
-                                <span className="text-gray-500 text-sm ml-1">
-                                  ({utente.settore})
-                                </span>
+                                <span className="text-gray-500 text-sm ml-1">({utente.settore})</span>
                               )}
                             </Label>
                           </div>
@@ -527,12 +543,7 @@ export default function ComunicazioniPage() {
               <div className="space-y-2">
                 <Label htmlFor="allegato">Allegato</Label>
                 <div className="flex items-center gap-2">
-                  <Input
-                    id="allegato"
-                    type="file"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                  />
+                  <Input id="allegato" type="file" onChange={handleFileChange} className="cursor-pointer" />
                   {selectedFile && (
                     <Badge variant="secondary" className="px-2 py-1">
                       {selectedFile.name}
@@ -542,12 +553,7 @@ export default function ComunicazioniPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)}
-                  disabled={sending}
-                >
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={sending}>
                   Annulla
                 </Button>
                 <Button type="submit" disabled={sending} className="bg-blue-600">
@@ -581,6 +587,7 @@ export default function ComunicazioniPage() {
             </div>
           </div>
         </CardHeader>
+
         <CardContent>
           <Table>
             <TableHeader>
@@ -593,6 +600,7 @@ export default function ComunicazioniPage() {
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {filteredComunicazioni.length === 0 ? (
                 <TableRow>
@@ -606,29 +614,36 @@ export default function ComunicazioniPage() {
                     <TableCell className="text-sm">
                       {comm.data_invio ? new Date(comm.data_invio).toLocaleDateString("it-IT") : "-"}
                     </TableCell>
+
                     <TableCell>
-                      <Badge variant={
-                        comm.tipo === "newsletter" ? "default" : 
-                        comm.tipo === "scadenze" ? "destructive" :
-                        comm.tipo === "interna" ? "outline" : "secondary"
-                      }>
-                        {comm.tipo === "interna" ? "INTERNA" : comm.tipo.toUpperCase()}
+                      <Badge
+                        variant={
+                          comm.tipo === "newsletter"
+                            ? "default"
+                            : comm.tipo === "scadenze"
+                              ? "destructive"
+                              : comm.tipo === "interna"
+                                ? "outline"
+                                : "secondary"
+                        }
+                      >
+                        {comm.tipo === "interna" ? "INTERNA" : String(comm.tipo || "").toUpperCase()}
                       </Badge>
                     </TableCell>
+
                     <TableCell className="font-medium">{comm.oggetto}</TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Users className="h-3 w-3 text-gray-500" />
                         <span className="text-sm">{comm.destinatari_count || 0}</span>
                       </div>
                     </TableCell>
+
                     <TableCell>
-                      {comm.allegati ? (
-                        <Paperclip className="h-4 w-4 text-blue-600" />
-                      ) : (
-                        <span className="text-gray-300">-</span>
-                      )}
+                      {comm.allegati ? <Paperclip className="h-4 w-4 text-blue-600" /> : <span className="text-gray-300">-</span>}
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
