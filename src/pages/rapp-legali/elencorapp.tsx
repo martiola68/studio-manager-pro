@@ -207,148 +207,149 @@ router.push("/rapp-legali");
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
-                <Input
-                  id="nome_cognome"
-                  value={form.nome_cognome}
-                  onChange={(e) => setForm((p) => ({ ...p, nome_cognome: e.target.value }))}
-                  placeholder="Mario Rossi"
-                />
-              </div>
+         <form onSubmit={handleSubmit} className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="md:col-span-2">
+      <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
+      <Input
+        id="nome_cognome"
+        value={form.nome_cognome}
+        onChange={(e) => setForm((p) => ({ ...p, nome_cognome: e.target.value }))}
+        placeholder="Mario Rossi"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                <Input
-                  id="codice_fiscale"
-                  value={form.codice_fiscale}
-                  onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
-                  placeholder="RSSMRA80A01H501U"
-                  maxLength={16}
-                />
-                {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-                  <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
-                )}
-              </div>
+    <div>
+      <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+      <Input
+        id="codice_fiscale"
+        value={form.codice_fiscale}
+        onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
+        placeholder="RSSMRA80A01H501U"
+        maxLength={16}
+      />
+      {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
+        <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
+      )}
+    </div>
 
-              <div>
-                <Label htmlFor="nazionalita">Nazionalità</Label>
-                <Input
-                  id="nazionalita"
-                  value={form.nazionalita}
-                  onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
-                  placeholder="Italiana"
-                />
-              </div>
+    <div>
+      <Label htmlFor="nazionalita">Nazionalità</Label>
+      <Input
+        id="nazionalita"
+        value={form.nazionalita}
+        onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
+        placeholder="Italiana"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="luogo_nascita">Luogo nascita</Label>
-                <Input
-                  id="luogo_nascita"
-                  value={form.luogo_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
-                  placeholder="Roma"
-                />
-              </div>
+    <div>
+      <Label htmlFor="luogo_nascita">Luogo nascita</Label>
+      <Input
+        id="luogo_nascita"
+        value={form.luogo_nascita}
+        onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
+        placeholder="Roma"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="data_nascita">Data nascita</Label>
-                <Input
-                  id="data_nascita"
-                  type="date"
-                  value={form.data_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
-                />
-              </div>
+    <div>
+      <Label htmlFor="data_nascita">Data nascita</Label>
+      <Input
+        id="data_nascita"
+        type="date"
+        value={form.data_nascita}
+        onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="citta_residenza">Città residenza</Label>
-                <Input
-                  id="citta_residenza"
-                  value={form.citta_residenza}
-                  onChange={(e) => setForm((p) => ({ ...p, citta_residenza: e.target.value }))}
-                  placeholder="Milano"
-                />
-              </div>
+    <div>
+      <Label htmlFor="citta_residenza">Città residenza</Label>
+      <Input
+        id="citta_residenza"
+        value={form.citta_residenza}
+        onChange={(e) => setForm((p) => ({ ...p, citta_residenza: e.target.value }))}
+        placeholder="Milano"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="indirizzo_residenza">Indirizzo residenza</Label>
-                <Input
-                  id="indirizzo_residenza"
-                  value={form.indirizzo_residenza}
-                  onChange={(e) => setForm((p) => ({ ...p, indirizzo_residenza: e.target.value }))}
-                  placeholder="Via Roma 10"
-                />
-              </div>
+    <div>
+      <Label htmlFor="indirizzo_residenza">Indirizzo residenza</Label>
+      <Input
+        id="indirizzo_residenza"
+        value={form.indirizzo_residenza}
+        onChange={(e) => setForm((p) => ({ ...p, indirizzo_residenza: e.target.value }))}
+        placeholder="Via Roma 10"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="tipo_doc">Tipo documento</Label>
-                <Select
-                  value={form.tipo_doc || undefined}
-                  onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
-                >
-                  <SelectTrigger id="tipo_doc">
-                    <SelectValue placeholder="Seleziona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Carta di identità">Carta di identità</SelectItem>
-                    <SelectItem value="Passaporto">Passaporto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="scadenza_doc">Scadenza documento</Label>
-                <Input
-                  id="scadenza_doc"
-                  type="date"
-                  value={form.scadenza_doc}
-                  onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
-                />
-              </div>
-
-             <div className="md:col-span-2">
-  <Label htmlFor="allegato_doc">Allegato documento (URL)</Label>
-  <div className="flex flex-col md:flex-row gap-3 md:items-center">
-    <Input
-      id="allegato_doc"
-      type="url"
-      value={form.allegato_doc}
-      onChange={(e) => setForm((p) => ({ ...p, allegato_doc: e.target.value }))}
-      placeholder="https://..."
-    />
-    <div className="flex gap-2">
-      <Button
-        type="button"
-        variant="secondary"
-        disabled={!form.allegato_doc}
-        onClick={() => window.open(form.allegato_doc, "_blank")}
+    <div>
+      <Label htmlFor="tipo_doc">Tipo documento</Label>
+      <Select
+        value={form.tipo_doc || undefined}
+        onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
       >
-        Apri link
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!form.allegato_doc}
-        onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
-      >
-        Rimuovi
-      </Button>
+        <SelectTrigger id="tipo_doc">
+          <SelectValue placeholder="Seleziona..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+          <SelectItem value="Passaporto">Passaporto</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div>
+      <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+      <Input
+        id="scadenza_doc"
+        type="date"
+        value={form.scadenza_doc}
+        onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor="allegato_doc">Allegato documento (URL)</Label>
+      <div className="flex flex-col md:flex-row gap-3 md:items-center">
+        <Input
+          id="allegato_doc"
+          type="url"
+          value={form.allegato_doc}
+          onChange={(e) => setForm((p) => ({ ...p, allegato_doc: e.target.value }))}
+          placeholder="https://..."
+        />
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!form.allegato_doc}
+            onClick={() => window.open(form.allegato_doc, "_blank")}
+          >
+            Apri link
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!form.allegato_doc}
+            onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
+          >
+            Rimuovi
+          </Button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading || uploading}>
-                {loading ? "Salvataggio..." : "Salva"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => router.push("/rapp-legali")}>
-                Annulla
-              </Button>
-            </div>
-          </form>
+  <div className="flex gap-2">
+    <Button type="submit" disabled={loading}>
+      {loading ? "Salvataggio..." : "Salva"}
+    </Button>
+    <Button type="button" variant="secondary" onClick={() => router.push("/rapp-legali")}>
+      Annulla
+    </Button>
+  </div>
+</form>
         </CardContent>
       </Card>
     </div>
