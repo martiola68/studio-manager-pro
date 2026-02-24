@@ -18,7 +18,7 @@ import {
    CONFIG
    ========================================================= */
 // ⚠️ METTI QUI IL NOME REALE DEL BUCKET (quello che vedi in Supabase > Storage)
-const BUCKET_NAME = "documenti"; // <-- CAMBIA (es: "allegati", "docs", "storage_docs", ecc.)
+const BUCKET_NAME = "allegati"; // <-- CAMBIA (es: "allegati", "docs", "storage_docs", ecc.)
 
 /* =========================================================
    CODICE FISCALE VALIDATOR (formale + checksum)
@@ -233,40 +233,51 @@ export default function RappresentantiPage() {
   /* =========================================================
      UPLOAD DOCUMENTO
      ========================================================= */
-  async function handleUploadDoc(file: File) {
-    if (!studioId) {
-      setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
-      return;
-    }
-
-    setUploading(true);
-    setErrMsg(null);
-    setOkMsg(null);
-
-    try {
-      await assertBucketExists();
-
-      const safeName = file.name.replace(/\s+/g, "_");
-      const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
-
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, { upsert: true });
-
-      if (upErr) throw upErr;
-
-      // Salviamo in DB un URL apribile (public o signed) oppure, meglio ancora, il path.
-      // Qui manteniamo il tuo schema attuale: salviamo URL "apribile".
-      const openableUrl = await getOpenableUrl(path);
-
-      setForm((p) => ({ ...p, allegato_doc: openableUrl }));
-      setOkMsg("✅ Documento allegato.");
-    } catch (e: any) {
-      setErrMsg(e?.message ?? "Errore upload documento");
-    } finally {
-      setUploading(false);
-    }
+async function handleUploadDoc(file: File) {
+  if (!studioId) {
+    setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
+    return;
   }
+
+  setUploading(true);
+  setErrMsg(null);
+  setOkMsg(null);
+
+  try {
+    const safeName = file.name.replace(/\s+/g, "_");
+    const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
+
+    const { data: upData, error: upErr } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, file, { upsert: true });
+
+    if (upErr) {
+      // errore completo in UI (così capiamo subito)
+      throw new Error(`Upload fallito su bucket "${BUCKET_NAME}": ${upErr.message}`);
+    }
+
+    // PROVA URL pubblico
+    const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+    const publicUrl = pub?.publicUrl;
+
+    // se bucket privato, il publicUrl potrebbe non essere accessibile: usiamo signed url
+    let urlToSave = publicUrl || "";
+    if (!urlToSave) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(path, 60 * 10);
+      if (signErr) throw signErr;
+      urlToSave = signed.signedUrl;
+    }
+
+    setForm((p) => ({ ...p, allegato_doc: urlToSave }));
+    setOkMsg("✅ Documento allegato.");
+  } catch (e: any) {
+    setErrMsg(e?.message ?? "Errore upload documento");
+  } finally {
+    setUploading(false);
+  }
+}
 
   function handleRemoveDoc() {
     setForm((p) => ({ ...p, allegato_doc: "" }));
