@@ -42,8 +42,13 @@ export const cassettiFiscaliService = {
 
     let query = (supabase as any).from(source).select("*").order("nominativo");
 
-    if (studioId) query = query.eq("studio_id", studioId);
+    if (studioId && source !== "v_clienti_con_cassetto") {
+  query = query.eq("studio_id", studioId);
+    }
 
+if (studioId && source !== "v_clienti_con_cassetto") {
+  query = query.eq("studio_id", studioId);
+}
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
