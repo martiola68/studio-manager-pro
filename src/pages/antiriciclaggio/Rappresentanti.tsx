@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-
 import { supabase } from "@/lib/supabaseClient";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useStudio } from "@/contexts/StudioContext";
-
-// -----------------------
-// Codice Fiscale validator (formale + checksum)
-// -----------------------
+/* =========================
+   CODICE FISCALE VALIDATOR
+   ========================= */
 const CF_RE =
   /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
 
@@ -42,7 +39,7 @@ function normalizeCF(cf: string) {
 
 function cfToDigitsForChecksum(cf: string) {
   const chars = cf.split("");
-  const idxs = [6, 7, 9, 10, 12, 13, 14]; // 0-based
+  const idxs = [6, 7, 9, 10, 12, 13, 14];
   for (const i of idxs) {
     const c = chars[i];
     if (OMO_MAP[c]) chars[i] = OMO_MAP[c];
@@ -51,81 +48,23 @@ function cfToDigitsForChecksum(cf: string) {
 }
 
 const ODD_MAP: Record<string, number> = {
-  "0": 1,
-  "1": 0,
-  "2": 5,
-  "3": 7,
-  "4": 9,
-  "5": 13,
-  "6": 15,
-  "7": 17,
-  "8": 19,
-  "9": 21,
-  A: 1,
-  B: 0,
-  C: 5,
-  D: 7,
-  E: 9,
-  F: 13,
-  G: 15,
-  H: 17,
-  I: 19,
-  J: 21,
-  K: 2,
-  L: 4,
-  M: 18,
-  N: 20,
-  O: 11,
-  P: 3,
-  Q: 6,
-  R: 8,
-  S: 12,
-  T: 14,
-  U: 16,
-  V: 10,
-  W: 22,
-  X: 25,
-  Y: 24,
-  Z: 23,
+  "0": 1, "1": 0, "2": 5, "3": 7, "4": 9,
+  "5": 13, "6": 15, "7": 17, "8": 19, "9": 21,
+  A: 1, B: 0, C: 5, D: 7, E: 9,
+  F: 13, G: 15, H: 17, I: 19, J: 21,
+  K: 2, L: 4, M: 18, N: 20, O: 11,
+  P: 3, Q: 6, R: 8, S: 12, T: 14,
+  U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23,
 };
 
 const EVEN_MAP: Record<string, number> = {
-  "0": 0,
-  "1": 1,
-  "2": 2,
-  "3": 3,
-  "4": 4,
-  "5": 5,
-  "6": 6,
-  "7": 7,
-  "8": 8,
-  "9": 9,
-  A: 0,
-  B: 1,
-  C: 2,
-  D: 3,
-  E: 4,
-  F: 5,
-  G: 6,
-  H: 7,
-  I: 8,
-  J: 9,
-  K: 10,
-  L: 11,
-  M: 12,
-  N: 13,
-  O: 14,
-  P: 15,
-  Q: 16,
-  R: 17,
-  S: 18,
-  T: 19,
-  U: 20,
-  V: 21,
-  W: 22,
-  X: 23,
-  Y: 24,
-  Z: 25,
+  "0": 0, "1": 1, "2": 2, "3": 3, "4": 4,
+  "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+  A: 0, B: 1, C: 2, D: 3, E: 4,
+  F: 5, G: 6, H: 7, I: 8, J: 9,
+  K: 10, L: 11, M: 12, N: 13, O: 14,
+  P: 15, Q: 16, R: 17, S: 18, T: 19,
+  U: 20, V: 21, W: 22, X: 23, Y: 24, Z: 25,
 };
 
 function computeCFCheckChar(cf15: string) {
@@ -147,38 +86,27 @@ function isValidCF(cfRaw: string) {
   return expected === cfNorm[15];
 }
 
-// -----------------------
-// Form type
-// -----------------------
+/* =========================
+   TYPES
+   ========================= */
 type FormState = {
   nome_cognom: string;
   codice_fiscale: string;
   luogo_nascita: string;
-  data_nascita: string; // yyyy-mm-dd
+  data_nascita: string;
   citta_residenz: string;
   indirizzo_resid: string;
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
-  scadenza_doc: string; // yyyy-mm-dd
-  allegato_doc: string; // ✅ URL pubblico (o stringa vuota)
+  scadenza_doc: string;
+  allegato_doc: string; // URL pubblico
 };
 
 export default function RappresentantiPage() {
   const router = useRouter();
-  const { studioId } = useStudio() as any;
-
-  // ✅ studio_id: prima da context, poi da localStorage (solo client)
-  const [studioIdLS, setStudioIdLS] = useState<string>("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setStudioIdLS(localStorage.getItem("studio_id") || "");
-    }
-  }, []);
-
-  const studioIdEffettivo: string = (studioId as string) || studioIdLS || "";
-
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const [studioId, setStudioId] = useState<string>("");
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -198,17 +126,69 @@ export default function RappresentantiPage() {
     allegato_doc: "",
   });
 
+  /* =========================
+     ✅ STUDIO_ID: localStorage -> tbutenti (via email)
+     ========================= */
+  useEffect(() => {
+    const loadStudioId = async () => {
+      setErrMsg(null);
+
+      // 1) localStorage
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("studio_id");
+        if (cached) {
+          setStudioId(cached);
+          return;
+        }
+      }
+
+      // 2) utente loggato
+      const { data: auth } = await supabase.auth.getUser();
+      const email = auth?.user?.email;
+      if (!email) {
+        setErrMsg("Utente non loggato: impossibile recuperare studio_id.");
+        return;
+      }
+
+      // 3) tbutenti via email
+      const { data, error } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("email", email)
+        .single();
+
+      if (error) {
+        setErrMsg(`Errore lettura tbutenti: ${error.message}`);
+        return;
+      }
+
+      const sid = data?.studio_id ? String(data.studio_id) : "";
+      if (!sid) {
+        setErrMsg("studio_id non presente in tbutenti per questo utente.");
+        return;
+      }
+
+      setStudioId(sid);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("studio_id", sid);
+      }
+    };
+
+    loadStudioId();
+  }, []);
+
   const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
   const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
 
-  // Required only (doc fields are OPTIONAL)
   const canSave = useMemo(() => {
-    return !!studioIdEffettivo && form.nome_cognom.trim().length > 0 && cfOk;
-  }, [studioIdEffettivo, form.nome_cognom, cfOk]);
+    return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
+  }, [studioId, form.nome_cognom, cfOk]);
 
-  // ✅ Upload doc: salva URL pubblico in allegato_doc (bucket pubblico)
+  /* =========================
+     UPLOAD DOCUMENTO
+     ========================= */
   async function handleUploadDoc(file: File) {
-    if (!studioIdEffettivo) {
+    if (!studioId) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
       return;
     }
@@ -219,7 +199,7 @@ export default function RappresentantiPage() {
 
     try {
       const safeName = file.name.replace(/\s+/g, "_");
-      const path = `rapp_legali/${studioIdEffettivo}/${Date.now()}_${safeName}`;
+      const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
 
       const { error: upErr } = await supabase.storage
         .from("documenti")
@@ -227,10 +207,8 @@ export default function RappresentantiPage() {
 
       if (upErr) throw upErr;
 
-      // ✅ Salviamo URL (non path)
       const { data } = supabase.storage.from("documenti").getPublicUrl(path);
       const publicUrl = data?.publicUrl;
-
       if (!publicUrl) throw new Error("Impossibile ottenere URL pubblico del documento.");
 
       setForm((p) => ({ ...p, allegato_doc: publicUrl }));
@@ -246,16 +224,18 @@ export default function RappresentantiPage() {
     setForm((p) => ({ ...p, allegato_doc: "" }));
   }
 
+  /* =========================
+     SUBMIT
+     ========================= */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setOkMsg(null);
     setErrMsg(null);
 
-    if (!studioIdEffettivo) {
-      setErrMsg("Studio non disponibile: impossibile leggere studio_id.");
+    if (!studioId) {
+      setErrMsg("studio_id non disponibile: impossibile salvare.");
       return;
     }
-
     if (!canSave) {
       setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
       return;
@@ -264,7 +244,7 @@ export default function RappresentantiPage() {
     setLoading(true);
     try {
       const payload = {
-        studio_id: studioIdEffettivo,
+        studio_id: studioId,
         nome_cognom: form.nome_cognom.trim(),
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
@@ -274,7 +254,7 @@ export default function RappresentantiPage() {
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null, // ✅ URL
+        allegato_doc: form.allegato_doc || null,
       };
 
       const { error } = await (supabase as any).from("rapp_legali").insert(payload);
@@ -309,11 +289,15 @@ export default function RappresentantiPage() {
             <Button
               variant="secondary"
               type="button"
-              onClick={() => router.push("/rapp-legali/elencorapp")}
+              onClick={() => router.push("/antiriciclaggio/elencorapp")}
             >
               Vai a elenco
             </Button>
-            <Button variant="outline" type="button" onClick={() => router.push("/anticiclaggio")}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/antiriciclaggio")}
+            >
               Torna al menù
             </Button>
           </div>
@@ -422,11 +406,10 @@ export default function RappresentantiPage() {
                 />
               </div>
 
-              {/* ✅ Allegato documento */}
+              {/* Allegato */}
               <div className="md:col-span-2">
                 <Label htmlFor="allegato_doc">Allegato documento</Label>
 
-                {/* ✅ Input file nascosto */}
                 <input
                   ref={fileRef}
                   type="file"
@@ -454,13 +437,7 @@ export default function RappresentantiPage() {
                       type="button"
                       variant="secondary"
                       disabled={uploading}
-                      onClick={() => {
-                        if (!studioIdEffettivo) {
-                          setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
-                          return;
-                        }
-                        fileRef.current?.click();
-                      }}
+                      onClick={() => fileRef.current?.click()}
                     >
                       {uploading ? "Caricamento..." : "Allega documento"}
                     </Button>
@@ -484,17 +461,16 @@ export default function RappresentantiPage() {
                     </Button>
                   </div>
                 </div>
-
-                {form.allegato_doc && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    URL documento: <span className="font-mono">{form.allegato_doc}</span>
-                  </p>
-                )}
               </div>
             </div>
 
             {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
             {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+
+            {/* Debug studio_id (rimuovi quando ok) */}
+            <p className="text-xs text-muted-foreground">
+              Debug studio_id: {studioId || "-"}
+            </p>
 
             <div className="flex gap-2">
               <Button type="submit" disabled={loading || !canSave}>
@@ -522,13 +498,6 @@ export default function RappresentantiPage() {
                 Pulisci
               </Button>
             </div>
-
-            {/* Debug (puoi rimuoverlo dopo) */}
-            {!studioIdEffettivo && (
-              <p className="text-sm text-red-600">
-                Debug: studio_id non presente (né context né localStorage).
-              </p>
-            )}
           </form>
         </CardContent>
       </Card>
