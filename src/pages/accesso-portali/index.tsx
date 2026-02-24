@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search, ExternalLink, Eye, EyeOff, Key } from "lucide-react";
 import { credenzialiAccessoService } from "@/services/credenzialiAccessoService";
@@ -17,6 +30,7 @@ type CredenzialeAccesso = Database["public"]["Tables"]["tbcredenziali_accesso"][
 export default function AccessoPortaliPage() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [credenziali, setCredenziali] = useState<CredenzialeAccesso[]>([]);
   const [filteredCredenziali, setFilteredCredenziali] = useState<CredenzialeAccesso[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,26 +50,38 @@ export default function AccessoPortaliPage() {
   });
 
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (userId) {
-      fetchCredenziali();
+      void fetchCredenziali();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   useEffect(() => {
     filterCredenziali();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, credenziali]);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    try {
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      setUserId(session.user.id);
+    } catch (e) {
       router.push("/login");
-      return;
     }
-    setUserId(session.user.id);
   };
 
   const fetchCredenziali = async () => {
@@ -82,11 +108,13 @@ export default function AccessoPortaliPage() {
     }
 
     const term = searchTerm.toLowerCase();
-    const filtered = credenziali.filter((cred) =>
-      cred.portale.toLowerCase().includes(term) ||
-      (cred.indirizzo_url && cred.indirizzo_url.toLowerCase().includes(term)) ||
-      (cred.login_utente && cred.login_utente.toLowerCase().includes(term))
+    const filtered = credenziali.filter(
+      (cred) =>
+        cred.portale.toLowerCase().includes(term) ||
+        (cred.indirizzo_url && cred.indirizzo_url.toLowerCase().includes(term)) ||
+        (cred.login_utente && cred.login_utente.toLowerCase().includes(term))
     );
+
     setFilteredCredenziali(filtered);
   };
 
@@ -141,23 +169,17 @@ export default function AccessoPortaliPage() {
     try {
       if (editingCredenziale) {
         await credenzialiAccessoService.update(editingCredenziale.id, formData);
-        toast({
-          title: "Successo",
-          description: "Credenziale aggiornata con successo",
-        });
+        toast({ title: "Successo", description: "Credenziale aggiornata con successo" });
       } else {
         await credenzialiAccessoService.create({
           ...formData,
           created_by: userId,
         });
-        toast({
-          title: "Successo",
-          description: "Credenziale creata con successo",
-        });
+        toast({ title: "Successo", description: "Credenziale creata con successo" });
       }
 
       handleCloseDialog();
-      fetchCredenziali();
+      void fetchCredenziali();
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
       toast({
@@ -173,11 +195,8 @@ export default function AccessoPortaliPage() {
 
     try {
       await credenzialiAccessoService.delete(id);
-      toast({
-        title: "Successo",
-        description: "Credenziale eliminata con successo",
-      });
-      fetchCredenziali();
+      toast({ title: "Successo", description: "Credenziale eliminata con successo" });
+      void fetchCredenziali();
     } catch (error) {
       console.error("Errore nell'eliminazione:", error);
       toast({
@@ -218,9 +237,7 @@ export default function AccessoPortaliPage() {
             <Key className="w-8 h-8 text-blue-600" />
             Accesso Portali
           </h1>
-          <p className="text-gray-500 mt-1">
-            Gestione credenziali di accesso ai portali esterni
-          </p>
+          <p className="text-gray-500 mt-1">Gestione credenziali di accesso ai portali esterni</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="gap-2">
           <Plus className="w-4 h-4" />
@@ -253,6 +270,7 @@ export default function AccessoPortaliPage() {
               <TableHead className="text-right w-[200px]">Azioni</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {loading ? (
               <TableRow>
@@ -277,10 +295,15 @@ export default function AccessoPortaliPage() {
                       {cred.portale}
                     </div>
                   </TableCell>
+
                   <TableCell className="text-sm text-gray-600">
                     {cred.indirizzo_url ? (
                       <a
-                        href={cred.indirizzo_url.startsWith("http") ? cred.indirizzo_url : `https://${cred.indirizzo_url}`}
+                        href={
+                          cred.indirizzo_url.startsWith("http")
+                            ? cred.indirizzo_url
+                            : `https://${cred.indirizzo_url}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline flex items-center gap-1"
@@ -294,7 +317,9 @@ export default function AccessoPortaliPage() {
                       <span className="text-gray-400">-</span>
                     )}
                   </TableCell>
+
                   <TableCell className="text-sm">{cred.login_utente || "-"}</TableCell>
+
                   <TableCell className="text-sm">
                     {cred.login_pw ? (
                       <div className="flex items-center gap-2">
@@ -304,6 +329,7 @@ export default function AccessoPortaliPage() {
                         <button
                           onClick={() => toggleShowPassword(cred.id)}
                           className="text-gray-400 hover:text-gray-600"
+                          type="button"
                         >
                           {showPassword[cred.id] ? (
                             <EyeOff className="w-3 h-3" />
@@ -316,10 +342,13 @@ export default function AccessoPortaliPage() {
                       "-"
                     )}
                   </TableCell>
+
                   <TableCell className="text-sm font-mono text-xs">{cred.login_pin || "-"}</TableCell>
+
                   <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
                     {cred.note || "-"}
                   </TableCell>
+
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       {cred.indirizzo_url && (
@@ -333,6 +362,7 @@ export default function AccessoPortaliPage() {
                           Login
                         </Button>
                       )}
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -341,6 +371,7 @@ export default function AccessoPortaliPage() {
                       >
                         <Pencil className="w-4 h-4 text-gray-500" />
                       </Button>
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -361,9 +392,7 @@ export default function AccessoPortaliPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingCredenziale ? "Modifica Credenziale" : "Nuova Credenziale"}
-            </DialogTitle>
+            <DialogTitle>{editingCredenziale ? "Modifica Credenziale" : "Nuova Credenziale"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
