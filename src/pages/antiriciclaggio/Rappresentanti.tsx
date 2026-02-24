@@ -14,9 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/* =========================
-   CODICE FISCALE VALIDATOR
-   ========================= */
+/* =========================================================
+   CONFIG
+   ========================================================= */
+// ⚠️ METTI QUI IL NOME REALE DEL BUCKET (quello che vedi in Supabase > Storage)
+const BUCKET_NAME = "documenti"; // <-- CAMBIA (es: "allegati", "docs", "storage_docs", ecc.)
+
+/* =========================================================
+   CODICE FISCALE VALIDATOR (formale + checksum)
+   ========================================================= */
 const CF_RE =
   /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
 
@@ -86,9 +92,9 @@ function isValidCF(cfRaw: string) {
   return expected === cfNorm[15];
 }
 
-/* =========================
+/* =========================================================
    TYPES
-   ========================= */
+   ========================================================= */
 type FormState = {
   nome_cognom: string;
   codice_fiscale: string;
@@ -99,7 +105,7 @@ type FormState = {
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string;
-  allegato_doc: string; // URL pubblico
+  allegato_doc: string; // ✅ URL pubblico (bucket pubblico) oppure signed URL (bucket privato)
 };
 
 export default function RappresentantiPage() {
@@ -126,9 +132,9 @@ export default function RappresentantiPage() {
     allegato_doc: "",
   });
 
-  /* =========================
-     ✅ STUDIO_ID: localStorage -> tbutenti (via email)
-     ========================= */
+  /* =========================================================
+     STUDIO_ID: localStorage -> tbutenti (via email)
+     ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
       setErrMsg(null);
@@ -142,7 +148,7 @@ export default function RappresentantiPage() {
         }
       }
 
-      // 2) utente loggato
+      // 2) utente loggato (email)
       const { data: auth } = await supabase.auth.getUser();
       const email = auth?.user?.email;
       if (!email) {
@@ -162,7 +168,7 @@ export default function RappresentantiPage() {
         return;
       }
 
-      const sid = data?.studio_id ? String(data.studio_id) : "";
+      const sid = data?.studio_id ? String((data as any).studio_id) : "";
       if (!sid) {
         setErrMsg("studio_id non presente in tbutenti per questo utente.");
         return;
@@ -184,9 +190,49 @@ export default function RappresentantiPage() {
     return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
   }, [studioId, form.nome_cognom, cfOk]);
 
-  /* =========================
+  /* =========================================================
+     STORAGE HELPERS
+     ========================================================= */
+
+  // 1) Verifica esistenza bucket (così l'errore è chiarissimo)
+  async function assertBucketExists() {
+    const { data, error } = await supabase.storage.listBuckets();
+    if (error) throw error;
+    const ok = (data || []).some((b) => b.name === BUCKET_NAME);
+    if (!ok) {
+      throw new Error(
+        `Bucket "${BUCKET_NAME}" non trovato. Apri Supabase > Storage e usa il nome esatto del bucket (case-sensitive).`
+      );
+    }
+  }
+
+  // 2) Decide URL: se bucket pubblico -> publicUrl, se privato -> signedUrl
+  async function getOpenableUrl(path: string) {
+    const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+    const publicUrl = pub?.publicUrl;
+
+    // Prova se è apribile subito (bucket pubblico) con un check leggero
+    // Se fallisce (CORS o 401/403), fallback su signed URL.
+    if (publicUrl) {
+      try {
+        // HEAD può fallire per CORS: in quel caso andiamo su signedUrl comunque
+        await fetch(publicUrl, { method: "HEAD" });
+        return publicUrl;
+      } catch {
+        // ignore -> fallback signed
+      }
+    }
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(path, 60 * 10); // 10 minuti
+    if (error) throw error;
+    return data.signedUrl;
+  }
+
+  /* =========================================================
      UPLOAD DOCUMENTO
-     ========================= */
+     ========================================================= */
   async function handleUploadDoc(file: File) {
     if (!studioId) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
@@ -198,20 +244,22 @@ export default function RappresentantiPage() {
     setOkMsg(null);
 
     try {
+      await assertBucketExists();
+
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
 
       const { error: upErr } = await supabase.storage
-        .from("documenti")
+        .from(BUCKET_NAME)
         .upload(path, file, { upsert: true });
 
       if (upErr) throw upErr;
 
-      const { data } = supabase.storage.from("documenti").getPublicUrl(path);
-      const publicUrl = data?.publicUrl;
-      if (!publicUrl) throw new Error("Impossibile ottenere URL pubblico del documento.");
+      // Salviamo in DB un URL apribile (public o signed) oppure, meglio ancora, il path.
+      // Qui manteniamo il tuo schema attuale: salviamo URL "apribile".
+      const openableUrl = await getOpenableUrl(path);
 
-      setForm((p) => ({ ...p, allegato_doc: publicUrl }));
+      setForm((p) => ({ ...p, allegato_doc: openableUrl }));
       setOkMsg("✅ Documento allegato.");
     } catch (e: any) {
       setErrMsg(e?.message ?? "Errore upload documento");
@@ -224,9 +272,9 @@ export default function RappresentantiPage() {
     setForm((p) => ({ ...p, allegato_doc: "" }));
   }
 
-  /* =========================
+  /* =========================================================
      SUBMIT
-     ========================= */
+     ========================================================= */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setOkMsg(null);
@@ -236,6 +284,7 @@ export default function RappresentantiPage() {
       setErrMsg("studio_id non disponibile: impossibile salvare.");
       return;
     }
+
     if (!canSave) {
       setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
       return;
@@ -311,7 +360,9 @@ export default function RappresentantiPage() {
                 <Input
                   id="nome_cognom"
                   value={form.nome_cognom}
-                  onChange={(e) => setForm((p) => ({ ...p, nome_cognom: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, nome_cognom: e.target.value }))
+                  }
                   placeholder="Mario Rossi"
                 />
               </div>
@@ -321,12 +372,16 @@ export default function RappresentantiPage() {
                 <Input
                   id="codice_fiscale"
                   value={form.codice_fiscale}
-                  onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, codice_fiscale: e.target.value }))
+                  }
                   placeholder="RSSMRA80A01H501U"
                   maxLength={16}
                 />
                 {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-                  <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    Codice fiscale non valido
+                  </p>
                 )}
               </div>
 
@@ -335,7 +390,9 @@ export default function RappresentantiPage() {
                 <Input
                   id="nazionalita"
                   value={form.nazionalita}
-                  onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, nazionalita: e.target.value }))
+                  }
                   placeholder="Italiana"
                 />
               </div>
@@ -345,7 +402,9 @@ export default function RappresentantiPage() {
                 <Input
                   id="luogo_nascita"
                   value={form.luogo_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, luogo_nascita: e.target.value }))
+                  }
                   placeholder="Roma"
                 />
               </div>
@@ -356,7 +415,9 @@ export default function RappresentantiPage() {
                   id="data_nascita"
                   type="date"
                   value={form.data_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, data_nascita: e.target.value }))
+                  }
                 />
               </div>
 
@@ -365,7 +426,9 @@ export default function RappresentantiPage() {
                 <Input
                   id="citta_residenz"
                   value={form.citta_residenz}
-                  onChange={(e) => setForm((p) => ({ ...p, citta_residenz: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, citta_residenz: e.target.value }))
+                  }
                   placeholder="Milano"
                 />
               </div>
@@ -375,7 +438,9 @@ export default function RappresentantiPage() {
                 <Input
                   id="indirizzo_resid"
                   value={form.indirizzo_resid}
-                  onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))
+                  }
                   placeholder="Via Roma 10"
                 />
               </div>
@@ -384,13 +449,17 @@ export default function RappresentantiPage() {
                 <Label htmlFor="tipo_doc">Tipo documento</Label>
                 <Select
                   value={form.tipo_doc || undefined}
-                  onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
+                  onValueChange={(v) =>
+                    setForm((p) => ({ ...p, tipo_doc: v as any }))
+                  }
                 >
                   <SelectTrigger id="tipo_doc">
                     <SelectValue placeholder="Seleziona..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+                    <SelectItem value="Carta di identità">
+                      Carta di identità
+                    </SelectItem>
                     <SelectItem value="Passaporto">Passaporto</SelectItem>
                   </SelectContent>
                 </Select>
@@ -402,7 +471,9 @@ export default function RappresentantiPage() {
                   id="scadenza_doc"
                   type="date"
                   value={form.scadenza_doc}
-                  onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, scadenza_doc: e.target.value }))
+                  }
                 />
               </div>
 
@@ -467,9 +538,9 @@ export default function RappresentantiPage() {
             {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
             {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
 
-            {/* Debug studio_id (rimuovi quando ok) */}
+            {/* Debug (rimuovi quando ok) */}
             <p className="text-xs text-muted-foreground">
-              Debug studio_id: {studioId || "-"}
+              Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME}
             </p>
 
             <div className="flex gap-2">
