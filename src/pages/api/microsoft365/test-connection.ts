@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { decrypt } from "@/lib/encryption365";
 import { z } from "zod";
 
@@ -37,6 +37,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const supabase = getSupabaseClient() as any;
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
