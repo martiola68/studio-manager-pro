@@ -250,7 +250,7 @@ export default function RappresentantiPage() {
         </CardHeader>
 
         <CardContent>
-       <form onSubmit={handleSubmit} className="space-y-6">
+<form onSubmit={handleSubmit} className="space-y-6">
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div className="md:col-span-2">
       <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
@@ -352,62 +352,58 @@ export default function RappresentantiPage() {
       />
     </div>
 
-    {/* ✅ Allegato documento come URL */}
-  <div className="md:col-span-2">
-  <Label htmlFor="allegato_doc">Allegato documento</Label>
+    {/* ✅ Allegato documento con pulsante "Allega" */}
+    <div className="md:col-span-2">
+      <Label htmlFor="allegato_doc">Allegato documento</Label>
 
-  <div className="flex flex-col md:flex-row gap-3 md:items-center">
-    <Input
-      id="allegato_doc"
-      type="url"
-      value={form.allegato_doc}
-      readOnly
-      placeholder="Nessun documento allegato"
-    />
+      <div className="flex flex-col md:flex-row gap-3 md:items-center">
+        <Input
+          id="allegato_doc"
+          type="url"
+          value={form.allegato_doc}
+          readOnly
+          placeholder="Nessun documento allegato"
+        />
 
-    <div className="flex gap-2">
-      {/* 🔵 Allega */}
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => {
-          const url = window.prompt("Inserisci il link del documento (https://...)");
-          if (url) {
-            setForm((p) => ({ ...p, allegato_doc: url }));
-          }
-        }}
-      >
-        Allega documento
-      </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              const url = window.prompt("Inserisci il link del documento (https://...)");
+              if (url) setForm((p) => ({ ...p, allegato_doc: url }));
+            }}
+          >
+            Allega documento
+          </Button>
 
-      {/* 🔗 Apri */}
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!form.allegato_doc}
-        onClick={() => window.open(form.allegato_doc, "_blank")}
-      >
-        Apri
-      </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!form.allegato_doc}
+            onClick={() => window.open(form.allegato_doc, "_blank")}
+          >
+            Apri
+          </Button>
 
-      {/* ❌ Rimuovi */}
-      <Button
-        type="button"
-        variant="ghost"
-        disabled={!form.allegato_doc}
-        onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
-      >
-        Rimuovi
-      </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={!form.allegato_doc}
+            onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
+          >
+            Rimuovi
+          </Button>
+        </div>
+      </div>
+
+      {form.allegato_doc && (
+        <p className="text-sm text-muted-foreground mt-1">
+          Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
+        </p>
+      )}
     </div>
   </div>
-
-  {form.allegato_doc && (
-    <p className="text-sm text-muted-foreground mt-1">
-      Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
-    </p>
-  )}
-</div>
 
   {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
   {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
@@ -421,8 +417,8 @@ export default function RappresentantiPage() {
       type="button"
       variant="secondary"
       onClick={() =>
-        setForm({
-          ...form,
+        setForm((p) => ({
+          ...p,
           nome_cognom: "",
           codice_fiscale: "",
           luogo_nascita: "",
@@ -433,7 +429,7 @@ export default function RappresentantiPage() {
           tipo_doc: "",
           scadenza_doc: "",
           allegato_doc: "",
-        })
+        }))
       }
     >
       Pulisci
