@@ -112,7 +112,6 @@ export default function NuovoRappLegalePage() {
     citta_residenza: "",
     indirizzo_residenza: "",
     nazionalita: "",
-    carica: "",
     tipo_doc: "",
     scadenza_doc: "",
     allegato_doc: "",
