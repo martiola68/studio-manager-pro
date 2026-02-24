@@ -96,7 +96,6 @@ type FormState = {
   citta_residenz: string;
   indirizzo_resid: string;
   nazionalita: string;
-  carica: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string; // yyyy-mm-dd
   allegato_doc: string; // storage path
@@ -119,7 +118,6 @@ export default function RappresentantiPage() {
     citta_residenz: "",
     indirizzo_resid: "",
     nazionalita: "",
-    carica: "",
     tipo_doc: "",
     scadenza_doc: "",
     allegato_doc: "",
@@ -205,7 +203,6 @@ export default function RappresentantiPage() {
         citta_residenz: form.citta_residenz.trim() || null,
         indirizzo_resid: form.indirizzo_resid.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
-        carica: form.carica.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
@@ -223,7 +220,6 @@ export default function RappresentantiPage() {
         citta_residenz: "",
         indirizzo_resid: "",
         nazionalita: "",
-        carica: "",
         tipo_doc: "",
         scadenza_doc: "",
         allegato_doc: "",
@@ -254,176 +250,181 @@ export default function RappresentantiPage() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
-                <Input
-                  id="nome_cognom"
-                  value={form.nome_cognom}
-                  onChange={(e) => setForm((p) => ({ ...p, nome_cognom: e.target.value }))}
-                  placeholder="Mario Rossi"
-                />
-              </div>
+       <form onSubmit={handleSubmit} className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="md:col-span-2">
+      <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
+      <Input
+        id="nome_cognom"
+        value={form.nome_cognom}
+        onChange={(e) => setForm((p) => ({ ...p, nome_cognom: e.target.value }))}
+        placeholder="Mario Rossi"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                <Input
-                  id="codice_fiscale"
-                  value={form.codice_fiscale}
-                  onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
-                  placeholder="RSSMRA80A01H501U"
-                  maxLength={16}
-                />
-                {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-                  <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
-                )}
-              </div>
+    <div>
+      <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+      <Input
+        id="codice_fiscale"
+        value={form.codice_fiscale}
+        onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
+        placeholder="RSSMRA80A01H501U"
+        maxLength={16}
+      />
+      {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
+        <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
+      )}
+    </div>
 
-              <div>
-                <Label htmlFor="nazionalita">Nazionalità</Label>
-                <Input
-                  id="nazionalita"
-                  value={form.nazionalita}
-                  onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
-                  placeholder="Italiana"
-                />
-              </div>
+    <div>
+      <Label htmlFor="nazionalita">Nazionalità</Label>
+      <Input
+        id="nazionalita"
+        value={form.nazionalita}
+        onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
+        placeholder="Italiana"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="luogo_nascita">Luogo nascita</Label>
-                <Input
-                  id="luogo_nascita"
-                  value={form.luogo_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
-                  placeholder="Roma"
-                />
-              </div>
+    <div>
+      <Label htmlFor="luogo_nascita">Luogo nascita</Label>
+      <Input
+        id="luogo_nascita"
+        value={form.luogo_nascita}
+        onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
+        placeholder="Roma"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="data_nascita">Data nascita</Label>
-                <Input
-                  id="data_nascita"
-                  type="date"
-                  value={form.data_nascita}
-                  onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
-                />
-              </div>
+    <div>
+      <Label htmlFor="data_nascita">Data nascita</Label>
+      <Input
+        id="data_nascita"
+        type="date"
+        value={form.data_nascita}
+        onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="citta_residenz">Città residenza</Label>
-                <Input
-                  id="citta_residenz"
-                  value={form.citta_residenz}
-                  onChange={(e) => setForm((p) => ({ ...p, citta_residenz: e.target.value }))}
-                  placeholder="Milano"
-                />
-              </div>
+    <div>
+      <Label htmlFor="citta_residenz">Città residenza</Label>
+      <Input
+        id="citta_residenz"
+        value={form.citta_residenz}
+        onChange={(e) => setForm((p) => ({ ...p, citta_residenz: e.target.value }))}
+        placeholder="Milano"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
-                <Input
-                  id="indirizzo_resid"
-                  value={form.indirizzo_resid}
-                  onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
-                  placeholder="Via Roma 10"
-                />
-              </div>
+    <div>
+      <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
+      <Input
+        id="indirizzo_resid"
+        value={form.indirizzo_resid}
+        onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
+        placeholder="Via Roma 10"
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="carica">Carica</Label>
-                <Input
-                  id="carica"
-                  value={form.carica}
-                  onChange={(e) => setForm((p) => ({ ...p, carica: e.target.value }))}
-                  placeholder="Amministratore Unico"
-                />
-              </div>
+    <div>
+      <Label htmlFor="tipo_doc">Tipo documento</Label>
+      <Select
+        value={form.tipo_doc || undefined}
+        onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
+      >
+        <SelectTrigger id="tipo_doc">
+          <SelectValue placeholder="Seleziona..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+          <SelectItem value="Passaporto">Passaporto</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
 
-              <div>
-                <Label htmlFor="tipo_doc">Tipo documento</Label>
-                <Select
-                  value={form.tipo_doc || undefined}
-                  onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
-                >
-                  <SelectTrigger id="tipo_doc">
-                    <SelectValue placeholder="Seleziona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Carta di identità">Carta di identità</SelectItem>
-                    <SelectItem value="Passaporto">Passaporto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+    <div>
+      <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+      <Input
+        id="scadenza_doc"
+        type="date"
+        value={form.scadenza_doc}
+        onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
+      />
+    </div>
 
-              <div>
-                <Label htmlFor="scadenza_doc">Scadenza documento</Label>
-                <Input
-                  id="scadenza_doc"
-                  type="date"
-                  value={form.scadenza_doc}
-                  onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
-                />
-              </div>
+    {/* ✅ Allegato documento come URL */}
+    <div className="md:col-span-2">
+      <Label htmlFor="allegato_doc">Allegato documento (URL)</Label>
 
-              <div className="md:col-span-2">
-                <Label>Allegato documento</Label>
-                <div className="flex flex-col md:flex-row gap-3 md:items-center">
-                  <Input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={uploading || !studioId}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUploadDoc(f);
-                    }}
-                  />
-                  <div className="flex gap-2">
-                    <Button type="button" variant="secondary" disabled={!form.allegato_doc} onClick={handleOpenDoc}>
-                      Apri documento
-                    </Button>
-                    <Button type="button" variant="outline" disabled={!form.allegato_doc} onClick={handleRemoveDoc}>
-                      Rimuovi
-                    </Button>
-                  </div>
-                </div>
-                {form.allegato_doc && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Path salvata: <span className="font-mono">{form.allegato_doc}</span>
-                  </p>
-                )}
-                {!studioId && (
-                  <p className="text-sm text-red-500 mt-1">
-                    studio_id non disponibile: non posso caricare file né salvare il record.
-                  </p>
-                )}
-              </div>
-            </div>
+      <div className="flex flex-col md:flex-row gap-3 md:items-center">
+        <Input
+          id="allegato_doc"
+          type="url"
+          value={form.allegato_doc}
+          onChange={(e) => setForm((p) => ({ ...p, allegato_doc: e.target.value }))}
+          placeholder="https://..."
+        />
 
-            {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
-            {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!form.allegato_doc}
+            onClick={() => window.open(form.allegato_doc, "_blank")}
+          >
+            Apri link
+          </Button>
 
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading || uploading || !canSave}>
-                {loading ? "Salvataggio..." : "Salva dati"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setForm((_) => ({ ...form, ...{
-                nome_cognom: "",
-                codice_fiscale: "",
-                luogo_nascita: "",
-                data_nascita: "",
-                citta_residenz: "",
-                indirizzo_resid: "",
-                nazionalita: "",
-                carica: "",
-                tipo_doc: "",
-                scadenza_doc: "",
-                allegato_doc: "",
-              }}))}>
-                Pulisci
-              </Button>
-            </div>
-          </form>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!form.allegato_doc}
+            onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
+          >
+            Rimuovi
+          </Button>
+        </div>
+      </div>
+
+      {form.allegato_doc && (
+        <p className="text-sm text-muted-foreground mt-1">
+          URL salvata: <span className="font-mono">{form.allegato_doc}</span>
+        </p>
+      )}
+    </div>
+  </div>
+
+  {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
+  {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+
+  <div className="flex gap-2">
+    <Button type="submit" disabled={loading || !canSave}>
+      {loading ? "Salvataggio..." : "Salva dati"}
+    </Button>
+
+    <Button
+      type="button"
+      variant="secondary"
+      onClick={() =>
+        setForm({
+          ...form,
+          nome_cognom: "",
+          codice_fiscale: "",
+          luogo_nascita: "",
+          data_nascita: "",
+          citta_residenz: "",
+          indirizzo_resid: "",
+          nazionalita: "",
+          tipo_doc: "",
+          scadenza_doc: "",
+          allegato_doc: "",
+        })
+      }
+    >
+      Pulisci
+    </Button>
+  </div>
+</form>
         </CardContent>
       </Card>
     </div>
