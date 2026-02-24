@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 import { Button } from "@/components/ui/button";
@@ -258,7 +258,7 @@ export default function ClientiPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-
+  const supabase = getSupabaseClient();
       const [clientiData, contattiData, utentiData, cassettiData, prestazioniRes] =
         await Promise.all([
           clienteService.getClienti(),
@@ -322,6 +322,7 @@ export default function ClientiPage() {
       );
 
       try {
+        const supabase = getSupabaseClient();
         const { error } = await supabase
           .from("tbclienti")
           .update({ [field]: nextValue } as any)
@@ -407,7 +408,7 @@ export default function ClientiPage() {
   const handleEdit = async (cliente: Cliente) => {
     setIsDialogOpen(true);
     setEditingCliente(cliente);
-
+const supabase = getSupabaseClient();
     // rileggo record completo dal DB
     let clienteDb: any = cliente;
     try {
@@ -614,6 +615,7 @@ export default function ClientiPage() {
   // ✅ usa i flag DEL CLIENTE (non lo state del form)
   const handleInsertIntoScadenzari = async (cliente: Cliente) => {
     try {
+      const supabase = getSupabaseClient();
       const scadenzariAttivi: string[] = [];
       if (cliente.flag_iva) scadenzariAttivi.push("IVA");
       if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
@@ -742,7 +744,7 @@ export default function ClientiPage() {
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+const supabase = getSupabaseClient();
     setImportLoading(true);
 
     let successCount = 0;
