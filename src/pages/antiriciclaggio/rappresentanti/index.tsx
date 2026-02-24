@@ -353,46 +353,61 @@ export default function RappresentantiPage() {
     </div>
 
     {/* ✅ Allegato documento come URL */}
-    <div className="md:col-span-2">
-      <Label htmlFor="allegato_doc">Allegato documento (URL)</Label>
+  <div className="md:col-span-2">
+  <Label htmlFor="allegato_doc">Allegato documento</Label>
 
-      <div className="flex flex-col md:flex-row gap-3 md:items-center">
-        <Input
-          id="allegato_doc"
-          type="url"
-          value={form.allegato_doc}
-          onChange={(e) => setForm((p) => ({ ...p, allegato_doc: e.target.value }))}
-          placeholder="https://..."
-        />
+  <div className="flex flex-col md:flex-row gap-3 md:items-center">
+    <Input
+      id="allegato_doc"
+      type="url"
+      value={form.allegato_doc}
+      readOnly
+      placeholder="Nessun documento allegato"
+    />
 
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!form.allegato_doc}
-            onClick={() => window.open(form.allegato_doc, "_blank")}
-          >
-            Apri link
-          </Button>
+    <div className="flex gap-2">
+      {/* 🔵 Allega */}
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={() => {
+          const url = window.prompt("Inserisci il link del documento (https://...)");
+          if (url) {
+            setForm((p) => ({ ...p, allegato_doc: url }));
+          }
+        }}
+      >
+        Allega documento
+      </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!form.allegato_doc}
-            onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
-          >
-            Rimuovi
-          </Button>
-        </div>
-      </div>
+      {/* 🔗 Apri */}
+      <Button
+        type="button"
+        variant="outline"
+        disabled={!form.allegato_doc}
+        onClick={() => window.open(form.allegato_doc, "_blank")}
+      >
+        Apri
+      </Button>
 
-      {form.allegato_doc && (
-        <p className="text-sm text-muted-foreground mt-1">
-          URL salvata: <span className="font-mono">{form.allegato_doc}</span>
-        </p>
-      )}
+      {/* ❌ Rimuovi */}
+      <Button
+        type="button"
+        variant="ghost"
+        disabled={!form.allegato_doc}
+        onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
+      >
+        Rimuovi
+      </Button>
     </div>
   </div>
+
+  {form.allegato_doc && (
+    <p className="text-sm text-muted-foreground mt-1">
+      Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
+    </p>
+  )}
+</div>
 
   {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
   {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
