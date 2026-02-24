@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import type { Database } from "@/lib/supabase/types";
@@ -16,16 +16,7 @@ import {
   ChevronDown,
   Building2,
   MessageSquare,
-  Bell,
   Key,
-  FolderOpen,
-  LogOut,
-  Sun,
-  Moon,
-  User,
-  BookOpen,
-  FolderArchive,
-  Tag,
   Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,59 +42,45 @@ interface MenuItem {
 export function TopNavBar() {
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaRicevuti, setPromemoriaRicevuti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
   const [eventiImminenti, setEventiImminenti] = useState(0);
+
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (currentUser) {
-      loadMessaggiNonLetti();
-      loadPromemoriaAttivi();
-      loadPromemoriaRicevuti();
-      loadEventiImminenti();
-      const interval = setInterval(() => {
-        loadMessaggiNonLetti();
-        loadPromemoriaAttivi();
-        loadPromemoriaRicevuti();
-        loadEventiImminenti();
-      }, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [currentUser]);
-
-  const loadEventiImminenti = async () => {
-    if (!currentUser) return;
-
+  const loadCurrentUser = async () => {
     try {
-      const now = new Date();
-      const twoDaysLater = new Date();
-      twoDaysLater.setDate(now.getDate() + 2);
-      
-      const { count, error } = await supabase
-        .from("tbagenda")
-        .select("*", { count: 'exact', head: true })
-        .eq("utente_id", currentUser.id)
-        .gte("data_inizio", now.toISOString())
-        .lte("data_inizio", twoDaysLater.toISOString());
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (error) {
-        console.warn("⚠️ Errore query eventi imminenti:", error);
-        return;
+      if (session?.user?.email) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("*")
+          .eq("email", session.user.email)
+          .single();
+
+        if (utente) setCurrentUser(utente);
       }
-
-      setEventiImminenti(count || 0);
     } catch (error) {
-      console.warn("⚠️ Errore caricamento eventi imminenti:", error);
+      console.error("Errore caricamento utente:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadMessaggiNonLetti = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.user?.id) {
-        console.warn("⚠️ Nessuna sessione attiva, skip caricamento messaggi");
         setMessaggiNonLetti(0);
         return;
       }
@@ -117,62 +94,39 @@ export function TopNavBar() {
     }
   };
 
-  useEffect(() => {
-    loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadPromemoriaAttivi();
-      const interval = setInterval(loadPromemoriaAttivi, 60000);
-      return () => clearInterval(interval);
+  const loadPromemoriaAttivi = async () => {
+    if (!currentUser) {
+      setPromemoriaAttivi(0);
+      return;
     }
-  }, [currentUser]);
 
-useEffect(() => {
-  if (!currentUser) return;
+    try {
+      const supabase = getSupabaseClient();
 
-  const handler = () => {
-    loadPromemoriaAttivi();
+      const { count, error } = await supabase
+        .from("tbpromemoria")
+        .select("*", { count: "exact", head: true })
+        .eq("working_progress", "Aperto")
+        .eq("destinatario_id", currentUser.id);
+
+      if (error) throw error;
+
+      setPromemoriaAttivi(count ?? 0);
+    } catch (error) {
+      console.error("Errore caricamento promemoria attivi (gestito):", error);
+      setPromemoriaAttivi(0);
+    }
   };
-
-  window.addEventListener("promemoria-updated", handler);
-  return () => {
-    window.removeEventListener("promemoria-updated", handler);
-  };
-}, [currentUser]);
-  
-const loadPromemoriaAttivi = async () => {
-  if (!currentUser) {
-    setPromemoriaAttivi(0);
-    return;
-  }
-
-  try {
-    // Conta SOLO i promemoria "Aperto" destinati all'utente loggato (tbutenti.id)
-    const { count, error } = await supabase
-      .from("tbpromemoria")
-      .select("*", { count: "exact", head: true })
-      .eq("working_progress", "Aperto")
-      .eq("destinatario_id", currentUser.id);
-
-    if (error) throw error;
-
-    setPromemoriaAttivi(count ?? 0);
-  } catch (error) {
-    console.error("Errore caricamento promemoria attivi (gestito):", error);
-    setPromemoriaAttivi(0);
-  }
-};
-
 
   const loadPromemoriaRicevuti = async () => {
     if (!currentUser) return;
 
     try {
+      const supabase = getSupabaseClient();
+
       const { count, error } = await supabase
         .from("tbpromemoria")
-        .select("*", { count: 'exact', head: true })
+        .select("*", { count: "exact", head: true })
         .eq("destinatario_id", currentUser.id)
         .eq("working_progress", "da_fare");
 
@@ -188,58 +142,81 @@ const loadPromemoriaAttivi = async () => {
     }
   };
 
+  const loadEventiImminenti = async () => {
+    if (!currentUser) return;
+
+    try {
+      const supabase = getSupabaseClient();
+
+      const now = new Date();
+      const twoDaysLater = new Date();
+      twoDaysLater.setDate(now.getDate() + 2);
+
+      const { count, error } = await supabase
+        .from("tbagenda")
+        .select("*", { count: "exact", head: true })
+        .eq("utente_id", currentUser.id)
+        .gte("data_inizio", now.toISOString())
+        .lte("data_inizio", twoDaysLater.toISOString());
+
+      if (error) {
+        console.warn("⚠️ Errore query eventi imminenti:", error);
+        return;
+      }
+
+      setEventiImminenti(count || 0);
+    } catch (error) {
+      console.warn("⚠️ Errore caricamento eventi imminenti:", error);
+    }
+  };
+
   const handlePromemoriaClick = () => {
     setPromemoriaRicevuti(0);
   };
 
-  const loadCurrentUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user?.email) {
-        const { data: utente } = await supabase
-          .from("tbutenti")
-          .select("*")
-          .eq("email", session.user.email)
-          .single();
-        
-        if (utente) {
-          setCurrentUser(utente);
-        }
-      }
-    } catch (error) {
-      console.error("Errore caricamento utente:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    void loadCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    void loadMessaggiNonLetti();
+    void loadPromemoriaAttivi();
+    void loadPromemoriaRicevuti();
+    void loadEventiImminenti();
+
+    const interval = setInterval(() => {
+      void loadMessaggiNonLetti();
+      void loadPromemoriaAttivi();
+      void loadPromemoriaRicevuti();
+      void loadEventiImminenti();
+    }, 60000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const handler = () => {
+      void loadPromemoriaAttivi();
+    };
+
+    window.addEventListener("promemoria-updated", handler);
+    return () => {
+      window.removeEventListener("promemoria-updated", handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const menuItems: MenuItem[] = [
-    {
-      label: "Dashboard",
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      href: "/dashboard"
-    },
-    {
-      label: "Messaggi",
-      href: "/messaggi",
-      icon: <MessageSquare className="h-4 w-4" />,
-    },
-    {
-      label: "Agenda",
-      icon: <Calendar className="h-4 w-4" />,
-      href: "/agenda"
-    },
-    {
-      label: "Rubrica",
-      icon: <UserCircle className="h-4 w-4" />,
-      href: "/contatti"
-    },
-    {
-      label: "Promemoria",
-      icon: <FileText className="h-4 w-4" />,
-      href: "/promemoria"
-    },
+    { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
+    { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+    { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
+    { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
+    { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
     {
       label: "Scadenzario",
       icon: <FileText className="h-4 w-4" />,
@@ -255,40 +232,24 @@ const loadPromemoriaAttivi = async () => {
         { label: "770", href: "/scadenze/modello-770", icon: null },
         { label: "LIPE", href: "/scadenze/lipe", icon: null },
         { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
-        { label: "Proforma", href: "/scadenze/proforma", icon: null }
-      ]
+        { label: "Proforma", href: "/scadenze/proforma", icon: null },
+      ],
     },
+    { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+    { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+    { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
     {
-      label: "Accesso Portali",
-      icon: <Key className="h-4 w-4" />,
-      href: "/accesso-portali"
+      label: "Antiriciclaggio",
+      icon: <ShieldCheck className="h-5 w-5" />,
+      children: [
+        { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
+        { label: "Nuovo rappresentante", href: "/antiriciclaggio/rappresentanti/nuovo", icon: null },
+        { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
+        { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
+        { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
+      ],
     },
-    {
-      label: "Cassetti Fiscali",
-      icon: <FileText className="h-4 w-4" />,
-      href: "/cassetti-fiscali"
-    },
-    {
-  label: "Comunicazioni",
-  icon: <Mail className="h-4 w-4" />,
-  href: "/comunicazioni"
-},
-{
-  label: "Antiriciclaggio",
-  icon: <ShieldCheck className="h-5 w-5" />,
-  children: [
-    { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
-    { label: "Nuovo rappresentante", href: "/antiriciclaggio/rappresentanti/nuovo", icon: null },
-    { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
-    { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
-    { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
-  ],
-},
-{
-  label: "Clienti",
-  icon: <Users className="h-4 w-4" />,
-  href: "/clienti"
-},
+    { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
     {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
@@ -301,24 +262,22 @@ const loadPromemoriaAttivi = async () => {
         { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
         { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-        { label: "Microsoft 365", href: "/impostazioni/microsoft365", icon: <Cloud className="h-4 w-4" /> }
-      ]
-    }
+        { label: "Microsoft 365", href: "/impostazioni/microsoft365", icon: <Cloud className="h-4 w-4" /> },
+      ],
+    },
   ];
 
   const isActive = (href: string) => pathname === href;
 
   const renderMenuItem = (item: MenuItem) => {
-    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
-      return null;
-    }
+    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
 
-    const hasChildren = item.children && item.children.length > 0;
+    const hasChildren = !!(item.children && item.children.length > 0);
+
     const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
     const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
     const showPromemoriaAlert = item.label === "Promemoria" && promemoriaAttivi > 0;
     const showAgendaBadge = item.label === "Agenda" && eventiImminenti > 0;
-    const hasNotification = showMessaggiBadge || showPromemoriaAlert;
 
     if (hasChildren) {
       return (
@@ -336,8 +295,9 @@ const loadPromemoriaAttivi = async () => {
               <ChevronDown className="h-4 w-4 ml-1" />
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="start" className="w-56">
-            {item.children?.map(child => (
+            {item.children?.map((child) => (
               <DropdownMenuItem key={child.label} asChild>
                 <Link
                   href={child.href || "#"}
@@ -370,21 +330,25 @@ const loadPromemoriaAttivi = async () => {
       >
         {item.icon}
         <span>{item.label}</span>
+
         {showMessaggiBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {messaggiNonLetti > 99 ? "99+" : messaggiNonLetti}
           </Badge>
         )}
+
         {showPromemoriaRicevutiBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {promemoriaRicevuti > 99 ? "99+" : promemoriaRicevuti}
           </Badge>
         )}
+
         {showPromemoriaAlert && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {promemoriaAttivi > 99 ? "99+" : promemoriaAttivi}
           </Badge>
         )}
+
         {showAgendaBadge && (
           <Badge variant="destructive" className="ml-1 px-1.5 py-0 h-5 min-w-[20px] text-xs">
             {eventiImminenti > 99 ? "99+" : eventiImminenti}
@@ -398,9 +362,9 @@ const loadPromemoriaAttivi = async () => {
     return (
       <nav className="w-full bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
-          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
         </div>
       </nav>
     );
@@ -410,7 +374,7 @@ const loadPromemoriaAttivi = async () => {
     <nav className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-16 z-30">
       <div className="overflow-x-auto">
         <div className="flex items-center gap-1 px-4 py-2 min-w-max">
-          {menuItems.map(item => renderMenuItem(item))}
+          {menuItems.map((item) => renderMenuItem(item))}
         </div>
       </div>
     </nav>
