@@ -255,7 +255,7 @@ export default function RappresentantiFormPage() {
     const supabase = getSupabaseClient() as any;
     const { data, error } = await supabase.storage.listBuckets();
     if (error) throw error;
-    const ok = (data || []).some((b) => b.name === BUCKET_NAME);
+    const ok = (data || []).some((b: { name: string }) => b.name === BUCKET_NAME);
     if (!ok) {
       throw new Error(
         `Bucket "${BUCKET_NAME}" non trovato. Apri Supabase > Storage e usa il nome esatto del bucket (case-sensitive).`
