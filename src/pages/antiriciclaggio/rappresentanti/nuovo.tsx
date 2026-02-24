@@ -196,20 +196,6 @@ export default function RappresentantiPage() {
      STORAGE HELPERS
      ========================================================= */
 
-  // 1) Verifica esistenza bucket (così l'errore è chiarissimo)
-  async function assertBucketExists() {
-    const supabase = getSupabaseClient() as any;
-
-    const { data, error } = await supabase.storage.listBuckets();
-    if (error) throw error;
-    const ok = (data || []).some((b: { name: string }) => b.name === BUCKET_NAME);
-    if (!ok) {
-      throw new Error(
-        `Bucket "${BUCKET_NAME}" non trovato. Apri Supabase > Storage e usa il nome esatto del bucket (case-sensitive).`
-      );
-    }
-  }
-
   // 2) Decide URL: se bucket pubblico -> publicUrl, se privato -> signedUrl
   async function getOpenableUrl(path: string) {
     const supabase = getSupabaseClient() as any;
@@ -251,7 +237,6 @@ export default function RappresentantiPage() {
 
     try {
       // opzionale ma utile: controlliamo che il bucket esista davvero
-      await assertBucketExists();
 
       // 1) Converti file in base64
       const base64 = await new Promise<string>((resolve, reject) => {
