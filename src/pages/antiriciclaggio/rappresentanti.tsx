@@ -80,7 +80,6 @@ type FormState = {
   citta_residenz: string;
   indirizzo_resid: string;
   nazionalita: string;
-  carica: string;
 
   tipo_doc: "" | "Carta di identità" | "Passaporto"; // opzionale
   scadenza_doc: string; // opzionale
@@ -95,7 +94,6 @@ const initialState: FormState = {
   citta_residenz: "",
   indirizzo_resid: "",
   nazionalita: "",
-  carica: "",
   tipo_doc: "",
   scadenza_doc: "",
   allegato_doc: "",
@@ -202,7 +200,6 @@ async function handleUploadDoc(file: File) {
         citta_residenz: form.citta_residenz.trim() || null,
         indirizzo_resid: form.indirizzo_resid.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
-        carica: form.carica.trim() || null,
 
         // DOC opzionali
         tipo_doc: form.tipo_doc || null,
@@ -308,16 +305,6 @@ async function handleUploadDoc(file: File) {
                   value={form.indirizzo_resid}
                   onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
                   placeholder="Via Roma 10"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="carica">Carica</Label>
-                <Input
-                  id="carica"
-                  value={form.carica}
-                  onChange={(e) => setForm((p) => ({ ...p, carica: e.target.value }))}
-                  placeholder="Amministratore Unico"
                 />
               </div>
 
