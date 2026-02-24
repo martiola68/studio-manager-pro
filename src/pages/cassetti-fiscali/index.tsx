@@ -677,48 +677,56 @@ export default function CassettiFiscaliPage() {
                           </div>
                         </TableCell>
 
-                        <TableCell className={cassetto.pw_attiva1 ? "bg-blue-50/50" : ""}>
-                          {renderSensitiveCell(cassetto, "pw1")}
-                        </TableCell>
+                      <TableCell
+  className={cassetto.pw_attiva1 ? "!bg-red-100 border border-red-300" : ""}
+>
+  {renderSensitiveCell(cassetto, "pw1")}
+</TableCell>
 
-                        <TableCell className={cassetto.pw_attiva2 ? "bg-blue-50/50" : ""}>
-                          {renderSensitiveCell(cassetto, "pw2")}
-                        </TableCell>
+<TableCell
+  className={cassetto.pw_attiva2 ? "!bg-red-100 border border-red-300" : ""}
+>
+  {renderSensitiveCell(cassetto, "pw2")}
+</TableCell>
 
-                        <TableCell>{renderSensitiveCell(cassetto, "pin")}</TableCell>
+<TableCell>
+  {renderSensitiveCell(cassetto, "pin")}
+</TableCell>
 
-                        <TableCell>{renderSensitiveCell(cassetto, "pw_init")}</TableCell>
+<TableCell>
+  {renderSensitiveCell(cassetto, "pw_init")}
+</TableCell>
 
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setEditingCassetto(cassetto);
-                                setDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+<TableCell className="text-right">
+  <div className="flex justify-end gap-2">
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => {
+        setEditingCassetto(cassetto);
+        setDialogOpen(true);
+      }}
+    >
+      <Edit className="h-4 w-4" />
+    </Button>
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(cassetto.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="text-destructive hover:text-destructive"
+      onClick={() => handleDelete(cassetto.id)}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  </div>
 
-                          {encryptionEnabled && !hasKey() && isSensitiveEncrypted(cassetto) && (
-                            <div className="text-[10px] text-muted-foreground mt-1 flex justify-end gap-1 items-center">
-                              <Lock className="h-3 w-3" />
-                              <span>sensibile cifrato</span>
-                            </div>
-                          )}
-                        </TableCell>
+  {encryptionEnabled && !hasKey() && isSensitiveEncrypted(cassetto) && (
+    <div className="text-[10px] text-muted-foreground mt-1 flex justify-end gap-1 items-center">
+      <Lock className="h-3 w-3" />
+      <span>sensibile cifrato</span>
+    </div>
+  )}
+</TableCell>
                       </TableRow>
                     );
                   })
