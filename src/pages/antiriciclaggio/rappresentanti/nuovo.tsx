@@ -233,6 +233,10 @@ export default function RappresentantiPage() {
   /* =========================================================
      UPLOAD DOCUMENTO
      ========================================================= */
+/* =========================================================
+   UPLOAD DOCUMENTO (via API server)
+   ========================================================= */
+
 async function handleUploadDoc(file: File) {
   if (!studioId) {
     setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
@@ -244,33 +248,37 @@ async function handleUploadDoc(file: File) {
   setOkMsg(null);
 
   try {
-    const safeName = file.name.replace(/\s+/g, "_");
-    const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
+    // 1) Converti file in base64
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Impossibile leggere il file"));
+      reader.readAsDataURL(file);
+    });
 
-    const { data: upData, error: upErr } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(path, file, { upsert: true });
+    // 2) Upload tramite API server
+    const resp = await fetch("/api/rapp-doc/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studioId,
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        base64,
+      }),
+    });
 
-    if (upErr) {
-      // errore completo in UI (così capiamo subito)
-      throw new Error(`Upload fallito su bucket "${BUCKET_NAME}": ${upErr.message}`);
+    const json = await resp.json();
+    if (!resp.ok || !json?.ok) {
+      throw new Error(json?.error ?? "Upload fallito");
     }
 
-    // PROVA URL pubblico
-    const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-    const publicUrl = pub?.publicUrl;
+    // 3) Salviamo SOLO IL PATH (stabile)
+    setForm((p) => ({
+      ...p,
+      allegato_doc: String(json.path),
+    }));
 
-    // se bucket privato, il publicUrl potrebbe non essere accessibile: usiamo signed url
-    let urlToSave = publicUrl || "";
-    if (!urlToSave) {
-      const { data: signed, error: signErr } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(path, 60 * 10);
-      if (signErr) throw signErr;
-      urlToSave = signed.signedUrl;
-    }
-
-    setForm((p) => ({ ...p, allegato_doc: urlToSave }));
     setOkMsg("✅ Documento allegato.");
   } catch (e: any) {
     setErrMsg(e?.message ?? "Errore upload documento");
@@ -279,10 +287,34 @@ async function handleUploadDoc(file: File) {
   }
 }
 
-  function handleRemoveDoc() {
-    setForm((p) => ({ ...p, allegato_doc: "" }));
-  }
+/* =========================================================
+   APERTURA DOCUMENTO (signed URL)
+   ========================================================= */
+async function handleOpenDoc() {
+  if (!form.allegato_doc) return;
 
+  try {
+    const resp = await fetch(
+      `/api/rapp-doc/url?path=${encodeURIComponent(form.allegato_doc)}`
+    );
+    const json = await resp.json();
+
+    if (!resp.ok || !json?.ok) {
+      throw new Error(json?.error ?? "Impossibile aprire il documento");
+    }
+
+    window.open(json.signedUrl, "_blank");
+  } catch (e: any) {
+    setErrMsg(e?.message ?? "Errore apertura documento");
+  }
+}
+
+/* =========================================================
+   RIMOZIONE DOCUMENTO (solo frontend)
+   ========================================================= */
+function handleRemoveDoc() {
+  setForm((p) => ({ ...p, allegato_doc: "" }));
+}
   /* =========================================================
      SUBMIT
      ========================================================= */
