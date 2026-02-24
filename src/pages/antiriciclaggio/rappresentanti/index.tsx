@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -7,7 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { useStudio } from "@/contexts/StudioContext";
 
@@ -15,7 +21,8 @@ import { useStudio } from "@/contexts/StudioContext";
 // Codice Fiscale validator (formale + checksum)
 // Supporta omocodia (parzialmente) e verifica checksum.
 // -----------------------
-const CF_RE = /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
+const CF_RE =
+  /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
 
 const OMO_MAP: Record<string, string> = {
   L: "0",
@@ -49,17 +56,81 @@ function cfToDigitsForChecksum(cf: string) {
 }
 
 const ODD_MAP: Record<string, number> = {
-  "0": 1, "1": 0, "2": 5, "3": 7, "4": 9, "5": 13, "6": 15, "7": 17, "8": 19, "9": 21,
-  A: 1, B: 0, C: 5, D: 7, E: 9, F: 13, G: 15, H: 17, I: 19, J: 21,
-  K: 2, L: 4, M: 18, N: 20, O: 11, P: 3, Q: 6, R: 8, S: 12, T: 14,
-  U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23,
+  "0": 1,
+  "1": 0,
+  "2": 5,
+  "3": 7,
+  "4": 9,
+  "5": 13,
+  "6": 15,
+  "7": 17,
+  "8": 19,
+  "9": 21,
+  A: 1,
+  B: 0,
+  C: 5,
+  D: 7,
+  E: 9,
+  F: 13,
+  G: 15,
+  H: 17,
+  I: 19,
+  J: 21,
+  K: 2,
+  L: 4,
+  M: 18,
+  N: 20,
+  O: 11,
+  P: 3,
+  Q: 6,
+  R: 8,
+  S: 12,
+  T: 14,
+  U: 16,
+  V: 10,
+  W: 22,
+  X: 25,
+  Y: 24,
+  Z: 23,
 };
 
 const EVEN_MAP: Record<string, number> = {
-  "0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
-  A: 0, B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, I: 8, J: 9,
-  K: 10, L: 11, M: 12, N: 13, O: 14, P: 15, Q: 16, R: 17, S: 18, T: 19,
-  U: 20, V: 21, W: 22, X: 23, Y: 24, Z: 25,
+  "0": 0,
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  A: 0,
+  B: 1,
+  C: 2,
+  D: 3,
+  E: 4,
+  F: 5,
+  G: 6,
+  H: 7,
+  I: 8,
+  J: 9,
+  K: 10,
+  L: 11,
+  M: 12,
+  N: 13,
+  O: 14,
+  P: 15,
+  Q: 16,
+  R: 17,
+  S: 18,
+  T: 19,
+  U: 20,
+  V: 21,
+  W: 22,
+  X: 23,
+  Y: 24,
+  Z: 25,
 };
 
 function computeCFCheckChar(cf15: string) {
@@ -82,8 +153,7 @@ function isValidCF(cfRaw: string) {
 }
 
 // -----------------------
-// DB mapping notes:
-// Your table fields (from screenshot): 
+// DB mapping notes (dal tuo schema):
 // studio_id, nome_cognom, codice_fiscale, luogo_nascita, data_nascita,
 // citta_residenz, indirizzo_resid, nazionalita, carica,
 // tipo_doc, scadenza_doc, allegato_doc
@@ -98,12 +168,17 @@ type FormState = {
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string; // yyyy-mm-dd
-  allegato_doc: string; // storage path
+  allegato_doc: string; // ✅ URL pubblico (o stringa vuota)
 };
 
 export default function RappresentantiPage() {
   const router = useRouter();
   const { studioId } = useStudio() as any;
+
+  // ✅ id effettivo usato in tutto (evita studioIdEffettivo non definito)
+  const studioIdEffettivo = studioId as string | null;
+
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -128,15 +203,12 @@ export default function RappresentantiPage() {
 
   // Required only (doc fields are OPTIONAL)
   const canSave = useMemo(() => {
-    return (
-      !!studioId &&
-      form.nome_cognom.trim().length > 0 &&
-      cfOk
-    );
-  }, [studioId, form.nome_cognom, cfOk]);
+    return !!studioIdEffettivo && form.nome_cognom.trim().length > 0 && cfOk;
+  }, [studioIdEffettivo, form.nome_cognom, cfOk]);
 
+  // ✅ Upload doc: salva URL pubblico in allegato_doc (bucket pubblico)
   async function handleUploadDoc(file: File) {
-    if (!studioId) {
+    if (!studioIdEffettivo) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
       return;
     }
@@ -147,29 +219,27 @@ export default function RappresentantiPage() {
 
     try {
       const safeName = file.name.replace(/\s+/g, "_");
-      const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
+      const path = `rapp_legali/${studioIdEffettivo}/${Date.now()}_${safeName}`;
 
-      const { error } = await supabase.storage.from("documenti").upload(path, file, { upsert: true });
-      if (error) throw error;
+      const { error: upErr } = await supabase.storage
+        .from("documenti")
+        .upload(path, file, { upsert: true });
 
-      setForm((p) => ({ ...p, allegato_doc: path }));
-      setOkMsg("✅ Documento caricato.");
+      if (upErr) throw upErr;
+
+      // ✅ Salviamo URL (non path)
+      const { data } = supabase.storage.from("documenti").getPublicUrl(path);
+      const publicUrl = data?.publicUrl;
+
+      if (!publicUrl) throw new Error("Impossibile ottenere URL pubblico del documento.");
+
+      setForm((p) => ({ ...p, allegato_doc: publicUrl }));
+      setOkMsg("✅ Documento allegato.");
     } catch (e: any) {
       setErrMsg(e?.message ?? "Errore upload documento");
     } finally {
       setUploading(false);
     }
-  }
-
-  async function handleOpenDoc() {
-    if (!form.allegato_doc) return;
-
-    const { data, error } = await supabase.storage.from("documenti").createSignedUrl(form.allegato_doc, 60 * 10);
-    if (error) {
-      setErrMsg(error.message);
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
   }
 
   function handleRemoveDoc() {
@@ -181,7 +251,7 @@ export default function RappresentantiPage() {
     setOkMsg(null);
     setErrMsg(null);
 
-    if (!studioId) {
+    if (!studioIdEffettivo) {
       setErrMsg("Studio non disponibile: impossibile leggere studio_id dall’utente loggato.");
       return;
     }
@@ -195,7 +265,7 @@ export default function RappresentantiPage() {
     try {
       // Optional doc fields: if empty -> null
       const payload = {
-        studio_id: studioId,
+        studio_id: studioIdEffettivo,
         nome_cognom: form.nome_cognom.trim(),
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
@@ -205,7 +275,7 @@ export default function RappresentantiPage() {
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null,
+        allegato_doc: form.allegato_doc || null, // ✅ URL
       };
 
       const { error } = await (supabase as any).from("rapp_legali").insert(payload);
@@ -225,7 +295,6 @@ export default function RappresentantiPage() {
         allegato_doc: "",
       });
 
-      // If you want to go to existing list page:
       // router.push("/rapp-legali/elencorapp");
     } catch (e: any) {
       setErrMsg(e?.message ?? "Errore inserimento rappresentante legale");
@@ -240,7 +309,11 @@ export default function RappresentantiPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
           <div className="flex gap-2">
-            <Button variant="secondary" type="button" onClick={() => router.push("/rapp-legali/elencorapp")}>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => router.push("/rapp-legali/elencorapp")}
+            >
               Vai a elenco
             </Button>
             <Button variant="outline" type="button" onClick={() => router.push("/anticiclaggio")}>
@@ -250,192 +323,202 @@ export default function RappresentantiPage() {
         </CardHeader>
 
         <CardContent>
-<form onSubmit={handleSubmit} className="space-y-6">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div className="md:col-span-2">
-      <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
-      <Input
-        id="nome_cognom"
-        value={form.nome_cognom}
-        onChange={(e) => setForm((p) => ({ ...p, nome_cognom: e.target.value }))}
-        placeholder="Mario Rossi"
-      />
-    </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
+                <Input
+                  id="nome_cognom"
+                  value={form.nome_cognom}
+                  onChange={(e) => setForm((p) => ({ ...p, nome_cognom: e.target.value }))}
+                  placeholder="Mario Rossi"
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-      <Input
-        id="codice_fiscale"
-        value={form.codice_fiscale}
-        onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
-        placeholder="RSSMRA80A01H501U"
-        maxLength={16}
-      />
-      {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-        <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
-      )}
-    </div>
+              <div>
+                <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                <Input
+                  id="codice_fiscale"
+                  value={form.codice_fiscale}
+                  onChange={(e) => setForm((p) => ({ ...p, codice_fiscale: e.target.value }))}
+                  placeholder="RSSMRA80A01H501U"
+                  maxLength={16}
+                />
+                {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
+                  <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
+                )}
+              </div>
 
-    <div>
-      <Label htmlFor="nazionalita">Nazionalità</Label>
-      <Input
-        id="nazionalita"
-        value={form.nazionalita}
-        onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
-        placeholder="Italiana"
-      />
-    </div>
+              <div>
+                <Label htmlFor="nazionalita">Nazionalità</Label>
+                <Input
+                  id="nazionalita"
+                  value={form.nazionalita}
+                  onChange={(e) => setForm((p) => ({ ...p, nazionalita: e.target.value }))}
+                  placeholder="Italiana"
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="luogo_nascita">Luogo nascita</Label>
-      <Input
-        id="luogo_nascita"
-        value={form.luogo_nascita}
-        onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
-        placeholder="Roma"
-      />
-    </div>
+              <div>
+                <Label htmlFor="luogo_nascita">Luogo nascita</Label>
+                <Input
+                  id="luogo_nascita"
+                  value={form.luogo_nascita}
+                  onChange={(e) => setForm((p) => ({ ...p, luogo_nascita: e.target.value }))}
+                  placeholder="Roma"
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="data_nascita">Data nascita</Label>
-      <Input
-        id="data_nascita"
-        type="date"
-        value={form.data_nascita}
-        onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
-      />
-    </div>
+              <div>
+                <Label htmlFor="data_nascita">Data nascita</Label>
+                <Input
+                  id="data_nascita"
+                  type="date"
+                  value={form.data_nascita}
+                  onChange={(e) => setForm((p) => ({ ...p, data_nascita: e.target.value }))}
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="citta_residenz">Città residenza</Label>
-      <Input
-        id="citta_residenz"
-        value={form.citta_residenz}
-        onChange={(e) => setForm((p) => ({ ...p, citta_residenz: e.target.value }))}
-        placeholder="Milano"
-      />
-    </div>
+              <div>
+                <Label htmlFor="citta_residenz">Città residenza</Label>
+                <Input
+                  id="citta_residenz"
+                  value={form.citta_residenz}
+                  onChange={(e) => setForm((p) => ({ ...p, citta_residenz: e.target.value }))}
+                  placeholder="Milano"
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
-      <Input
-        id="indirizzo_resid"
-        value={form.indirizzo_resid}
-        onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
-        placeholder="Via Roma 10"
-      />
-    </div>
+              <div>
+                <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
+                <Input
+                  id="indirizzo_resid"
+                  value={form.indirizzo_resid}
+                  onChange={(e) => setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))}
+                  placeholder="Via Roma 10"
+                />
+              </div>
 
-    <div>
-      <Label htmlFor="tipo_doc">Tipo documento</Label>
-      <Select
-        value={form.tipo_doc || undefined}
-        onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
-      >
-        <SelectTrigger id="tipo_doc">
-          <SelectValue placeholder="Seleziona..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="Carta di identità">Carta di identità</SelectItem>
-          <SelectItem value="Passaporto">Passaporto</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+              <div>
+                <Label htmlFor="tipo_doc">Tipo documento</Label>
+                <Select
+                  value={form.tipo_doc || undefined}
+                  onValueChange={(v) => setForm((p) => ({ ...p, tipo_doc: v as any }))}
+                >
+                  <SelectTrigger id="tipo_doc">
+                    <SelectValue placeholder="Seleziona..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+                    <SelectItem value="Passaporto">Passaporto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-    <div>
-      <Label htmlFor="scadenza_doc">Scadenza documento</Label>
-      <Input
-        id="scadenza_doc"
-        type="date"
-        value={form.scadenza_doc}
-        onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
-      />
-    </div>
+              <div>
+                <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+                <Input
+                  id="scadenza_doc"
+                  type="date"
+                  value={form.scadenza_doc}
+                  onChange={(e) => setForm((p) => ({ ...p, scadenza_doc: e.target.value }))}
+                />
+              </div>
 
-    {/* ✅ Allegato documento con pulsante "Allega" */}
-    <div className="md:col-span-2">
-      <Label htmlFor="allegato_doc">Allegato documento</Label>
+              {/* ✅ Allegato documento */}
+              <div className="md:col-span-2">
+                <Label htmlFor="allegato_doc">Allegato documento</Label>
 
-      <div className="flex flex-col md:flex-row gap-3 md:items-center">
-        <Input
-          id="allegato_doc"
-          type="url"
-          value={form.allegato_doc}
-          readOnly
-          placeholder="Nessun documento allegato"
-        />
+                {/* ✅ input file nascosto (UNA sola volta) */}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadDoc(f);
+                    e.currentTarget.value = "";
+                  }}
+                />
 
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              const url = window.prompt("Inserisci il link del documento (https://...)");
-              if (url) setForm((p) => ({ ...p, allegato_doc: url }));
-            }}
-          >
-            Allega documento
-          </Button>
+                <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                  <Input
+                    id="allegato_doc"
+                    type="url"
+                    value={form.allegato_doc}
+                    readOnly
+                    placeholder="Nessun documento allegato"
+                  />
 
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!form.allegato_doc}
-            onClick={() => window.open(form.allegato_doc, "_blank")}
-          >
-            Apri
-          </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={uploading || !studioIdEffettivo}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {uploading ? "Caricamento..." : "Allega documento"}
+                    </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={!form.allegato_doc}
-            onClick={() => setForm((p) => ({ ...p, allegato_doc: "" }))}
-          >
-            Rimuovi
-          </Button>
-        </div>
-      </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!form.allegato_doc}
+                      onClick={() => window.open(form.allegato_doc, "_blank")}
+                    >
+                      Apri
+                    </Button>
 
-      {form.allegato_doc && (
-        <p className="text-sm text-muted-foreground mt-1">
-          Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
-        </p>
-      )}
-    </div>
-  </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={!form.allegato_doc || uploading}
+                      onClick={handleRemoveDoc}
+                    >
+                      Rimuovi
+                    </Button>
+                  </div>
+                </div>
 
-  {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
-  {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+                {form.allegato_doc && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
+                  </p>
+                )}
+              </div>
+            </div>
 
-  <div className="flex gap-2">
-    <Button type="submit" disabled={loading || !canSave}>
-      {loading ? "Salvataggio..." : "Salva dati"}
-    </Button>
+            {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
+            {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
 
-    <Button
-      type="button"
-      variant="secondary"
-      onClick={() =>
-        setForm((p) => ({
-          ...p,
-          nome_cognom: "",
-          codice_fiscale: "",
-          luogo_nascita: "",
-          data_nascita: "",
-          citta_residenz: "",
-          indirizzo_resid: "",
-          nazionalita: "",
-          tipo_doc: "",
-          scadenza_doc: "",
-          allegato_doc: "",
-        }))
-      }
-    >
-      Pulisci
-    </Button>
-  </div>
-</form>
+            <div className="flex gap-2">
+              <Button type="submit" disabled={loading || !canSave}>
+                {loading ? "Salvataggio..." : "Salva dati"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  setForm({
+                    nome_cognom: "",
+                    codice_fiscale: "",
+                    luogo_nascita: "",
+                    data_nascita: "",
+                    citta_residenz: "",
+                    indirizzo_resid: "",
+                    nazionalita: "",
+                    tipo_doc: "",
+                    scadenza_doc: "",
+                    allegato_doc: "",
+                  })
+                }
+              >
+                Pulisci
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>
