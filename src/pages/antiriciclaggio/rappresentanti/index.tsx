@@ -1,197 +1,331 @@
-// src/pages/antiriciclaggio/rappresentanti/index.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import { Search, Pencil, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+/* =========================================================
+   CONFIG
+   ========================================================= */
+// ⚠️ METTI QUI IL NOME REALE DEL BUCKET (quello che vedi in Supabase > Storage)
+const BUCKET_NAME = "allegati"; // <-- CAMBIA se diverso
 
-/**
- * Nota: se il tipo "rapp_legali" non è presente nei types generati,
- * teniamo un type locale minimale.
- */
-type RappLegale = {
-  id: string;
-  studio_id: string;
-  nome_cognom: string | null;
-  codice_fiscale: string | null;
-  tipo_doc: string | null;
-  scadenza_doc: string | null; // date string
-  allegato_doc: string | null; // PATH nel bucket (stabile) o URL
-  created_at?: string | null;
+/* =========================================================
+   CODICE FISCALE VALIDATOR (formale + checksum)
+   ========================================================= */
+const CF_RE =
+  /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
+
+const OMO_MAP: Record<string, string> = {
+  L: "0",
+  M: "1",
+  N: "2",
+  P: "3",
+  Q: "4",
+  R: "5",
+  S: "6",
+  T: "7",
+  U: "8",
+  V: "9",
 };
 
-function normalizeText(s: string) {
-  return (s || "").trim().toLowerCase();
+function normalizeCF(cf: string) {
+  return (cf || "").trim().toUpperCase();
 }
 
-export default function RappresentantiIndexPage() {
+function cfToDigitsForChecksum(cf: string) {
+  const chars = cf.split("");
+  const idxs = [6, 7, 9, 10, 12, 13, 14];
+  for (const i of idxs) {
+    const c = chars[i];
+    if (OMO_MAP[c]) chars[i] = OMO_MAP[c];
+  }
+  return chars.join("");
+}
+
+const ODD_MAP: Record<string, number> = {
+  "0": 1, "1": 0, "2": 5, "3": 7, "4": 9,
+  "5": 13, "6": 15, "7": 17, "8": 19, "9": 21,
+  A: 1, B: 0, C: 5, D: 7, E: 9,
+  F: 13, G: 15, H: 17, I: 19, J: 21,
+  K: 2, L: 4, M: 18, N: 20, O: 11,
+  P: 3, Q: 6, R: 8, S: 12, T: 14,
+  U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23,
+};
+
+const EVEN_MAP: Record<string, number> = {
+  "0": 0, "1": 1, "2": 2, "3": 3, "4": 4,
+  "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+  A: 0, B: 1, C: 2, D: 3, E: 4,
+  F: 5, G: 6, H: 7, I: 8, J: 9,
+  K: 10, L: 11, M: 12, N: 13, O: 14,
+  P: 15, Q: 16, R: 17, S: 18, T: 19,
+  U: 20, V: 21, W: 22, X: 23, Y: 24, Z: 25,
+};
+
+function computeCFCheckChar(cf15: string) {
+  let sum = 0;
+  for (let i = 0; i < 15; i++) {
+    const c = cf15[i];
+    const isOddPosition = (i + 1) % 2 === 1;
+    sum += isOddPosition ? ODD_MAP[c] : EVEN_MAP[c];
+  }
+  const r = sum % 26;
+  return String.fromCharCode("A".charCodeAt(0) + r);
+}
+
+function isValidCF(cfRaw: string) {
+  const cf = normalizeCF(cfRaw);
+  if (!CF_RE.test(cf)) return false;
+  const cfNorm = cfToDigitsForChecksum(cf);
+  const expected = computeCFCheckChar(cfNorm.substring(0, 15));
+  return expected === cfNorm[15];
+}
+
+/* =========================================================
+   TYPES
+   ========================================================= */
+type FormState = {
+  nome_cognom: string;
+  codice_fiscale: string;
+  luogo_nascita: string;
+  data_nascita: string;
+  citta_residenz: string;
+  indirizzo_resid: string;
+  nazionalita: string;
+  tipo_doc: "" | "Carta di identità" | "Passaporto";
+  scadenza_doc: string;
+  allegato_doc: string; // PATH stabile nel bucket
+};
+
+export default function RappresentantiFormPage() {
   const router = useRouter();
-  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [studioId, setStudioId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
 
-  const [rows, setRows] = useState<RappLegale[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  // Dialog modifica nominativo
-  const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState<RappLegale | null>(null);
-  const [newNome, setNewNome] = useState("");
+  // EDIT MODE
+  const editingId = useMemo(() => {
+    const raw = router.query?.id;
+    const id = Array.isArray(raw) ? raw[0] : raw;
+    return typeof id === "string" && id.trim() ? id.trim() : null;
+  }, [router.query]);
+
+  const isEdit = !!editingId;
+
+  const [form, setForm] = useState<FormState>({
+    nome_cognom: "",
+    codice_fiscale: "",
+    luogo_nascita: "",
+    data_nascita: "",
+    citta_residenz: "",
+    indirizzo_resid: "",
+    nazionalita: "",
+    tipo_doc: "",
+    scadenza_doc: "",
+    allegato_doc: "",
+  });
 
   /* =========================================================
      STUDIO_ID: localStorage -> tbutenti (via email)
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-      try {
-        // 1) localStorage
-        if (typeof window !== "undefined") {
-          const cached = localStorage.getItem("studio_id");
-          if (cached) {
-            setStudioId(cached);
-            return;
-          }
-        }
+      const supabase = getSupabaseClient();
+      setErrMsg(null);
 
-        // 2) utente loggato
-        const supabase = getSupabaseClient();
-        const { data: auth } = await supabase.auth.getUser();
-        const email = auth?.user?.email;
-
-        if (!email) {
-          toast({
-            title: "Errore",
-            description: "Utente non loggato: impossibile recuperare studio_id.",
-            variant: "destructive",
-          });
-          router.push("/login");
+      // 1) localStorage
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem("studio_id");
+        if (cached) {
+          setStudioId(cached);
           return;
         }
+      }
 
-        // 3) tbutenti via email
-        const { data, error } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("email", email)
-          .single();
+      // 2) utente loggato (email)
+      const { data: auth } = await supabase.auth.getUser();
+      const email = auth?.user?.email;
+      if (!email) {
+        setErrMsg("Utente non loggato: impossibile recuperare studio_id.");
+        return;
+      }
 
-        if (error) {
-          toast({
-            title: "Errore",
-            description: `Errore lettura tbutenti: ${error.message}`,
-            variant: "destructive",
-          });
-          return;
-        }
+      // 3) tbutenti via email
+      const { data, error } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("email", email)
+        .single();
 
-        const sid = data?.studio_id ? String((data as any).studio_id) : "";
-        if (!sid) {
-          toast({
-            title: "Errore",
-            description: "studio_id non presente in tbutenti per questo utente.",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (error) {
+        setErrMsg(`Errore lettura tbutenti: ${error.message}`);
+        return;
+      }
 
-        setStudioId(sid);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("studio_id", sid);
-        }
-      } catch (e) {
-        toast({
-          title: "Errore",
-          description: "Impossibile inizializzare la pagina.",
-          variant: "destructive",
-        });
+      const sid = data?.studio_id ? String((data as any).studio_id) : "";
+      if (!sid) {
+        setErrMsg("studio_id non presente in tbutenti per questo utente.");
+        return;
+      }
+
+      setStudioId(sid);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("studio_id", sid);
       }
     };
 
     void loadStudioId();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* =========================================================
-     LOAD LIST
+     LOAD RECORD (solo in EDIT)
      ========================================================= */
   useEffect(() => {
+    if (!isEdit) return;
     if (!studioId) return;
+    if (!editingId) return;
 
-    const load = async () => {
+    const loadRecord = async () => {
       const supabase = getSupabaseClient();
-      setLoading(true);
+      setLoadingRecord(true);
+      setErrMsg(null);
+      setOkMsg(null);
+
       try {
         const { data, error } = await (supabase as any)
           .from("rapp_legali")
-          .select("id, studio_id, nome_cognom, codice_fiscale, tipo_doc, scadenza_doc, allegato_doc, created_at")
+          .select("*")
+          .eq("id", editingId)
           .eq("studio_id", studioId)
-          .order("nome_cognom", { ascending: true });
+          .single();
 
         if (error) throw error;
+        if (!data) throw new Error("Record non trovato.");
 
-        setRows((data || []) as RappLegale[]);
-      } catch (e: any) {
-        console.error(e);
-        toast({
-          title: "Errore",
-          description: e?.message ?? "Impossibile caricare i rappresentanti.",
-          variant: "destructive",
+        setForm({
+          nome_cognom: data.nome_cognom ?? "",
+          codice_fiscale: data.codice_fiscale ?? "",
+          luogo_nascita: data.luogo_nascita ?? "",
+          data_nascita: (data.data_nascita ?? "").toString().substring(0, 10),
+          citta_residenz: data.citta_residenz ?? "",
+          indirizzo_resid: data.indirizzo_resid ?? "",
+          nazionalita: data.nazionalita ?? "",
+          tipo_doc: (data.tipo_doc ?? "") as any,
+          scadenza_doc: (data.scadenza_doc ?? "").toString().substring(0, 10),
+          allegato_doc: data.allegato_doc ?? "",
         });
+      } catch (e: any) {
+        setErrMsg(e?.message ?? "Impossibile caricare il rappresentante.");
       } finally {
-        setLoading(false);
+        setLoadingRecord(false);
       }
     };
 
-    void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studioId]);
+    void loadRecord();
+  }, [isEdit, studioId, editingId]);
+
+  const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
+  const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
+
+  const canSave = useMemo(() => {
+    return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
+  }, [studioId, form.nome_cognom, cfOk]);
 
   /* =========================================================
-     FILTER (solo nominativo in alto)
+     STORAGE HELPERS
      ========================================================= */
-  const filtered = useMemo(() => {
-    const term = normalizeText(searchTerm);
-    if (!term) return rows;
-
-    return rows.filter((r) => normalizeText(r.nome_cognom || "").includes(term));
-  }, [rows, searchTerm]);
+  async function assertBucketExists() {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.storage.listBuckets();
+    if (error) throw error;
+    const ok = (data || []).some((b) => b.name === BUCKET_NAME);
+    if (!ok) {
+      throw new Error(
+        `Bucket "${BUCKET_NAME}" non trovato. Apri Supabase > Storage e usa il nome esatto del bucket (case-sensitive).`
+      );
+    }
+  }
 
   /* =========================================================
-     DOCUMENT OPEN (allegato_doc può essere path)
+     UPLOAD DOCUMENTO (via API server)
      ========================================================= */
-  const handleOpenDoc = async (pathOrUrl: string) => {
-    if (!pathOrUrl) return;
-
-    // Se sembra già un URL, aprilo e basta
-    if (/^https?:\/\//i.test(pathOrUrl)) {
-      window.open(pathOrUrl, "_blank", "noopener,noreferrer");
+  async function handleUploadDoc(file: File) {
+    if (!studioId) {
+      setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
       return;
     }
 
+    setUploading(true);
+    setErrMsg(null);
+    setOkMsg(null);
+
     try {
-      const resp = await fetch(`/api/rapp-doc/url?path=${encodeURIComponent(pathOrUrl)}`);
+      await assertBucketExists();
+
+      // 1) Converti file in base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("Impossibile leggere il file"));
+        reader.readAsDataURL(file);
+      });
+
+      // 2) Upload tramite API server
+      const resp = await fetch("/api/rapp-doc/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studioId,
+          fileName: file.name,
+          contentType: file.type || "application/octet-stream",
+          base64,
+        }),
+      });
+
+      const json = await resp.json();
+      if (!resp.ok || !json?.ok) {
+        throw new Error(json?.error ?? "Upload fallito");
+      }
+
+      // 3) Salviamo SOLO IL PATH (stabile)
+      setForm((p) => ({
+        ...p,
+        allegato_doc: String(json.path),
+      }));
+
+      setOkMsg("✅ Documento allegato.");
+    } catch (e: any) {
+      setErrMsg(e?.message ?? "Errore upload documento");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  /* =========================================================
+     APERTURA DOCUMENTO (signed URL via API)
+     ========================================================= */
+  async function handleOpenDoc() {
+    if (!form.allegato_doc) return;
+
+    try {
+      const resp = await fetch(`/api/rapp-doc/url?path=${encodeURIComponent(form.allegato_doc)}`);
       const json = await resp.json();
 
       if (!resp.ok || !json?.ok) {
@@ -200,211 +334,341 @@ export default function RappresentantiIndexPage() {
 
       window.open(json.signedUrl, "_blank", "noopener,noreferrer");
     } catch (e: any) {
-      toast({
-        title: "Errore",
-        description: e?.message ?? "Errore apertura documento",
-        variant: "destructive",
-      });
+      setErrMsg(e?.message ?? "Errore apertura documento");
     }
-  };
+  }
+
+  function handleRemoveDoc() {
+    setForm((p) => ({ ...p, allegato_doc: "" }));
+  }
 
   /* =========================================================
-     EDIT NOMINATIVO
+     SUBMIT (CREATE o UPDATE)
      ========================================================= */
-  const openEdit = (r: RappLegale) => {
-    setEditing(r);
-    setNewNome(r.nome_cognom || "");
-    setEditOpen(true);
-  };
+  async function handleSubmit(e: React.FormEvent) {
+    const supabase = getSupabaseClient();
 
-  const closeEdit = () => {
-    setEditOpen(false);
-    setEditing(null);
-    setNewNome("");
-  };
+    e.preventDefault();
+    setOkMsg(null);
+    setErrMsg(null);
 
-  const saveEdit = async () => {
-    if (!editing) return;
-
-    const nome = newNome.trim();
-    if (!nome) {
-      toast({
-        title: "Errore",
-        description: "Il nominativo è obbligatorio.",
-        variant: "destructive",
-      });
+    if (!studioId) {
+      setErrMsg("studio_id non disponibile: impossibile salvare.");
       return;
     }
 
-    const supabase = getSupabaseClient();
-    try {
-      const { error } = await (supabase as any)
-        .from("rapp_legali")
-        .update({ nome_cognom: nome })
-        .eq("id", editing.id);
-
-      if (error) throw error;
-
-      setRows((prev) =>
-        prev
-          .map((x) => (x.id === editing.id ? { ...x, nome_cognom: nome } : x))
-          .sort((a, b) => (a.nome_cognom || "").localeCompare(b.nome_cognom || "", "it", { sensitivity: "base" }))
-      );
-
-      toast({ title: "Successo", description: "Nominativo aggiornato." });
-      closeEdit();
-    } catch (e: any) {
-      toast({
-        title: "Errore",
-        description: e?.message ?? "Impossibile salvare la modifica.",
-        variant: "destructive",
-      });
+    if (!canSave) {
+      setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
+      return;
     }
-  };
+
+    setLoading(true);
+    try {
+      const payload = {
+        studio_id: studioId,
+        nome_cognom: form.nome_cognom.trim(),
+        codice_fiscale: cf,
+        luogo_nascita: form.luogo_nascita.trim() || null,
+        data_nascita: form.data_nascita || null,
+        citta_residenz: form.citta_residenz.trim() || null,
+        indirizzo_resid: form.indirizzo_resid.trim() || null,
+        nazionalita: form.nazionalita.trim() || null,
+        tipo_doc: form.tipo_doc || null,
+        scadenza_doc: form.scadenza_doc || null,
+        allegato_doc: form.allegato_doc || null,
+      };
+
+      if (isEdit && editingId) {
+        const { error } = await (supabase as any)
+          .from("rapp_legali")
+          .update(payload)
+          .eq("id", editingId)
+          .eq("studio_id", studioId);
+
+        if (error) throw error;
+
+        setOkMsg("✅ Rappresentante aggiornato correttamente.");
+      } else {
+        const { error } = await (supabase as any).from("rapp_legali").insert(payload);
+        if (error) throw error;
+
+        setOkMsg("✅ Rappresentante salvato correttamente.");
+
+        // reset solo in create
+        setForm({
+          nome_cognom: "",
+          codice_fiscale: "",
+          luogo_nascita: "",
+          data_nascita: "",
+          citta_residenz: "",
+          indirizzo_resid: "",
+          nazionalita: "",
+          tipo_doc: "",
+          scadenza_doc: "",
+          allegato_doc: "",
+        });
+      }
+    } catch (e: any) {
+      setErrMsg(e?.message ?? "Errore salvataggio rappresentante legale");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const title = isEdit ? "Modifica Rappresentante" : "Nuovo Rappresentante";
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-      {/* RICERCA (come immagine 2) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ricerca e Filtri</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 bg-white border rounded-md px-3 py-2">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cerca per nominativo..."
-              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* TABELLA FORM */}
+    <div className="p-6 space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Elenco Rappresentanti</CardTitle>
-
+          <CardTitle>
+            Anticiclaggio • Rappresentanti • {title}
+          </CardTitle>
           <div className="flex gap-2">
-            <Button variant="secondary" type="button" onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}>
-              Nuovo
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => router.push("/antiriciclaggio/rappresentanti")}
+            >
+              Torna a elenco
             </Button>
-            <Button variant="outline" type="button" onClick={() => router.push("/antiriciclaggio")}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => router.push("/antiriciclaggio")}
+            >
               Torna al menù
             </Button>
           </div>
         </CardHeader>
 
         <CardContent>
-          <div className="rounded-lg border overflow-hidden bg-white">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[260px]">Nome e Cognome</TableHead>
-                  <TableHead className="min-w-[190px]">Codice Fiscale</TableHead>
-                  <TableHead className="min-w-[180px]">Tipo documento</TableHead>
-                  <TableHead className="min-w-[160px]">Scadenza documento</TableHead>
-                  <TableHead className="min-w-[180px]">Allegato documento</TableHead>
-                  <TableHead className="w-[180px] text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
+          {loadingRecord ? (
+            <div className="py-10 text-center text-muted-foreground">
+              Caricamento dati rappresentante...
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
+                  <Input
+                    id="nome_cognom"
+                    value={form.nome_cognom}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, nome_cognom: e.target.value }))
+                    }
+                    placeholder="Mario Rossi"
+                  />
+                </div>
 
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                      Caricamento in corso...
-                    </TableCell>
-                  </TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                      Nessun rappresentante trovato
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filtered.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.nome_cognom || "-"}</TableCell>
-                      <TableCell className="font-mono text-sm">{r.codice_fiscale || "-"}</TableCell>
-                      <TableCell className="text-sm">{r.tipo_doc || "-"}</TableCell>
-                      <TableCell className="text-sm">
-                        {r.scadenza_doc ? String(r.scadenza_doc).substring(0, 10) : "-"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {r.allegato_doc ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => void handleOpenDoc(r.allegato_doc as string)}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Apri allegato
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => openEdit(r)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                          Modifica nominativo
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                <div>
+                  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                  <Input
+                    id="codice_fiscale"
+                    value={form.codice_fiscale}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, codice_fiscale: e.target.value }))
+                    }
+                    placeholder="RSSMRA80A01H501U"
+                    maxLength={16}
+                  />
+                  {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
+                    <p className="text-sm text-red-500 mt-1">
+                      Codice fiscale non valido
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="nazionalita">Nazionalità</Label>
+                  <Input
+                    id="nazionalita"
+                    value={form.nazionalita}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, nazionalita: e.target.value }))
+                    }
+                    placeholder="Italiana"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="luogo_nascita">Luogo nascita</Label>
+                  <Input
+                    id="luogo_nascita"
+                    value={form.luogo_nascita}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, luogo_nascita: e.target.value }))
+                    }
+                    placeholder="Roma"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="data_nascita">Data nascita</Label>
+                  <Input
+                    id="data_nascita"
+                    type="date"
+                    value={form.data_nascita}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, data_nascita: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="citta_residenz">Città residenza</Label>
+                  <Input
+                    id="citta_residenz"
+                    value={form.citta_residenz}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, citta_residenz: e.target.value }))
+                    }
+                    placeholder="Milano"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
+                  <Input
+                    id="indirizzo_resid"
+                    value={form.indirizzo_resid}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))
+                    }
+                    placeholder="Via Roma 10"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_doc">Tipo documento</Label>
+                  <Select
+                    value={form.tipo_doc || undefined}
+                    onValueChange={(v) =>
+                      setForm((p) => ({ ...p, tipo_doc: v as any }))
+                    }
+                  >
+                    <SelectTrigger id="tipo_doc">
+                      <SelectValue placeholder="Seleziona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Carta di identità">
+                        Carta di identità
+                      </SelectItem>
+                      <SelectItem value="Passaporto">Passaporto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+                  <Input
+                    id="scadenza_doc"
+                    type="date"
+                    value={form.scadenza_doc}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, scadenza_doc: e.target.value }))
+                    }
+                  />
+                </div>
+
+                {/* Allegato */}
+                <div className="md:col-span-2">
+                  <Label htmlFor="allegato_doc">Allegato documento</Label>
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void handleUploadDoc(f);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                    <Input
+                      id="allegato_doc"
+                      type="text"
+                      value={form.allegato_doc ? "Documento allegato" : ""}
+                      readOnly
+                      placeholder="Nessun documento allegato"
+                      className="cursor-default"
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={uploading}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        {uploading ? "Caricamento..." : "Allega documento"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!form.allegato_doc}
+                        onClick={() => void handleOpenDoc()}
+                      >
+                        Apri
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={!form.allegato_doc || uploading}
+                        onClick={handleRemoveDoc}
+                      >
+                        Rimuovi
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
+              {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+
+              {/* Debug (rimuovi quando ok) */}
+              <p className="text-xs text-muted-foreground">
+                Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME} | Mode:{" "}
+                {isEdit ? `EDIT (${editingId})` : "CREATE"}
+              </p>
+
+              <div className="flex gap-2">
+                <Button type="submit" disabled={loading || !canSave}>
+                  {loading ? "Salvataggio..." : isEdit ? "Salva modifiche" : "Salva dati"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setForm({
+                      nome_cognom: "",
+                      codice_fiscale: "",
+                      luogo_nascita: "",
+                      data_nascita: "",
+                      citta_residenz: "",
+                      indirizzo_resid: "",
+                      nazionalita: "",
+                      tipo_doc: "",
+                      scadenza_doc: "",
+                      allegato_doc: "",
+                    })
+                  }
+                >
+                  Pulisci
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
-
-      {/* DIALOG MODIFICA NOMINATIVO */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Modifica nominativo</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="nome_cognom">Nome e Cognome</Label>
-              <Input
-                id="nome_cognom"
-                value={newNome}
-                onChange={(e) => setNewNome(e.target.value)}
-                placeholder="Es. Mario Rossi"
-              />
-            </div>
-
-            {editing?.codice_fiscale ? (
-              <p className="text-xs text-muted-foreground">
-                CF: <span className="font-mono">{editing.codice_fiscale}</span>
-              </p>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeEdit}>
-              Annulla
-            </Button>
-            <Button type="button" onClick={() => void saveEdit()}>
-              Salva
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
