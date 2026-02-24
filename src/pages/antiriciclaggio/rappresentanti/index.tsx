@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -18,8 +18,7 @@ import {
 import { useStudio } from "@/contexts/StudioContext";
 
 // -----------------------
-// Codice Fiscale validator (formale + checksum)
-// Supporta omocodia (parzialmente) e verifica checksum.
+// Codice Fiscale validator
 // -----------------------
 const CF_RE =
   /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
@@ -41,13 +40,9 @@ function normalizeCF(cf: string) {
   return (cf || "").trim().toUpperCase();
 }
 
-function isValidCFFormat(cf: string) {
-  return CF_RE.test(cf);
-}
-
 function cfToDigitsForChecksum(cf: string) {
   const chars = cf.split("");
-  const idxs = [6, 7, 9, 10, 12, 13, 14]; // 0-based
+  const idxs = [6, 7, 9, 10, 12, 13, 14];
   for (const i of idxs) {
     const c = chars[i];
     if (OMO_MAP[c]) chars[i] = OMO_MAP[c];
@@ -146,37 +141,29 @@ function computeCFCheckChar(cf15: string) {
 
 function isValidCF(cfRaw: string) {
   const cf = normalizeCF(cfRaw);
-  if (!isValidCFFormat(cf)) return false;
+  if (!CF_RE.test(cf)) return false;
   const cfNorm = cfToDigitsForChecksum(cf);
   const expected = computeCFCheckChar(cfNorm.substring(0, 15));
   return expected === cfNorm[15];
 }
 
-// -----------------------
-// DB mapping notes (dal tuo schema):
-// studio_id, nome_cognom, codice_fiscale, luogo_nascita, data_nascita,
-// citta_residenz, indirizzo_resid, nazionalita, carica,
-// tipo_doc, scadenza_doc, allegato_doc
-// -----------------------
 type FormState = {
   nome_cognom: string;
   codice_fiscale: string;
   luogo_nascita: string;
-  data_nascita: string; // yyyy-mm-dd
+  data_nascita: string;
   citta_residenz: string;
   indirizzo_resid: string;
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
-  scadenza_doc: string; // yyyy-mm-dd
-  allegato_doc: string; // ✅ URL pubblico (o stringa vuota)
+  scadenza_doc: string;
+  allegato_doc: string; // URL pubblico (o stringa vuota)
 };
 
 export default function RappresentantiPage() {
   const router = useRouter();
   const { studioId } = useStudio() as any;
-
-  // ✅ id effettivo usato in tutto (evita studioIdEffettivo non definito)
-  const studioIdEffettivo = studioId as string | null;
+  const studioIdEffettivo = (studioId as string) || null;
 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -201,12 +188,10 @@ export default function RappresentantiPage() {
   const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
   const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
 
-  // Required only (doc fields are OPTIONAL)
   const canSave = useMemo(() => {
     return !!studioIdEffettivo && form.nome_cognom.trim().length > 0 && cfOk;
   }, [studioIdEffettivo, form.nome_cognom, cfOk]);
 
-  // ✅ Upload doc: salva URL pubblico in allegato_doc (bucket pubblico)
   async function handleUploadDoc(file: File) {
     if (!studioIdEffettivo) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
@@ -227,7 +212,6 @@ export default function RappresentantiPage() {
 
       if (upErr) throw upErr;
 
-      // ✅ Salviamo URL (non path)
       const { data } = supabase.storage.from("documenti").getPublicUrl(path);
       const publicUrl = data?.publicUrl;
 
@@ -263,7 +247,6 @@ export default function RappresentantiPage() {
 
     setLoading(true);
     try {
-      // Optional doc fields: if empty -> null
       const payload = {
         studio_id: studioIdEffettivo,
         nome_cognom: form.nome_cognom.trim(),
@@ -275,7 +258,7 @@ export default function RappresentantiPage() {
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null, // ✅ URL
+        allegato_doc: form.allegato_doc || null,
       };
 
       const { error } = await (supabase as any).from("rapp_legali").insert(payload);
@@ -294,8 +277,6 @@ export default function RappresentantiPage() {
         scadenza_doc: "",
         allegato_doc: "",
       });
-
-      // router.push("/rapp-legali/elencorapp");
     } catch (e: any) {
       setErrMsg(e?.message ?? "Errore inserimento rappresentante legale");
     } finally {
@@ -309,11 +290,7 @@ export default function RappresentantiPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => router.push("/rapp-legali/elencorapp")}
-            >
+            <Button variant="secondary" type="button" onClick={() => router.push("/rapp-legali/elencorapp")}>
               Vai a elenco
             </Button>
             <Button variant="outline" type="button" onClick={() => router.push("/anticiclaggio")}>
@@ -429,7 +406,7 @@ export default function RappresentantiPage() {
               <div className="md:col-span-2">
                 <Label htmlFor="allegato_doc">Allegato documento</Label>
 
-                {/* ✅ input file nascosto (UNA sola volta) */}
+                {/* ✅ Input file nascosto */}
                 <input
                   ref={fileRef}
                   type="file"
@@ -445,18 +422,26 @@ export default function RappresentantiPage() {
                 <div className="flex flex-col md:flex-row gap-3 md:items-center">
                   <Input
                     id="allegato_doc"
-                    type="url"
-                    value={form.allegato_doc}
+                    type="text"
+                    value={form.allegato_doc ? "Documento allegato" : ""}
                     readOnly
                     placeholder="Nessun documento allegato"
+                    className="cursor-default"
                   />
 
                   <div className="flex gap-2">
+                    {/* ✅ Bottone che apre la selezione file */}
                     <Button
                       type="button"
                       variant="secondary"
-                      disabled={uploading || !studioIdEffettivo}
-                      onClick={() => fileRef.current?.click()}
+                      disabled={uploading}
+                      onClick={() => {
+                        if (!studioIdEffettivo) {
+                          setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
+                          return;
+                        }
+                        fileRef.current?.click();
+                      }}
                     >
                       {uploading ? "Caricamento..." : "Allega documento"}
                     </Button>
@@ -483,7 +468,7 @@ export default function RappresentantiPage() {
 
                 {form.allegato_doc && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Documento allegato: <span className="font-mono">{form.allegato_doc}</span>
+                    URL documento: <span className="font-mono">{form.allegato_doc}</span>
                   </p>
                 )}
               </div>
