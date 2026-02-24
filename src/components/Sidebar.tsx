@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { ShieldCheck } from "lucide-react";
 import type { Database } from "@/lib/supabase/types";
 import {
@@ -38,10 +38,7 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export function Sidebar({
-  mobileOpen = false,
-  onClose = () => {},
-}: SidebarProps) {
+export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<Utente | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
@@ -49,40 +46,10 @@ export function Sidebar({
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
   const [promemoriaAttivi, setPromemoriaAttivi] = useState(0);
 
-  useEffect(() => {
-    loadCurrentUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadMessaggiNonLetti();
-      loadPromemoriaAttivi();
-
-      // Aggiorna ogni 30 secondi
-      const interval = setInterval(() => {
-        loadMessaggiNonLetti();
-        loadPromemoriaAttivi();
-      }, 30000);
-
-      return () => clearInterval(interval);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-  const handler = () => {
-    loadPromemoriaAttivi();
-  };
-
-  window.addEventListener("promemoria-updated", handler);
-
-  return () => {
-    window.removeEventListener("promemoria-updated", handler);
-  };
-}, []);
-
   const loadCurrentUser = async () => {
     try {
+      const supabase = getSupabaseClient();
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -94,9 +61,7 @@ export function Sidebar({
           .eq("email", session.user.email)
           .single();
 
-        if (utente) {
-          setCurrentUser(utente);
-        }
+        if (utente) setCurrentUser(utente);
       }
     } catch (error) {
       console.error("Errore caricamento utente:", error);
@@ -110,9 +75,7 @@ export function Sidebar({
 
     try {
       const { messaggioService } = await import("@/services/messaggioService");
-      const count = await messaggioService.getMessaggiNonLettiCount(
-        currentUser.id
-      );
+      const count = await messaggioService.getMessaggiNonLettiCount(currentUser.id);
       setMessaggiNonLetti(count);
     } catch (error) {
       console.error("Errore caricamento messaggi non letti:", error);
@@ -121,7 +84,8 @@ export function Sidebar({
 
   const loadPromemoriaAttivi = async () => {
     try {
-      // Ottieni l'utente corrente (auth.users)
+      const supabase = getSupabaseClient();
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -131,7 +95,6 @@ export function Sidebar({
         return;
       }
 
-      // Conta SOLO i promemoria con working_progress = "Aperto"
       const { count, error } = await supabase
         .from("tbpromemoria")
         .select("*", { count: "exact", head: true })
@@ -147,11 +110,39 @@ export function Sidebar({
     }
   };
 
+  useEffect(() => {
+    void loadCurrentUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    void loadMessaggiNonLetti();
+    void loadPromemoriaAttivi();
+
+    const interval = setInterval(() => {
+      void loadMessaggiNonLetti();
+      void loadPromemoriaAttivi();
+    }, 30000);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  useEffect(() => {
+    const handler = () => {
+      void loadPromemoriaAttivi();
+    };
+
+    window.addEventListener("promemoria-updated", handler);
+    return () => window.removeEventListener("promemoria-updated", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleMenu = (label: string) => {
     setExpandedMenus((prev) =>
-      prev.includes(label)
-        ? prev.filter((item) => item !== label)
-        : [...prev, label]
+      prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]
     );
   };
 
@@ -215,16 +206,16 @@ export function Sidebar({
       icon: <FolderOpen className="h-5 w-5" />,
       href: "/cassetti-fiscali",
     },
-  {
-  label: "Antiriciclaggio",
-  icon: <ShieldCheck className="h-5 w-5" />,
-  children: [
-    { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
-    { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
-    { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
-    { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
-  ],
-},
+    {
+      label: "Antiriciclaggio",
+      icon: <ShieldCheck className="h-5 w-5" />,
+      children: [
+        { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
+        { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
+        { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
+        { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
+      ],
+    },
     {
       label: "Clienti",
       icon: <Users className="h-5 w-5" />,
@@ -250,11 +241,9 @@ export function Sidebar({
   const isActive = (href: string) => router.pathname === href;
 
   const renderMenuItem = (item: MenuItem, depth: number = 0) => {
-    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") {
-      return null;
-    }
+    if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
 
-    const hasChildren = item.children && item.children.length > 0;
+    const hasChildren = !!(item.children && item.children.length > 0);
     const isExpanded = expandedMenus.includes(item.label);
 
     if (hasChildren) {
@@ -271,12 +260,9 @@ export function Sidebar({
               {item.icon}
               <span className="font-medium">{item.label}</span>
             </div>
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
+
           {isExpanded && (
             <div className="ml-4 mt-1 space-y-1">
               {item.children?.map((child) => renderMenuItem(child, depth + 1))}
@@ -327,7 +313,7 @@ export function Sidebar({
     return (
       <aside className="w-64 bg-white border-r border-gray-200 min-h-screen p-4">
         <div className="flex items-center justify-center py-8">
-          <div className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </aside>
     );
@@ -336,10 +322,7 @@ export function Sidebar({
   return (
     <>
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
       )}
 
       <aside
