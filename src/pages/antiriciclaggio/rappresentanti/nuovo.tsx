@@ -137,7 +137,7 @@ export default function RappresentantiPage() {
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       setErrMsg(null);
 
@@ -198,7 +198,7 @@ export default function RappresentantiPage() {
 
   // 1) Verifica esistenza bucket (così l'errore è chiarissimo)
   async function assertBucketExists() {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     const { data, error } = await supabase.storage.listBuckets();
     if (error) throw error;
@@ -212,7 +212,7 @@ export default function RappresentantiPage() {
 
   // 2) Decide URL: se bucket pubblico -> publicUrl, se privato -> signedUrl
   async function getOpenableUrl(path: string) {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
     const publicUrl = pub?.publicUrl;
@@ -329,7 +329,7 @@ export default function RappresentantiPage() {
      SUBMIT
      ========================================================= */
   async function handleSubmit(e: React.FormEvent) {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     e.preventDefault();
     setOkMsg(null);
