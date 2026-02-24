@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 
 type UseRequireAuthResult = {
@@ -18,6 +18,8 @@ export function useRequireAuth(): UseRequireAuthResult {
 
     const sync = async () => {
       try {
+        const supabase = getSupabaseClient();
+
         const { data, error } = await supabase.auth.getSession();
         if (cancelled) return;
 
@@ -36,7 +38,9 @@ export function useRequireAuth(): UseRequireAuthResult {
       }
     };
 
-    sync();
+    void sync();
+
+    const supabase = getSupabaseClient();
 
     // ✅ tieni allineato lo stato quando cambia auth
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
