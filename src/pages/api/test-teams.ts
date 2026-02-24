@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { microsoftGraphService } from "@/services/microsoftGraphService";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const supabase = getSupabaseClient() as any;
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Metodo non consentito" });
   }
