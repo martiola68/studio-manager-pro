@@ -111,14 +111,11 @@ export default function RappresentantiIndexPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
 
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => router.push("/antiriciclaggio")}>
-              Torna al menù
-            </Button>
-            <Button onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}>
-              Nuovo rappresentante
-            </Button>
-          </div>
+         <div className="flex gap-2">
+  <Button type="button" onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}>
+    Nuovo rappresentante
+  </Button>
+</div>
         </CardHeader>
 
         <CardContent className="space-y-4">
