@@ -38,55 +38,23 @@ export const cassettiFiscaliService = {
     viewMode: "gestori" | "societa" = "gestori"
   ) {
     const source =
-      viewMode === "gestori"
-        ? "v_cassetti_fiscali"
-        : "v_clienti_con_cassetto";
+      viewMode === "gestori" ? "v_cassetti_fiscali" : "v_clienti_con_cassetto";
 
-    // campi necessari alla tua pagina + booleani attiva
-    const selectFields = `
-      id,
-      nominativo,
-      username,
-      password1,
-      password2,
-      pin,
-      pw_iniziale,
-      pw_attiva1,
-      pw_attiva2,
-      note,
-      studio_id
-    `;
+    // ⬅️ ROLLBACK: select("*") come prima, così non rompiamo la view "societa"
+    let query = (supabase as any).from(source).select("*").order("nominativo");
 
-    // ⚠️ cast a any perché i types Database non includono le Views
-    let query = (supabase as any)
-      .from(source)
-      .select(selectFields)
-      .order("nominativo");
-
-    // filtro SOLO per Gestori
-    if (studioId && viewMode === "gestori") {
+    // filtro SOLO per gestori (come prima)
+    if (studioId && source !== "v_clienti_con_cassetto") {
       query = query.eq("studio_id", studioId);
     }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    // normalizza booleani (a volte arrivano 0/1 o "t"/"f")
-    return (data ?? []).map((r: any) => ({
-      ...r,
-      pw_attiva1:
-        r.pw_attiva1 === true ||
-        r.pw_attiva1 === 1 ||
-        r.pw_attiva1 === "1" ||
-        r.pw_attiva1 === "t" ||
-        r.pw_attiva1 === "true",
-      pw_attiva2:
-        r.pw_attiva2 === true ||
-        r.pw_attiva2 === 1 ||
-        r.pw_attiva2 === "1" ||
-        r.pw_attiva2 === "t" ||
-        r.pw_attiva2 === "true",
-    })) as CassettoFiscale[];
+    // 🔍 Debug (puoi lasciarlo un attimo e poi rimuoverlo)
+    // console.log("[getCassettiFiscali]", viewMode, "sample:", data?.[0]);
+
+    return data || [];
   },
 
   async getById(id: string) {
