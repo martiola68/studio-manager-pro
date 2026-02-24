@@ -40,3 +40,17 @@ export function getSupabaseClient(): SupabaseClient<Database> {
 
   return browserClient;
 }
+
+/**
+ * ✅ Alias di compatibilità
+ * Permette di continuare a usare:
+ *   import { supabase } from "@/lib/supabase/client";
+ * senza dover modificare altri file
+ */
+export const supabase: SupabaseClient<Database> = (() => {
+  if (typeof window === "undefined") {
+    // evita crash in build/SSR se qualcuno importa supabase per sbaglio
+    return null as unknown as SupabaseClient<Database>;
+  }
+  return getSupabaseClient();
+})();
