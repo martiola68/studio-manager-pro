@@ -147,7 +147,7 @@ export default function RappresentantiFormPage() {
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
       setErrMsg(null);
 
       // 1) localStorage
@@ -203,7 +203,7 @@ export default function RappresentantiFormPage() {
     if (!editingId) return;
 
     const loadRecord = async () => {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
       setLoadingRecord(true);
       setErrMsg(null);
       setOkMsg(null);
@@ -252,7 +252,7 @@ export default function RappresentantiFormPage() {
      STORAGE HELPERS
      ========================================================= */
   async function assertBucketExists() {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
     const { data, error } = await supabase.storage.listBuckets();
     if (error) throw error;
     const ok = (data || []).some((b) => b.name === BUCKET_NAME);
@@ -346,7 +346,7 @@ export default function RappresentantiFormPage() {
      SUBMIT (CREATE o UPDATE)
      ========================================================= */
   async function handleSubmit(e: React.FormEvent) {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     e.preventDefault();
     setOkMsg(null);
