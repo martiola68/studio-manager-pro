@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClientOnlyAuthCallback() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState("");
@@ -20,14 +21,17 @@ export default function ClientOnlyAuthCallback() {
   const [authType, setAuthType] = useState<string>("");
 
   useEffect(() => {
-    handleAuthCallback();
+    void handleAuthCallback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAuthCallback = async () => {
     try {
+      const supabase = getSupabaseClient();
+
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const urlParams = new URLSearchParams(window.location.search);
-      
+
       const type = urlParams.get("type") || hashParams.get("type");
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
@@ -39,10 +43,11 @@ export default function ClientOnlyAuthCallback() {
         return;
       }
 
+      // Caso: callback con token in hash (#access_token=...&refresh_token=...)
       if (accessToken && refreshToken) {
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
-          refresh_token: refreshToken
+          refresh_token: refreshToken,
         });
 
         if (sessionError) {
@@ -51,6 +56,7 @@ export default function ClientOnlyAuthCallback() {
           return;
         }
 
+        // recovery / invite / signup -> chiedi password
         if (type === "recovery" || type === "invite" || type === "signup") {
           setAuthType(type);
           setNeedsPassword(true);
@@ -62,8 +68,18 @@ export default function ClientOnlyAuthCallback() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      // Caso: nessun token in hash -> provo a leggere sessione corrente
+      const {
+        data: { session },
+        error: getSessionError,
+      } = await supabase.auth.getSession();
+
+      if (getSessionError) {
+        setError("Sessione non valida. Torna al login.");
+        setLoading(false);
+        return;
+      }
+
       if (session) {
         if (type === "recovery" || type === "invite") {
           setAuthType(type);
@@ -100,19 +116,22 @@ export default function ClientOnlyAuthCallback() {
     try {
       setUpdating(true);
 
+      const supabase = getSupabaseClient();
+
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+        password,
       });
 
       if (updateError) throw updateError;
 
       toast({
         title: "✅ Password impostata!",
-        description: "Accesso in corso..."
+        description: "Accesso in corso...",
       });
 
       setTimeout(() => router.push("/dashboard"), 1000);
     } catch (err) {
+      console.error("Password update error:", err);
       setError("Errore durante l'impostazione della password");
       setUpdating(false);
     }
@@ -123,7 +142,7 @@ export default function ClientOnlyAuthCallback() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 text-center">
-            <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-600">Verifica credenziali...</p>
           </CardContent>
         </Card>
@@ -162,6 +181,7 @@ export default function ClientOnlyAuthCallback() {
             </div>
             <CardTitle className="text-2xl">Imposta la tua Password</CardTitle>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSetPassword} className="space-y-4">
               {error && (
@@ -171,48 +191,38 @@ export default function ClientOnlyAuthCallback() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="password">Nuova Password *</Label>
+                <Label htmlFor="password">Nuova Password</Label>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Almeno 8 caratteri"
+                  placeholder="Minimo 8 caratteri"
                   required
-                  disabled={updating}
-                  minLength={8}
-                  className="h-11"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm_password">Conferma Password *</Label>
+                <Label htmlFor="confirmPassword">Conferma Password</Label>
                 <Input
-                  id="confirm_password"
+                  id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ripeti la password"
                   required
-                  disabled={updating}
-                  minLength={8}
-                  className="h-11"
                 />
               </div>
 
-              <Button type="submit" className="w-full h-11" disabled={updating}>
-                {updating ? (
-                  <>
-                    <div className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Salvataggio...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-5 w-5 mr-2" />
-                    Conferma e Accedi
-                  </>
-                )}
+              <Button type="submit" className="w-full" disabled={updating}>
+                {updating ? "Salvataggio..." : "Imposta Password"}
               </Button>
+
+              {authType && (
+                <p className="text-xs text-gray-500 text-center">
+                  Tipo operazione: <span className="font-medium">{authType}</span>
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -220,5 +230,7 @@ export default function ClientOnlyAuthCallback() {
     );
   }
 
+  // Fallback: se non stiamo caricando e non ci sono errori / password,
+  // rimandiamo al dashboard (o login) per sicurezza.
   return null;
 }
