@@ -1,15 +1,34 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { contattoService } from "@/services/contattoService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Edit, Trash2, Search, Plus, Upload, Download, FileSpreadsheet, AlertCircle, Phone, Mail, Smartphone, User, Globe } from "lucide-react";
+import {
+  UserCircle,
+  Edit,
+  Trash2,
+  Search,
+  Plus,
+  Download,
+  FileSpreadsheet,
+  Phone,
+  Mail,
+  Smartphone,
+  User
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
@@ -19,6 +38,7 @@ type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 export default function ContattiPage() {
   const router = useRouter();
   const { toast } = useToast();
+
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [filteredContatti, setFilteredContatti] = useState<Contatto[]>([]);
@@ -31,7 +51,6 @@ export default function ContattiPage() {
   const [importing, setImporting] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
 
-  // Stato del form con i nuovi campi
   const [formData, setFormData] = useState({
     cognome: "",
     nome: "",
@@ -50,19 +69,29 @@ export default function ContattiPage() {
 
   useEffect(() => {
     checkAuthAndLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     filterContatti();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contatti, searchQuery, letterFilter]);
 
   const checkAuthAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+        error
+      } = await supabase.auth.getSession();
+
+      if (error) throw error;
+
       if (!session) {
         router.push("/login");
         return;
       }
+
       await loadContatti();
     } catch (error) {
       console.error("Errore:", error);
@@ -92,18 +121,17 @@ export default function ContattiPage() {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.cognome.toLowerCase().includes(query) ||
-        (c.nome || "").toLowerCase().includes(query) ||
-        (c.email?.toLowerCase() || "").includes(query) ||
-        (c.cell?.toLowerCase() || "").includes(query)
-      );
+      filtered = filtered.filter((c) => {
+        const cognome = (c.cognome || "").toLowerCase();
+        const nome = (c.nome || "").toLowerCase();
+        const email = (c.email || "").toLowerCase();
+        const cell = (c.cell || "").toLowerCase();
+        return cognome.includes(query) || nome.includes(query) || email.includes(query) || cell.includes(query);
+      });
     }
 
     if (letterFilter) {
-      filtered = filtered.filter(c =>
-        c.cognome.toUpperCase().startsWith(letterFilter)
-      );
+      filtered = filtered.filter((c) => (c.cognome || "").toUpperCase().startsWith(letterFilter));
     }
 
     setFilteredContatti(filtered);
@@ -113,12 +141,9 @@ export default function ContattiPage() {
     e.preventDefault();
 
     try {
-      // Preparazione dati per salvataggio
-      // Nome inviato come stringa vuota se mancante (richiesto dal DB)
-      // Altri campi opzionali come null se vuoti
       const dataToSave = {
         cognome: formData.cognome,
-        nome: formData.nome || "", 
+        nome: formData.nome || "",
         cell: formData.cell || null,
         tel: formData.tel || null,
         altro_telefono: formData.altro_telefono || null,
@@ -243,10 +268,7 @@ export default function ContattiPage() {
       ]
     ];
 
-    const csvContent = [
-      headers.join(","),
-      ...exampleRows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
+    const csvContent = [headers.join(","), ...exampleRows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -262,30 +284,30 @@ export default function ContattiPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
-        toast({
-          title: "Formato non valido",
-          description: "Seleziona un file Excel (.xlsx, .xls) o CSV",
-          variant: "destructive"
-        });
-        return;
-      }
-      setCsvFile(file);
-      parseFile(file);
+    if (!file) return;
+
+    if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      toast({
+        title: "Formato non valido",
+        description: "Seleziona un file Excel (.xlsx, .xls) o CSV",
+        variant: "destructive"
+      });
+      return;
     }
+
+    setCsvFile(file);
+    parseFile(file);
   };
 
   const parseFile = async (file: File) => {
     try {
       if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        // Gestione Excel
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-        
+
         if (jsonData.length < 2) {
           toast({
             title: "File vuoto",
@@ -295,7 +317,20 @@ export default function ContattiPage() {
           return;
         }
 
-        const headers = ["cognome", "nome", "cell", "tel", "altro_telefono", "email", "pec", "email_secondaria", "email_altro", "contatto_principale", "note"];
+        const headers = [
+          "cognome",
+          "nome",
+          "cell",
+          "tel",
+          "altro_telefono",
+          "email",
+          "pec",
+          "email_secondaria",
+          "email_altro",
+          "contatto_principale",
+          "note"
+        ];
+
         const excelRows = jsonData.slice(1).map((row: any[], index) => {
           const rowData: any = { _lineNumber: index + 2 };
           headers.forEach((header, i) => {
@@ -306,10 +341,9 @@ export default function ContattiPage() {
 
         setPreviewData(excelRows);
       } else {
-        // Gestione CSV
         const text = await file.text();
-        const lines = text.split("\n").filter(line => line.trim());
-        
+        const lines = text.split("\n").filter((line) => line.trim());
+
         if (lines.length < 2) {
           toast({
             title: "File vuoto",
@@ -319,15 +353,13 @@ export default function ContattiPage() {
           return;
         }
 
-        const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
+        const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
         const csvRows = lines.slice(1).map((line, index) => {
-          const values = line.split(",").map(v => v.trim().replace(/"/g, ""));
+          const values = line.split(",").map((v) => v.trim().replace(/"/g, ""));
           const row: any = { _lineNumber: index + 2 };
-          
           headers.forEach((header, i) => {
             row[header] = values[i] || "";
           });
-          
           return row;
         });
 
@@ -347,8 +379,7 @@ export default function ContattiPage() {
     const errors: string[] = [];
 
     if (!row.cognome?.trim()) errors.push("Cognome/Denominazione obbligatorio");
-    
-    // Validazioni di base per email
+
     [row.email, row.pec, row.email_secondaria, row.email_altro].forEach((email, idx) => {
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         const fieldNames = ["Email", "PEC", "Email secondaria", "Email altro"];
@@ -356,10 +387,7 @@ export default function ContattiPage() {
       }
     });
 
-    return {
-      valid: errors.length === 0,
-      errors
-    };
+    return { valid: errors.length === 0, errors };
   };
 
   const handleImport = async () => {
@@ -380,7 +408,7 @@ export default function ContattiPage() {
 
       for (const row of previewData) {
         const validation = validateContatto(row);
-        
+
         if (!validation.valid) {
           errors++;
           errorDetails.push(`Riga ${row._lineNumber}: ${validation.errors.join(", ")}`);
@@ -390,7 +418,7 @@ export default function ContattiPage() {
         try {
           const contattoData = {
             cognome: row.cognome.trim(),
-            nome: row.nome?.trim() || "", // Importante: stringa vuota se manca
+            nome: row.nome?.trim() || "",
             cell: row.cell?.trim() || null,
             tel: row.tel?.trim() || null,
             altro_telefono: row.altro_telefono?.trim() || null,
@@ -425,7 +453,6 @@ export default function ContattiPage() {
       setCsvFile(null);
       setPreviewData([]);
       await loadContatti();
-
     } catch (error) {
       console.error("Errore importazione:", error);
       toast({
@@ -463,6 +490,7 @@ export default function ContattiPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rubrica Contatti</h1>
             <p className="text-sm md:text-base text-gray-500 mt-1">Gestisci i contatti della rubrica</p>
           </div>
+
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <DialogTrigger asChild>
@@ -471,12 +499,11 @@ export default function ContattiPage() {
                   Importa Excel
                 </Button>
               </DialogTrigger>
+
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
                 <DialogHeader>
                   <DialogTitle>Importazione Contatti da Excel/CSV</DialogTitle>
-                  <DialogDescription>
-                    Carica un file Excel (.xlsx, .xls) o CSV per importare più contatti contemporaneamente
-                  </DialogDescription>
+                  <DialogDescription>Carica un file Excel (.xlsx, .xls) o CSV per importare più contatti contemporaneamente</DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6">
@@ -494,11 +521,7 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  <Button
-                    onClick={downloadTemplate}
-                    variant="outline"
-                    className="w-full"
-                  >
+                  <Button onClick={downloadTemplate} variant="outline" className="w-full">
                     <Download className="h-4 w-4 mr-2" />
                     Scarica Template CSV
                   </Button>
@@ -517,11 +540,7 @@ export default function ContattiPage() {
                   {previewData.length > 0 && (
                     <div className="space-y-4">
                       <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button
-                          onClick={handleImport}
-                          disabled={importing}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
+                        <Button onClick={handleImport} disabled={importing} className="flex-1 bg-green-600 hover:bg-green-700">
                           {importing ? "Importazione..." : `Importa ${previewData.length} Contatti`}
                         </Button>
                       </div>
@@ -531,30 +550,27 @@ export default function ContattiPage() {
               </DialogContent>
             </Dialog>
 
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
+            <Dialog
+              open={dialogOpen}
+              onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Nuovo Contatto
                 </Button>
               </DialogTrigger>
+
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Inserisci i dati del contatto. I campi contrassegnati con * sono obbligatori.
-                  </DialogDescription>
+                  <DialogTitle>{editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}</DialogTitle>
+                  <DialogDescription>Inserisci i dati del contatto. I campi contrassegnati con * sono obbligatori.</DialogDescription>
                 </DialogHeader>
-                
-                {/* FORM TABELLARE - 2 COLONNE */}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  
-                  {/* Riga 1: Cognome (1) e Nome (2) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cognome">Cognome/Denominazione *</Label>
@@ -577,7 +593,6 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  {/* Riga 2: Cellulare (3) e Telefono (4) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="cell">Cellulare</Label>
@@ -599,7 +614,6 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  {/* Riga 3: Altro telefono (5) e Email (6) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="altro_telefono">Altro Telefono</Label>
@@ -621,7 +635,6 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  {/* Riga 4: PEC (7) e Email Secondaria (8) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="pec">PEC</Label>
@@ -643,7 +656,6 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  {/* Riga 5: Email Altro (9) e Contatto Principale (10) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email_altro">Email Altro</Label>
@@ -665,7 +677,6 @@ export default function ContattiPage() {
                     </div>
                   </div>
 
-                  {/* Riga 6: Note (11) - Full width */}
                   <div className="space-y-2">
                     <Label htmlFor="note">Note</Label>
                     <Textarea
@@ -680,12 +691,7 @@ export default function ContattiPage() {
                     <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
                       {editingContatto ? "Aggiorna" : "Salva"} Contatto
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setDialogOpen(false)}
-                      className="w-full sm:w-auto"
-                    >
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
                       Annulla
                     </Button>
                   </div>
@@ -720,7 +726,7 @@ export default function ContattiPage() {
             >
               Tutti
             </Button>
-            {alphabet.map(letter => (
+            {alphabet.map((letter) => (
               <Button
                 key={letter}
                 variant={letterFilter === letter ? "default" : "outline"}
@@ -742,7 +748,9 @@ export default function ContattiPage() {
               <UserCircle className="h-16 w-16 mx-auto text-gray-300 mb-4" />
               <p className="text-gray-500 text-lg">Nessun contatto trovato</p>
               <p className="text-gray-400 text-sm mt-2">
-                {searchQuery || letterFilter ? "Prova a modificare i filtri di ricerca" : "Inizia aggiungendo il tuo primo contatto"}
+                {searchQuery || letterFilter
+                  ? "Prova a modificare i filtri di ricerca"
+                  : "Inizia aggiungendo il tuo primo contatto"}
               </p>
             </CardContent>
           </Card>
@@ -795,7 +803,7 @@ export default function ContattiPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                       {contatto.email && (
-                        <a 
+                        <a
                           href={`mailto:${contatto.email}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
@@ -805,7 +813,7 @@ export default function ContattiPage() {
                       )}
 
                       {contatto.pec && (
-                        <a 
+                        <a
                           href={`mailto:${contatto.pec}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
@@ -815,7 +823,7 @@ export default function ContattiPage() {
                       )}
 
                       {contatto.email_secondaria && (
-                        <a 
+                        <a
                           href={`mailto:${contatto.email_secondaria}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
                         >
@@ -825,7 +833,7 @@ export default function ContattiPage() {
                       )}
 
                       {contatto.cell && (
-                        <a 
+                        <a
                           href={`tel:${contatto.cell}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
                         >
@@ -833,9 +841,9 @@ export default function ContattiPage() {
                           <span>{contatto.cell}</span>
                         </a>
                       )}
-                      
+
                       {contatto.tel && (
-                        <a 
+                        <a
                           href={`tel:${contatto.tel}`}
                           className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
                         >
