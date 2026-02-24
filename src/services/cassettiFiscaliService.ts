@@ -46,9 +46,6 @@ export const cassettiFiscaliService = {
   query = query.eq("studio_id", studioId);
     }
 
-if (studioId && source !== "v_clienti_con_cassetto") {
-  query = query.eq("studio_id", studioId);
-}
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
