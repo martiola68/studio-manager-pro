@@ -16,10 +16,18 @@ type CassettoFiscaleUpdateClient = Omit<
 
 async function getAuthToken(): Promise<string> {
   const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
+  if (error) {
+    console.error("[cassettiFiscaliService] getSession error:", error);
+    throw new Error("Auth session error");
+  }
 
   const token = data?.session?.access_token;
-  if (!token) throw new Error("User not authenticated");
+  if (!token) {
+    console.error(
+      "[cassettiFiscaliService] ❌ No session found - user not authenticated"
+    );
+    throw new Error("No session found (user not authenticated)");
+  }
 
   return token;
 }
@@ -34,6 +42,7 @@ export const cassettiFiscaliService = {
         ? "v_cassetti_fiscali"
         : "v_clienti_con_cassetto";
 
+    // campi necessari alla tua pagina + booleani attiva
     const selectFields = `
       id,
       nominativo,
@@ -48,12 +57,13 @@ export const cassettiFiscaliService = {
       studio_id
     `;
 
-    let query = supabase
+    // ⚠️ cast a any perché i types Database non includono le Views
+    let query = (supabase as any)
       .from(source)
       .select(selectFields)
       .order("nominativo");
 
-    // 🔒 filtro SOLO per Gestori
+    // filtro SOLO per Gestori
     if (studioId && viewMode === "gestori") {
       query = query.eq("studio_id", studioId);
     }
@@ -61,21 +71,22 @@ export const cassettiFiscaliService = {
     const { data, error } = await query;
     if (error) throw error;
 
+    // normalizza booleani (a volte arrivano 0/1 o "t"/"f")
     return (data ?? []).map((r: any) => ({
       ...r,
-      pw_attiva1: Boolean(
+      pw_attiva1:
         r.pw_attiva1 === true ||
-          r.pw_attiva1 === 1 ||
-          r.pw_attiva1 === "1" ||
-          r.pw_attiva1 === "t"
-      ),
-      pw_attiva2: Boolean(
+        r.pw_attiva1 === 1 ||
+        r.pw_attiva1 === "1" ||
+        r.pw_attiva1 === "t" ||
+        r.pw_attiva1 === "true",
+      pw_attiva2:
         r.pw_attiva2 === true ||
-          r.pw_attiva2 === 1 ||
-          r.pw_attiva2 === "1" ||
-          r.pw_attiva2 === "t"
-      ),
-    }));
+        r.pw_attiva2 === 1 ||
+        r.pw_attiva2 === "1" ||
+        r.pw_attiva2 === "t" ||
+        r.pw_attiva2 === "true",
+    })) as CassettoFiscale[];
   },
 
   async getById(id: string) {
@@ -101,8 +112,13 @@ export const cassettiFiscaliService = {
       body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error("Create failed");
-    return res.json();
+    if (!res.ok) {
+      const raw = await res.text();
+      console.error("[cassettiFiscaliService] create failed:", raw);
+      throw new Error("Failed to create cassetto fiscale");
+    }
+
+    return (await res.json()) as CassettoFiscale;
   },
 
   async update(id: string, payload: CassettoFiscaleUpdateClient) {
@@ -117,8 +133,13 @@ export const cassettiFiscaliService = {
       body: JSON.stringify({ id, ...payload }),
     });
 
-    if (!res.ok) throw new Error("Update failed");
-    return res.json();
+    if (!res.ok) {
+      const raw = await res.text();
+      console.error("[cassettiFiscaliService] update failed:", raw);
+      throw new Error("Failed to update cassetto fiscale");
+    }
+
+    return (await res.json()) as CassettoFiscale;
   },
 
   async delete(id: string) {
