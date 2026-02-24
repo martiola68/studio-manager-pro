@@ -5,8 +5,15 @@ export const config = {
   api: { bodyParser: { sizeLimit: "15mb" } },
 };
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// ✅ IMPORTANTISSIMO: assicura runtime Node (no Edge)
+export const runtime = "nodejs";
+
+// ✅ env robuste
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE;
 
 // ✅ bucket coerente con la UI
 const BUCKET = "allegati";
@@ -16,14 +23,24 @@ function getExtFromName(name: string) {
   return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "";
 }
 
+function sanitizeFileName(name: string) {
+  return String(name || "file")
+    .trim()
+    .replace(/[^\w.\-]+/g, "_")
+    .replace(/_+/g, "_")
+    .slice(0, 180);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
+    if (req.method !== "POST") {
+      return res.status(405).json({ ok: false, error: "Method not allowed" });
+    }
 
     if (!supabaseUrl || !serviceRoleKey) {
       return res.status(500).json({
         ok: false,
-        error: "Missing env vars: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+        error: "Missing env vars: SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
       });
     }
 
@@ -44,34 +61,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       auth: { persistSession: false },
     });
 
-    // (opzionale) crea bucket se non esiste
+    // ✅ check bucket (senza autocreazione: più sicuro)
     const { data: buckets, error: bErr } = await supabaseAdmin.storage.listBuckets();
     if (bErr) return res.status(500).json({ ok: false, error: bErr.message });
 
     const exists = (buckets || []).some((b) => b.name === BUCKET);
     if (!exists) {
-      const { error: cErr } = await supabaseAdmin.storage.createBucket(BUCKET, { public: false });
-      if (cErr) {
-        return res.status(500).json({
-          ok: false,
-          error: `Impossibile creare bucket "${BUCKET}": ${cErr.message}`,
-        });
-      }
+      return res.status(500).json({
+        ok: false,
+        error: `Bucket "${BUCKET}" non trovato. Crealo in Supabase > Storage (case-sensitive).`,
+      });
     }
 
+    // base64 -> bytes
     const clean = String(base64).replace(/^data:.*;base64,/, "");
     const bytes = Buffer.from(clean, "base64");
 
-    const safeName = String(fileName).replace(/[^\w.\-]+/g, "_");
-    const path = `rapp_legali/${studioId}/${Date.now()}_${safeName}`;
+    // ✅ hard limit ~ 15MB (bytes)
+    const MAX_BYTES = 15 * 1024 * 1024;
+    if (bytes.length > MAX_BYTES) {
+      return res.status(413).json({ ok: false, error: "File troppo grande. Max 15MB." });
+    }
 
-    const { error: upErr } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(path, bytes, {
-        contentType: String(contentType),
-        upsert: true, // se preferisci non sovrascrivere: metti false
-        cacheControl: "3600",
-      });
+    const safeName = sanitizeFileName(String(fileName));
+    const path = `rapp_legali/${String(studioId)}/${Date.now()}_${safeName}`;
+
+    // content-type minimo
+    const ct = String(contentType || "application/octet-stream");
+
+    const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, {
+      contentType: ct,
+      upsert: true,
+      cacheControl: "3600",
+    });
 
     if (upErr) return res.status(500).json({ ok: false, error: upErr.message });
 
