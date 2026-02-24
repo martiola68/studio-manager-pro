@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,18 +20,19 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
   const loadUserAndStudio = async () => {
     try {
+      const supabase = getSupabaseClient();
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!session) {
         setCurrentUser(null);
-        // studio lo puoi lasciare com’è oppure svuotarlo:
-        // setStudio(null);
         return;
       }
 
       const email = session.user.email;
+
       if (email) {
         const { data: utente, error: utenteError } = await supabase
           .from("tbutenti")
@@ -55,23 +56,22 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   };
 
   useEffect(() => {
+    const supabase = getSupabaseClient();
+
     loadUserAndStudio();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_OUT" || !session) {
-          setCurrentUser(null);
-          // opzionale:
-          // setStudio(null);
-        } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-          loadUserAndStudio();
-        }
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        setCurrentUser(null);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        loadUserAndStudio();
       }
-    );
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
@@ -83,7 +83,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -125,9 +124,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
                 {currentUser.nome} {currentUser.cognome}
               </p>
               <p className="text-xs text-gray-500">
-                {currentUser.tipo_utente === "Admin"
-                  ? "Amministratore"
-                  : "Utente"}
+                {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
               </p>
             </div>
 
