@@ -17,8 +17,7 @@ import {
 /* =========================================================
    CONFIG
    ========================================================= */
-// ⚠️ METTI QUI IL NOME REALE DEL BUCKET (quello che vedi in Supabase > Storage)
-const BUCKET_NAME = "allegati"; // <-- CAMBIA (es: "allegati", "docs", "storage_docs", ecc.)
+const BUCKET_NAME = "allegati";
 
 /* =========================================================
    CODICE FISCALE VALIDATOR (formale + checksum)
@@ -105,7 +104,7 @@ type FormState = {
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string;
-  allegato_doc: string; // ✅ ORA: path stabile nel bucket (non URL)
+  allegato_doc: string; // path stabile nel bucket
 };
 
 export default function RappresentantiPage() {
@@ -138,10 +137,8 @@ export default function RappresentantiPage() {
   useEffect(() => {
     const loadStudioId = async () => {
       const supabase = getSupabaseClient() as any;
-
       setErrMsg(null);
 
-      // 1) localStorage
       if (typeof window !== "undefined") {
         const cached = localStorage.getItem("studio_id");
         if (cached) {
@@ -150,7 +147,6 @@ export default function RappresentantiPage() {
         }
       }
 
-      // 2) utente loggato (email)
       const { data: auth } = await supabase.auth.getUser();
       const email = auth?.user?.email;
       if (!email) {
@@ -158,7 +154,6 @@ export default function RappresentantiPage() {
         return;
       }
 
-      // 3) tbutenti via email
       const { data, error } = await supabase
         .from("tbutenti")
         .select("studio_id")
@@ -185,26 +180,42 @@ export default function RappresentantiPage() {
     void loadStudioId();
   }, []);
 
-  const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
+  const cf = useMemo(
+    () => normalizeCF(form.codice_fiscale),
+    [form.codice_fiscale]
+  );
   const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
 
   const canSave = useMemo(() => {
     return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
   }, [studioId, form.nome_cognom, cfOk]);
 
+  const resetForm = () => {
+    setForm({
+      nome_cognom: "",
+      codice_fiscale: "",
+      luogo_nascita: "",
+      data_nascita: "",
+      citta_residenz: "",
+      indirizzo_resid: "",
+      nazionalita: "",
+      tipo_doc: "",
+      scadenza_doc: "",
+      allegato_doc: "",
+    });
+    setOkMsg(null);
+    setErrMsg(null);
+  };
+
   /* =========================================================
      STORAGE HELPERS
      ========================================================= */
-
-  // 2) Decide URL: se bucket pubblico -> publicUrl, se privato -> signedUrl
   async function getOpenableUrl(path: string) {
     const supabase = getSupabaseClient() as any;
 
     const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
     const publicUrl = pub?.publicUrl;
 
-    // Prova se è apribile subito (bucket pubblico) con un check leggero
-    // Se fallisce (CORS o 401/403), fallback su signed URL.
     if (publicUrl) {
       try {
         await fetch(publicUrl, { method: "HEAD" });
@@ -216,7 +227,8 @@ export default function RappresentantiPage() {
 
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
-      .createSignedUrl(path, 60 * 10); // 10 minuti
+      .createSignedUrl(path, 60 * 10);
+
     if (error) throw error;
     return data.signedUrl;
   }
@@ -224,7 +236,6 @@ export default function RappresentantiPage() {
   /* =========================================================
      UPLOAD DOCUMENTO (via API server)
      ========================================================= */
-
   async function handleUploadDoc(file: File) {
     if (!studioId) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
@@ -236,9 +247,6 @@ export default function RappresentantiPage() {
     setOkMsg(null);
 
     try {
-      // opzionale ma utile: controlliamo che il bucket esista davvero
-
-      // 1) Converti file in base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result));
@@ -246,7 +254,6 @@ export default function RappresentantiPage() {
         reader.readAsDataURL(file);
       });
 
-      // 2) Upload tramite API server
       const resp = await fetch("/api/rapp-doc/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,7 +270,6 @@ export default function RappresentantiPage() {
         throw new Error(json?.error ?? "Upload fallito");
       }
 
-      // 3) Salviamo SOLO IL PATH (stabile)
       setForm((p) => ({
         ...p,
         allegato_doc: String(json.path),
@@ -278,20 +284,18 @@ export default function RappresentantiPage() {
   }
 
   /* =========================================================
-     APERTURA DOCUMENTO (signed URL via API)
+     APERTURA DOCUMENTO
      ========================================================= */
   async function handleOpenDoc() {
     if (!form.allegato_doc) return;
 
     try {
-      // 1) preferiamo API (come già avevi) per ottenere signedUrl
       const resp = await fetch(
         `/api/rapp-doc/url?path=${encodeURIComponent(form.allegato_doc)}`
       );
       const json = await resp.json();
 
       if (!resp.ok || !json?.ok) {
-        // 2) fallback: prova ad aprire direttamente (bucket pubblico) / signed direttamente
         const url = await getOpenableUrl(form.allegato_doc);
         window.open(url, "_blank", "noopener,noreferrer");
         return;
@@ -303,9 +307,6 @@ export default function RappresentantiPage() {
     }
   }
 
-  /* =========================================================
-     RIMOZIONE DOCUMENTO (solo frontend)
-     ========================================================= */
   function handleRemoveDoc() {
     setForm((p) => ({ ...p, allegato_doc: "" }));
   }
@@ -326,7 +327,9 @@ export default function RappresentantiPage() {
     }
 
     if (!canSave) {
-      setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
+      setErrMsg(
+        "Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri)."
+      );
       return;
     }
 
@@ -350,18 +353,7 @@ export default function RappresentantiPage() {
       if (error) throw error;
 
       setOkMsg("✅ Rappresentante salvato correttamente.");
-      setForm({
-        nome_cognom: "",
-        codice_fiscale: "",
-        luogo_nascita: "",
-        data_nascita: "",
-        citta_residenz: "",
-        indirizzo_resid: "",
-        nazionalita: "",
-        tipo_doc: "",
-        scadenza_doc: "",
-        allegato_doc: "",
-      });
+      resetForm();
     } catch (e: any) {
       setErrMsg(e?.message ?? "Errore inserimento rappresentante legale");
     } finally {
@@ -374,20 +366,15 @@ export default function RappresentantiPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
+
+          {/* ✅ SOLO 1 PULSANTE: Annulla inserimento -> elenco rappresentanti */}
           <div className="flex gap-2">
             <Button
               variant="secondary"
               type="button"
-              onClick={() => router.push("/antiriciclaggio/elencorapp")}
+              onClick={() => router.push("/antiriciclaggio/rappresentanti")}
             >
-              Vai a elenco
-            </Button>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => router.push("/antiriciclaggio")}
-            >
-              Torna al menù
+              Annulla inserimento
             </Button>
           </div>
         </CardHeader>
@@ -588,24 +575,7 @@ export default function RappresentantiPage() {
                 {loading ? "Salvataggio..." : "Salva dati"}
               </Button>
 
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  setForm({
-                    nome_cognom: "",
-                    codice_fiscale: "",
-                    luogo_nascita: "",
-                    data_nascita: "",
-                    citta_residenz: "",
-                    indirizzo_resid: "",
-                    nazionalita: "",
-                    tipo_doc: "",
-                    scadenza_doc: "",
-                    allegato_doc: "",
-                  })
-                }
-              >
+              <Button type="button" variant="secondary" onClick={resetForm}>
                 Pulisci
               </Button>
             </div>
