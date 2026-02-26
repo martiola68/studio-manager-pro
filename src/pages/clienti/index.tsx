@@ -615,77 +615,89 @@ const supabase = getSupabaseClient();
     }
   };
 
-  // ✅ usa i flag DEL CLIENTE (non lo state del form)
-  const handleInsertIntoScadenzari = async (cliente: Cliente) => {
-    try {
-      const supabase = getSupabaseClient();
-      const scadenzariAttivi: string[] = [];
-      if (cliente.flag_iva) scadenzariAttivi.push("IVA");
-      if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
-      if (cliente.flag_cu) scadenzariAttivi.push("CU");
-      if (cliente.flag_770) scadenzariAttivi.push("770");
-      if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
-      if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
+// ✅ usa i flag DEL CLIENTE (non lo state del form)
+const handleInsertIntoScadenzari = async (cliente: Cliente) => {
+  try {
+    const supabase = getSupabaseClient();
 
-      const baseData = {
-        nominativo: cliente.ragione_sociale,
-        utente_operatore_id: cliente.utente_operatore_id,
-      };
+    const scadenzariAttivi: string[] = [];
+    if (cliente.flag_iva) scadenzariAttivi.push("IVA");
+    if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
+    if (cliente.flag_cu) scadenzariAttivi.push("CU");
+    if (cliente.flag_770) scadenzariAttivi.push("770");
+    if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
+    if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
 
-      await Promise.all(
-        scadenzariAttivi.map((s) => {
-          switch (s) {
-            case "IVA":
-              return supabase
-                .from("tbscadiva")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
-            case "CU":
-              return supabase
-                .from("tbscadcu")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
-            case "Bilanci":
-              return supabase
-                .from("tbscadbilanci")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
-            case "Fiscali":
-              return supabase
-                .from("tbscadfiscali")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
-            case "LIPE":
-              return supabase
-                .from("tbscadlipe")
-                .upsert({ ...baseData, id: cliente.id }, { onConflict: "id" });
-            case "770":
-              return supabase.from("tbscad770").upsert(
+    // ⬇️ studio_id: prendilo dal cliente se c’è (consigliato)
+    const studioId = (cliente as any).studio_id;
+
+    if (!studioId) {
+      toast({
+        title: "Errore",
+        description: "studio_id mancante: impossibile inserire negli scadenzari",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const baseData = {
+      id: cliente.id, // puoi metterlo qui ed evitare di ripeterlo nei case
+      studio_id: studioId,
+      nominativo: cliente.ragione_sociale,
+      utente_operatore_id: cliente.utente_operatore_id,
+    };
+
+    await Promise.all(
+      scadenzariAttivi.map((s) => {
+        switch (s) {
+          case "IVA":
+            return supabase.from("tbscadiva").upsert(baseData, { onConflict: "id" });
+
+          case "CU":
+            return supabase.from("tbscadcu").upsert(baseData, { onConflict: "id" });
+
+          case "Bilanci":
+            return supabase.from("tbscadbilanci").upsert(baseData, { onConflict: "id" });
+
+          case "Fiscali":
+            return supabase.from("tbscadfiscali").upsert(baseData, { onConflict: "id" });
+
+          case "LIPE":
+            return supabase.from("tbscadlipe").upsert(baseData, { onConflict: "id" });
+
+          case "770":
+            return supabase
+              .from("tbscad770")
+              .upsert(
                 {
                   ...baseData,
-                  id: cliente.id,
                   utente_payroll_id: cliente.utente_payroll_id,
                   professionista_payroll_id: cliente.professionista_payroll_id,
                 },
                 { onConflict: "id" }
               );
-            default:
-              return Promise.resolve(null);
-          }
-        })
-      );
 
-      toast({
-        title: "Successo",
-        description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
-          ", "
-        )}`,
-      });
-    } catch (error) {
-      console.error("Errore inserimento scadenzari:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile inserire il cliente negli scadenzari",
-        variant: "destructive",
-      });
-    }
-  };
+          default:
+            return Promise.resolve(null);
+        }
+      })
+    );
+
+    toast({
+      title: "Successo",
+      description: `Cliente inserito in ${scadenzariAttivi.length} scadenzari: ${scadenzariAttivi.join(
+        ", "
+      )}`,
+    });
+  } catch (error) {
+    console.error("Errore inserimento scadenzari:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile inserire il cliente negli scadenzari",
+      variant: "destructive",
+    });
+  }
+};
 
   const downloadTemplate = () => {
     const headers = [
