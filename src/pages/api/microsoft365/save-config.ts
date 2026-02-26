@@ -1,4 +1,8 @@
+export const runtime = "nodejs";
 export const config = { runtime: "nodejs" };
+
+console.log("[M365 save-config] FILE LOADED - NODE RUNTIME");
+
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
