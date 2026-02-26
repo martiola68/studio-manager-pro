@@ -620,6 +620,7 @@ const handleInsertIntoScadenzari = async (cliente: Cliente) => {
   try {
     const supabase = getSupabaseClient();
 
+    // Elenco scadenzari attivi in base ai flag cliente
     const scadenzariAttivi: string[] = [];
     if (cliente.flag_iva) scadenzariAttivi.push("IVA");
     if (cliente.flag_lipe) scadenzariAttivi.push("LIPE");
@@ -627,55 +628,64 @@ const handleInsertIntoScadenzari = async (cliente: Cliente) => {
     if (cliente.flag_770) scadenzariAttivi.push("770");
     if (cliente.flag_bilancio) scadenzariAttivi.push("Bilanci");
     if (cliente.flag_fiscali) scadenzariAttivi.push("Fiscali");
+    if (cliente.flag_proforma) scadenzariAttivi.push("Proforma"); // ✅ nuovo
 
-    // ⬇️ studio_id: prendilo dal cliente se c’è (consigliato)
-    const studioId = (cliente as any).studio_id;
-
-    if (!studioId) {
-      toast({
-        title: "Errore",
-        description: "studio_id mancante: impossibile inserire negli scadenzari",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    // Dati comuni a tutti gli scadenzari
+    // (aggiunti studio_id e utente_professionista_id come richiesto)
     const baseData = {
-      id: cliente.id, // puoi metterlo qui ed evitare di ripeterlo nei case
-      studio_id: studioId,
+      id: cliente.id, // usi id cliente come PK sugli scadenzari
       nominativo: cliente.ragione_sociale,
-      utente_operatore_id: cliente.utente_operatore_id,
+      studio_id: (cliente as any).studio_id ?? null,
+      utente_operatore_id: cliente.utente_operatore_id ?? null,
+      utente_professionista_id: (cliente as any).utente_professionista_id ?? null,
     };
 
     await Promise.all(
       scadenzariAttivi.map((s) => {
         switch (s) {
           case "IVA":
-            return supabase.from("tbscadiva").upsert(baseData, { onConflict: "id" });
-
-          case "CU":
-            return supabase.from("tbscadcu").upsert(baseData, { onConflict: "id" });
-
-          case "Bilanci":
-            return supabase.from("tbscadbilanci").upsert(baseData, { onConflict: "id" });
-
-          case "Fiscali":
-            return supabase.from("tbscadfiscali").upsert(baseData, { onConflict: "id" });
+            return supabase
+              .from("tbscadiva")
+              .upsert({ ...baseData }, { onConflict: "id" });
 
           case "LIPE":
-            return supabase.from("tbscadlipe").upsert(baseData, { onConflict: "id" });
+            return supabase
+              .from("tbscadlipe")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "CU":
+            return supabase
+              .from("tbscadcu")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "Bilanci":
+            return supabase
+              .from("tbscadbilanci")
+              .upsert({ ...baseData }, { onConflict: "id" });
+
+          case "Fiscali":
+            return supabase
+              .from("tbscadfiscali")
+              .upsert({ ...baseData }, { onConflict: "id" });
 
           case "770":
+            // ✅ mantiene i campi payroll specifici + aggiunge studio/professionista
             return supabase
               .from("tbscad770")
               .upsert(
                 {
                   ...baseData,
-                  utente_payroll_id: cliente.utente_payroll_id,
-                  professionista_payroll_id: cliente.professionista_payroll_id,
+                  utente_payroll_id: cliente.utente_payroll_id ?? null,
+                  professionista_payroll_id: cliente.professionista_payroll_id ?? null,
                 },
                 { onConflict: "id" }
               );
+
+          case "Proforma":
+            // ✅ nuovo scadenzario proforma solo se flag_proforma=true
+            return supabase
+              .from("tbscadproforma")
+              .upsert({ ...baseData }, { onConflict: "id" });
 
           default:
             return Promise.resolve(null);
