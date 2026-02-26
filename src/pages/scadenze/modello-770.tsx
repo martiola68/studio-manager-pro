@@ -17,13 +17,13 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
     settore_lavoro?: boolean | null;
     settore_consulenza?: boolean | null;
   } | null;
-  // Estensione per la UI se necessario
   settore?: string;
 };
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"];
+const TIPO_770_OPTIONS = ["Ordinario", "Semplificato"];
 
 const getSettoreInfo = (settore?: string) => {
   return { icon: FileText };
@@ -345,8 +345,6 @@ export default function Scadenze770Page() {
                   filteredScadenze.map((scadenza) => {
                     const isConfermata = scadenza.conferma_riga || false;
                     const isRicevuta = scadenza.ricevuta || false;
-                    const settoreInfo = getSettoreInfo(scadenza.settore);
-                    const SettoreIcon = settoreInfo.icon;
 
                     const operatoreFiscaleLabel = getUtenteLabelById(scadenza.utente_operatore_id);
                     const operatorePayrollLabel = getUtenteLabelById(scadenza.utente_payroll_id);
@@ -417,15 +415,27 @@ export default function Scadenze770Page() {
                           </Select>
                         </td>
 
+                        {/* Tipo 770: ora è una casella ad elenco (modelli_770) */}
                         <td className="p-2 align-middle min-w-[180px]">
-                          <Input
-                            type="text"
-                            value={scadenza.modelli_770 || ""}
-                            onChange={(e) => handleUpdateField(scadenza.id, "modelli_770", e.target.value)}
-                            className="w-full text-xs"
+                          <Select
+                            value={scadenza.modelli_770 || "__none__"}
+                            onValueChange={(value) =>
+                              handleUpdateField(scadenza.id, "modelli_770", value === "__none__" ? null : value)
+                            }
                             disabled={isConfermata}
-                            placeholder="Es: 770 Semplificato"
-                          />
+                          >
+                            <SelectTrigger className="w-full text-xs">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Nessuno</SelectItem>
+                              {TIPO_770_OPTIONS.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
 
                         <td className="p-2 align-middle text-center min-w-[110px]">
@@ -458,10 +468,11 @@ export default function Scadenze770Page() {
                           />
                         </td>
 
+                        {/* data invio: deve essere Blank (non mostrare valore) */}
                         <td className="p-2 align-middle text-center min-w-[140px]">
                           <Input
                             type="date"
-                            value={scadenza.data_invio || ""}
+                            value={""}
                             onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
                             className="w-36 text-xs"
                             disabled={isConfermata}
