@@ -39,7 +39,9 @@ export default function ScadenzeBilanciPage() {
 
   const checkAuthAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
       if (!session) {
         router.push("/login");
         return;
@@ -54,14 +56,11 @@ export default function ScadenzeBilanciPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [scadenzeData, utentiData] = await Promise.all([
-        loadScadenze(),
-        loadUtenti()
-      ]);
+      const [scadenzeData, utentiData] = await Promise.all([loadScadenze(), loadUtenti()]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
 
-      const confermate = scadenzeData.filter(s => s.conferma_riga).length;
+      const confermate = scadenzeData.filter((s) => s.conferma_riga).length;
       setStats({
         totale: scadenzeData.length,
         confermate,
@@ -80,20 +79,14 @@ export default function ScadenzeBilanciPage() {
   };
 
   const loadScadenze = async (): Promise<ScadenzaBilancio[]> => {
-    const { data, error } = await supabase
-      .from("tbscadbilanci")
-      .select("*")
-      .order("nominativo", { ascending: true });
+    const { data, error } = await supabase.from("tbscadbilanci").select("*").order("nominativo", { ascending: true });
 
     if (error) throw error;
     return data || [];
   };
 
   const loadUtenti = async (): Promise<Utente[]> => {
-    const { data, error } = await supabase
-      .from("tbutenti")
-      .select("*")
-      .order("cognome", { ascending: true });
+    const { data, error } = await supabase.from("tbutenti").select("*").order("cognome", { ascending: true });
 
     if (error) throw error;
     return data || [];
@@ -114,12 +107,10 @@ export default function ScadenzeBilanciPage() {
     try {
       const newValue = !currentValue;
 
-      setScadenze(prev => prev.map(s =>
-        s.id === scadenzaId ? { ...s, [field]: newValue } : s
-      ));
+      setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: newValue } : s)));
 
       if (field === "conferma_riga") {
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
           nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
@@ -127,10 +118,7 @@ export default function ScadenzeBilanciPage() {
       }
 
       const updates: any = { [field]: newValue };
-      const { error } = await supabase
-        .from("tbscadbilanci")
-        .update(updates)
-        .eq("id", scadenzaId);
+      const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
       if (error) throw error;
     } catch (error) {
@@ -150,36 +138,26 @@ export default function ScadenzeBilanciPage() {
       if (field === "data_approvazione") {
         const newDataScadPres = value ? addDaysToISODate(value, 30) : null;
 
-        setScadenze(prev => prev.map(s =>
-          s.id === scadenzaId
-            ? { ...s, data_approvazione: value, data_scad_pres: newDataScadPres }
-            : s
-        ));
+        setScadenze((prev) =>
+          prev.map((s) => (s.id === scadenzaId ? { ...s, data_approvazione: value, data_scad_pres: newDataScadPres } : s))
+        );
 
         const updates: any = {
           data_approvazione: value || null,
           data_scad_pres: newDataScadPres
         };
 
-        const { error } = await supabase
-          .from("tbscadbilanci")
-          .update(updates)
-          .eq("id", scadenzaId);
+        const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
         if (error) throw error;
         return;
       }
 
-      setScadenze(prev => prev.map(s =>
-        s.id === scadenzaId ? { ...s, [field]: value } : s
-      ));
+      setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value } : s)));
 
       const updates: any = { [field]: value || null };
 
-      const { error } = await supabase
-        .from("tbscadbilanci")
-        .update(updates)
-        .eq("id", scadenzaId);
+      const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
       if (error) throw error;
     } catch (error) {
@@ -193,7 +171,7 @@ export default function ScadenzeBilanciPage() {
   };
 
   const handleNoteChange = (scadenzaId: string, value: string) => {
-    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
+    setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
 
     if (noteTimers[scadenzaId]) {
       clearTimeout(noteTimers[scadenzaId]);
@@ -201,16 +179,11 @@ export default function ScadenzeBilanciPage() {
 
     const timer = setTimeout(async () => {
       try {
-        const { error } = await supabase
-          .from("tbscadbilanci")
-          .update({ note: value || null })
-          .eq("id", scadenzaId);
+        const { error } = await supabase.from("tbscadbilanci").update({ note: value || null }).eq("id", scadenzaId);
 
         if (error) throw error;
 
-        setScadenze(prev => prev.map(s =>
-          s.id === scadenzaId ? { ...s, note: value } : s
-        ));
+        setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, note: value } : s)));
       } catch (error) {
         console.error("Errore salvataggio nota:", error);
         toast({
@@ -221,17 +194,14 @@ export default function ScadenzeBilanciPage() {
       }
     }, 1000);
 
-    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
+    setNoteTimers((prev) => ({ ...prev, [scadenzaId]: timer }));
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
-      const { error } = await supabase
-        .from("tbscadbilanci")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("tbscadbilanci").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -250,18 +220,18 @@ export default function ScadenzeBilanciPage() {
     }
   };
 
-  const filteredScadenze = scadenze.filter(s => {
+  const filteredScadenze = scadenze.filter((s) => {
     const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    const matchConferma = filterConferma === "__all__" ||
-      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+    const matchConferma =
+      filterConferma === "__all__" || (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
     return matchSearch && matchOperatore && matchProfessionista && matchConferma;
   });
 
   const getUtenteNome = (utenteId: string | null): string => {
     if (!utenteId) return "-";
-    const utente = utenti.find(u => u.id === utenteId);
+    const utente = utenti.find((u) => u.id === utenteId);
     return utente ? `${utente.nome} ${utente.cognome}` : "-";
   };
 
@@ -275,6 +245,17 @@ export default function ScadenzeBilanciPage() {
       </div>
     );
   }
+
+  const dateInputClass = (value?: string | null) =>
+    [
+      "w-full",
+      // nasconde il testo "gg/mm/aaaa" quando vuoto, ma mostra il calendario
+      !value ? "text-transparent caret-transparent" : "",
+      // quando focus, il testo deve essere visibile anche se vuoto
+      "focus:text-gray-900 focus:caret-auto"
+    ]
+      .filter(Boolean)
+      .join(" ");
 
   return (
     <div className="space-y-6">
@@ -332,8 +313,10 @@ export default function ScadenzeBilanciPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti</SelectItem>
-                  {utenti.map(u => (
-                    <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -346,8 +329,10 @@ export default function ScadenzeBilanciPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti</SelectItem>
-                  {utenti.map(u => (
-                    <SelectItem key={u.id} value={u.id}>{u.nome} {u.cognome}</SelectItem>
+                  {utenti.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nome} {u.cognome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -375,25 +360,60 @@ export default function ScadenzeBilanciPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Bilancio def</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Verbale def</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Rel. gestione</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Rel. Sindaci</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Rel. Revisore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data approvazione</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data scadenza</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Approvato</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Inviato</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Data invio</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">Ricevuta</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">Note</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">Conferma</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">Azioni</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
+                    Nominativo
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                    Professionista
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                    Operatore
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Bilancio def
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Verbale def
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. gestione
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. Sindaci
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Rel. Revisore
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data approvazione
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data scadenza
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Approvato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Inviato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Data invio
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Ricevuta
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                    Note
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
+                    Conferma
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
+                    Azioni
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
@@ -403,10 +423,17 @@ export default function ScadenzeBilanciPage() {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
+                    <tr
+                      key={scadenza.id}
+                      className={[
+                        "border-b transition-colors",
+                        scadenza.conferma_riga ? "bg-red-50 hover:bg-red-50" : "hover:bg-green-50"
+                      ].join(" ")}
+                    >
                       <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
+
                       <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</td>
                       <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
 
@@ -418,6 +445,7 @@ export default function ScadenzeBilanciPage() {
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -426,6 +454,7 @@ export default function ScadenzeBilanciPage() {
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -434,19 +463,25 @@ export default function ScadenzeBilanciPage() {
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
                           checked={scadenza.relazione_sindaci || false}
-                          onChange={() => handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci)}
+                          onChange={() =>
+                            handleToggleField(scadenza.id, "relazione_sindaci", scadenza.relazione_sindaci)
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
                           checked={scadenza.relazione_revisore || false}
-                          onChange={() => handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore)}
+                          onChange={() =>
+                            handleToggleField(scadenza.id, "relazione_revisore", scadenza.relazione_revisore)
+                          }
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
@@ -456,15 +491,16 @@ export default function ScadenzeBilanciPage() {
                           type="date"
                           value={scadenza.data_approvazione || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_approvazione)}
                         />
                       </td>
+
                       <td className="p-2 align-middle min-w-[150px]">
                         <Input
                           type="date"
                           value={scadenza.data_scad_pres || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_scad_pres", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_scad_pres)}
                         />
                       </td>
 
@@ -476,6 +512,7 @@ export default function ScadenzeBilanciPage() {
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -490,9 +527,10 @@ export default function ScadenzeBilanciPage() {
                           type="date"
                           value={scadenza.data_invio || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_invio)}
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -519,6 +557,7 @@ export default function ScadenzeBilanciPage() {
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
+
                       <td className="p-2 align-middle text-center min-w-[100px]">
                         <Button
                           variant="ghost"
