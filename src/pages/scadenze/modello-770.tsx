@@ -20,12 +20,12 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
   // Estensione per la UI se necessario
   settore?: string;
 };
+
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"];
 
 const getSettoreInfo = (settore?: string) => {
-  // Mock implementation or logic based on boolean flags if settore string is not available
   return { icon: FileText };
 };
 
@@ -116,6 +116,15 @@ export default function Scadenze770Page() {
 
     if (error) throw error;
     return data || [];
+  };
+
+  const getUtenteLabelById = (id?: string | null) => {
+    if (!id) return "";
+    const u = utenti.find((x) => x.id === id);
+    if (!u) return "";
+    const nome = (u as any).nome ?? "";
+    const cognome = (u as any).cognome ?? "";
+    return `${nome} ${cognome}`.trim();
   };
 
   const handleToggleField = async (scadenzaId: string, field: string, currentValue: boolean | null) => {
@@ -219,7 +228,6 @@ export default function Scadenze770Page() {
   const filteredScadenze = scadenze.filter((s) => {
     const matchSearch = s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Logica filtro settori basata sui nuovi campi boolean
     const hasFiscale = s.cliente?.settore_fiscale === true;
     const hasLavoro = s.cliente?.settore_lavoro === true;
 
@@ -307,70 +315,41 @@ export default function Scadenze770Page() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
-                    Settore
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Operatore fiscale
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Operatore fiscale
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Operatore payroll
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Operatore payroll
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Tipo invio
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                    Tipo 770
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">
-                    Mod. Compilato
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">
-                    Mod. Definitivo
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">
-                    Mod. Inviato
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[140px]">
-                    data invio
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">
-                    Ricevuta
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[200px]">
-                    Note
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
-                    Conferma
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px]">
-                    Azioni
-                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px]">Settore</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore fiscale</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore payroll</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">Tipo invio</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Tipo 770</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">Mod. Compilato</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">Mod. Definitivo</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">Mod. Inviato</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[140px]">data invio</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Ricevuta</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">Note</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Conferma</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Azioni</th>
                 </tr>
               </thead>
+
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={16} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                    <td colSpan={14} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => {
-                    // Logic for variables
                     const isConfermata = scadenza.conferma_riga || false;
                     const isRicevuta = scadenza.ricevuta || false;
                     const settoreInfo = getSettoreInfo(scadenza.settore);
                     const SettoreIcon = settoreInfo.icon;
+
+                    const operatoreFiscaleLabel = getUtenteLabelById(scadenza.utente_operatore_id);
+                    const operatorePayrollLabel = getUtenteLabelById(scadenza.utente_payroll_id);
 
                     return (
                       <tr
@@ -379,10 +358,9 @@ export default function Scadenze770Page() {
                           isConfermata ? "bg-red-50 hover:bg-red-50" : "hover:bg-green-50"
                         } data-[state=selected]:bg-muted`}
                       >
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
-                          {scadenza.nominativo}
-                        </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
+                        <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">{scadenza.nominativo}</td>
+
+                        <td className="p-2 align-middle min-w-[120px]">
                           <div className="flex flex-col gap-1">
                             {scadenza.cliente?.settore_fiscale && (
                               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Fiscale</span>
@@ -398,39 +376,26 @@ export default function Scadenze770Page() {
                               !scadenza.cliente?.settore_consulenza && <span className="text-xs text-gray-500">-</span>}
                           </div>
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+
+                        <td className="p-2 align-middle min-w-[180px]">
                           <Input
                             type="text"
-                            value={scadenza.utente_professionista_id || ""}
+                            value={operatoreFiscaleLabel}
                             disabled={true}
                             className="w-full text-xs bg-gray-50 cursor-not-allowed"
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+
+                        <td className="p-2 align-middle min-w-[180px]">
                           <Input
                             type="text"
-                            value={scadenza.utente_operatore_id || ""}
+                            value={operatorePayrollLabel}
                             disabled={true}
                             className="w-full text-xs bg-gray-50 cursor-not-allowed"
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                          <Input
-                            type="text"
-                            value={scadenza.professionista_payroll_id || ""}
-                            disabled={true}
-                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                          <Input
-                            type="text"
-                            value={scadenza.utente_payroll_id || ""}
-                            disabled={true}
-                            className="w-full text-xs bg-gray-50 cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+
+                        <td className="p-2 align-middle min-w-[150px]">
                           <Select
                             value={scadenza.tipo_invio || "__none__"}
                             onValueChange={(value) =>
@@ -451,7 +416,8 @@ export default function Scadenze770Page() {
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+
+                        <td className="p-2 align-middle min-w-[180px]">
                           <Input
                             type="text"
                             value={scadenza.modelli_770 || ""}
@@ -461,7 +427,8 @@ export default function Scadenze770Page() {
                             placeholder="Es: 770 Semplificato"
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                        <td className="p-2 align-middle text-center min-w-[110px]">
                           <input
                             type="checkbox"
                             checked={scadenza.mod_compilato || false}
@@ -470,7 +437,8 @@ export default function Scadenze770Page() {
                             disabled={isConfermata}
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                        <td className="p-2 align-middle text-center min-w-[110px]">
                           <input
                             type="checkbox"
                             checked={scadenza.mod_definitivo || false}
@@ -479,7 +447,8 @@ export default function Scadenze770Page() {
                             disabled={isConfermata}
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                        <td className="p-2 align-middle text-center min-w-[110px]">
                           <input
                             type="checkbox"
                             checked={scadenza.mod_inviato || false}
@@ -488,7 +457,8 @@ export default function Scadenze770Page() {
                             disabled={isConfermata}
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[140px]">
+
+                        <td className="p-2 align-middle text-center min-w-[140px]">
                           <Input
                             type="date"
                             value={scadenza.data_invio || ""}
@@ -497,7 +467,8 @@ export default function Scadenze770Page() {
                             disabled={isConfermata}
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                        <td className="p-2 align-middle text-center min-w-[100px]">
                           <input
                             type="checkbox"
                             checked={isRicevuta}
@@ -506,7 +477,8 @@ export default function Scadenze770Page() {
                             disabled={isConfermata}
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[200px]">
+
+                        <td className="p-2 align-middle min-w-[300px]">
                           <Textarea
                             value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                             onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
@@ -515,7 +487,8 @@ export default function Scadenze770Page() {
                             placeholder="Note..."
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+
+                        <td className="p-2 align-middle text-center min-w-[120px]">
                           <input
                             type="checkbox"
                             checked={isConfermata}
@@ -523,7 +496,8 @@ export default function Scadenze770Page() {
                             className="rounded w-4 h-4 cursor-pointer"
                           />
                         </td>
-                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                        <td className="p-2 align-middle text-center min-w-[100px]">
                           <Button
                             variant="ghost"
                             size="sm"
