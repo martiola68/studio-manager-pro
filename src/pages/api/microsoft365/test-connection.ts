@@ -28,37 +28,43 @@ const TokenResponseSchema = z.object({
 });
 
 const GraphOrgSchema = z.object({
-  value: z.array(z.object({
-    displayName: z.string().optional().nullable(),
-  })).min(1),
+  value: z
+    .array(
+      z.object({
+        displayName: z.string().optional().nullable(),
+      })
+    )
+    .min(1),
 });
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const supabase = getSupabaseClient() as any;
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
+    // 🔹 Validate request
     const parseResult = TestRequestSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({ error: "Invalid studioId" });
     }
-    const { studioId } = parseResult.data;
 
+    const { studioId } = parseResult.data;
     console.log("[M365 Test] Testing connection for studio:", studioId);
 
+    // 🔹 Load config from DB (service role)
     const supabaseAdmin = getSupabaseAdmin();
     const { data: config, error: configError } = await supabaseAdmin
       .from("microsoft365_config")
-      .select("client_id, client_secret, tenant_id")
+      .select("client_id, client_secret, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();
 
     if (configError) throw configError;
+
     if (!config) {
       return res.status(404).json({
         success: false,
@@ -68,8 +74,12 @@ export default async function handler(
 
     const dbParse = DBConfigSchema.safeParse(config);
     if (!dbParse.success) {
-      return res.status(500).json({ error: "Invalid database configuration data" });
+      return res.status(500).json({
+        success: false,
+        error: "Invalid database configuration data",
+      });
     }
+
     const configData = dbParse.data;
 
     if (!configData.enabled) {
@@ -79,8 +89,10 @@ export default async function handler(
       });
     }
 
+    // 🔹 DECRYPT INSIDE TRY (critical)
     const clientSecret = decrypt(configData.client_secret);
 
+    // 🔹 Obtain access token
     console.log("[M365 Test] Obtaining access token...");
     const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
 
@@ -98,42 +110,62 @@ export default async function handler(
     });
 
     if (!tokenResponse.ok) {
-      const err = await tokenResponse.json().catch(() => ({}));
+      let errBody: any = {};
+      try {
+        errBody = await tokenResponse.json();
+      } catch {
+        /* ignore */
+      }
+
       return res.status(401).json({
         success: false,
         error: "Failed to obtain access token",
-        details: err.error_description || "Invalid credentials",
+        details:
+          errBody.error_description ||
+          errBody.error ||
+          "Invalid client credentials or tenant",
       });
     }
 
     const tokenJson = await tokenResponse.json();
     const tokenParsed = TokenResponseSchema.safeParse(tokenJson);
     if (!tokenParsed.success) {
-      return res.status(500).json({ error: "Invalid token response from Microsoft" });
+      return res.status(500).json({
+        success: false,
+        error: "Invalid token response from Microsoft",
+      });
     }
+
     const { access_token, expires_in } = tokenParsed.data;
 
+    // 🔹 Test Graph API
     console.log("[M365 Test] Testing Graph API call...");
-    const graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
+    const graphResponse = await fetch(
+      "https://graph.microsoft.com/v1.0/organization",
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
+    );
 
     if (!graphResponse.ok) {
       return res.status(403).json({
         success: false,
         error: "Graph API call failed",
-        details: "Token obtained but permissions denied",
+        details: "Token valid but permissions missing (Directory.Read.All)",
       });
     }
 
     const graphJson = await graphResponse.json();
     const graphParsed = GraphOrgSchema.safeParse(graphJson);
-    
-    let orgName = "Unknown";
-    if (graphParsed.success) {
-      orgName = graphParsed.data.value[0].displayName || "Unknown";
-    }
 
+    const orgName =
+      graphParsed.success
+        ? graphParsed.data.value[0]?.displayName || "Unknown"
+        : "Unknown";
+
+    // ✅ SUCCESS
     return res.status(200).json({
       success: true,
       message: "Microsoft 365 connection successful",
@@ -144,6 +176,7 @@ export default async function handler(
 
   } catch (error: unknown) {
     console.error("[M365 Test] Error:", error);
+
     return res.status(500).json({
       success: false,
       error: "Internal server error",
