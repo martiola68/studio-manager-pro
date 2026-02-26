@@ -83,7 +83,7 @@ export default function Microsoft365Settings() {
       const { data: user } = await supabase
         .from("tbutenti")
         .select("studio_id")
-        .eq("id", currentUserId)
+        .eq("user_id", currentUserId)
         .single();
 
       if (!user?.studio_id) {
@@ -248,23 +248,45 @@ export default function Microsoft365Settings() {
       setTesting(false);
     }
   }
-
-  async function handleConnect() {
-    if (!config) {
-      setError("Configura prima l'app Azure AD (Client ID, Tenant ID, Secret)");
-      return;
-    }
-
-    if (!config.enabled) {
-      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
-      return;
-    }
-
-    setError(null);
-    setSuccessMessage(null);
-    
-    window.location.href = "/api/auth/microsoft/login";
+async function handleConnect() {
+  if (!config) {
+    setError("Configura prima l'app Azure AD (Client ID, Tenant ID, Secret)");
+    return;
   }
+
+  if (!config.enabled) {
+    setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+    return;
+  }
+
+  setError(null);
+  setSuccessMessage(null);
+
+  // 1) recupera sessione Supabase
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    setError("Sessione non valida, fai login di nuovo.");
+    return;
+  }
+
+  // 2) chiama backend per ottenere la URL Microsoft
+  const res = await fetch("/api/auth/microsoft/login", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok || !data?.url) {
+    setError(data?.error || "Errore avvio login Microsoft");
+    return;
+  }
+
+  // 3) redirect reale verso Microsoft
+  window.location.href = data.url;
+}
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
