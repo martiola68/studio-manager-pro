@@ -17,13 +17,14 @@ type Scadenza770 = Database["public"]["Tables"]["tbscad770"]["Row"] & {
     settore_lavoro?: boolean | null;
     settore_consulenza?: boolean | null;
   } | null;
+  // Estensione per la UI se necessario
   settore?: string;
 };
 
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
-const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"];
-const TIPO_770_OPTIONS = ["Ordinario", "Semplificato"];
+const TIPO_INVIO_OPTIONS = ["Ordinario", "Correttivo", "Integrativo"] as const;
+const TIPO_770_OPTIONS = ["Mod. Ordinario", "Mod. Semplificato"] as const;
 
 const getSettoreInfo = (settore?: string) => {
   return { icon: FileText };
@@ -49,6 +50,7 @@ export default function Scadenze770Page() {
 
   useEffect(() => {
     checkAuthAndLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthAndLoad = async () => {
@@ -349,6 +351,9 @@ export default function Scadenze770Page() {
                     const operatoreFiscaleLabel = getUtenteLabelById(scadenza.utente_operatore_id);
                     const operatorePayrollLabel = getUtenteLabelById(scadenza.utente_payroll_id);
 
+                    // forza "blank": niente placeholder tipo gg/mm/aaaa
+                    const dataInvioValue = scadenza.data_invio ? String(scadenza.data_invio).slice(0, 10) : "";
+
                     return (
                       <tr
                         key={scadenza.id}
@@ -415,7 +420,7 @@ export default function Scadenze770Page() {
                           </Select>
                         </td>
 
-                        {/* Tipo 770: ora è una casella ad elenco (modelli_770) */}
+                        {/* Tipo 770 (modelli_770) = elenco fisso */}
                         <td className="p-2 align-middle min-w-[180px]">
                           <Select
                             value={scadenza.modelli_770 || "__none__"}
@@ -468,14 +473,15 @@ export default function Scadenze770Page() {
                           />
                         </td>
 
-                        {/* data invio: deve essere Blank (non mostrare valore) */}
+                        {/* Data invio: blank (nessun placeholder gg/mm/aaaa) */}
                         <td className="p-2 align-middle text-center min-w-[140px]">
                           <Input
                             type="date"
-                            value={""}
+                            value={dataInvioValue}
                             onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
                             className="w-36 text-xs"
                             disabled={isConfermata}
+                            placeholder="" // forzato vuoto
                           />
                         </td>
 
@@ -491,7 +497,7 @@ export default function Scadenze770Page() {
 
                         <td className="p-2 align-middle min-w-[300px]">
                           <Textarea
-                            value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                            value={localNotes[scadenza.id] ?? (scadenza as any).note ?? ""}
                             onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
                             className="min-h-[60px] text-xs resize-none"
                             disabled={isConfermata}
