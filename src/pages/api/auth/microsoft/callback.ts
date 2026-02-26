@@ -1,261 +1,134 @@
+// src/pages/api/auth/microsoft/callback.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { encrypt, decrypt } from "@/lib/encryption365";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { ConfidentialClientApplication } from "@azure/msal-node";
+import { createClient } from "@supabase/supabase-js";
+import { decrypt, encrypt } from "@/lib/encryption365";
 
-/**
- * Microsoft OAuth Callback Endpoint
- * 
- * Gestisce il redirect da Microsoft dopo login:
- * - Valida state anti-CSRF
- * - Scambia authorization code → access_token + refresh_token
- * - Salva token cifrati nel database
- * - Redirect a pagina impostazioni
- * 
- * Security:
- * - State validation (anti-CSRF)
- * - PKCE validation (code_verifier)
- * - Token encryption (AES-256-GCM)
- * 
- * Uses supabaseAdmin (service role) to bypass RLS.
- */
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+);
 
-interface TokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  scope: string;
-  refresh_token?: string;
-  id_token?: string;
+function getBaseUrl(req: NextApiRequest) {
+  const proto = (req.headers["x-forwarded-proto"] as string) || "http";
+  const host = req.headers.host;
+  return `${proto}://${host}`;
 }
 
-interface MicrosoftUserInfo {
-  id: string;
-  displayName?: string;
-  mail?: string;
-  userPrincipalName?: string;
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    console.log("[OAuth Callback] Request received:", {
-      code: !!req.query.code,
-      state: !!req.query.state,
-      cookies: Object.keys(req.cookies),
-    });
+    const code = req.query.code as string | undefined;
+    const state = req.query.state as string | undefined;
 
-    const supabase = createClient(req, res);
-
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    console.log("[OAuth Callback] Session check:", {
-      authenticated: !!session,
-      userId: session?.user?.id,
-      sessionError: sessionError?.message,
-    });
-
-    if (!session) {
-      console.log("[OAuth Callback] No session - returning 401");
-      return res.status(401).json({
-        error: "Non autenticato",
-        details: "Sessione non valida per OAuth callback.",
-      });
-    }
-
-    const { code, state, error, error_description } = req.query;
-
-    if (error) {
-      console.error("[OAuth Callback] Microsoft error:", error, error_description);
-      return res.redirect(
-        `/impostazioni/microsoft365?error=${encodeURIComponent(error as string)}&message=${encodeURIComponent(error_description as string || "Autorizzazione negata")}`
-      );
-    }
+    const redirectBackBase = "/impostazioni/microsoft365";
 
     if (!code || !state) {
-      console.error("[OAuth Callback] Missing code or state");
       return res.redirect(
-        "/impostazioni/microsoft365?error=invalid_request&message=Parametri+mancanti"
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("Parametri mancanti")}`
       );
     }
 
-    const cookies = parseCookies(req.headers.cookie || "");
-    const savedState = cookies.oauth_state;
-    const codeVerifier = cookies.oauth_code_verifier;
-    const userId = cookies.oauth_user_id;
-
-    if (!savedState || savedState !== state) {
-      console.error("[OAuth Callback] State mismatch:", { savedState, receivedState: state });
+    // 1) leggi cookie state
+    const cookie = req.cookies["m365_state"];
+    if (!cookie) {
       return res.redirect(
-        "/impostazioni/microsoft365?error=invalid_state&message=Stato+non+valido+(CSRF)"
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("State mancante")}`
       );
     }
 
-    if (!codeVerifier || !userId) {
-      console.error("[OAuth Callback] Missing code_verifier or user_id in cookies");
+    const decoded = JSON.parse(Buffer.from(cookie, "base64url").toString("utf8"));
+    if (decoded.state !== state) {
       return res.redirect(
-        "/impostazioni/microsoft365?error=invalid_session&message=Sessione+non+valida"
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("State non valida")}`
       );
     }
 
-    const { data: userData, error: userError } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
-      .single();
+    const { studioId, userId } = decoded as { studioId: string; userId: string };
 
-    if (userError || !userData?.studio_id) {
-      console.error("[OAuth Callback] Studio not found:", userError);
-      return res.redirect(
-        "/impostazioni/microsoft365?error=studio_not_found&message=Studio+non+trovato"
-      );
-    }
-
-    const studioId = userData.studio_id;
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: rawConfigData, error: configError } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, client_secret, tenant_id")
+    // 2) carica config studio completa (serve secret)
+    const { data: cfg, error: cfgErr } = await supabaseAdmin
+      .from("tbmicrosoft365_config" as any)
+      .select("client_id, tenant_id, client_secret_encrypted, enabled")
       .eq("studio_id", studioId)
       .single();
 
-    if (configError || !rawConfigData) {
-      console.error("[OAuth Callback] Config not found:", configError);
+    if (cfgErr || !cfg || !cfg.enabled) {
       return res.redirect(
-        "/impostazioni/microsoft365?error=config_not_found&message=Configurazione+non+trovata"
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("Config studio non valida")}`
       );
     }
 
-    const configData = rawConfigData as unknown as {
-      client_id: string;
-      client_secret: string;
-      tenant_id: string;
-    };
+    const clientSecret = decrypt(cfg.client_secret_encrypted);
+    const redirectUri = `${getBaseUrl(req)}/api/auth/microsoft/callback`;
 
-    const clientSecret = decrypt(configData.client_secret);
-
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || "https://studio-manager-pro.vercel.app"}/api/auth/microsoft/callback`;
-
-    const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
-
-    const tokenParams = new URLSearchParams({
-      client_id: configData.client_id,
-      client_secret: clientSecret,
-      code: code as string,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-      code_verifier: codeVerifier
-    });
-
-    console.log("[OAuth Callback] Exchanging code for token...");
-
-    const tokenResponse = await fetch(tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+    // 3) MSAL app
+    const msalApp = new ConfidentialClientApplication({
+      auth: {
+        clientId: cfg.client_id,
+        authority: `https://login.microsoftonline.com/${cfg.tenant_id}`,
+        clientSecret,
       },
-      body: tokenParams.toString()
     });
 
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json().catch(() => ({}));
-      console.error("[OAuth Callback] Token exchange failed:", errorData);
+    const scopes = [
+      "openid",
+      "profile",
+      "offline_access",
+      "User.Read",
+      "Calendars.ReadWrite",
+      "Mail.Send",
+      "OnlineMeetings.ReadWrite",
+    ];
+
+    // 4) scambia code per token
+    const result = await msalApp.acquireTokenByCode({
+      code,
+      redirectUri,
+      scopes,
+    });
+
+    if (!result?.accessToken) {
       return res.redirect(
-        `/impostazioni/microsoft365?error=token_exchange_failed&message=${encodeURIComponent(errorData.error_description || "Errore scambio token")}`
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("Token non ottenuto")}`
       );
     }
 
-    const tokens: TokenResponse = await tokenResponse.json();
+    // 5) salva token cache (NON access token)
+    const cachePlain = msalApp.getTokenCache().serialize();
+    const token_cache_encrypted = encrypt(cachePlain);
 
-    console.log("[OAuth Callback] Token received:", {
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      expiresIn: tokens.expires_in
-    });
+    const { error: upErr } = await supabaseAdmin
+      .from("tbmicrosoft365_user_tokens" as any)
+      .upsert(
+        {
+          studio_id: studioId,
+          user_id: userId,
+          token_cache_encrypted,
+          scopes: scopes.join(" "),
+          revoked_at: null,
+        },
+        { onConflict: "studio_id,user_id" }
+      );
 
-    let microsoftUserId: string | null = null;
-
-    try {
-      const userInfoResponse = await fetch("https://graph.microsoft.com/v1.0/me", {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`
-        }
-      });
-
-      if (userInfoResponse.ok) {
-        const userInfo: MicrosoftUserInfo = await userInfoResponse.json();
-        microsoftUserId = userInfo.id;
-        console.log("[OAuth Callback] Microsoft user info:", {
-          id: userInfo.id,
-          displayName: userInfo.displayName,
-          mail: userInfo.mail
-        });
-      }
-    } catch (error) {
-      console.warn("[OAuth Callback] Failed to fetch user info (non-critical):", error);
-    }
-
-    const encryptedAccessToken = encrypt(tokens.access_token);
-    const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
-
-    console.log("[OAuth Callback] Tokens encrypted successfully");
-
-    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-
-    const { error: upsertError } = await supabase
-      .from("tbmicrosoft_tokens")
-      .upsert({
-        user_id: userId,
-        access_token: encryptedAccessToken,
-        refresh_token: encryptedRefreshToken,
-        expires_at: expiresAt.toISOString(),
-        microsoft_user_id: microsoftUserId,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: "user_id"
-      });
-
-    if (upsertError) {
-      console.error("[OAuth Callback] Database error:", upsertError);
+    if (upErr) {
+      console.error("[m365 callback] upsert error", upErr);
       return res.redirect(
-        "/impostazioni/microsoft365?error=database_error&message=Errore+salvataggio+token"
+        `${redirectBackBase}?error=1&message=${encodeURIComponent("Errore salvataggio token")}`
       );
     }
 
-    console.log("[OAuth Callback] Token saved successfully for user:", userId);
+    // 6) pulisci cookie state
+    res.setHeader(
+      "Set-Cookie",
+      `m365_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
+    );
 
-    res.setHeader("Set-Cookie", [
-      "oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-      "oauth_code_verifier=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-      "oauth_user_id=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
-    ]);
-
-    res.redirect("/impostazioni/microsoft365?success=true");
-
-  } catch (error) {
-    console.error("[OAuth Callback] Unexpected error:", error);
+    return res.redirect(`${redirectBackBase}?success=true`);
+  } catch (e: any) {
+    console.error("[m365 callback] error", e);
     return res.redirect(
-      `/impostazioni/microsoft365?error=server_error&message=${encodeURIComponent(error instanceof Error ? error.message : "Errore sconosciuto")}`
+      `/impostazioni/microsoft365?error=1&message=${encodeURIComponent("Errore callback")}`
     );
   }
-}
-
-function parseCookies(cookieHeader: string): Record<string, string> {
-  return cookieHeader.split(";").reduce((cookies, cookie) => {
-    const [name, value] = cookie.trim().split("=");
-    if (name && value) {
-      cookies[name] = decodeURIComponent(value);
-    }
-    return cookies;
-  }, {} as Record<string, string>);
 }
