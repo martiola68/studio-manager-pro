@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +35,9 @@ export default function ImuPage() {
   }, []);
 
   const checkAuthAndLoad = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
     if (!session) {
       router.push("/login");
       return;
@@ -54,20 +48,17 @@ export default function ImuPage() {
   const loadScadenze = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("tbscadimu")
-        .select("*")
-        .order("nominativo", { ascending: true });
-      
+      const { data, error } = await supabase.from("tbscadimu").select("*").order("nominativo", { ascending: true });
+
       if (error) throw error;
-      
+
       const scadenzeData = data || [];
       setScadenze(scadenzeData);
-      
+
       setStats({
         totale: scadenzeData.length,
-        confermate: scadenzeData.filter(s => s.conferma_riga).length,
-        nonConfermate: scadenzeData.filter(s => !s.conferma_riga).length
+        confermate: scadenzeData.filter((s) => s.conferma_riga).length,
+        nonConfermate: scadenzeData.filter((s) => !s.conferma_riga).length
       });
     } catch (error: any) {
       toast({
@@ -83,24 +74,19 @@ export default function ImuPage() {
   const handleToggleField = async (id: string, field: keyof ScadenzaImu, currentValue: boolean | null) => {
     try {
       const newValue = !currentValue;
-      
-      setScadenze(prev => prev.map(s => 
-        s.id === id ? { ...s, [field]: newValue } : s
-      ));
-      
+
+      setScadenze((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: newValue } : s)));
+
       if (field === "conferma_riga") {
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
           nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
         }));
       }
-      
-      const { error } = await supabase
-        .from("tbscadimu")
-        .update({ [field]: newValue })
-        .eq("id", id);
-      
+
+      const { error } = await supabase.from("tbscadimu").update({ [field]: newValue }).eq("id", id);
+
       if (error) throw error;
     } catch (error: any) {
       toast({
@@ -114,16 +100,11 @@ export default function ImuPage() {
 
   const handleUpdateField = async (id: string, field: keyof ScadenzaImu, value: any) => {
     try {
-      const { error } = await supabase
-        .from("tbscadimu")
-        .update({ [field]: value || null })
-        .eq("id", id);
-      
+      const { error } = await supabase.from("tbscadimu").update({ [field]: value || null }).eq("id", id);
+
       if (error) throw error;
-      
-      setScadenze(prev => prev.map(s => 
-        s.id === id ? { ...s, [field]: value } : s
-      ));
+
+      setScadenze((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
     } catch (error: any) {
       toast({
         title: "Errore aggiornamento",
@@ -134,24 +115,19 @@ export default function ImuPage() {
   };
 
   const handleNoteChange = (scadenzaId: string, value: string) => {
-    setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
-    
+    setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
+
     if (noteTimers[scadenzaId]) {
       clearTimeout(noteTimers[scadenzaId]);
     }
-    
+
     const timer = setTimeout(async () => {
       try {
-        const { error } = await supabase
-          .from("tbscadimu")
-          .update({ note: value || null })
-          .eq("id", scadenzaId);
+        const { error } = await supabase.from("tbscadimu").update({ note: value || null }).eq("id", scadenzaId);
 
         if (error) throw error;
-        
-        setScadenze(prev => prev.map(s => 
-          s.id === scadenzaId ? { ...s, note: value } : s
-        ));
+
+        setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, note: value } : s)));
       } catch (error) {
         console.error("Errore salvataggio nota:", error);
         toast({
@@ -161,18 +137,15 @@ export default function ImuPage() {
         });
       }
     }, 1000);
-    
-    setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
+
+    setNoteTimers((prev) => ({ ...prev, [scadenzaId]: timer }));
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo record?")) return;
 
     try {
-      const { error } = await supabase
-        .from("tbscadimu")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("tbscadimu").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -191,15 +164,16 @@ export default function ImuPage() {
     }
   };
 
-  const filteredScadenze = scadenze.filter(s => {
-    const matchSearch = !searchQuery || 
+  const filteredScadenze = scadenze.filter((s) => {
+    const matchSearch =
+      !searchQuery ||
       s.nominativo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.professionista?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.operatore?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchConferma = filterConferma === "__all__" ||
-      (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
-    
+
+    const matchConferma =
+      filterConferma === "__all__" || (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
+
     return matchSearch && matchConferma;
   });
 
@@ -213,6 +187,11 @@ export default function ImuPage() {
       </div>
     );
   }
+
+  const dateInputClass = (value?: string | null) =>
+    ["w-full", !value ? "text-transparent caret-transparent" : "", "focus:text-gray-900 focus:caret-auto"]
+      .filter(Boolean)
+      .join(" ");
 
   return (
     <div className="space-y-6">
@@ -285,112 +264,176 @@ export default function ImuPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Professionista</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Acconto</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">Saldo</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">Note</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px] text-center">Conferma</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[100px] text-center">Azioni</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
+                    Nominativo
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Professionista
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+                    Operatore
+                  </th>
+
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Acconto Imu
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Dovuto
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Cominicato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px]">
+                    Data comunicazione
+                  </th>
+
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Saldo Imu
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Dovuto
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+                    Comunicato
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[160px]">
+                    Data comunicazione
+                  </th>
+
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">
+                    Con dic. Imu
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px]">
+                    Data scadenza dic.
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[140px]">
+                    Dic. presentata
+                  </th>
+
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+                    Note
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[140px] text-center">
+                    Conferma dati
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
+                    Azioni
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={8} className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center py-8 text-gray-500">
+                    <td colSpan={17} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
+                    <tr
+                      key={scadenza.id}
+                      className={[
+                        "border-b transition-colors",
+                        scadenza.conferma_riga ? "bg-red-50 hover:bg-red-50" : "hover:bg-green-50"
+                      ].join(" ")}
+                    >
+                      <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.professionista || "-"}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">{scadenza.operatore || "-"}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle min-w-[150px]">{scadenza.professionista || "-"}</td>
+                      <td className="p-2 align-middle min-w-[150px]">{scadenza.operatore || "-"}</td>
+
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.acconto_imu || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "acconto_imu", scadenza.acconto_imu)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.acconto_dovuto || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto)}
+                          onCheckedChange={() =>
+                            handleToggleField(scadenza.id, "acconto_dovuto", scadenza.acconto_dovuto)
+                          }
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.acconto_comunicato || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "acconto_comunicato", scadenza.acconto_comunicato)}
+                          onCheckedChange={() =>
+                            handleToggleField(scadenza.id, "acconto_comunicato", scadenza.acconto_comunicato)
+                          }
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                      <td className="p-2 align-middle min-w-[160px]">
                         <Input
                           type="date"
                           value={scadenza.data_com_acconto || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_com_acconto", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_com_acconto)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.saldo_imu || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "saldo_imu", scadenza.saldo_imu)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.saldo_dovuto || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "saldo_dovuto", scadenza.saldo_dovuto)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
                           checked={scadenza.saldo_comunicato || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "saldo_comunicato", scadenza.saldo_comunicato)}
+                          onCheckedChange={() =>
+                            handleToggleField(scadenza.id, "saldo_comunicato", scadenza.saldo_comunicato)
+                          }
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                      <td className="p-2 align-middle min-w-[160px]">
                         <Input
                           type="date"
                           value={scadenza.data_com_saldo || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_com_saldo", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_com_saldo)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+
+                      <td className="p-2 align-middle text-center min-w-[140px]">
                         <Checkbox
                           checked={scadenza.dichiarazione_imu || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)}
+                          onCheckedChange={() =>
+                            handleToggleField(scadenza.id, "dichiarazione_imu", scadenza.dichiarazione_imu)
+                          }
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                      <td className="p-2 align-middle min-w-[170px]">
                         <Input
                           type="date"
                           value={scadenza.data_scad_dichiarazione || ""}
                           onChange={(e) => handleUpdateField(scadenza.id, "data_scad_dichiarazione", e.target.value)}
-                          className="w-full"
+                          className={dateInputClass(scadenza.data_scad_dichiarazione)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                      <td className="p-2 align-middle text-center min-w-[140px]">
                         <Checkbox
                           checked={scadenza.dichiarazione_presentata || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "dichiarazione_presentata", scadenza.dichiarazione_presentata)}
+                          onCheckedChange={() =>
+                            handleToggleField(
+                              scadenza.id,
+                              "dichiarazione_presentata",
+                              scadenza.dichiarazione_presentata
+                            )
+                          }
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_presentazione || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_presentazione", e.target.value)}
-                          className="w-full"
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
+
+                      <td className="p-2 align-middle min-w-[300px]">
                         <Textarea
                           value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
                           onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
@@ -398,13 +441,15 @@ export default function ImuPage() {
                           className="min-h-[60px] resize-none"
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+
+                      <td className="p-2 align-middle text-center min-w-[140px]">
                         <Checkbox
                           checked={scadenza.conferma_riga || false}
                           onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
                         />
                       </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+
+                      <td className="p-2 align-middle text-center min-w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
