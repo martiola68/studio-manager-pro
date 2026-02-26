@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: urow, error: uerr } = await supabaseAdmin
       .from("tbutenti")
       .select("studio_id")
-      .eq("user_id", userId)
+      .eq("id", userId)
       .single();
 
     if (uerr || !urow?.studio_id) {

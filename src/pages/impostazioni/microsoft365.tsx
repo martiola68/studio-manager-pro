@@ -83,7 +83,7 @@ export default function Microsoft365Settings() {
       const { data: user } = await supabase
         .from("tbutenti")
         .select("studio_id")
-        .eq("user_id", currentUserId)
+        .eq("id", currentUserId)
         .single();
 
       if (!user?.studio_id) {
