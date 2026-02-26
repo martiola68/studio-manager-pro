@@ -1150,162 +1150,36 @@ const supabase = getSupabaseClient();
             </div>
           ) : (
             <div className="overflow-x-auto">
-              {vistaClienti === "clienti" ? (
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-20 w-[120px]">
-                        Cod. Cliente
-                      </TableHead>
-                      <TableHead className="sticky left-[120px] bg-background z-20 w-[250px]">
-                        Ragione Sociale
-                      </TableHead>
-                      <TableHead className="min-w-[220px] pl-6">Utente Fiscale</TableHead>
-                      <TableHead className="min-w-[200px]">Utente Payroll</TableHead>
-                      <TableHead className="min-w-[100px]">Stato</TableHead>
-                      <TableHead className="text-center">Scadenzari</TableHead>
-                      <TableHead className="sticky right-0 bg-background z-20 text-right">
-                        Azioni
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
+            <table class="table clienti-table">
+  <thead>
+    <tr>
+      <th class="col-codice">Cod. Cliente</th>
+      <th class="col-ragione">Ragione Sociale</th>
+      <th class="col-fiscale">Utente Fiscale</th>
+      <th class="col-payroll">Utente Payroll</th>
+      <th class="col-stato">Stato</th>
+      <th class="col-scadenze">Scadenze</th>
+      <th class="col-azioni">Azioni</th>
+    </tr>
+  </thead>
 
-                  <TableBody>
-                    {filteredClienti.map((cliente) => (
-                      <TableRow key={cliente.id}>
-                       <TableCell
-                         className="sticky left-0 bg-background z-30 font-mono text-sm w-[120px] truncate border-r"
-  title={cliente.cod_cliente || cliente.id}
->
-  {cliente.cod_cliente || cliente.id.substring(0, 8).toUpperCase()}
-</TableCell>
-
-<TableCell
-  className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r pr-4"
-  title={cliente.ragione_sociale || ""}
->
-  {cliente.ragione_sociale}
-</TableCell>
-
-<TableCell className="min-w-[220px] pl-8 pr-3 text-left align-middle relative z-0">
-  <div className="w-full whitespace-nowrap text-left">
-    {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
-  </div>
-</TableCell>
-
-<TableCell className="min-w-[200px] px-3 text-left align-middle">
-  {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
-</TableCell>
-
-                        <TableCell>
-                          {cliente.attivo ? (
-                            <Badge variant="default" className="bg-green-600">
-                              Attivo
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Inattivo</Badge>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleInsertIntoScadenzari(cliente)}
-                            title="Inserisci negli Scadenzari"
-                          >
-                            <Calendar className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-
-                        <TableCell className="sticky right-0 bg-background z-10 text-right">
-                          <div className="flex justify-end gap-3">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(cliente)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(cliente.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
-                        Cliente
-                      </TableHead>
-                      <TableHead className="min-w-[220px]">Utente Fiscale</TableHead>
-                      <TableHead className="text-center min-w-[90px]">IVA</TableHead>
-                      <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Bilancio</TableHead>
-                      <TableHead className="text-center min-w-[90px]">770</TableHead>
-                      <TableHead className="text-center min-w-[90px]">IMU</TableHead>
-                      <TableHead className="text-center min-w-[90px]">CU</TableHead>
-                      <TableHead className="text-center min-w-[110px]">Fiscali</TableHead>
-                      <TableHead className="text-center min-w-[130px]">Esterometro</TableHead>
-                      <TableHead className="text-center min-w-[100px]">CCGG</TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {filteredClienti.map((cliente) => (
-                      <TableRow key={cliente.id}>
-                        <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                          {cliente.ragione_sociale}
-                        </TableCell>
-
-                        <TableCell>{getUtenteNome(cliente.utente_operatore_id)}</TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_iva}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_iva", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_lipe}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_lipe", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_bilancio}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_770}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_770", v === true)
-                            }
-                          />
-                        </TableCell>
-
+  <tbody>
+    <tr>
+      <td class="col-codice">CLI001587</td>
+      <td class="col-ragione"><strong>21 DICEMBRE S.R.L.</strong></td>
+      <td class="col-fiscale">Roberta Di Francesco</td>
+      <td class="col-payroll">Stefania Allevato</td>
+      <td class="col-stato"><span class="badge badge-success">Attivo</span></td>
+      <td class="col-scadenze">
+        <i class="icon-calendar"></i>
+      </td>
+      <td class="col-azioni">
+        <i class="icon-edit"></i>
+        <i class="icon-delete text-danger"></i>
+      </td>
+    </tr>
+  </tbody>
+</table>
                         <TableCell className="text-center">
                           <Checkbox
                             checked={!!cliente.flag_imu}
