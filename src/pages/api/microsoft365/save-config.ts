@@ -55,6 +55,12 @@ export default async function handler(
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
+  
+   // DEBUG TEMP: ping to verify logs & routing
+  if (req.query.ping === "1") {
+    console.log("[M365 save-config] PING OK");
+    return res.status(200).json({ success: true, message: "PING_OK" } as any);
+  }
 
   try {
     console.log("[M365 save-config] HANDLER START");
