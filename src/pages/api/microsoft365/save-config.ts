@@ -1,21 +1,22 @@
 export const runtime = "nodejs";
 export const config = { runtime: "nodejs" };
 
-console.log("[M365 save-config] FILE LOADED - NODE RUNTIME");
-
-
 import type { NextApiRequest, NextApiResponse } from "next";
+import { z } from "zod";
+
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { encrypt } from "@/lib/encryption365";
 import { tokenCache } from "@/services/tokenCacheService";
-import { z } from "zod";
 
 /**
  * API: Save Microsoft 365 Configuration
  * POST /api/microsoft365/save-config
  *
  * Encrypts and saves M365 credentials for a studio using supabaseAdmin (service role).
+ * Always returns JSON (never "silent" crash responses).
  */
+
+console.log("[M365 save-config] FILE LOADED - NODE RUNTIME");
 
 const SaveConfigRequestSchema = z.object({
   studioId: z.string().uuid(),
@@ -25,12 +26,47 @@ const SaveConfigRequestSchema = z.object({
   organizerEmail: z.string().email().optional().or(z.literal("")),
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+type ApiOk = {
+  success: true;
+  message: string;
+  config: {
+    id: string;
+    studio_id: string;
+    client_id: string;
+    tenant_id: string;
+    organizer_email: string | null;
+    enabled: boolean;
+  };
+};
+
+type ApiErr = {
+  success: false;
+  error: string;
+  details?: any;
+};
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiOk | ApiErr>
+) {
+  // Always JSON
+  res.setHeader("Content-Type", "application/json");
+
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
   try {
+    console.log("[M365 save-config] HANDLER START");
+
+    // Non-sensitive env checks (boolean only)
+    console.log("[M365 save-config] ENV:", {
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL || !!process.env.SUPABASE_URL,
+      hasEncryptKey: !!process.env.ENCRYPTION365_KEY || !!process.env.ENCRYPTION_KEY,
+      hasResendKey: !!process.env.RESEND_API_KEY,
+    });
+
     const parseResult = SaveConfigRequestSchema.safeParse(req.body);
     if (!parseResult.success) {
       return res.status(400).json({
@@ -41,6 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { studioId, clientId, clientSecret, tenantId, organizerEmail } = parseResult.data;
+
+    // Normalize secret "a prova di UI"
+    const rawSecret = (clientSecret ?? "").toString().trim();
+    console.log("[M365 save-config] secret received len:", rawSecret.length);
 
     const supabaseAdmin = getSupabaseAdmin();
 
@@ -79,17 +119,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3) Build update/insert payload
-    const basePayload: any = {
+    const basePayload: Record<string, any> = {
       studio_id: studioId,
       client_id: clientId,
       tenant_id: tenantId,
       enabled: true,
-      organizer_email: organizerEmail || null,
+      organizer_email: organizerEmail ? organizerEmail : null,
     };
 
-    // Only update secret if provided and non-empty
-    if (typeof clientSecret === "string" && clientSecret.trim().length > 0) {
-      basePayload.client_secret = encrypt(clientSecret.trim());
+    // Save secret only if provided (update can keep existing)
+    if (rawSecret.length > 0) {
+      // If encryption fails due to missing key, catch will return JSON
+      basePayload.client_secret = encrypt(rawSecret);
     }
 
     if (existingConfig) {
@@ -152,7 +193,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       config: savedConfig,
     });
   } catch (error: unknown) {
-    console.error("[M365 Config] Fatal error:", error);
+    console.error("[M365 save-config] Fatal error:", error);
     return res.status(500).json({
       success: false,
       error: "Failed to save Microsoft 365 configuration",
