@@ -36,11 +36,10 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         return;
       }
 
+      // ✅ SOLO colonne che i tuoi types riconoscono sicuramente (evita SelectQueryError)
       const { data: utente, error: utenteError } = await supabase
         .from("tbutenti")
-        .select(
-          "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile, studio_id"
-        )
+        .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at")
         .eq("email", email)
         .maybeSingle();
 
