@@ -4,7 +4,7 @@
 
 import type { Database as DB } from '@/integrations/supabase/database.types';
 
-export type Database = DB;
+export type { Database } from "./database.types";
 
 // Re-export commonly used types for convenience
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
