@@ -22,34 +22,33 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     try {
       const supabase = getSupabaseClient();
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
 
       if (!session) {
         setCurrentUser(null);
         return;
       }
 
-      const email = session.user.email;
-
-      if (email) {
-        const { data: utente, error: utenteError } = await supabase
-          .from("tbutenti")
-          .select(
-            "id, email, nome, cognome, tipo_utente, attivo, ruolo_operatore_id, responsabile, settore, studio_id, created_at, updated_at"
-          )
-          .eq("email", email)
-          .single();
-
-        if (utenteError) {
-          console.warn("Impossibile caricare utente:", utenteError.message);
-          setCurrentUser(null);
-        } else {
-          setCurrentUser((utente as Utente) ?? null);
-        }
-      } else {
+      const email = session.user.email ?? null;
+      if (!email) {
         setCurrentUser(null);
+        return;
+      }
+
+      const { data: utente, error: utenteError } = await supabase
+        .from("tbutenti")
+        .select(
+          "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, settore, responsabile, studio_id"
+        )
+        .eq("email", email)
+        .maybeSingle();
+
+      if (utenteError) {
+        console.warn("Impossibile caricare utente:", utenteError.message);
+        setCurrentUser(null);
+      } else {
+        setCurrentUser(utente ?? null);
       }
 
       const studioData = await studioService.getStudio();
@@ -80,7 +79,6 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
   }, []);
 
   const handleLogout = async () => {
-    console.log("🚪 Logout HARD in corso...");
     await hardLogout("/login");
   };
 
