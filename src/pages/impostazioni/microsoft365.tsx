@@ -39,6 +39,7 @@ export default function Microsoft365Settings() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -50,7 +51,7 @@ export default function Microsoft365Settings() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // ✅ Validazione chiara lato UI
+  // ✅ Validazione chiara lato UI (config studio completa + enabled)
   const studioConfigValid = useMemo(() => {
     if (!config) return false;
     return Boolean(config.client_id && config.tenant_id && config.enabled === true);
@@ -62,14 +63,24 @@ export default function Microsoft365Settings() {
   }, []);
 
   // ✅ gestisci i query params solo quando router è pronto
+  // nuovo flusso: /impostazioni/microsoft365?m365=connected
   useEffect(() => {
     if (!router.isReady) return;
 
-    if (router.query.success === "true") {
+    // successo nuova callback
+    if (router.query.m365 === "connected") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
-      // ricarico stato connessione usando lo userId già noto (se presente)
       if (userId) loadUserConnectionStatus(userId);
       router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
+      return;
+    }
+
+    // manteniamo compatibilità eventuale vecchio flusso
+    if (router.query.success === "true") {
+      setSuccessMessage("✅ Microsoft 365 connesso con successo!");
+      if (userId) loadUserConnectionStatus(userId);
+      router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
+      return;
     }
 
     if (router.query.error) {
@@ -136,7 +147,6 @@ export default function Microsoft365Settings() {
           setError("Configurazione nel database corrotta o non valida");
         }
       } else {
-        // nessuna config trovata
         setConfig(null);
       }
 
@@ -225,7 +235,6 @@ export default function Microsoft365Settings() {
         throw new Error(result.error || "Errore nel salvataggio");
       }
 
-      // result.config dovrebbe contenere client_id, tenant_id, enabled
       const parsed = M365ConfigSchema.safeParse(result.config);
       if (!parsed.success) {
         console.error("save-config returned invalid config:", parsed.error, result.config);
@@ -288,8 +297,8 @@ export default function Microsoft365Settings() {
     }
   }
 
+  // ✅ NUOVO FLOW: POST /api/m365/connect -> { url } -> redirect browser
   async function handleConnect() {
-    // ✅ messaggio più preciso: config studio, non “secret”
     if (!config) {
       setError("Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio.");
       return;
@@ -300,39 +309,50 @@ export default function Microsoft365Settings() {
       return;
     }
 
+    setConnecting(true);
     setError(null);
     setSuccessMessage(null);
 
-    // 1) recupera sessione Supabase
-    const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
-    if (sessionErr) {
-      setError("Errore sessione: " + sessionErr.message);
-      return;
+    try {
+      // 1) recupera sessione Supabase
+      const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr) throw sessionErr;
+
+      const session = sessionRes?.session;
+      const token = session?.access_token;
+
+      if (!token) {
+        setError("Sessione non valida. Rifai login.");
+        return;
+      }
+
+      // 2) chiama il nuovo endpoint (IMPORTANT: body non null)
+      const r = await fetch("/api/m365/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+        credentials: "include",
+      });
+
+      const data = await r.json().catch(() => null);
+
+      if (!r.ok || !data?.url) {
+        console.error("m365 connect error", data);
+        setError(data?.error || "Errore connessione Microsoft 365");
+        return;
+      }
+
+      // 3) redirect su Microsoft
+      window.location.href = data.url;
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "Errore imprevisto");
+    } finally {
+      setConnecting(false);
     }
-
-    const session = sessionRes?.session;
-    if (!session?.access_token) {
-      setError("Sessione non valida, fai login di nuovo.");
-      return;
-    }
-
-    // 2) chiama backend per ottenere la URL Microsoft
-    const res = await fetch("/api/auth/microsoft/login", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data?.url) {
-      setError(data?.error || "Errore avvio login Microsoft");
-      return;
-    }
-
-    // 3) redirect reale verso Microsoft
-    window.location.href = data.url;
   }
 
   async function handleDisconnect() {
@@ -381,9 +401,7 @@ export default function Microsoft365Settings() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Impostazioni Microsoft 365</h1>
-        <p className="text-muted-foreground">
-          Configura l&apos;integrazione con Microsoft 365 per il tuo studio
-        </p>
+        <p className="text-muted-foreground">Configura l&apos;integrazione con Microsoft 365 per il tuo studio</p>
       </div>
 
       {successMessage && (
@@ -411,7 +429,8 @@ export default function Microsoft365Settings() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione Azure AD registrata per il tuo studio. Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
+          <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione
+          Azure AD registrata per il tuo studio. Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
         </AlertDescription>
       </Alert>
 
@@ -497,7 +516,8 @@ export default function Microsoft365Settings() {
               </div>
 
               <div className="pt-2">
-                <Button onClick={handleConnect} disabled={!studioConfigValid}>
+                <Button onClick={handleConnect} disabled={!studioConfigValid || connecting}>
+                  {connecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Connetti Microsoft 365
                 </Button>
 
@@ -571,9 +591,7 @@ export default function Microsoft365Settings() {
               onChange={(e) => setClientSecret(e.target.value)}
               autoComplete="new-password"
             />
-            <p className="text-xs text-muted-foreground">
-              Il secret viene cifrato con AES-256-GCM prima del salvataggio.
-            </p>
+            <p className="text-xs text-muted-foreground">Il secret viene cifrato con AES-256-GCM prima del salvataggio.</p>
           </div>
 
           <div className="space-y-2">
@@ -609,10 +627,7 @@ export default function Microsoft365Settings() {
           <CardDescription>Segui la guida passo-passo per configurare l&apos;applicazione Azure AD</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            variant="outline"
-            onClick={() => window.open("/guide/MICROSOFT_365_SETUP_GUIDE.md", "_blank")}
-          >
+          <Button variant="outline" onClick={() => window.open("/guide/MICROSOFT_365_SETUP_GUIDE.md", "_blank")}>
             Apri Guida Completa
           </Button>
         </CardContent>
