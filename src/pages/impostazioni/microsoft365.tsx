@@ -165,11 +165,11 @@ export default function Microsoft365Settings() {
     if (!uid) return;
 
     try {
-      const { data: tokenData, error: tokenErr } = await supabase
-        .from("tbmicrosoft365_user_tokens")
-        .select("connected_at, updated_at, revoked_at")
-        .eq("user_id", uid)
-        .maybeSingle();
+      const { data: tokenData, error: tokenErr } = await (supabase as any)
+  .from("tbmicrosoft365_user_tokens")
+  .select("connected_at, updated_at, revoked_at")
+  .eq("user_id", uid)
+  .maybeSingle();
 
       if (tokenErr) throw tokenErr;
 
