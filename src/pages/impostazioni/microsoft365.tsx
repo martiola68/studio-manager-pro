@@ -266,11 +266,11 @@ export default function Microsoft365Settings() {
     setTestResult(null);
 
     try {
-      const response = await fetch("/api/microsoft365/test-connection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studioId }),
-      });
+      const response = await fetch("/api/microsoft365/test-delegated", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({}), // body non null
+});
 
       const result = await response.json().catch(() => ({}));
 
