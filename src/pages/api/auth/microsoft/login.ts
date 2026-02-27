@@ -80,22 +80,10 @@ export default async function handler(
     }
 
     const studioId = urow.studio_id as string;
-
-    // 3) Read Microsoft 365 config for the studio
-    // IMPORTANT: table name must match what save-config writes to: microsoft365_config
-    const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, tenant_id, enabled")
-      .eq("studio_id", studioId)
-      .maybeSingle();
-
-    if (cfgErr) {
-      return res.status(500).json({
-        error: "Errore lettura configurazione Microsoft365",
-        details: cfgErr.message,
-      });
-    }
-
+    
+const clientId = process.env.MICROSOFT_CLIENT_ID!;
+const tenantId = process.env.MICROSOFT_TENANT_ID!;
+    
     if (!cfg) {
       return res.status(400).json({
         error: "Config Microsoft365 mancante",
@@ -152,7 +140,7 @@ export default async function handler(
       state,
     });
 
-    const authorizeUrl = `https://login.microsoftonline.com/${cfg.tenant_id}/oauth2/v2.0/authorize?${params.toString()}`;
+    const authorizeUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 
     console.log("[m365 login] authorizeUrl created for studio:", studioId);
 
