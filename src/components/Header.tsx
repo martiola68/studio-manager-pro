@@ -7,7 +7,20 @@ import type { Database } from "@/lib/supabase/types";
 import { hardLogout } from "@/services/logoutService";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
-type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type HeaderUser = Pick<
+  UtenteRow,
+  | "id"
+  | "nome"
+  | "cognome"
+  | "email"
+  | "tipo_utente"
+  | "ruolo_operatore_id"
+  | "attivo"
+  | "created_at"
+  | "updated_at"
+>;
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -15,7 +28,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle, title }: HeaderProps) {
-  const [currentUser, setCurrentUser] = useState<Utente | null>(null);
+  const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
 
   const loadUserAndStudio = async () => {
@@ -39,7 +52,9 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       // ✅ SOLO colonne che i tuoi types riconoscono sicuramente (evita SelectQueryError)
       const { data: utente, error: utenteError } = await supabase
         .from("tbutenti")
-        .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at")
+        .select(
+          "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
+        )
         .eq("email", email)
         .maybeSingle();
 
@@ -47,7 +62,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         console.warn("Impossibile caricare utente:", utenteError.message);
         setCurrentUser(null);
       } else {
-        setCurrentUser(utente ?? null);
+        setCurrentUser((utente ?? null) as HeaderUser | null);
       }
 
       const studioData = await studioService.getStudio();
@@ -90,7 +105,11 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
           </Button>
 
           {studio?.logo_url ? (
-            <img src={studio.logo_url} alt="Logo Studio" className="h-12 w-auto object-contain" />
+            <img
+              src={studio.logo_url}
+              alt="Logo Studio"
+              className="h-12 w-auto object-contain"
+            />
           ) : (
             <img src="/logo-elma.png" alt="ELMA Software" className="h-12 w-auto object-contain" />
           )}
