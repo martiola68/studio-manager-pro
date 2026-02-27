@@ -15,7 +15,40 @@ export type Database = {
   }
   public: {
     Tables: {
-      event_confirmations: {
+      tbmicrosoft365_user_tokens: {
+  Row: {
+    id: string
+    studio_id: string
+    user_id: string
+    token_cache_encrypted: string
+    scopes: string | null
+    connected_at: string | null
+    updated_at: string | null
+    revoked_at: string | null
+  }
+  Insert: {
+    id?: string
+    studio_id: string
+    user_id: string
+    token_cache_encrypted: string
+    scopes?: string | null
+    connected_at?: string | null
+    updated_at?: string | null
+    revoked_at?: string | null
+  }
+  Update: {
+    id?: string
+    studio_id?: string
+    user_id?: string
+    token_cache_encrypted?: string
+    scopes?: string | null
+    connected_at?: string | null
+    updated_at?: string | null
+    revoked_at?: string | null
+  }
+  Relationships: []
+},
+     event_confirmations: {
         Row: {
           confirmed: boolean | null
           confirmed_at: string | null
