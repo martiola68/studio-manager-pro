@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -23,7 +23,20 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type SidebarUser = Pick<
+  UtenteRow,
+  | "id"
+  | "nome"
+  | "cognome"
+  | "email"
+  | "tipo_utente"
+  | "ruolo_operatore_id"
+  | "attivo"
+  | "created_at"
+  | "updated_at"
+>;
 
 interface MenuItem {
   label: string;
@@ -40,7 +53,7 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps) {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<Utente | null>(null);
+  const [currentUser, setCurrentUser] = useState<SidebarUser | null>(null);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
@@ -55,16 +68,29 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
       } = await supabase.auth.getSession();
 
       if (session?.user?.email) {
-        const { data: utente } = await supabase
+        // ✅ SOLO colonne "sicure" per evitare mismatch types/schema
+        const { data: utente, error } = await supabase
           .from("tbutenti")
-          .select("*")
+          .select(
+            "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
+          )
           .eq("email", session.user.email)
-          .single();
+          .maybeSingle();
 
-        if (utente) setCurrentUser(utente);
+        if (error) {
+          console.error("Errore caricamento utente:", error);
+          setCurrentUser(null);
+        } else if (utente) {
+          setCurrentUser(utente as SidebarUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
       }
     } catch (error) {
       console.error("Errore caricamento utente:", error);
+      setCurrentUser(null);
     } finally {
       setLoading(false);
     }
@@ -227,13 +253,37 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
       adminOnly: true,
       children: [
         { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+        {
+          label: "Dati Studio",
+          href: "/impostazioni/studio",
+          icon: <Building2 className="h-4 w-4" />,
+        },
         { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-        { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-        { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-        { label: "Cassetti Fiscali", href: "/impostazioni/cassetti-fiscali", icon: <Key className="h-4 w-4" /> },
+        {
+          label: "Prestazioni",
+          href: "/impostazioni/prestazioni",
+          icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          label: "Scadenzari",
+          href: "/impostazioni/scadenzari",
+          icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          label: "Tipi Scadenze",
+          href: "/impostazioni/tipi-scadenze",
+          icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          label: "Tipo Promemoria",
+          href: "/impostazioni/tipo-promemoria",
+          icon: <Settings className="h-4 w-4" />,
+        },
+        {
+          label: "Cassetti Fiscali",
+          href: "/impostazioni/cassetti-fiscali",
+          icon: <Key className="h-4 w-4" />,
+        },
       ],
     },
   ];
@@ -260,7 +310,11 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
               {item.icon}
               <span className="font-medium">{item.label}</span>
             </div>
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
           </button>
 
           {isExpanded && (
@@ -332,12 +386,7 @@ export function Sidebar({ mobileOpen = false, onClose = () => {} }: SidebarProps
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-4 right-4 lg:hidden"
-          onClick={onClose}
-        >
+        <Button variant="ghost" size="icon" className="absolute top-4 right-4 lg:hidden" onClick={onClose}>
           <X className="h-6 w-6" />
         </Button>
 
