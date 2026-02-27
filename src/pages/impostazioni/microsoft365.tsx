@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,8 @@ import { supabase } from "@/lib/supabase/client";
 import { z } from "zod";
 
 const M365ConfigSchema = z.object({
-  client_id: z.string(),
-  tenant_id: z.string(),
+  client_id: z.string().min(1),
+  tenant_id: z.string().min(1),
   enabled: z.boolean(),
 });
 
@@ -31,47 +31,65 @@ interface UserConnectionStatus {
 
 export default function Microsoft365Settings() {
   const router = useRouter();
+
   const [studioId, setStudioId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  
+
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [tenantId, setTenantId] = useState("");
-  
+
   const [config, setConfig] = useState<M365Config | null>(null);
   const [userConnection, setUserConnection] = useState<UserConnectionStatus>({ isConnected: false });
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUserAndConfig();
-  }, []);
+  // ✅ Validazione chiara lato UI
+  const studioConfigValid = useMemo(() => {
+    if (!config) return false;
+    return Boolean(config.client_id && config.tenant_id && config.enabled === true);
+  }, [config]);
 
   useEffect(() => {
+    loadUserAndConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ gestisci i query params solo quando router è pronto
+  useEffect(() => {
+    if (!router.isReady) return;
+
     if (router.query.success === "true") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
-      loadUserConnectionStatus();
+      // ricarico stato connessione usando lo userId già noto (se presente)
+      if (userId) loadUserConnectionStatus(userId);
       router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
     }
-    
+
     if (router.query.error) {
-      const errorMsg = router.query.message 
+      const errorMsg = router.query.message
         ? decodeURIComponent(router.query.message as string)
         : "Errore durante la connessione";
       setError(`❌ ${errorMsg}`);
       router.replace("/impostazioni/microsoft365", undefined, { shallow: true });
     }
-  }, [router.query]);
+  }, [router.isReady, router.query, userId]);
 
   async function loadUserAndConfig() {
+    setLoading(true);
+    setError(null);
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr) throw sessionErr;
+
+      const session = sessionRes?.session;
       if (!session) {
         router.push("/login");
         return;
@@ -80,25 +98,30 @@ export default function Microsoft365Settings() {
       const currentUserId = session.user.id;
       setUserId(currentUserId);
 
-      const { data: user } = await supabase
+      // studio_id dell'utente
+      const { data: user, error: userErr } = await supabase
         .from("tbutenti")
         .select("studio_id")
         .eq("id", currentUserId)
         .single();
 
+      if (userErr) throw userErr;
+
       if (!user?.studio_id) {
         setError("Studio non trovato");
-        setLoading(false);
         return;
       }
 
       setStudioId(user.studio_id);
 
-      const { data: rawData } = await supabase
+      // ✅ config studio (maybeSingle -> oggetto o null)
+      const { data: rawData, error: cfgErr } = await supabase
         .from("microsoft365_config")
         .select("client_id, tenant_id, enabled")
         .eq("studio_id", user.studio_id)
         .maybeSingle();
+
+      if (cfgErr) throw cfgErr;
 
       if (rawData) {
         const parsed = M365ConfigSchema.safeParse(rawData);
@@ -109,29 +132,36 @@ export default function Microsoft365Settings() {
           setTenantId(validConfig.tenant_id);
         } else {
           console.error("Invalid config data in DB:", parsed.error);
+          setConfig(null);
           setError("Configurazione nel database corrotta o non valida");
         }
+      } else {
+        // nessuna config trovata
+        setConfig(null);
       }
 
-      await loadUserConnectionStatus();
-
-      setLoading(false);
+      // ✅ IMPORTANTISSIMO: usa l'id appena letto, non lo state che può essere ancora vuoto
+      await loadUserConnectionStatus(currentUserId);
     } catch (err) {
       console.error("Error loading config:", err);
-      setError("Errore nel caricamento della configurazione");
+      setError(err instanceof Error ? err.message : "Errore nel caricamento della configurazione");
+    } finally {
       setLoading(false);
     }
   }
 
-  async function loadUserConnectionStatus() {
-    if (!userId) return;
-    
+  // ✅ ora accetta userId come parametro: niente race condition con setState
+  async function loadUserConnectionStatus(uid: string) {
+    if (!uid) return;
+
     try {
-      const { data: tokenData } = await supabase
+      const { data: tokenData, error: tokenErr } = await supabase
         .from("tbmicrosoft_tokens")
         .select("created_at, updated_at")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .maybeSingle();
+
+      if (tokenErr) throw tokenErr;
 
       if (tokenData) {
         setUserConnection({
@@ -141,8 +171,8 @@ export default function Microsoft365Settings() {
       } else {
         setUserConnection({ isConnected: false });
       }
-    } catch (error) {
-      console.error("Error loading user connection status:", error);
+    } catch (err) {
+      console.error("Error loading user connection status:", err);
       setUserConnection({ isConnected: false });
     }
   }
@@ -158,6 +188,7 @@ export default function Microsoft365Settings() {
       return;
     }
 
+    // se config esiste, secret opzionale
     if (config && !clientSecret) {
       const confirmed = window.confirm(
         "Non hai inserito un nuovo Client Secret. Vuoi mantenere quello esistente?"
@@ -165,6 +196,7 @@ export default function Microsoft365Settings() {
       if (!confirmed) return;
     }
 
+    // se config non esiste, secret obbligatorio
     if (!config && !clientSecret) {
       setError("Client Secret è obbligatorio per nuove configurazioni");
       return;
@@ -187,18 +219,25 @@ export default function Microsoft365Settings() {
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(result.error || "Errore nel salvataggio");
       }
 
-      setConfig(result.config);
-      setClientSecret(""); 
+      // result.config dovrebbe contenere client_id, tenant_id, enabled
+      const parsed = M365ConfigSchema.safeParse(result.config);
+      if (!parsed.success) {
+        console.error("save-config returned invalid config:", parsed.error, result.config);
+        throw new Error("Risposta salvataggio non valida");
+      }
+
+      setConfig(parsed.data);
+      setClientSecret("");
       setSuccessMessage("✅ Configurazione salvata con successo!");
-      
+
+      // opzionale: testa subito
       await handleTest();
-      
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Errore nel salvataggio");
@@ -224,7 +263,7 @@ export default function Microsoft365Settings() {
         body: JSON.stringify({ studioId }),
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (response.ok && result.success) {
         setTestResult({
@@ -248,50 +287,58 @@ export default function Microsoft365Settings() {
       setTesting(false);
     }
   }
-async function handleConnect() {
-  if (!config) {
-    setError("Configura prima l'app Azure AD (Client ID, Tenant ID, Secret)");
-    return;
+
+  async function handleConnect() {
+    // ✅ messaggio più preciso: config studio, non “secret”
+    if (!config) {
+      setError("Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio.");
+      return;
+    }
+
+    if (!config.enabled) {
+      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+
+    // 1) recupera sessione Supabase
+    const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) {
+      setError("Errore sessione: " + sessionErr.message);
+      return;
+    }
+
+    const session = sessionRes?.session;
+    if (!session?.access_token) {
+      setError("Sessione non valida, fai login di nuovo.");
+      return;
+    }
+
+    // 2) chiama backend per ottenere la URL Microsoft
+    const res = await fetch("/api/auth/microsoft/login", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data?.url) {
+      setError(data?.error || "Errore avvio login Microsoft");
+      return;
+    }
+
+    // 3) redirect reale verso Microsoft
+    window.location.href = data.url;
   }
-
-  if (!config.enabled) {
-    setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
-    return;
-  }
-
-  setError(null);
-  setSuccessMessage(null);
-
-  // 1) recupera sessione Supabase
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    setError("Sessione non valida, fai login di nuovo.");
-    return;
-  }
-
-  // 2) chiama backend per ottenere la URL Microsoft
-  const res = await fetch("/api/auth/microsoft/login", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok || !data?.url) {
-    setError(data?.error || "Errore avvio login Microsoft");
-    return;
-  }
-
-  // 3) redirect reale verso Microsoft
-  window.location.href = data.url;
-}
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
       "Sei sicuro di voler disconnettere il tuo account Microsoft 365?\n\n" +
-      "Perderai l'accesso a Teams, Mail e Calendar finché non ti riconnetti."
+        "Perderai l'accesso a Teams, Mail e Calendar finché non ti riconnetti."
     );
 
     if (!confirmed) return;
@@ -306,7 +353,7 @@ async function handleConnect() {
         headers: { "Content-Type": "application/json" },
       });
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Errore durante la disconnessione");
@@ -314,7 +361,6 @@ async function handleConnect() {
 
       setUserConnection({ isConnected: false });
       setSuccessMessage("✅ Account Microsoft 365 disconnesso con successo");
-      
     } catch (err) {
       console.error("Disconnect error:", err);
       setError(err instanceof Error ? err.message : "Errore durante la disconnessione");
@@ -333,16 +379,25 @@ async function handleConnect() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Impostazioni Microsoft 365</h1>
-        <p className="text-muted-foreground">Configura l&apos;integrazione con Microsoft 365 per il tuo studio</p>
+        <p className="text-muted-foreground">
+          Configura l&apos;integrazione con Microsoft 365 per il tuo studio
+        </p>
       </div>
 
       {successMessage && (
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
           <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* ✅ Banner “Config studio non valida” SOLO se davvero non valida */}
+      {!studioConfigValid && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Config studio non valida</AlertDescription>
         </Alert>
       )}
 
@@ -356,8 +411,7 @@ async function handleConnect() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione Azure AD registrata per il tuo studio. 
-          Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
+          <strong>Configurazione App-Only (Client Credentials):</strong> Inserisci le credenziali dell&apos;applicazione Azure AD registrata per il tuo studio. Il Client Secret viene cifrato con AES-256-GCM prima di essere salvato.
         </AlertDescription>
       </Alert>
 
@@ -377,9 +431,7 @@ async function handleConnect() {
                 </>
               )}
             </CardTitle>
-            <CardDescription>
-              Configurazione attiva per questo studio
-            </CardDescription>
+            <CardDescription>Configurazione attiva per questo studio</CardDescription>
           </CardHeader>
         </Card>
       )}
@@ -399,10 +451,9 @@ async function handleConnect() {
               </>
             )}
           </CardTitle>
-          <CardDescription>
-            Stato della tua connessione personale a Microsoft 365
-          </CardDescription>
+          <CardDescription>Stato della tua connessione personale a Microsoft 365</CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
           {userConnection.isConnected ? (
             <>
@@ -411,25 +462,23 @@ async function handleConnect() {
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-sm font-medium">✅ Connesso</span>
                 </div>
+
                 {userConnection.lastConnection && (
                   <p className="text-sm text-muted-foreground">
-                    Ultima connessione: {userConnection.lastConnection.toLocaleString("it-IT", {
+                    Ultima connessione:{" "}
+                    {userConnection.lastConnection.toLocaleString("it-IT", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                       hour: "2-digit",
-                      minute: "2-digit"
+                      minute: "2-digit",
                     })}
                   </p>
                 )}
               </div>
-              
+
               <div className="pt-2">
-                <Button
-                  variant="outline"
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                >
+                <Button variant="outline" onClick={handleDisconnect} disabled={disconnecting}>
                   {disconnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Disconnetti Account
                 </Button>
@@ -446,15 +495,13 @@ async function handleConnect() {
                   Connetti il tuo account Microsoft per accedere a Teams, Mail e Calendar
                 </p>
               </div>
-              
+
               <div className="pt-2">
-                <Button
-                  onClick={handleConnect}
-                  disabled={!config || !config.enabled}
-                >
+                <Button onClick={handleConnect} disabled={!studioConfigValid}>
                   Connetti Microsoft 365
                 </Button>
-                {!config && (
+
+                {!studioConfigValid && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     ⚠️ Prima configura l&apos;app Azure AD nella sezione sottostante
                   </p>
@@ -467,18 +514,12 @@ async function handleConnect() {
 
       {testResult && (
         <Alert variant={testResult.success ? "default" : "destructive"}>
-          {testResult.success ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
+          {testResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <AlertDescription>
             {testResult.success ? (
               <>
                 <strong>✅ Connessione riuscita!</strong>
-                {testResult.organization && (
-                  <div className="mt-1">Organizzazione: {testResult.organization}</div>
-                )}
+                {testResult.organization && <div className="mt-1">Organizzazione: {testResult.organization}</div>}
               </>
             ) : (
               <>
@@ -495,17 +536,18 @@ async function handleConnect() {
           <CardTitle>Credenziali Azure AD (Configurazione Studio)</CardTitle>
           <CardDescription>
             Configura l&apos;applicazione Microsoft 365 per il tuo studio.
-            <a 
-              href="/guide/MICROSOFT_365_SETUP_GUIDE.md" 
+            <a
+              href="/guide/MICROSOFT_365_SETUP_GUIDE.md"
               target="_blank"
+              rel="noreferrer"
               className="ml-2 text-blue-600 hover:underline"
             >
               Guida completa →
             </a>
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
-          
           <div className="space-y-2">
             <Label htmlFor="clientId">Client ID *</Label>
             <Input
@@ -546,35 +588,25 @@ async function handleConnect() {
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button
-              onClick={handleSave}
-              disabled={saving || !clientId || !tenantId}
-            >
+            <Button onClick={handleSave} disabled={saving || !clientId || !tenantId}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {config ? "Aggiorna Configurazione" : "Salva Configurazione"}
             </Button>
 
             {config && (
-              <Button
-                variant="outline"
-                onClick={handleTest}
-                disabled={testing}
-              >
+              <Button variant="outline" onClick={handleTest} disabled={testing}>
                 {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Testa Connessione
               </Button>
             )}
           </div>
-
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle>Guida alla Configurazione</CardTitle>
-          <CardDescription>
-            Segui la guida passo-passo per configurare l&apos;applicazione Azure AD
-          </CardDescription>
+          <CardDescription>Segui la guida passo-passo per configurare l&apos;applicazione Azure AD</CardDescription>
         </CardHeader>
         <CardContent>
           <Button
@@ -585,7 +617,6 @@ async function handleConnect() {
           </Button>
         </CardContent>
       </Card>
-
     </div>
   );
 }
