@@ -4,7 +4,6 @@ export const config = { runtime: "nodejs" };
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { decrypt } from "@/lib/encryption365";
 
@@ -12,10 +11,8 @@ import { decrypt } from "@/lib/encryption365";
  * API: Test Microsoft 365 Connection (App-only / client credentials)
  * POST /api/microsoft365/test-connection
  *
- * - Richiede utente autenticato (cookie Supabase).
- * - Consente test SOLO per lo studio dell’utente.
- * - Carica config con service role, decifra secret, ottiene token e chiama Graph /organization.
- * - Sempre JSON.
+ * Input: { studioId }
+ * Output: { success, message, organization, tenant_id } oppure { success:false, error, details? }
  */
 
 const RequestSchema = z.object({
@@ -50,17 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   try {
-    // 1) Auth (cookie-based) + autorizzazione sullo studio
-    const supabase = createClient(req, res);
-    const {
-      data: { session },
-      error: sessionErr,
-    } = await supabase.auth.getSession();
-
-    if (sessionErr || !session?.user) {
-      return res.status(401).json({ success: false, error: "Non autenticato. Effettua il login." });
-    }
-
+    // 1) Validate input
     const parsedReq = RequestSchema.safeParse(req.body);
     if (!parsedReq.success) {
       return res.status(400).json({
@@ -71,21 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     const { studioId } = parsedReq.data;
-
-    // Verifica che l'utente appartenga allo studio richiesto
-    const { data: userRow, error: userErr } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", session.user.id)
-      .single();
-
-    if (userErr || !userRow?.studio_id) {
-      return res.status(403).json({ success: false, error: "Studio utente non valido o non trovato." });
-    }
-
-    if (userRow.studio_id !== studioId) {
-      return res.status(403).json({ success: false, error: "Operazione non autorizzata per questo studio." });
-    }
 
     // 2) Load config (service role)
     const { data, error } = await supabaseAdmin
@@ -114,6 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return res.status(500).json({
         success: false,
         error: "Invalid configuration data in database",
+        details: parsedConfig.error.flatten(),
       });
     }
 
@@ -140,6 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     // 4) Get access token (client_credentials)
     const tokenUrl = `https://login.microsoftonline.com/${cfg.tenant_id}/oauth2/v2.0/token`;
+
     const tokenParams = new URLSearchParams({
       client_id: cfg.client_id,
       client_secret: clientSecret,
@@ -183,9 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     let graphResponse: Response;
     try {
       graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
     } catch {
       return res.status(502).json({
@@ -206,7 +178,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const orgName = graphJson?.value?.[0]?.displayName ?? "Unknown organization";
 
-    // 6) SUCCESS
     return res.status(200).json({
       success: true,
       message: "Microsoft 365 connection successful",
@@ -214,7 +185,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       tenant_id: cfg.tenant_id,
     });
   } catch (err: unknown) {
-    console.error("[M365 test-connection] Fatal error:", err);
+    console.error("[M365 Test] Fatal error:", err);
 
     return res.status(500).json({
       success: false,
