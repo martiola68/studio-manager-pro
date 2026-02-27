@@ -1,27 +1,29 @@
-export const runtime = "nodejs";
+// pages/api/microsoft365/save-config.ts
 export const config = { runtime: "nodejs" };
 
 import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/encryption365";
 import { tokenCache } from "@/services/tokenCacheService";
 
 /**
- * API: Save Microsoft 365 Configuration
+ * API: Save Microsoft 365 Configuration (Studio-level)
  * POST /api/microsoft365/save-config
  *
- * Encrypts and saves M365 credentials for a studio using supabaseAdmin (service role).
- * Always returns JSON (never "silent" crash responses).
+ * - Richiede utente autenticato (cookie Supabase).
+ * - Consente salvataggio SOLO per lo studio dell'utente.
+ * - Salva/aggiorna la config con service role (supabaseAdmin).
+ * - Client Secret viene cifrato prima del salvataggio.
+ * - Invalida token cache dello studio.
  */
-
-console.log("[M365 save-config] FILE LOADED - NODE RUNTIME");
 
 const SaveConfigRequestSchema = z.object({
   studioId: z.string().uuid(),
   clientId: z.string().min(1),
-  clientSecret: z.string().optional(), // optional: can keep existing
+  clientSecret: z.string().optional(), // opzionale: update può mantenere esistente
   tenantId: z.string().min(1),
   organizerEmail: z.string().email().optional().or(z.literal("")),
 });
@@ -45,33 +47,29 @@ type ApiErr = {
   details?: any;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiOk | ApiErr>
-) {
-  // Always JSON
+export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiOk | ApiErr>) {
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
-  
-   // DEBUG TEMP: ping to verify logs & routing
+
+  // (opzionale) ping rapido per debug routing
   if (req.query.ping === "1") {
-    console.log("[M365 save-config] PING OK");
     return res.status(200).json({ success: true, message: "PING_OK" } as any);
   }
 
   try {
-    console.log("[M365 save-config] HANDLER START");
+    // 1) Auth (cookie-based) + autorizzazione sullo studio
+    const supabase = createClient(req, res);
+    const {
+      data: { session },
+      error: sessionErr,
+    } = await supabase.auth.getSession();
 
-    // Non-sensitive env checks (boolean only)
-    console.log("[M365 save-config] ENV:", {
-      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL || !!process.env.SUPABASE_URL,
-      hasEncryptKey: !!process.env.ENCRYPTION365_KEY || !!process.env.ENCRYPTION_KEY,
-      hasResendKey: !!process.env.RESEND_API_KEY,
-    });
+    if (sessionErr || !session?.user) {
+      return res.status(401).json({ success: false, error: "Non autenticato. Effettua il login." });
+    }
 
     const parseResult = SaveConfigRequestSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -83,14 +81,24 @@ export default async function handler(
     }
 
     const { studioId, clientId, clientSecret, tenantId, organizerEmail } = parseResult.data;
-
-    // Normalize secret "a prova di UI"
     const rawSecret = (clientSecret ?? "").toString().trim();
-    console.log("[M365 save-config] secret received len:", rawSecret.length);
 
-    const supabaseAdmin = getSupabaseAdmin();
+    // Verifica che l'utente appartenga allo studio richiesto
+    const { data: userRow, error: userErr } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", session.user.id)
+      .single();
 
-    // 1) Verify studio exists (ADMIN, no RLS issues)
+    if (userErr || !userRow?.studio_id) {
+      return res.status(403).json({ success: false, error: "Studio utente non valido o non trovato." });
+    }
+
+    if (userRow.studio_id !== studioId) {
+      return res.status(403).json({ success: false, error: "Operazione non autorizzata per questo studio." });
+    }
+
+    // 2) Verifica che lo studio esista (admin, no RLS)
     const { data: studio, error: studioError } = await supabaseAdmin
       .from("tbstudio")
       .select("id")
@@ -109,7 +117,7 @@ export default async function handler(
       return res.status(404).json({ success: false, error: "Studio not found" });
     }
 
-    // 2) Check existing config
+    // 3) Leggi config esistente
     const { data: existingConfig, error: existingError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("id")
@@ -124,8 +132,8 @@ export default async function handler(
       });
     }
 
-    // 3) Build update/insert payload
-    const basePayload: Record<string, any> = {
+    // 4) Payload base
+    const payload: Record<string, any> = {
       studio_id: studioId,
       client_id: clientId,
       tenant_id: tenantId,
@@ -133,17 +141,16 @@ export default async function handler(
       organizer_email: organizerEmail ? organizerEmail : null,
     };
 
-    // Save secret only if provided (update can keep existing)
+    // Secret: salva solo se presente (update può mantenerlo)
     if (rawSecret.length > 0) {
-      // If encryption fails due to missing key, catch will return JSON
-      basePayload.client_secret = encrypt(rawSecret);
+      payload.client_secret = encrypt(rawSecret);
     }
 
+    // 5) Insert / Update
     if (existingConfig) {
-      // Update existing
       const { error: updateError } = await supabaseAdmin
         .from("microsoft365_config")
-        .update(basePayload)
+        .update(payload)
         .eq("studio_id", studioId);
 
       if (updateError) {
@@ -154,17 +161,15 @@ export default async function handler(
         });
       }
     } else {
-      // Insert new: secret is required
-      if (!basePayload.client_secret) {
+      // New config: secret obbligatorio
+      if (!payload.client_secret) {
         return res.status(400).json({
           success: false,
           error: "Client secret is required for new configuration",
         });
       }
 
-      const { error: insertError } = await supabaseAdmin
-        .from("microsoft365_config")
-        .insert(basePayload);
+      const { error: insertError } = await supabaseAdmin.from("microsoft365_config").insert(payload);
 
       if (insertError) {
         return res.status(500).json({
@@ -175,7 +180,7 @@ export default async function handler(
       }
     }
 
-    // 4) Read back saved config (for UI)
+    // 6) Read-back (per UI)
     const { data: savedConfig, error: selectError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("id, studio_id, client_id, tenant_id, organizer_email, enabled")
@@ -190,7 +195,7 @@ export default async function handler(
       });
     }
 
-    // 5) Invalidate token cache
+    // 7) Invalidate cache
     tokenCache.invalidate(studioId);
 
     return res.status(200).json({
