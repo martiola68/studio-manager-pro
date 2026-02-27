@@ -1,11 +1,21 @@
+// pages/api/microsoft365/test-connection.ts
+export const config = { runtime: "nodejs" };
+
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { decrypt } from "@/lib/encryption365";
 import { z } from "zod";
 
+import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { decrypt } from "@/lib/encryption365";
+
 /**
- * API: Test Microsoft 365 Connection
- * App-only (client credentials) test.
+ * API: Test Microsoft 365 Connection (App-only / client credentials)
+ * POST /api/microsoft365/test-connection
+ *
+ * - Richiede utente autenticato (cookie Supabase).
+ * - Consente test SOLO per lo studio dell’utente.
+ * - Carica config con service role, decifra secret, ottiene token e chiama Graph /organization.
+ * - Sempre JSON.
  */
 
 const RequestSchema = z.object({
@@ -19,33 +29,65 @@ const DbConfigSchema = z.object({
   enabled: z.boolean(),
 });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // ❌ Metodo
+type ApiOk = {
+  success: true;
+  message: string;
+  organization: string;
+  tenant_id: string;
+};
+
+type ApiErr = {
+  success: false;
+  error: string;
+  details?: any;
+};
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiOk | ApiErr>) {
+  res.setHeader("Content-Type", "application/json");
+
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
   try {
-    /* =========================
-       1. Validate input
-    ========================= */
+    // 1) Auth (cookie-based) + autorizzazione sullo studio
+    const supabase = createClient(req, res);
+    const {
+      data: { session },
+      error: sessionErr,
+    } = await supabase.auth.getSession();
+
+    if (sessionErr || !session?.user) {
+      return res.status(401).json({ success: false, error: "Non autenticato. Effettua il login." });
+    }
+
     const parsedReq = RequestSchema.safeParse(req.body);
     if (!parsedReq.success) {
       return res.status(400).json({
         success: false,
         error: "Invalid request body",
+        details: parsedReq.error.flatten(),
       });
     }
 
     const { studioId } = parsedReq.data;
 
-    /* =========================
-       2. Load config (service role)
-    ========================= */
-    const supabaseAdmin = getSupabaseAdmin();
+    // Verifica che l'utente appartenga allo studio richiesto
+    const { data: userRow, error: userErr } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", session.user.id)
+      .single();
+
+    if (userErr || !userRow?.studio_id) {
+      return res.status(403).json({ success: false, error: "Studio utente non valido o non trovato." });
+    }
+
+    if (userRow.studio_id !== studioId) {
+      return res.status(403).json({ success: false, error: "Operazione non autorizzata per questo studio." });
+    }
+
+    // 2) Load config (service role)
     const { data, error } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, client_secret, tenant_id, enabled")
@@ -53,7 +95,11 @@ export default async function handler(
       .maybeSingle();
 
     if (error) {
-      throw new Error(`Database error: ${error.message}`);
+      return res.status(500).json({
+        success: false,
+        error: "Database error",
+        details: error.message,
+      });
     }
 
     if (!data) {
@@ -71,34 +117,31 @@ export default async function handler(
       });
     }
 
-    const config = parsedConfig.data;
+    const cfg = parsedConfig.data;
 
-    if (!config.enabled) {
+    if (!cfg.enabled) {
       return res.status(400).json({
         success: false,
         error: "Microsoft 365 integration is disabled",
       });
     }
 
-    /* =========================
-       3. Decrypt secret
-    ========================= */
+    // 3) Decrypt secret
     let clientSecret: string;
     try {
-      clientSecret = decrypt(config.client_secret);
-    } catch (e) {
-      throw new Error(
-        "Failed to decrypt client secret (wrong key or corrupted data)"
-      );
+      clientSecret = decrypt(cfg.client_secret);
+    } catch {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to decrypt client secret",
+        details: "Wrong encryption key or corrupted stored secret",
+      });
     }
 
-    /* =========================
-       4. Get access token
-    ========================= */
-    const tokenUrl = `https://login.microsoftonline.com/${config.tenant_id}/oauth2/v2.0/token`;
-
+    // 4) Get access token (client_credentials)
+    const tokenUrl = `https://login.microsoftonline.com/${cfg.tenant_id}/oauth2/v2.0/token`;
     const tokenParams = new URLSearchParams({
-      client_id: config.client_id,
+      client_id: cfg.client_id,
       client_secret: clientSecret,
       scope: "https://graph.microsoft.com/.default",
       grant_type: "client_credentials",
@@ -112,7 +155,10 @@ export default async function handler(
         body: tokenParams.toString(),
       });
     } catch {
-      throw new Error("Network error while contacting Microsoft login endpoint");
+      return res.status(502).json({
+        success: false,
+        error: "Network error while contacting Microsoft login endpoint",
+      });
     }
 
     const tokenJson = await tokenResponse.json().catch(() => null);
@@ -121,33 +167,31 @@ export default async function handler(
       return res.status(401).json({
         success: false,
         error: "Failed to obtain access token",
-        details:
-          tokenJson?.error_description ||
-          tokenJson?.error ||
-          "Invalid credentials or tenant",
+        details: tokenJson?.error_description || tokenJson?.error || "Invalid credentials or tenant",
       });
     }
 
     const accessToken = tokenJson?.access_token;
     if (!accessToken) {
-      throw new Error("Access token missing in Microsoft response");
+      return res.status(500).json({
+        success: false,
+        error: "Access token missing in Microsoft response",
+      });
     }
 
-    /* =========================
-       5. Test Graph API
-    ========================= */
+    // 5) Test Graph API
     let graphResponse: Response;
     try {
-      graphResponse = await fetch(
-        "https://graph.microsoft.com/v1.0/organization",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      graphResponse = await fetch("https://graph.microsoft.com/v1.0/organization", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
     } catch {
-      throw new Error("Network error while calling Microsoft Graph");
+      return res.status(502).json({
+        success: false,
+        error: "Network error while calling Microsoft Graph",
+      });
     }
 
     const graphJson = await graphResponse.json().catch(() => null);
@@ -156,26 +200,21 @@ export default async function handler(
       return res.status(403).json({
         success: false,
         error: "Graph API call failed",
-        details: "Token valid but insufficient permissions",
+        details: graphJson?.error?.message || "Token valid but insufficient permissions",
       });
     }
 
-    const orgName =
-      graphJson?.value?.[0]?.displayName ?? "Unknown organization";
+    const orgName = graphJson?.value?.[0]?.displayName ?? "Unknown organization";
 
-    /* =========================
-       6. SUCCESS
-    ========================= */
+    // 6) SUCCESS
     return res.status(200).json({
       success: true,
       message: "Microsoft 365 connection successful",
       organization: orgName,
-      tenant_id: config.tenant_id,
+      tenant_id: cfg.tenant_id,
     });
-
   } catch (err: unknown) {
-    // 🔴 ULTIMA RETE DI SICUREZZA
-    console.error("[M365 Test] Fatal error:", err);
+    console.error("[M365 test-connection] Fatal error:", err);
 
     return res.status(500).json({
       success: false,
