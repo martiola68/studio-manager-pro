@@ -3,7 +3,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Database } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/database.types";
 import { hardLogout } from "@/services/logoutService";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
@@ -36,7 +36,9 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       if (email) {
         const { data: utente, error: utenteError } = await supabase
           .from("tbutenti")
-          .select("*")
+          .select(
+            "id, email, nome, cognome, tipo_utente, attivo, ruolo_operatore_id, responsabile, settore, studio_id, created_at, updated_at"
+          )
           .eq("email", email)
           .single();
 
@@ -44,14 +46,17 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
           console.warn("Impossibile caricare utente:", utenteError.message);
           setCurrentUser(null);
         } else {
-          setCurrentUser(utente ?? null);
+          setCurrentUser((utente as Utente) ?? null);
         }
+      } else {
+        setCurrentUser(null);
       }
 
       const studioData = await studioService.getStudio();
       setStudio(studioData);
     } catch (e) {
       console.error("Errore caricamento dati header:", e);
+      setCurrentUser(null);
     }
   };
 
@@ -83,27 +88,14 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
     <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onMenuToggle}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
             <Menu className="h-6 w-6" />
           </Button>
 
           {studio?.logo_url ? (
-            <img
-              src={studio.logo_url}
-              alt="Logo Studio"
-              className="h-12 w-auto object-contain"
-            />
+            <img src={studio.logo_url} alt="Logo Studio" className="h-12 w-auto object-contain" />
           ) : (
-            <img
-              src="/logo-elma.png"
-              alt="ELMA Software"
-              className="h-12 w-auto object-contain"
-            />
+            <img src="/logo-elma.png" alt="ELMA Software" className="h-12 w-auto object-contain" />
           )}
 
           <div>
