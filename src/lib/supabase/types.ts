@@ -3,7 +3,6 @@
 
 import type { Database as DB } from "@/integrations/supabase/database.types";
 
-// Re-export the canonical Database type (optional but handy)
 export type Database = DB;
 
 // Re-export commonly used types for convenience
