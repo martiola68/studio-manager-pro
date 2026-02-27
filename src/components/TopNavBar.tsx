@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { usePathname } from "next/navigation";
-import type React from "react";
 import type { Database } from "@/lib/supabase/types";
 import { ShieldCheck } from "lucide-react";
 import {
@@ -29,7 +28,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
+type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
+
+type TopNavUser = Pick<
+  UtenteRow,
+  | "id"
+  | "nome"
+  | "cognome"
+  | "email"
+  | "tipo_utente"
+  | "ruolo_operatore_id"
+  | "attivo"
+  | "created_at"
+  | "updated_at"
+>;
 
 interface MenuItem {
   label: string;
@@ -40,7 +52,7 @@ interface MenuItem {
 }
 
 export function TopNavBar() {
-  const [currentUser, setCurrentUser] = useState<Utente | null>(null);
+  const [currentUser, setCurrentUser] = useState<TopNavUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [messaggiNonLetti, setMessaggiNonLetti] = useState(0);
@@ -58,16 +70,29 @@ export function TopNavBar() {
       } = await supabase.auth.getSession();
 
       if (session?.user?.email) {
-        const { data: utente } = await supabase
+        // ✅ SOLO colonne "sicure" (evita mismatch con types/schema)
+        const { data: utente, error } = await supabase
           .from("tbutenti")
-          .select("*")
+          .select(
+            "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
+          )
           .eq("email", session.user.email)
-          .single();
+          .maybeSingle();
 
-        if (utente) setCurrentUser(utente);
+        if (error) {
+          console.error("Errore caricamento utente:", error);
+          setCurrentUser(null);
+        } else if (utente) {
+          setCurrentUser(utente as TopNavUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } else {
+        setCurrentUser(null);
       }
     } catch (error) {
       console.error("Errore caricamento utente:", error);
+      setCurrentUser(null);
     } finally {
       setLoading(false);
     }
