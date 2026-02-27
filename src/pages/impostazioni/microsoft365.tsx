@@ -166,8 +166,8 @@ export default function Microsoft365Settings() {
 
     try {
       const { data: tokenData, error: tokenErr } = await supabase
-        .from("tbmicrosoft_tokens")
-        .select("created_at, updated_at")
+        .from("tbmicrosoft365_user_tokens")
+        .select("connected_at, updated_at, revoked_at")
         .eq("user_id", uid)
         .maybeSingle();
 
