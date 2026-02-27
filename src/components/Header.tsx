@@ -3,7 +3,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/types";
 import { hardLogout } from "@/services/logoutService";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
