@@ -68,11 +68,13 @@ import {
 type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
-type CassettoFiscale =
-  Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
+type CassettoFiscale = Database["public"]["Tables"]["tbcassetti_fiscali"]["Row"];
 type Prestazione = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 
 type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
+type ContattoRow = Database["public"]["Tables"]["tbcontatti"]["Row"];
+type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
+type PrestazioneRow = Database["public"]["Tables"]["tbprestazioni"]["Row"];
 
 type ScadenzariSelezionati = {
   iva: boolean;
@@ -272,12 +274,11 @@ export default function ClientiPage() {
           supabase.from("tbprestazioni").select("*").order("descrizione"),
         ]);
 
-// ✅ qui dentro al tuo try(), lascia SOLO queste righe (senza type dentro)
 setClienti((clientiData ?? []) as unknown as ClienteRow[]);
-setContatti(contattiData ?? []);
-setUtenti(utentiData ?? []);
+setContatti((contattiData ?? []) as unknown as ContattoRow[]);
+setUtenti((utentiData ?? []) as unknown as UtenteRow[]);
 setCassettiFiscali((cassettiData ?? []) as CassettoFiscale[]);
-setPrestazioni(prestazioniRes.data ?? []);
+setPrestazioni((prestazioniRes.data ?? []) as unknown as PrestazioneRow[]);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
