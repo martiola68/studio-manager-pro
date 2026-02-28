@@ -510,7 +510,8 @@ const formatTimeWithTimezone = (value: string): string => {
           .single();
 
         if (error) throw error;
-
+        const { eventoService } = await import("@/services/eventoService");
+        
         await eventoService.sendEventNotification(
   toNotificationPayload(data) as any
 );
