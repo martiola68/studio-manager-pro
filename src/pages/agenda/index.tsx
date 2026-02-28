@@ -72,6 +72,23 @@ type ClienteAgenda = {
   utente_professionista_id: string | null;
 };
 
+// 👇 AGGIUNGI QUESTI DUE SUBITO DOPO
+
+type ClienteBase = {
+  id: string;
+  ragione_sociale?: string;
+  codice_fiscale?: string;
+  partita_iva?: string;
+};
+
+type UtenteBase = {
+  id: string;
+  nome: string;
+  cognome: string;
+  email: string;
+  settore: string | null;
+};
+
 // Tipo personalizzato per l'evento con le relazioni popolate
 type EventoWithRelations = Omit<
   Database["public"]["Tables"]["tbagenda"]["Row"],
