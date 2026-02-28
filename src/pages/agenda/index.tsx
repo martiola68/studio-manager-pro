@@ -31,7 +31,7 @@ import {
   Search,
   Map
 } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import {
   format,
   startOfMonth,
@@ -57,15 +57,20 @@ import {
 } from "@/components/ui/tooltip";
 import type React from "react";
 
-// DEFINIZIONE TIPI CORRETTA
-type ClienteBase = Pick<
-  Database["public"]["Tables"]["tbclienti"]["Row"],
-  "id" | "ragione_sociale" | "codice_fiscale" | "partita_iva"
->;
-type UtenteBase = Pick<
-  Database["public"]["Tables"]["tbutenti"]["Row"],
-  "id" | "nome" | "cognome" | "email" | "settore"
->;
+// DEFINIZIONE TIPI (agenda – shape reale query)
+type ClienteAgenda = {
+  attivo: boolean | null;
+  cap: string;
+  citta: string;
+  cod_cliente: string;
+  codice_fiscale: string;
+  contatto1_id: string | null;
+  contatto2_id: string | null;
+  created_at: string | null;
+  id: string;
+  updated_at: string | null;
+  utente_professionista_id: string | null;
+};
 
 // Tipo personalizzato per l'evento con le relazioni popolate
 type EventoWithRelations = Omit<
@@ -86,7 +91,7 @@ export default function AgendaPage() {
 
   // Stati principali
   const [eventi, setEventi] = useState<EventoWithRelations[]>([]);
-  const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -192,7 +197,7 @@ export default function AgendaPage() {
         .order("ragione_sociale");
 
       if (clientiError) throw clientiError;
-      setClienti(clientiData || []);
+      setClienti((clientiData || []) as ClienteAgenda[]);
 
       // Carica utenti
       const { data: utentiData, error: utentiError } = await supabase
