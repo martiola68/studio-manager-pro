@@ -488,7 +488,14 @@ export default function AgendaPage() {
         if (error) throw error;
 
         const { eventoService } = await import("@/services/eventoService");
-        await eventoService.sendEventNotification(data);
+        await eventoService.sendEventNotification({
+  ...data,
+  durata_giorni: (data as any).durata_giorni ?? null,
+  evento_generico: (data as any).evento_generico ?? null,
+  frequenza_giorni: (data as any).frequenza_giorni ?? null,
+  link_teams: (data as any).link_teams ?? null,
+  // aggiungi qui eventuali altri campi che TS ti segnala nel prossimo errore
+} as any);
 
         // NUOVO: Sincronizza con Outlook Calendar
         try {
