@@ -166,6 +166,41 @@ export default function AgendaPage() {
   const [searchPartecipanti, setSearchPartecipanti] = useState("");
 
   // Helper per formattare orari con timezone italiano
+
+  // Stato per ricerca partecipanti
+const [searchPartecipanti, setSearchPartecipanti] = useState("");
+
+const toNotificationPayload = (e: any) => ({
+  ...e,
+
+  durata_giorni: e?.durata_giorni ?? null,
+  evento_generico: e?.evento_generico ?? null,
+  frequenza_giorni: e?.frequenza_giorni ?? null,
+  link_teams: e?.link_teams ?? null,
+
+  frequenza_settimane: e?.frequenza_settimane ?? null,
+  frequenza_mesi: e?.frequenza_mesi ?? null,
+  giorno_mese: e?.giorno_mese ?? null,
+  giorni_settimana: e?.giorni_settimana ?? null,
+  ricorrenza_fine: e?.ricorrenza_fine ?? null,
+  ricorrenza_count: e?.ricorrenza_count ?? null,
+  outlook_event_id: e?.outlook_event_id ?? null,
+});
+  
+// Helper per formattare orari con timezone italiano
+const formatTimeWithTimezone = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Rome",
+    });
+  } catch {
+    return "";
+  }
+};
+  
   const formatTimeWithTimezone = (dateString: string): string => {
     try {
       const date = new Date(dateString);
@@ -487,15 +522,9 @@ export default function AgendaPage() {
 
         if (error) throw error;
 
-        const { eventoService } = await import("@/services/eventoService");
-        await eventoService.sendEventNotification({
-  ...data,
-  durata_giorni: (data as any).durata_giorni ?? null,
-  evento_generico: (data as any).evento_generico ?? null,
-  frequenza_giorni: (data as any).frequenza_giorni ?? null,
-  link_teams: (data as any).link_teams ?? null,
-  // aggiungi qui eventuali altri campi che TS ti segnala nel prossimo errore
-} as any);
+        await eventoService.sendEventNotification(
+  toNotificationPayload(data) as any
+);
 
         // NUOVO: Sincronizza con Outlook Calendar
         try {
@@ -560,7 +589,9 @@ export default function AgendaPage() {
           // Send notifications for all occurrences
           const { eventoService } = await import("@/services/eventoService");
           for (const occurrence of data) {
-            await eventoService.sendEventNotification(occurrence);
+            await eventoService.sendEventNotification(
+  toNotificationPayload(occurrence) as any
+);
           }
 
           // NUOVO: Sincronizza tutti gli eventi ricorrenti con Outlook
