@@ -3,24 +3,11 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { studioService } from "@/services/studioService";
 import { User, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Database } from "@/lib/supabase/types";
 import { hardLogout } from "@/services/logoutService";
+import type { Database } from "@/lib/supabase/types";
+import type { AppUserBase } from "@/types/appUser";
 
 type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
-type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
-
-type HeaderUser = Pick<
-  UtenteRow,
-  | "id"
-  | "nome"
-  | "cognome"
-  | "email"
-  | "tipo_utente"
-  | "ruolo_operatore_id"
-  | "attivo"
-  | "created_at"
-  | "updated_at"
->;
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -28,7 +15,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle, title }: HeaderProps) {
-  const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUserBase | null>(null);
   const [studio, setStudio] = useState<Studio | null>(null);
 
   const loadUserAndStudio = async () => {
@@ -49,11 +36,11 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         return;
       }
 
-      // ✅ SOLO colonne che i tuoi types riconoscono sicuramente (evita SelectQueryError)
+      // ✅ Utente MINIMO per l'app (no Row completo)
       const { data: utente, error: utenteError } = await supabase
         .from("tbutenti")
         .select(
-          "id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at"
+          "id, nome, cognome, email, tipo_utente, studio_id, settore, ruolo_operatore_id, attivo"
         )
         .eq("email", email)
         .maybeSingle();
@@ -62,7 +49,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
         console.warn("Impossibile caricare utente:", utenteError.message);
         setCurrentUser(null);
       } else {
-        setCurrentUser((utente ?? null) as HeaderUser | null);
+        setCurrentUser((utente ?? null) as AppUserBase | null);
       }
 
       const studioData = await studioService.getStudio();
@@ -105,11 +92,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
           </Button>
 
           {studio?.logo_url ? (
-            <img
-              src={studio.logo_url}
-              alt="Logo Studio"
-              className="h-12 w-auto object-contain"
-            />
+            <img src={studio.logo_url} alt="Logo Studio" className="h-12 w-auto object-contain" />
           ) : (
             <img src="/logo-elma.png" alt="ELMA Software" className="h-12 w-auto object-contain" />
           )}
