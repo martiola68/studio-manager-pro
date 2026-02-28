@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { encrypt } from "@/lib/encryption365";
+import { encrypt, decrypt } from "@/lib/encryption365";
 
 /* =======================
    Utils
@@ -12,7 +12,9 @@ function appBaseUrl(req: NextApiRequest) {
 }
 
 function redirectOk(res: NextApiResponse) {
-  res.writeHead(302, { Location: "/impostazioni/microsoft365?m365=connected" });
+  res.writeHead(302, {
+    Location: "/impostazioni/microsoft365?m365=connected",
+  });
   res.end();
 }
 
@@ -54,7 +56,7 @@ export default async function handler(
     }
 
     /* =======================
-       1) Recupera user_id dallo state
+       1) user_id dallo state
     ======================= */
     const { data: settings, error: sErr } = await supabaseAdmin
       .from("tbmicrosoft_settings")
@@ -69,7 +71,7 @@ export default async function handler(
     const userId = settings.user_id;
 
     /* =======================
-       2) Recupera studio_id
+       2) studio_id
     ======================= */
     const { data: userRow, error: uErr } = await supabaseAdmin
       .from("tbutenti")
@@ -84,7 +86,7 @@ export default async function handler(
     const studioId = userRow.studio_id;
 
     /* =======================
-       3) Config studio M365
+       3) Config Microsoft 365
     ======================= */
     const { data: cfg, error: cfgErr } = await supabaseAdmin
       .from("microsoft365_config")
@@ -105,12 +107,19 @@ export default async function handler(
 
     /* =======================
        4) CODE → TOKEN (DELEGATED)
+       🔴 QUI ERA IL BUG
+       ✅ decrypt OBBLIGATORIA
     ======================= */
     const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
 
+    const clientSecret = decrypt(cfg.client_secret);
+
+    // DEBUG TEMPORANEO (rimuovi dopo il primo test)
+    console.log("M365 CLIENT SECRET LEN:", clientSecret.length);
+
     const body = new URLSearchParams({
       client_id: cfg.client_id,
-      client_secret: cfg.client_secret,
+      client_secret: clientSecret, // ← IN CHIARO
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,
