@@ -98,6 +98,7 @@ type UtenteAgenda = {
   email: string;
   tipo_utente: string;
   ruolo_operatore_id: string | null;
+  settore: string | null; // ✅ AGGIUNGI QUESTA
   attivo: boolean | null;
   created_at: string | null;
   updated_at: string | null;
@@ -254,13 +255,23 @@ const formatTimeWithTimezone = (value: string): string => {
       if (clientiError) throw clientiError;
       setClienti((clientiData || []) as ClienteAgenda[]);
 
-      // Carica utenti
-      const { data: utentiData, error: utentiError } = await supabase
-        .from("tbutenti")
-        .select("*")
-        .eq("attivo", true)
-        .order("cognome", { ascending: true });
-
+   // Carica utenti
+const { data: utentiData, error: utentiError } = await supabase
+  .from("tbutenti")
+  .select(`
+    id,
+    nome,
+    cognome,
+    email,
+    settore,
+    tipo_utente,
+    ruolo_operatore_id,
+    attivo,
+    created_at,
+    updated_at
+  `)
+  .eq("attivo", true)
+  .order("cognome", { ascending: true });
       if (utentiError) throw utentiError;
       setUtenti((utentiData || []) as UtenteAgenda[]);
 
