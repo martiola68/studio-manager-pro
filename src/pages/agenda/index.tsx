@@ -59,6 +59,8 @@ import type React from "react";
 
 // DEFINIZIONE TIPI (agenda – shape reale query)
 type ClienteAgenda = {
+  id: string;
+  ragione_sociale: string; // ✅ serve per la select clienti
   attivo: boolean | null;
   cap: string;
   citta: string;
@@ -67,7 +69,6 @@ type ClienteAgenda = {
   contatto1_id: string | null;
   contatto2_id: string | null;
   created_at: string | null;
-  id: string;
   updated_at: string | null;
   utente_professionista_id: string | null;
 };
