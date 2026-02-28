@@ -2,7 +2,7 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import type { Database } from "@/integrations/supabase/types";
 
 /**
  * Singleton browser-only: il client viene creato una sola volta nel browser
