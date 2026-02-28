@@ -608,7 +608,7 @@ const formatTimeWithTimezone = (value: string): string => {
           if (error) throw error;
 
           const { eventoService } = await import("@/services/eventoService");
-          await eventoService.sendEventNotification(data);
+          await eventoService.sendEventNotification(toNotificationPayload(data) as any);
 
           // NUOVO: Sincronizza con Outlook Calendar
           try {
