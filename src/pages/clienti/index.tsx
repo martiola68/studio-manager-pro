@@ -796,20 +796,38 @@ const supabase = getSupabaseClient();
         return;
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", user.id)
-        .single();
+     const { data: userData, error: userError } = await supabase
+  .from("tbutenti")
+  .select("*")
+  .eq("id", currentUserId)
+  .single();
 
-      if (userError || !userData?.studio_id) {
-        toast({
-          title: "Errore",
-          description: "Impossibile recuperare lo studio dell'utente.",
-          variant: "destructive",
-        });
-        return;
-      }
+if (userError || !userData) {
+  toast({
+    title: "Errore",
+    description: "Impossibile recuperare lo studio dell'utente.",
+    variant: "destructive",
+  });
+  return;
+}
+
+// Recupero “studio” in modo safe (finché non usi la colonna corretta)
+const studioId =
+  (userData as unknown as UtenteRow as any).studio_id ??
+  (userData as unknown as UtenteRow as any).studio_professionale_id ??
+  (userData as unknown as UtenteRow as any).id_studio ??
+  (userData as unknown as UtenteRow as any).utente_professionista_id;
+
+if (!studioId) {
+  toast({
+    title: "Errore",
+    description: "Impossibile recuperare lo studio dell'utente.",
+    variant: "destructive",
+  });
+  return;
+}
+
+// 👇 DA QUI IN POI: sostituisci userData.studio_id con studioId
 
       const studioIdFromUser = userData.studio_id as string;
 
