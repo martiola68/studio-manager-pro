@@ -162,9 +162,6 @@ export default function AgendaPage() {
     durata_giorni: 180
   });
 
-  // Stato per ricerca partecipanti
-  const [searchPartecipanti, setSearchPartecipanti] = useState("");
-
   // Helper per formattare orari con timezone italiano
 
   // Stato per ricerca partecipanti
