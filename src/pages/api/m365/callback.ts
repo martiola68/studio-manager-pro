@@ -56,11 +56,11 @@ export default async function handler(
     }
 
     /* =======================
-       1) user_id dallo state
+       1) Recupero user dallo state
     ======================= */
     const { data: settings, error: sErr } = await supabaseAdmin
       .from("tbmicrosoft_settings")
-      .select("user_id, m365_oauth_state")
+      .select("user_id")
       .eq("m365_oauth_state", state)
       .maybeSingle();
 
@@ -71,7 +71,7 @@ export default async function handler(
     const userId = settings.user_id;
 
     /* =======================
-       2) studio_id
+       2) Recupero studio_id
     ======================= */
     const { data: userRow, error: uErr } = await supabaseAdmin
       .from("tbutenti")
@@ -106,20 +106,15 @@ export default async function handler(
     const redirectUri = `${appBaseUrl(req)}/api/m365/callback`;
 
     /* =======================
-       4) CODE → TOKEN (DELEGATED)
-       🔴 QUI ERA IL BUG
-       ✅ decrypt OBBLIGATORIA
+       4) CODE → TOKEN (NO PKCE)
     ======================= */
     const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
 
     const clientSecret = decrypt(cfg.client_secret);
 
-    // DEBUG TEMPORANEO (rimuovi dopo il primo test)
-    console.log("M365 CLIENT SECRET LEN:", clientSecret.length);
-
     const body = new URLSearchParams({
       client_id: cfg.client_id,
-      client_secret: clientSecret, // ← IN CHIARO
+      client_secret: clientSecret,
       grant_type: "authorization_code",
       code,
       redirect_uri: redirectUri,
