@@ -89,6 +89,20 @@ type UtenteBase = {
   settore: string | null;
 };
 
+// 👇 AGGIUNGI SUBITO QUI SOTTO
+
+type UtenteAgenda = {
+  id: string;
+  nome: string;
+  cognome: string;
+  email: string;
+  tipo_utente: string;
+  ruolo_operatore_id: string | null;
+  attivo: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
 // Tipo personalizzato per l'evento con le relazioni popolate
 type EventoWithRelations = Omit<
   Database["public"]["Tables"]["tbagenda"]["Row"],
@@ -109,7 +123,7 @@ export default function AgendaPage() {
   // Stati principali
   const [eventi, setEventi] = useState<EventoWithRelations[]>([]);
   const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
-  const [utenti, setUtenti] = useState<Utente[]>([]);
+  const [utenti, setUtenti] = useState<UtenteAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -224,7 +238,7 @@ export default function AgendaPage() {
         .order("cognome", { ascending: true });
 
       if (utentiError) throw utentiError;
-      setUtenti(utentiData || []);
+      setUtenti((utentiData || []) as UtenteAgenda[]);
 
     } catch (error) {
       console.error("Errore caricamento:", error);
