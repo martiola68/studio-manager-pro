@@ -1,18 +1,52 @@
-import { useState, useEffect, useRef } from "react";
+// src/pages/agenda/index.tsx
+import { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
+
 import { getSupabaseClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,9 +63,8 @@ import {
   Building2,
   FileText,
   Search,
-  Map
 } from "lucide-react";
-import type { Database } from "@/lib/supabase/types";
+
 import {
   format,
   startOfMonth,
@@ -45,22 +78,19 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
-  parseISO
+  parseISO,
 } from "date-fns";
 import { it } from "date-fns/locale";
-import { calendarSyncService } from "@/services/calendarSyncService";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type React from "react";
 
-// DEFINIZIONE TIPI (agenda – shape reale query)
+import { calendarSyncService } from "@/services/calendarSyncService";
+
+// --------------------
+// TIPI
+// --------------------
+
 type ClienteAgenda = {
   id: string;
-  ragione_sociale: string; // ✅ serve per la select clienti
+  ragione_sociale: string;
   attivo: boolean | null;
   cap: string;
   citta: string;
@@ -72,8 +102,6 @@ type ClienteAgenda = {
   updated_at: string | null;
   utente_professionista_id: string | null;
 };
-
-// 👇 AGGIUNGI QUESTI DUE SUBITO DOPO
 
 type ClienteBase = {
   id: string;
@@ -90,8 +118,6 @@ type UtenteBase = {
   settore: string | null;
 };
 
-// 👇 AGGIUNGI SUBITO QUI SOTTO
-
 type UtenteAgenda = {
   id: string;
   nome: string;
@@ -99,25 +125,104 @@ type UtenteAgenda = {
   email: string;
   tipo_utente: string;
   ruolo_operatore_id: string | null;
-  settore: string | null; // ✅ AGGIUNGI QUESTA
+  settore: string | null;
   attivo: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
 
-// Tipo personalizzato per l'evento con le relazioni popolate
-type EventoWithRelations = Omit<
-  Database["public"]["Tables"]["tbagenda"]["Row"],
-  "cliente_id" | "utente_id"
-> & {
+// Estendo la row agenda con le relazioni e campi ricorrenza usati nel file
+type AgendaRow = Database["public"]["Tables"]["tbagenda"]["Row"];
+
+type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   cliente_id: string | null;
   utente_id: string;
+
   cliente: ClienteBase | null;
   utente: UtenteBase | null;
+
+  // campi usati nel file (se non sono presenti in Row, restano opzionali)
+  ricorrente?: boolean | null;
+  frequenza_giorni?: number | null;
+  durata_giorni?: number | null;
+
+  // partecipanti potrebbe essere json/array: lo usiamo come array di string
+  partecipanti?: unknown;
 };
 
-type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
-type Cliente = Database["public"]["Tables"]["tbclienti"]["Row"];
+type FormDataState = {
+  titolo: string;
+  descrizione: string;
+  data_inizio: string;
+  ora_inizio: string;
+  data_fine: string;
+  ora_fine: string;
+  tutto_giorno: boolean;
+  cliente_id: string;
+  utente_id: string;
+  in_sede: boolean;
+  sala: string;
+  luogo: string;
+  evento_generico: boolean;
+  riunione_teams: boolean;
+  link_teams: string;
+  partecipanti: string[];
+  ricorrente: boolean;
+  frequenza_giorni: number;
+  durata_giorni: number;
+};
+
+// --------------------
+// HELPERS
+// --------------------
+
+const toNotificationPayload = (e: Record<string, unknown>) => ({
+  ...e,
+  durata_giorni: (e as any)?.durata_giorni ?? null,
+  evento_generico: (e as any)?.evento_generico ?? null,
+  frequenza_giorni: (e as any)?.frequenza_giorni ?? null,
+  link_teams: (e as any)?.link_teams ?? null,
+
+  frequenza_settimane: (e as any)?.frequenza_settimane ?? null,
+  frequenza_mesi: (e as any)?.frequenza_mesi ?? null,
+  giorno_mese: (e as any)?.giorno_mese ?? null,
+  giorni_settimana: (e as any)?.giorni_settimana ?? null,
+  ricorrenza_fine: (e as any)?.ricorrenza_fine ?? null,
+  ricorrenza_count: (e as any)?.ricorrenza_count ?? null,
+  outlook_event_id: (e as any)?.outlook_event_id ?? null,
+});
+
+// Helper per orari: se arriva già "HH:mm" la restituisce; altrimenti formatta in Europe/Rome
+const formatTimeWithTimezone = (value: string): string => {
+  if (/^\d{2}:\d{2}$/.test(value)) return value;
+
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "00:00";
+    return date.toLocaleTimeString("it-IT", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Rome",
+    });
+  } catch {
+    return "00:00";
+  }
+};
+
+const safeParseISO = (value: string | null | undefined): Date => {
+  if (!value) return new Date();
+  try {
+    return parseISO(value);
+  } catch {
+    return new Date();
+  }
+};
+
+const toBool = (c: CheckedState) => c === true;
+
+// --------------------
+// COMPONENT
+// --------------------
 
 export default function AgendaPage() {
   const { toast } = useToast();
@@ -141,8 +246,11 @@ export default function AgendaPage() {
   const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
   const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
 
+  // Stato per ricerca partecipanti
+  const [searchPartecipanti, setSearchPartecipanti] = useState("");
+
   // Stati form
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     titolo: "",
     descrizione: "",
     data_inizio: "",
@@ -158,54 +266,16 @@ export default function AgendaPage() {
     evento_generico: false,
     riunione_teams: false,
     link_teams: "",
-    partecipanti: [] as string[],
+    partecipanti: [],
     ricorrente: false,
     frequenza_giorni: 7,
-    durata_giorni: 180
+    durata_giorni: 180,
   });
 
-  // Helper per formattare orari con timezone italiano
+  // --------------------
+  // LOAD DATA
+  // --------------------
 
-  // Stato per ricerca partecipanti
-const [searchPartecipanti, setSearchPartecipanti] = useState("");
-
-const toNotificationPayload = (e: any) => ({
-  ...e,
-
-  durata_giorni: e?.durata_giorni ?? null,
-  evento_generico: e?.evento_generico ?? null,
-  frequenza_giorni: e?.frequenza_giorni ?? null,
-  link_teams: e?.link_teams ?? null,
-
-  frequenza_settimane: e?.frequenza_settimane ?? null,
-  frequenza_mesi: e?.frequenza_mesi ?? null,
-  giorno_mese: e?.giorno_mese ?? null,
-  giorni_settimana: e?.giorni_settimana ?? null,
-  ricorrenza_fine: e?.ricorrenza_fine ?? null,
-  ricorrenza_count: e?.ricorrenza_count ?? null,
-  outlook_event_id: e?.outlook_event_id ?? null,
-});
-  
-// Helper per orari: se arriva già "HH:mm" la restituisce; altrimenti formatta in Europe/Rome
-const formatTimeWithTimezone = (value: string): string => {
-  // Se è già un orario (es. "09:30"), non toccarlo
-  if (/^\d{2}:\d{2}$/.test(value)) return value;
-
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "00:00";
-
-    return date.toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Rome",
-    });
-  } catch {
-    return "00:00";
-  }
-};
-
-  // Caricamento dati
   useEffect(() => {
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,33 +288,35 @@ const formatTimeWithTimezone = (value: string): string => {
       setLoading(true);
 
       // Carica utente corrente
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session?.user?.email) {
-        const { data: userData } = await supabase
+        const { data: userData, error: userErr } = await supabase
           .from("tbutenti")
           .select("id")
           .eq("email", session.user.email)
           .single();
 
-        if (userData) {
-          setCurrentUserId(userData.id);
-        }
+        if (!userErr && userData?.id) setCurrentUserId(userData.id);
       }
 
-      // Carica eventi
+      // Carica eventi (con relazioni)
       const { data: eventiData, error: eventiError } = await supabase
         .from("tbagenda")
-        .select(`
+        .select(
+          `
           *,
           cliente:cliente_id(id, ragione_sociale, codice_fiscale, partita_iva),
           utente:utente_id(id, nome, cognome, email, settore)
-        `)
+        `
+        )
         .order("data_inizio", { ascending: true });
 
       if (eventiError) throw eventiError;
 
-      const typedEventi = (eventiData || []) as unknown as EventoWithRelations[];
-      setEventi(typedEventi);
+      setEventi(((eventiData ?? []) as unknown) as EventoWithRelations[]);
 
       // Carica clienti
       const { data: clientiData, error: clientiError } = await supabase
@@ -254,59 +326,56 @@ const formatTimeWithTimezone = (value: string): string => {
         .order("ragione_sociale");
 
       if (clientiError) throw clientiError;
-      setClienti((clientiData || []) as ClienteAgenda[]);
+      setClienti(((clientiData ?? []) as unknown) as ClienteAgenda[]);
 
-  // Carica utenti
-const res = (await supabase
-  .from("tbutenti")
-  .select(`
-    id,
-    nome,
-    cognome,
-    email,
-    settore,
-    tipo_utente,
-    ruolo_operatore_id,
-    attivo,
-    created_at,
-    updated_at
-  `)
-  .eq("attivo", true)
-  .order("cognome", { ascending: true })) as unknown as {
-  data: UtenteAgenda[] | null;
-  error: any;
-};
+      // Carica utenti
+      const { data: utentiData, error: utentiError } = await supabase
+        .from("tbutenti")
+        .select(
+          `
+          id,
+          nome,
+          cognome,
+          email,
+          settore,
+          tipo_utente,
+          ruolo_operatore_id,
+          attivo,
+          created_at,
+          updated_at
+        `
+        )
+        .eq("attivo", true)
+        .order("cognome", { ascending: true });
 
-const utentiData = res.data;
-const utentiError = res.error;
-
-if (utentiError) throw utentiError;
-
-setUtenti(utentiData || []);
-
+      if (utentiError) throw utentiError;
+      setUtenti(((utentiData ?? []) as unknown) as UtenteAgenda[]);
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // --- GESTIONE FORM ---
+  // --------------------
+  // FORM
+  // --------------------
 
   const resetForm = () => {
     setEditingEventoId(null);
     setSearchPartecipanti("");
+    const today = format(new Date(), "yyyy-MM-dd");
     setFormData({
       titolo: "",
       descrizione: "",
-      data_inizio: format(new Date(), "yyyy-MM-dd"),
+      data_inizio: today,
       ora_inizio: "09:00",
-      data_fine: format(new Date(), "yyyy-MM-dd"),
+      data_fine: today,
       ora_fine: "10:00",
       tutto_giorno: false,
       cliente_id: "",
@@ -320,12 +389,13 @@ setUtenti(utentiData || []);
       partecipanti: [],
       ricorrente: false,
       frequenza_giorni: 7,
-      durata_giorni: 180
+      durata_giorni: 180,
     });
   };
 
   const handleNuovoEvento = (date?: Date, hour?: number) => {
     resetForm();
+
     if (date) {
       const dateStr = format(date, "yyyy-MM-dd");
       let startHour = "09:00";
@@ -341,44 +411,47 @@ setUtenti(utentiData || []);
         data_inizio: dateStr,
         data_fine: dateStr,
         ora_inizio: startHour,
-        ora_fine: endHour
+        ora_fine: endHour,
       }));
     }
+
     setDialogOpen(true);
   };
 
   const handleEditEvento = (evento: EventoWithRelations) => {
-    const startDate = parseISO(evento.data_inizio);
-    const endDate = parseISO(evento.data_fine);
+    const startDate = safeParseISO(evento.data_inizio as any);
+    const endDate = safeParseISO(evento.data_fine as any);
 
     let partecipanti: string[] = [];
     if (Array.isArray(evento.partecipanti)) {
       partecipanti = evento.partecipanti.map((p) => String(p));
     }
 
-    setEditingEventoId(evento.id);
+    setEditingEventoId(String(evento.id));
     setSearchPartecipanti("");
+
     setFormData({
-      titolo: evento.titolo,
-      descrizione: evento.descrizione || "",
+      titolo: evento.titolo ?? "",
+      descrizione: (evento.descrizione as string) || "",
       data_inizio: format(startDate, "yyyy-MM-dd"),
-      ora_inizio: evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "09:00",
+      ora_inizio: evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "09:00",
       data_fine: format(endDate, "yyyy-MM-dd"),
-      ora_fine: evento.ora_fine ? evento.ora_fine.substring(0, 5) : "10:00",
-      tutto_giorno: evento.tutto_giorno || false,
+      ora_fine: evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "10:00",
+      tutto_giorno: Boolean(evento.tutto_giorno),
       cliente_id: evento.cliente_id || "",
       utente_id: evento.utente_id,
-      in_sede: evento.in_sede || false,
-      sala: evento.in_sede ? (evento.sala || "") : "",
-      luogo: !evento.in_sede ? (evento.luogo || "") : "",
-      evento_generico: evento.evento_generico || false,
-      riunione_teams: evento.riunione_teams || false,
-      link_teams: evento.link_teams || "",
-      partecipanti: partecipanti,
-      ricorrente: (evento as any).ricorrente || false,
-      frequenza_giorni: (evento as any).frequenza_giorni || 7,
-      durata_giorni: (evento as any).durata_giorni || 180
+      in_sede: Boolean(evento.in_sede),
+      sala: evento.in_sede ? (evento.sala ? String(evento.sala) : "") : "",
+      luogo: !evento.in_sede ? (evento.luogo ? String(evento.luogo) : "") : "",
+      evento_generico: Boolean((evento as any).evento_generico),
+      riunione_teams: Boolean((evento as any).riunione_teams),
+      link_teams: ((evento as any).link_teams as string) || "",
+      partecipanti,
+      ricorrente: Boolean((evento as any).ricorrente),
+      frequenza_giorni: Number((evento as any).frequenza_giorni ?? 7),
+      durata_giorni: Number((evento as any).durata_giorni ?? 180),
     });
+
     setDialogOpen(true);
   };
 
@@ -401,7 +474,7 @@ setUtenti(utentiData || []);
           toast({
             title: "Errore",
             description: "Frequenza obbligatoria per eventi ricorrenti (> 0)",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
@@ -409,7 +482,7 @@ setUtenti(utentiData || []);
           toast({
             title: "Errore",
             description: "Durata obbligatoria per eventi ricorrenti (> 0)",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
@@ -423,15 +496,15 @@ setUtenti(utentiData || []);
         ? `${formData.data_fine || formData.data_inizio}T23:59:59+00:00`
         : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00+00:00`;
 
-      // NUOVO: Genera meeting Teams se richiesto
+      // Genera meeting Teams se richiesto
       let teamsLink = formData.link_teams;
+
       if (formData.riunione_teams && !teamsLink) {
         try {
           toast({ title: "Verifica connessione Microsoft 365...", description: "Attendere prego" });
 
           const { microsoftGraphService } = await import("@/services/microsoftGraphService");
 
-          // FIX: Controlla connessione dell'utente LOGGATO, non quello assegnato
           if (!currentUserId) {
             toast({
               title: "⚠️ Errore Autenticazione",
@@ -445,8 +518,6 @@ setUtenti(utentiData || []);
           const isConnected = await microsoftGraphService.isConnected(currentUserId);
 
           if (!isConnected) {
-            console.log("❌ UTENTE NON CONNESSO - Richiesta connessione");
-
             toast({
               title: "⚠️ Connessione Microsoft 365 Richiesta",
               description:
@@ -454,7 +525,6 @@ setUtenti(utentiData || []);
               variant: "destructive",
               duration: 8000,
             });
-
             return;
           }
 
@@ -462,15 +532,10 @@ setUtenti(utentiData || []);
 
           const { teamsService } = await import("@/services/teamsService");
 
-          // Prepara lista partecipanti email
           const attendeesEmails = formData.partecipanti
-            .map((pId) => {
-              const user = utenti.find((u) => u.id === pId);
-              return user?.email;
-            })
-            .filter(Boolean) as string[];
+            .map((pId) => utenti.find((u) => u.id === pId)?.email)
+            .filter((v): v is string => Boolean(v));
 
-          // Crea meeting Teams usando le credenziali dell'utente LOGGATO
           const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
@@ -483,32 +548,31 @@ setUtenti(utentiData || []);
 
           toast({
             title: "Meeting Teams creato!",
-            description: "Link aggiunto all'evento"
+            description: "Link aggiunto all'evento",
           });
-        } catch (error: any) {
+        } catch (error) {
           console.error("❌ ERRORE creazione meeting Teams:", error);
-
           toast({
             title: "Avviso",
             description:
               "Impossibile creare meeting Teams. Assicurati di essere connesso a Microsoft 365 nelle impostazioni.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
       }
 
-      const basePayload = {
+      const basePayload: Partial<AgendaRow> & Record<string, unknown> = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
-        data_inizio: startDateTime,
-        data_fine: endDateTime,
-        ora_inizio: formData.tutto_giorno ? null : formData.ora_inizio,
-        ora_fine: formData.tutto_giorno ? null : formData.ora_fine,
-        tutto_giorno: formData.tutto_giorno,
+        data_inizio: startDateTime as any,
+        data_fine: endDateTime as any,
+        ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
+        ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
+        tutto_giorno: formData.tutto_giorno as any,
         cliente_id: formData.cliente_id || null,
-        utente_id: formData.utente_id,
-        in_sede: formData.in_sede,
+        utente_id: formData.utente_id as any,
+        in_sede: formData.in_sede as any,
         sala: formData.in_sede ? formData.sala : null,
         luogo: !formData.in_sede ? formData.luogo : null,
         evento_generico: formData.evento_generico,
@@ -517,34 +581,31 @@ setUtenti(utentiData || []);
         partecipanti: formData.partecipanti.length ? formData.partecipanti : null,
         ricorrente: formData.ricorrente,
         frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-        durata_giorni: formData.ricorrente ? formData.durata_giorni : null
+        durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
       };
 
       if (editingEventoId) {
-        // Update existing event
+        // Update
         const { data, error } = await supabase
           .from("tbagenda")
-          .update(basePayload)
+          .update(basePayload as any)
           .eq("id", editingEventoId)
           .select()
           .single();
 
         if (error) throw error;
-        const { eventoService } = await import("@/services/eventoService");
-        
-        await eventoService.sendEventNotification(
-  toNotificationPayload(data) as any
-);
 
-        // NUOVO: Sincronizza con Outlook Calendar
+        const { eventoService } = await import("@/services/eventoService");
+        await eventoService.sendEventNotification(toNotificationPayload(data as any) as any);
+
+        // Sync Outlook (non bloccare)
         try {
           await calendarSyncService.syncEventToOutlook(formData.utente_id, editingEventoId);
         } catch (syncError) {
           console.error("Errore sincronizzazione Outlook:", syncError);
-          // Non blocchiamo l'operazione se la sync fallisce
         }
 
-        // NUOVO: Invia notifica Teams ai partecipanti
+        // Notifica Teams ai partecipanti
         if (formData.riunione_teams && teamsLink) {
           try {
             const { teamsService } = await import("@/services/teamsService");
@@ -553,61 +614,57 @@ setUtenti(utentiData || []);
               if (user?.email) {
                 await teamsService.sendDirectMessage(formData.utente_id, user.email, {
                   content: `<strong>Riunione Teams aggiornata:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                  contentType: "html"
+                  contentType: "html",
                 });
               }
             }
-          } catch (error) {
-            console.error("Errore invio notifiche Teams:", error);
+          } catch (err) {
+            console.error("Errore invio notifiche Teams:", err);
           }
         }
 
         toast({ title: "Successo", description: "Evento aggiornato" });
       } else {
-        // Create new event(s)
+        // Create
         if (formData.ricorrente) {
-          // Generate recurring occurrences
           const startDate = new Date(formData.data_inizio);
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + formData.durata_giorni);
 
-          const occurrences = [];
-          let currentDate = new Date(startDate);
+          const occurrences: Array<Record<string, unknown>> = [];
+          let current = new Date(startDate);
 
-          while (currentDate <= endDate) {
+          while (current <= endDate) {
             const occurrenceStartDateTime = formData.tutto_giorno
-              ? `${format(currentDate, "yyyy-MM-dd")}T00:00:00+00:00`
-              : `${format(currentDate, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+              ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+              : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
 
             const occurrenceEndDateTime = formData.tutto_giorno
-              ? `${format(currentDate, "yyyy-MM-dd")}T23:59:59+00:00`
-              : `${format(currentDate, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+              ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+              : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
             occurrences.push({
               ...basePayload,
               data_inizio: occurrenceStartDateTime,
-              data_fine: occurrenceEndDateTime
+              data_fine: occurrenceEndDateTime,
             });
 
-            currentDate = new Date(currentDate);
-            currentDate.setDate(currentDate.getDate() + formData.frequenza_giorni);
+            current = new Date(current);
+            current.setDate(current.getDate() + formData.frequenza_giorni);
           }
 
-          const { data, error } = await supabase.from("tbagenda").insert(occurrences).select();
+          const { data, error } = await supabase.from("tbagenda").insert(occurrences as any).select();
           if (error) throw error;
 
-          // Send notifications for all occurrences
           const { eventoService } = await import("@/services/eventoService");
-          for (const occurrence of data) {
-            await eventoService.sendEventNotification(
-  toNotificationPayload(occurrence) as any
-);
+          for (const occurrence of data ?? []) {
+            await eventoService.sendEventNotification(toNotificationPayload(occurrence as any) as any);
           }
 
-          // NUOVO: Sincronizza tutti gli eventi ricorrenti con Outlook
+          // Sync Outlook (non bloccare)
           try {
-            for (const occurrence of data) {
-              await calendarSyncService.syncEventToOutlook(formData.utente_id, occurrence.id);
+            for (const occurrence of data ?? []) {
+              await calendarSyncService.syncEventToOutlook(formData.utente_id, String((occurrence as any).id));
             }
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook eventi ricorrenti:", syncError);
@@ -615,29 +672,23 @@ setUtenti(utentiData || []);
 
           toast({
             title: "Successo",
-            description: `${occurrences.length} eventi ricorrenti creati`
+            description: `${occurrences.length} eventi ricorrenti creati`,
           });
         } else {
-          // Single event
-          const { data, error } = await supabase
-            .from("tbagenda")
-            .insert([basePayload])
-            .select()
-            .single();
-
+          const { data, error } = await supabase.from("tbagenda").insert([basePayload as any]).select().single();
           if (error) throw error;
 
           const { eventoService } = await import("@/services/eventoService");
-          await eventoService.sendEventNotification(toNotificationPayload(data) as any);
+          await eventoService.sendEventNotification(toNotificationPayload(data as any) as any);
 
-          // NUOVO: Sincronizza con Outlook Calendar
+          // Sync Outlook (non bloccare)
           try {
-            await calendarSyncService.syncEventToOutlook(formData.utente_id, data.id);
+            await calendarSyncService.syncEventToOutlook(formData.utente_id, String((data as any).id));
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook:", syncError);
           }
 
-          // NUOVO: Invia notifica Teams ai partecipanti
+          // Notifica Teams ai partecipanti
           if (formData.riunione_teams && teamsLink) {
             try {
               const { teamsService } = await import("@/services/teamsService");
@@ -646,12 +697,12 @@ setUtenti(utentiData || []);
                 if (user?.email) {
                   await teamsService.sendDirectMessage(formData.utente_id, user.email, {
                     content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                    contentType: "html"
+                    contentType: "html",
                   });
                 }
               }
-            } catch (error) {
-              console.error("Errore invio notifiche Teams:", error);
+            } catch (err) {
+              console.error("Errore invio notifiche Teams:", err);
             }
           }
 
@@ -669,10 +720,10 @@ setUtenti(utentiData || []);
 
   const handleDeleteEvento = async () => {
     const supabase = getSupabaseClient();
-
     if (!eventoToDelete) return;
+
     try {
-      // NUOVO: Cancella da Outlook prima di cancellare dal database
+      // Cancella da Outlook prima del DB (non bloccare)
       if (currentUserId) {
         try {
           await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
@@ -684,7 +735,7 @@ setUtenti(utentiData || []);
       const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
       if (error) throw error;
 
-      setEventi((prevEventi) => prevEventi.filter((e) => e.id !== eventoToDelete));
+      setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
       setDeleteDialogOpen(false);
       setDialogOpen(false);
       setEventoToDelete(null);
@@ -692,14 +743,14 @@ setUtenti(utentiData || []);
 
       toast({
         title: "Evento eliminato",
-        description: "L'evento è stato eliminato con successo"
+        description: "L'evento è stato eliminato con successo",
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Errore eliminazione evento:", error);
       toast({
         title: "Errore",
         description: "Impossibile eliminare l'evento",
-        variant: "destructive"
+        variant: "destructive",
       });
       setDeleteDialogOpen(false);
       setEventoToDelete(null);
@@ -712,20 +763,23 @@ setUtenti(utentiData || []);
     setDeleteDialogOpen(true);
   };
 
-  // --- UTILITIES ---
+  // --------------------
+  // UTILITIES
+  // --------------------
 
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter((u) => u.settore === settore).map((u) => u.id);
     const isSelected = ids.some((id) => formData.partecipanti.includes(id));
+
     if (isSelected) {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: prev.partecipanti.filter((p) => !ids.includes(p))
+        partecipanti: prev.partecipanti.filter((p) => !ids.includes(p)),
       }));
     } else {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: [...new Set([...prev.partecipanti, ...ids])]
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])],
       }));
     }
   };
@@ -733,33 +787,33 @@ setUtenti(utentiData || []);
   const handleSelezioneConsulenza = () => {
     const ids = utenti.filter((u) => u.settore === "Consulenza").map((u) => u.id);
     const isSelected = ids.some((id) => formData.partecipanti.includes(id));
+
     if (isSelected) {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: prev.partecipanti.filter((p) => !ids.includes(p))
+        partecipanti: prev.partecipanti.filter((p) => !ids.includes(p)),
       }));
     } else {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: [...new Set([...prev.partecipanti, ...ids])]
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])],
       }));
     }
   };
 
   const handleSelezioneTutti = () => {
-    const ids = utenti.map((u) => u.id);
-    setFormData((prev) => ({ ...prev, partecipanti: ids }));
+    setFormData((prev) => ({ ...prev, partecipanti: utenti.map((u) => u.id) }));
   };
 
   const getEventColor = (evento: EventoWithRelations) => {
-    if (evento.evento_generico) return "#3B82F6";
+    if ((evento as any).evento_generico) return "#3B82F6";
     if (evento.in_sede) return "#10B981";
-    if (evento.riunione_teams) return "#F97316";
+    if ((evento as any).riunione_teams) return "#F97316";
     return "#EF4444";
   };
 
   const getEventoSummary = (evento: EventoWithRelations): string => {
-    const startDate = parseISO(evento.data_inizio);
+    const startDate = safeParseISO(evento.data_inizio as any);
 
     const utenteNome = evento.utente
       ? `${evento.utente.nome} ${evento.utente.cognome}${evento.utente.settore ? ` (${evento.utente.settore})` : ""}`
@@ -768,17 +822,17 @@ setUtenti(utentiData || []);
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
 
     const luogo = evento.in_sede
-      ? `Sala ${evento.sala || "??"} (In Sede)`
-      : (evento.luogo || "Fuori Sede");
+      ? `Sala ${evento.sala ? String(evento.sala) : "??"} (In Sede)`
+      : (evento.luogo ? String(evento.luogo) : "Fuori Sede");
 
-    const tipo = evento.evento_generico
+    const tipo = (evento as any).evento_generico
       ? "Evento Generico"
-      : evento.riunione_teams
-        ? "Riunione Teams"
-        : "Appuntamento";
+      : (evento as any).riunione_teams
+      ? "Riunione Teams"
+      : "Appuntamento";
 
-    const oraInizio = evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00";
-    const oraFine = evento.ora_fine ? evento.ora_fine.substring(0, 5) : "00:00";
+    const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "00:00";
+    const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "00:00";
 
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
@@ -788,33 +842,37 @@ setUtenti(utentiData || []);
     summary += `📍 Luogo: ${luogo}\n\n`;
     summary += `🔵 Tipo: ${tipo}\n`;
 
-    if (evento.riunione_teams) {
+    if ((evento as any).riunione_teams) {
       summary += `💻 Riunione Teams: Sì\n`;
-      if (evento.link_teams) {
-        summary += `🔗 Link: ${evento.link_teams}\n`;
-      }
+      if ((evento as any).link_teams) summary += `🔗 Link: ${(evento as any).link_teams}\n`;
     }
 
     if (evento.descrizione) {
-      summary += `\n📝 Note:\n${evento.descrizione}`;
+      summary += `\n📝 Note:\n${String(evento.descrizione)}`;
     }
 
     return summary;
   };
 
-  const filteredEvents = eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
+  const filteredEvents = useMemo(() => {
+    return eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
+  }, [eventi, filtroUtenti]);
 
-  // --- RENDERERS ---
+  // --------------------
+  // RENDERERS
+  // --------------------
 
-  const renderEventCard = (evento: EventoWithRelations, compact: boolean = false) => {
-    if (!evento) return null;
-
+  const renderEventCard = (evento: EventoWithRelations, compact = false) => {
     const utenteNome = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
-    const colorClass = evento.evento_generico ? "border-l-blue-500" : evento.in_sede ? "border-l-green-500" : "border-l-red-500";
+    const colorClass = (evento as any).evento_generico
+      ? "border-l-blue-500"
+      : evento.in_sede
+      ? "border-l-green-500"
+      : "border-l-red-500";
 
     return (
-      <TooltipProvider key={evento.id}>
+      <TooltipProvider key={String(evento.id)}>
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <Card
@@ -826,40 +884,61 @@ setUtenti(utentiData || []);
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
-                      {evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00"} -{" "}
-                      {evento.ora_fine ? evento.ora_fine.substring(0, 5) : "00:00"}
+                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "00:00"} -{" "}
+                      {evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "00:00"}
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditEvento(evento);
+                      }}
+                    >
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEventoToDelete(evento.id); setDeleteDialogOpen(true); }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEventoDirect(String(evento.id), e);
+                      }}
+                    >
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" />
                     <span className="font-semibold text-base">{utenteNome}</span>
                   </div>
+
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" />
                     <span>{clienteNome}</span>
                   </div>
+
                   {evento.in_sede && evento.sala && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-green-600" />
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">SALA {evento.sala}</span>
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                        SALA {String(evento.sala)}
+                      </span>
                     </div>
                   )}
+
                   {!evento.in_sede && evento.luogo && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-red-600" />
-                      <span className="text-xs text-gray-600 truncate max-w-[200px]">{evento.luogo}</span>
+                      <span className="text-xs text-gray-600 truncate max-w-[200px]">{String(evento.luogo)}</span>
                     </div>
                   )}
+
                   {!compact && evento.titolo && (
                     <div className="flex items-center gap-2 text-sm mt-2">
                       <FileText className="h-4 w-4" />
@@ -870,6 +949,7 @@ setUtenti(utentiData || []);
               </CardContent>
             </Card>
           </TooltipTrigger>
+
           <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
             {getEventoSummary(evento)}
           </TooltipContent>
@@ -884,7 +964,7 @@ setUtenti(utentiData || []);
     const startDate = startOfWeek(monthStart, { locale: it });
     const endDate = endOfWeek(monthEnd, { locale: it });
 
-    const days = [];
+    const days: Date[] = [];
     let day = startDate;
     while (day <= endDate) {
       days.push(day);
@@ -898,44 +978,56 @@ setUtenti(utentiData || []);
             {d}
           </div>
         ))}
+
         {days.map((dayItem) => {
           const isCurrentMonth = isSameMonth(dayItem, currentDate);
-          const dayEvents = filteredEvents.filter((e) => isSameDay(parseISO(e.data_inizio), dayItem));
+          const dayEvents = filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), dayItem));
 
           return (
             <div
               key={dayItem.toISOString()}
-              className={`min-h-[120px] bg-white p-2 cursor-pointer hover:bg-gray-50 transition-colors ${!isCurrentMonth ? "text-gray-400 bg-gray-50/50" : ""}`}
+              className={`min-h-[120px] bg-white p-2 cursor-pointer hover:bg-gray-50 transition-colors ${
+                !isCurrentMonth ? "text-gray-400 bg-gray-50/50" : ""
+              }`}
               onClick={() => handleNuovoEvento(dayItem)}
             >
               <div className="font-semibold text-sm mb-1">{format(dayItem, "d")}</div>
+
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((ev) => (
-                  <TooltipProvider key={ev.id}>
+                  <TooltipProvider key={String(ev.id)}>
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <div
                           className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity group relative"
                           style={{ backgroundColor: getEventColor(ev), borderLeftColor: "rgba(0,0,0,0.2)" }}
                         >
-                          <span onClick={(e) => { e.stopPropagation(); handleEditEvento(ev); }}>
-                            {ev.utente?.cognome} {ev.sala ? `(Sala ${ev.sala})` : ""}
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditEvento(ev);
+                            }}
+                          >
+                            {ev.utente?.cognome} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
                           </span>
+
                           <button
                             className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                            onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
+                            onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
                             title="Elimina"
                           >
                             ×
                           </button>
                         </div>
                       </TooltipTrigger>
+
                       <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
                         {getEventoSummary(ev)}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 ))}
+
                 {dayEvents.length > 3 && (
                   <div className="text-xs text-gray-500 font-medium">+{dayEvents.length - 3} altri</div>
                 )}
@@ -956,6 +1048,7 @@ setUtenti(utentiData || []);
       <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
         <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-gray-50">
           <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">Ora</div>
+
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
@@ -966,19 +1059,22 @@ setUtenti(utentiData || []);
             </div>
           ))}
         </div>
+
         <div className="overflow-y-auto flex-1">
           {hours.map((hour) => (
             <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b min-h-[100px]">
               <div className="p-2 text-xs text-gray-400 text-right border-r font-mono">
                 {String(hour).padStart(2, "0")}:00
               </div>
+
               {weekDays.map((day) => {
                 const cellEvents = filteredEvents.filter((e) => {
-                  const eventDate = parseISO(e.data_inizio);
+                  const eventDate = safeParseISO(e.data_inizio as any);
+
                   if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
 
                   if (!e.ora_inizio) return false;
-                  const eventHour = parseInt(e.ora_inizio.substring(0, 2));
+                  const eventHour = parseInt(String(e.ora_inizio).substring(0, 2));
                   return isSameDay(eventDate, day) && eventHour === hour;
                 });
 
@@ -991,42 +1087,52 @@ setUtenti(utentiData || []);
                     {cellEvents.length > 0 && (
                       <div className="space-y-1">
                         {cellEvents.map((evento) => (
-                          <TooltipProvider key={evento.id}>
+                          <TooltipProvider key={String(evento.id)}>
                             <Tooltip delayDuration={300}>
                               <TooltipTrigger asChild>
                                 <div
                                   className={`p-2 rounded border-l-2 ${
-                                    evento.evento_generico
+                                    (evento as any).evento_generico
                                       ? "bg-blue-50 border-blue-500"
                                       : evento.in_sede
-                                        ? "bg-green-50 border-green-500"
-                                        : "bg-red-50 border-red-500"
+                                      ? "bg-green-50 border-green-500"
+                                      : "bg-red-50 border-red-500"
                                   } cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
                                 >
-                                  <div onClick={(e) => { e.stopPropagation(); handleEditEvento(evento); }} className="pr-6">
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditEvento(evento);
+                                    }}
+                                    className="pr-6"
+                                  >
                                     <div className="font-semibold text-gray-900">
                                       👤 {evento.utente ? `${evento.utente.nome?.charAt(0)}. ${evento.utente.cognome}` : "?"}
                                     </div>
                                     <div className="text-gray-600 truncate">🏢 {evento.cliente?.ragione_sociale || ""}</div>
+
                                     {evento.in_sede && evento.sala && (
-                                      <div className="text-green-700 font-medium mt-1">📍 SALA {evento.sala}</div>
+                                      <div className="text-green-700 font-medium mt-1">📍 SALA {String(evento.sala)}</div>
                                     )}
                                     {!evento.in_sede && evento.luogo && (
-                                      <div className="text-red-700 font-medium mt-1 truncate">📍 {evento.luogo}</div>
+                                      <div className="text-red-700 font-medium mt-1 truncate">📍 {String(evento.luogo)}</div>
                                     )}
+
                                     <div className="text-gray-500 mt-1">
-                                      ⏰ {evento.ora_inizio ? evento.ora_inizio.substring(0, 5) : "00:00"}
+                                      ⏰ {evento.ora_inizio ? formatTimeWithTimezone(String(evento.ora_inizio)) : "00:00"}
                                     </div>
                                   </div>
+
                                   <button
                                     className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                                    onClick={(e) => handleDeleteEventoDirect(evento.id, e)}
+                                    onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
                                     title="Elimina evento"
                                   >
                                     ×
                                   </button>
                                 </div>
                               </TooltipTrigger>
+
                               <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
                                 {getEventoSummary(evento)}
                               </TooltipContent>
@@ -1047,7 +1153,8 @@ setUtenti(utentiData || []);
 
   const renderListView = () => {
     const now = new Date();
-    const pastEvents = filteredEvents.filter((evento) => parseISO(evento.data_inizio) < now);
+    const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio as any) < now);
+
     if (pastEvents.length === 0) {
       return (
         <div className="text-center py-12">
@@ -1056,16 +1163,16 @@ setUtenti(utentiData || []);
         </div>
       );
     }
-    return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((evento) => renderEventCard(evento, false))}</div>;
+
+    return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
   };
 
   const renderRicorrentiView = () => {
     const now = new Date();
     const ricorrentiEvents = filteredEvents.filter((evento) => {
       const isRecurring = (evento as any).ricorrente === true;
-      const eventDate = parseISO(evento.data_inizio);
-      const isActive = eventDate >= now;
-      return isRecurring && isActive;
+      const eventDate = safeParseISO(evento.data_inizio as any);
+      return isRecurring && eventDate >= now;
     });
 
     if (ricorrentiEvents.length === 0) {
@@ -1079,10 +1186,14 @@ setUtenti(utentiData || []);
 
     return (
       <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-        {ricorrentiEvents.map((evento) => renderEventCard(evento, false))}
+        {ricorrentiEvents.map((e) => renderEventCard(e, false))}
       </div>
     );
   };
+
+  // --------------------
+  // RENDER
+  // --------------------
 
   if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
 
@@ -1098,9 +1209,11 @@ setUtenti(utentiData || []);
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
+
             <span className="font-bold px-4 min-w-[150px] text-center">
               {format(currentDate, view === "week" ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", { locale: it })}
             </span>
+
             <Button
               variant="ghost"
               size="icon"
@@ -1109,10 +1222,12 @@ setUtenti(utentiData || []);
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
+
           <Button onClick={() => handleNuovoEvento()} className="gap-2">
             <Plus className="h-4 w-4" /> Nuovo Evento
           </Button>
         </div>
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
@@ -1128,7 +1243,7 @@ setUtenti(utentiData || []);
                   className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
                   onClick={() => setFiltroUtenti([])}
                 >
-                  <Checkbox checked={filtroUtenti.length === 0} />
+                  <Checkbox checked={filtroUtenti.length === 0} onCheckedChange={() => setFiltroUtenti([])} />
                   <span>Tutti gli utenti</span>
                 </div>
 
@@ -1159,17 +1274,21 @@ setUtenti(utentiData || []);
               </PopoverContent>
             </Popover>
           </div>
+
           <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
             <div className="flex gap-2">
               <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}>
                 <List className="h-4 w-4 mr-2" /> Eventi ricorrenti
               </Button>
+
               <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
                 <List className="h-4 w-4 mr-2" /> Scaduti
               </Button>
+
               <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
                 <CalendarIcon className="h-4 w-4 mr-2" /> Mese
               </Button>
+
               <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
                 <CalendarDays className="h-4 w-4 mr-2" /> Settimana
               </Button>
@@ -1185,7 +1304,12 @@ setUtenti(utentiData || []);
         {view === "week" && renderWeekView()}
       </div>
 
-      <Calendar mode="single" selected={selectedDate || undefined} />
+      {/* Calendar (shadcn): aggiunto onSelect per compatibilità tipi */}
+      <Calendar
+        mode="single"
+        selected={selectedDate ?? undefined}
+        onSelect={(date) => setSelectedDate(date ?? null)}
+      />
 
       {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -1193,15 +1317,24 @@ setUtenti(utentiData || []);
           <DialogHeader>
             <DialogTitle>{editingEventoId ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4 py-2">
             <div>
               <Label>Titolo Evento *</Label>
-              <Input value={formData.titolo} onChange={(e) => setFormData({ ...formData, titolo: e.target.value })} placeholder="Es. Riunione Cliente" />
+              <Input
+                value={formData.titolo}
+                onChange={(e) => setFormData({ ...formData, titolo: e.target.value })}
+                placeholder="Es. Riunione Cliente"
+              />
             </div>
 
             <div className="space-y-3 border p-3 rounded-md bg-blue-50">
               <div className="flex items-center space-x-2">
-                <Checkbox id="ricorrente" checked={formData.ricorrente} onCheckedChange={(c) => setFormData({ ...formData, ricorrente: !!c })} />
+                <Checkbox
+                  id="ricorrente"
+                  checked={formData.ricorrente}
+                  onCheckedChange={(c: CheckedState) => setFormData({ ...formData, ricorrente: toBool(c) })}
+                />
                 <Label htmlFor="ricorrente" className="font-semibold">
                   Evento ricorrente
                 </Label>
@@ -1216,7 +1349,9 @@ setUtenti(utentiData || []);
                       type="number"
                       min="1"
                       value={formData.frequenza_giorni}
-                      onChange={(e) => setFormData({ ...formData, frequenza_giorni: parseInt(e.target.value) || 1 })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, frequenza_giorni: parseInt(e.target.value, 10) || 1 })
+                      }
                       placeholder="Es. 7 per settimanale"
                     />
                     <p className="text-xs text-muted-foreground mt-1">Numero di giorni tra un evento e il successivo</p>
@@ -1229,10 +1364,14 @@ setUtenti(utentiData || []);
                       type="number"
                       min="1"
                       value={formData.durata_giorni}
-                      onChange={(e) => setFormData({ ...formData, durata_giorni: parseInt(e.target.value) || 1 })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, durata_giorni: parseInt(e.target.value, 10) || 1 })
+                      }
                       placeholder="Es. 180 per 6 mesi"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Durata complessiva della ricorrenza in giorni dalla data inizio</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Durata complessiva della ricorrenza in giorni dalla data inizio
+                    </p>
                   </div>
                 </div>
               )}
@@ -1241,28 +1380,53 @@ setUtenti(utentiData || []);
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data Inizio</Label>
-                <Input type="date" value={formData.data_inizio} onChange={(e) => setFormData({ ...formData, data_inizio: e.target.value })} />
+                <Input
+                  type="date"
+                  value={formData.data_inizio}
+                  onChange={(e) => setFormData({ ...formData, data_inizio: e.target.value })}
+                />
               </div>
+
               <div>
                 <Label>Ora Inizio</Label>
-                <Input type="time" disabled={formData.tutto_giorno} value={formData.ora_inizio} onChange={(e) => setFormData({ ...formData, ora_inizio: e.target.value })} />
+                <Input
+                  type="time"
+                  disabled={formData.tutto_giorno}
+                  value={formData.ora_inizio}
+                  onChange={(e) => setFormData({ ...formData, ora_inizio: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data Fine</Label>
-                <Input type="date" disabled={formData.ricorrente} value={formData.data_fine} onChange={(e) => setFormData({ ...formData, data_fine: e.target.value })} />
+                <Input
+                  type="date"
+                  disabled={formData.ricorrente}
+                  value={formData.data_fine}
+                  onChange={(e) => setFormData({ ...formData, data_fine: e.target.value })}
+                />
                 {formData.ricorrente && <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente dalla durata</p>}
               </div>
+
               <div>
                 <Label>Ora Fine</Label>
-                <Input type="time" disabled={formData.tutto_giorno} value={formData.ora_fine} onChange={(e) => setFormData({ ...formData, ora_fine: e.target.value })} />
+                <Input
+                  type="time"
+                  disabled={formData.tutto_giorno}
+                  value={formData.ora_fine}
+                  onChange={(e) => setFormData({ ...formData, ora_fine: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox id="allday" checked={formData.tutto_giorno} onCheckedChange={(c) => setFormData({ ...formData, tutto_giorno: !!c })} />
+              <Checkbox
+                id="allday"
+                checked={formData.tutto_giorno}
+                onCheckedChange={(c: CheckedState) => setFormData({ ...formData, tutto_giorno: toBool(c) })}
+              />
               <Label htmlFor="allday">Tutto il giorno</Label>
             </div>
 
@@ -1305,7 +1469,13 @@ setUtenti(utentiData || []);
                 <Checkbox
                   id="evento_generico"
                   checked={formData.evento_generico}
-                  onCheckedChange={(c) => setFormData({ ...formData, evento_generico: !!c, cliente_id: c ? "" : formData.cliente_id })}
+                  onCheckedChange={(c: CheckedState) =>
+                    setFormData({
+                      ...formData,
+                      evento_generico: toBool(c),
+                      cliente_id: toBool(c) ? "" : formData.cliente_id,
+                    })
+                  }
                 />
                 <Label htmlFor="evento_generico">Evento Generico (No Cliente)</Label>
               </div>
@@ -1314,7 +1484,15 @@ setUtenti(utentiData || []);
                 <Checkbox
                   id="in_sede"
                   checked={formData.in_sede}
-                  onCheckedChange={(c) => setFormData({ ...formData, in_sede: !!c, luogo: c ? "" : formData.luogo, sala: !c ? "" : formData.sala })}
+                  onCheckedChange={(c: CheckedState) => {
+                    const isChecked = toBool(c);
+                    setFormData({
+                      ...formData,
+                      in_sede: isChecked,
+                      luogo: isChecked ? "" : formData.luogo,
+                      sala: !isChecked ? "" : formData.sala,
+                    });
+                  }}
                 />
                 <Label htmlFor="in_sede">In Sede</Label>
               </div>
@@ -1338,7 +1516,11 @@ setUtenti(utentiData || []);
               {!formData.in_sede && (
                 <div>
                   <Label>Luogo / Indirizzo</Label>
-                  <Input value={formData.luogo} onChange={(e) => setFormData({ ...formData, luogo: e.target.value })} placeholder="Es. Via Roma 10, Milano" />
+                  <Input
+                    value={formData.luogo}
+                    onChange={(e) => setFormData({ ...formData, luogo: e.target.value })}
+                    placeholder="Es. Via Roma 10, Milano"
+                  />
                 </div>
               )}
 
@@ -1346,7 +1528,13 @@ setUtenti(utentiData || []);
                 <Checkbox
                   id="riunione_teams"
                   checked={formData.riunione_teams}
-                  onCheckedChange={(c) => setFormData({ ...formData, riunione_teams: !!c, link_teams: !c ? "" : formData.link_teams })}
+                  onCheckedChange={(c: CheckedState) =>
+                    setFormData({
+                      ...formData,
+                      riunione_teams: toBool(c),
+                      link_teams: !toBool(c) ? "" : formData.link_teams,
+                    })
+                  }
                 />
                 <Label htmlFor="riunione_teams">Riunione Teams</Label>
               </div>
@@ -1354,7 +1542,11 @@ setUtenti(utentiData || []);
               {formData.riunione_teams && (
                 <div>
                   <Label>Link Teams</Label>
-                  <Input value={formData.link_teams} onChange={(e) => setFormData({ ...formData, link_teams: e.target.value })} placeholder="https://teams.microsoft.com/..." />
+                  <Input
+                    value={formData.link_teams}
+                    onChange={(e) => setFormData({ ...formData, link_teams: e.target.value })}
+                    placeholder="https://teams.microsoft.com/..."
+                  />
                 </div>
               )}
             </div>
@@ -1385,7 +1577,12 @@ setUtenti(utentiData || []);
                 <Button type="button" variant="outline" size="sm" onClick={handleSelezioneTutti}>
                   Tutti
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setFormData({ ...formData, partecipanti: [] })}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, partecipanti: [] })}
+                >
                   Deseleziona Tutti
                 </Button>
               </div>
@@ -1402,10 +1599,12 @@ setUtenti(utentiData || []);
                     <div key={u.id} className="flex items-center space-x-2 mb-1">
                       <Checkbox
                         checked={formData.partecipanti.includes(u.id)}
-                        onCheckedChange={(checked) => {
-                          const newPart = checked
+                        onCheckedChange={(checked: CheckedState) => {
+                          const isChecked = toBool(checked);
+                          const newPart = isChecked
                             ? [...formData.partecipanti, u.id]
                             : formData.partecipanti.filter((id) => id !== u.id);
+
                           setFormData({ ...formData, partecipanti: newPart });
                         }}
                       />
@@ -1419,27 +1618,44 @@ setUtenti(utentiData || []);
 
             <div>
               <Label>Descrizione</Label>
-              <Textarea value={formData.descrizione} onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })} />
+              <Textarea
+                value={formData.descrizione}
+                onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })}
+              />
             </div>
           </div>
 
           <DialogFooter className="flex justify-between items-center">
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => {
-                setDialogOpen(false);
-                setEventoToDelete(editingEventoId!);
-                setDeleteDialogOpen(true);
-              }}
-              className="mr-auto"
-            >
-              <Trash2 className="h-4 w-4 mr-2" /> Elimina Evento
-            </Button>
+            {/* Mostra elimina solo in MODIFICA: evita editingEventoId! */}
+            {editingEventoId ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setEventoToDelete(editingEventoId);
+                  setDeleteDialogOpen(true);
+                }}
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Elimina Evento
+              </Button>
+            ) : (
+              <div className="mr-auto" />
+            )}
+
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setEditingEventoId(null); }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDialogOpen(false);
+                  setEditingEventoId(null);
+                }}
+              >
                 Annulla
               </Button>
+
               <Button type="submit" onClick={handleSaveEvento}>
                 {editingEventoId ? "Aggiorna Evento" : "Crea Evento"}
               </Button>
@@ -1452,8 +1668,9 @@ setUtenti(utentiData || []);
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Evento</AlertDialogTitle>
-            <AlertDialogDescription>Sei sicuro? L'azione è irreversibile.</AlertDialogDescription>
+            <AlertDialogDescription>Sei sicuro? L&apos;azione è irreversibile.</AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteEvento} className="bg-red-600">
