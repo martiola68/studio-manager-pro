@@ -297,63 +297,68 @@ export default function Microsoft365Settings() {
     }
   }
 
-  // ✅ NUOVO FLOW: POST /api/m365/connect -> { url } -> redirect browser
-  async function handleConnect() {
-    if (!config) {
-      setError("Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio.");
-      return;
-    }
-
-    if (!config.enabled) {
-      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
-      return;
-    }
-
-    setConnecting(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      // 1) recupera sessione Supabase
-      const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) throw sessionErr;
-
-      const session = sessionRes?.session;
-      const token = session?.access_token;
-
-      if (!token) {
-        setError("Sessione non valida. Rifai login.");
-        return;
-      }
-
-      // 2) chiama il nuovo endpoint (IMPORTANT: body non null)
-      const r = await fetch("/api/m365/connect", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-        credentials: "include",
-      });
-
-      const data = await r.json().catch(() => null);
-
-      if (!r.ok || !data?.url) {
-        console.error("m365 connect error", data);
-        setError(data?.error || "Errore connessione Microsoft 365");
-        return;
-      }
-
-      // 3) redirect su Microsoft
-      window.location.href = data.url;
-    } catch (e) {
-      console.error(e);
-      setError(e instanceof Error ? e.message : "Errore imprevisto");
-    } finally {
-      setConnecting(false);
-    }
+// ✅ FLOW DEFINITIVO: POST /api/m365/connect -> { url } -> redirect browser
+async function handleConnect() {
+  if (!config) {
+    setError(
+      "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
+    );
+    return;
   }
+
+  if (!config.enabled) {
+    setError(
+      "Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore."
+    );
+    return;
+  }
+
+  setConnecting(true);
+  setError(null);
+  setSuccessMessage(null);
+
+  try {
+    // 1) Recupera sessione Supabase
+    const { data: sessionRes, error: sessionErr } =
+      await supabase.auth.getSession();
+    if (sessionErr) throw sessionErr;
+
+    const session = sessionRes?.session;
+    const token = session?.access_token;
+
+    if (!token) {
+      setError("Sessione non valida. Rifai login.");
+      return;
+    }
+
+    // 2) Chiamata backend: genera STATE + URL OAuth (NO PKCE)
+    const r = await fetch("/api/m365/connect", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}), // body vuoto ma presente
+      credentials: "include",
+    });
+
+    const data = await r.json().catch(() => null);
+
+    if (!r.ok || !data?.url) {
+      console.error("m365 connect error", data);
+      setError(data?.error || "Errore connessione Microsoft 365");
+      return;
+    }
+
+    // 3) Redirect verso Microsoft
+    window.location.href = data.url;
+  } catch (e) {
+    console.error("M365 connect fatal", e);
+    setError(e instanceof Error ? e.message : "Errore imprevisto");
+  } finally {
+    setConnecting(false);
+  }
+}
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
