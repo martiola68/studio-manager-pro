@@ -272,9 +272,8 @@ export default function ClientiPage() {
           supabase.from("tbprestazioni").select("*").order("descrizione"),
         ]);
 
-      type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
 // ✅ qui dentro al tuo try(), lascia SOLO queste righe (senza type dentro)
-setClienti((clientiData ?? []) as ClienteRow[]);
+setClienti((clientiData ?? []) as unknown as ClienteRow[]);
 setContatti(contattiData ?? []);
 setUtenti(utentiData ?? []);
 setCassettiFiscali((cassettiData ?? []) as CassettoFiscale[]);
