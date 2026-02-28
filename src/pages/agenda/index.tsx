@@ -255,8 +255,8 @@ const formatTimeWithTimezone = (value: string): string => {
       if (clientiError) throw clientiError;
       setClienti((clientiData || []) as ClienteAgenda[]);
 
-   // Carica utenti
-const { data: utentiData, error: utentiError } = await supabase
+  // Carica utenti
+const res = (await supabase
   .from("tbutenti")
   .select(`
     id,
@@ -271,9 +271,17 @@ const { data: utentiData, error: utentiError } = await supabase
     updated_at
   `)
   .eq("attivo", true)
-  .order("cognome", { ascending: true });
-      if (utentiError) throw utentiError;
-      setUtenti((utentiData || []) as UtenteAgenda[]);
+  .order("cognome", { ascending: true })) as unknown as {
+  data: UtenteAgenda[] | null;
+  error: any;
+};
+
+const utentiData = res.data;
+const utentiError = res.error;
+
+if (utentiError) throw utentiError;
+
+setUtenti(utentiData || []);
 
     } catch (error) {
       console.error("Errore caricamento:", error);
