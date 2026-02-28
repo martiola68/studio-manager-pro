@@ -184,32 +184,24 @@ const toNotificationPayload = (e: any) => ({
   outlook_event_id: e?.outlook_event_id ?? null,
 });
   
-// Helper per formattare orari con timezone italiano
-const formatTimeWithTimezone = (dateString: string): string => {
+// Helper per orari: se arriva già "HH:mm" la restituisce; altrimenti formatta in Europe/Rome
+const formatTimeWithTimezone = (value: string): string => {
+  // Se è già un orario (es. "09:30"), non toccarlo
+  if (/^\d{2}:\d{2}$/.test(value)) return value;
+
   try {
-    const date = new Date(dateString);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "00:00";
+
     return date.toLocaleTimeString("it-IT", {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: "Europe/Rome",
     });
   } catch {
-    return "";
+    return "00:00";
   }
 };
-  
-  const formatTimeWithTimezone = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString("it-IT", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Europe/Rome"
-      });
-    } catch (e) {
-      return "00:00";
-    }
-  };
 
   // Caricamento dati
   useEffect(() => {
