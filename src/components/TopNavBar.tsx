@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
+import { Cloud, Link2, RefreshCcw } from "lucide-react";
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type TopNavUser = Pick<
@@ -276,11 +276,20 @@ export function TopNavBar() {
     { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
     {
   label: "Microsoft 365",
+  icon: <Cloud className="h-4 w-4" />,
   children: [
-    { label: "Connessioni", href: "/microsoft365?tab=connessioni" },
-    { label: "Sync", href: "/microsoft365?tab=sync" },
+    {
+      label: "Connessioni",
+      href: "/microsoft365?tab=connessioni",
+      icon: <Link2 className="h-4 w-4" />,
+    },
+    {
+      label: "Sync",
+      href: "/microsoft365?tab=sync",
+      icon: <RefreshCcw className="h-4 w-4" />,
+    },
   ],
-}
+},
     {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
