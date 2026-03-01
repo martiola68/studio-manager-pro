@@ -17,6 +17,8 @@ import {
   MessageSquare,
   Key,
   Cloud,
+  Link2,
+  RefreshCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -27,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Cloud, Link2, RefreshCcw } from "lucide-react";
+
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 type TopNavUser = Pick<
