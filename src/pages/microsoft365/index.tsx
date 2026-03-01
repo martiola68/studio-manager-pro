@@ -28,6 +28,25 @@ import {
 
 import { supabase } from "@/lib/supabase/client";
 
+const [m365Connected, setM365Connected] = useState<boolean | null>(null)
+const [m365Loading, setM365Loading] = useState(true)
+
+async function loadM365Status() {
+  setM365Loading(true)
+
+  try {
+    const res = await fetch("/api/m365/status")
+    const json = await res.json()
+
+    setM365Connected(json.connected === true)
+  } catch (e) {
+    // se qualcosa va storto → consideriamo NON connesso
+    setM365Connected(false)
+  }
+
+  setM365Loading(false)
+}
+
 const M365ConfigSchema = z.object({
   client_id: z.string().min(1),
   tenant_id: z.string().min(1),
