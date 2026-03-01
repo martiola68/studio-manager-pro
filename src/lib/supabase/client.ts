@@ -2,18 +2,10 @@
 
 import { createBrowserClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/lib/database.types"
+import type { Database } from "@/integrations/supabase/types"
 
-/**
- * Singleton browser-only: il client viene creato una sola volta nel browser
- * e riutilizzato in tutta l'app.
- */
 let browserClient: SupabaseClient<Database> | null = null
 
-/**
- * Ritorna il Supabase client SOLO lato browser.
- * ❌ Non chiamare questa funzione in SSR, build o server-side.
- */
 export function getSupabaseClient(): SupabaseClient<Database> {
   if (typeof window === "undefined") {
     throw new Error(
@@ -36,13 +28,6 @@ export function getSupabaseClient(): SupabaseClient<Database> {
   return browserClient
 }
 
-/**
- * ✅ Alias di compatibilità
- * Permette di continuare a usare:
- *   import { supabase } from "@/lib/supabase/client";
- *
- * In SSR/build, se qualcuno prova a usarlo, lancia un errore esplicito.
- */
 export const supabase: SupabaseClient<Database> =
   typeof window === "undefined"
     ? (new Proxy(
