@@ -2042,6 +2042,52 @@ export type Database = {
         }
         Relationships: []
       }
+     tbmicrosoft365_user_tokens: {
+  Row: {
+    id: string
+    studio_id: string
+    user_id: string
+    token_cache_encrypted: string
+    scopes: string | null
+    connected_at: string | null
+    updated_at: string | null
+    revoked_at: string | null
+  }
+  Insert: {
+    id?: string
+    studio_id: string
+    user_id: string
+    token_cache_encrypted: string
+    scopes?: string | null
+    connected_at?: string | null
+    updated_at?: string | null
+    revoked_at?: string | null
+  }
+  Update: {
+    id?: string
+    studio_id?: string
+    user_id?: string
+    token_cache_encrypted?: string
+    scopes?: string | null
+    connected_at?: string | null
+    updated_at?: string | null
+    revoked_at?: string | null
+  }
+  Relationships: [
+    {
+      foreignKeyName: "tbmicrosoft365_user_tokens_user_id_fkey"
+      columns: ["user_id"]
+      referencedRelation: "tbutenti"
+      referencedColumns: ["id"]
+    },
+    {
+      foreignKeyName: "tbmicrosoft365_user_tokens_studio_id_fkey"
+      columns: ["studio_id"]
+      referencedRelation: "tbstudio"
+      referencedColumns: ["id"]
+    }
+  ]
+}
       tbutenti: {
         Row: {
           attivo: boolean | null
