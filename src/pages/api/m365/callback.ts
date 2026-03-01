@@ -21,7 +21,7 @@ function redirectOk(res: NextApiResponse) {
 function redirectErr(res: NextApiResponse, msg: string) {
   const m = encodeURIComponent(msg);
   res.writeHead(302, {
-    Location: `/impostazioni/microsoft365?error=true&message=${m}`,
+    Location: `/microsoft365?error=true&message=${m}`,
   });
   res.end();
 }
