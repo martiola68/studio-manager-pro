@@ -85,7 +85,7 @@ export type Database = {
           },
         ]
       }
-      microsoft365_config: {
+          microsoft365_config: {
         Row: {
           client_id: string | null
           client_secret: string | null
@@ -146,7 +146,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
+      },
+
+      tbmicrosoft365_user_tokens: {
+        Row: {
+          id: string
+          studio_id: string
+          user_id: string
+          token_cache_encrypted: string
+          scopes: string | null
+          connected_at: string | null
+          updated_at: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          id?: string
+          studio_id: string
+          user_id: string
+          token_cache_encrypted: string
+          scopes?: string | null
+          connected_at?: string | null
+          updated_at?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          id?: string
+          studio_id?: string
+          user_id?: string
+          token_cache_encrypted?: string
+          scopes?: string | null
+          connected_at?: string | null
+          updated_at?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: []
+      },
+
       password_reset_tokens: {
         Row: {
           attempts: number | null
@@ -190,33 +225,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id: string
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       tbagenda: {
         Row: {
