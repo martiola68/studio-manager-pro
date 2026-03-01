@@ -13,7 +13,7 @@ function appBaseUrl(req: NextApiRequest) {
 
 function redirectOk(res: NextApiResponse) {
   res.writeHead(302, {
-    Location: "/impostazioni/microsoft365?m365=connected",
+    Location: "/microsoft365?m365=connected",
   });
   res.end();
 }
