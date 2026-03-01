@@ -1,30 +1,32 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { decrypt, encrypt } from "@/lib/encryption365";
+import type { NextApiRequest, NextApiResponse } from "next"
+import { supabaseAdmin } from "@/lib/supabase/admin"
+import { decrypt, encrypt } from "@/lib/encryption365"
+
+/* =======================
+   TIPI
+======================= */
 
 type TokenCache = {
-  access_token: string;
-  refresh_token: string | null;
-  scope: string | null;
-  token_type: string | null;
-  expires_at: string; // ISO
-  obtained_at: string; // ISO
-};
-
-function getBearerToken(req: NextApiRequest) {
-  const h = req.headers.authorization || "";
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] || null;
+  access_token: string
+  refresh_token: string | null
+  scope: string | null
+  token_type: string | null
+  expires_at: string
+  obtained_at: string
 }
 
-function appBaseUrl(req: NextApiRequest) {
-  const proto = (req.headers["x-forwarded-proto"] as string) || "https";
-  const host = (req.headers["x-forwarded-host"] as string) || req.headers.host;
-  return `${proto}://${host}`;
+/* =======================
+   UTILS
+======================= */
+
+function getBearerToken(req: NextApiRequest) {
+  const h = req.headers.authorization || ""
+  const m = h.match(/^Bearer\s+(.+)$/i)
+  return m?.[1] || null
 }
 
 function iso(d: Date) {
-  return d.toISOString();
+  return d.toISOString()
 }
 
 async function graphFetch(accessToken: string, url: string) {
@@ -35,240 +37,201 @@ async function graphFetch(accessToken: string, url: string) {
       "Content-Type": "application/json",
       Prefer: 'outlook.timezone="Europe/Rome"',
     },
-  });
+  })
 
-  const data = await r.json().catch(() => null);
-  return { ok: r.ok, status: r.status, data };
+  const data = await r.json().catch(() => null)
+  return { ok: r.ok, status: r.status, data }
 }
 
+/* =======================
+   REFRESH TOKEN
+======================= */
+
 async function refreshAccessToken(studioId: string, userId: string) {
-  // 1) leggi config studio (client_id/tenant_id/secret)
-  const { data: cfg, error: cfgErr } = await supabaseAdmin
+  const { data: cfg } = await supabaseAdmin
     .from("microsoft365_config")
     .select("client_id, tenant_id, client_secret, enabled")
     .eq("studio_id", studioId)
-    .maybeSingle();
+    .maybeSingle()
 
-  if (cfgErr) throw new Error(`Config read error: ${cfgErr.message}`);
-  if (!cfg?.enabled) throw new Error("Microsoft 365 disabilitato per lo studio");
-  if (!cfg.client_id || !cfg.client_secret) throw new Error("Config M365 incompleta");
+  if (!cfg?.enabled) throw new Error("Microsoft 365 non abilitato")
+  if (!cfg.client_id || !cfg.client_secret) throw new Error("Config M365 incompleta")
 
-  // 2) leggi token utente
-  const { data: tokRow, error: tokErr } = await supabaseAdmin
+  const { data: tokRow } = await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
     .select("token_cache_encrypted")
     .eq("studio_id", studioId)
     .eq("user_id", userId)
-    .maybeSingle();
+    .maybeSingle()
 
-  if (tokErr) throw new Error(`Token read error: ${tokErr.message}`);
-  if (!tokRow?.token_cache_encrypted) throw new Error("Token utente mancante");
+  if (!tokRow?.token_cache_encrypted) throw new Error("Token mancante")
 
-  const cache = JSON.parse(decrypt(tokRow.token_cache_encrypted)) as TokenCache;
-  if (!cache.refresh_token) throw new Error("Refresh token mancante (offline_access?)");
+  const cache = JSON.parse(decrypt(tokRow.token_cache_encrypted)) as TokenCache
+  if (!cache.refresh_token) throw new Error("Refresh token mancante")
 
-  const tenant = cfg.tenant_id || "common";
-  const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
-
-  const clientSecret = decrypt(cfg.client_secret);
-
-  const body = new URLSearchParams({
-    client_id: cfg.client_id,
-    client_secret: clientSecret,
-    grant_type: "refresh_token",
-    refresh_token: cache.refresh_token,
-    // scope opzionale: se lo metti, deve includere quelli originali + offline_access
-    // scope: "offline_access User.Read Mail.Read Calendars.Read Calendars.ReadWrite",
-  });
+  const tenant = cfg.tenant_id || "common"
+  const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`
 
   const resp = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
+    body: new URLSearchParams({
+      client_id: cfg.client_id,
+      client_secret: decrypt(cfg.client_secret),
+      grant_type: "refresh_token",
+      refresh_token: cache.refresh_token,
+    }),
+  })
 
-  const json = await resp.json().catch(() => null);
-
-  if (!resp.ok || !json?.access_token) {
-    const msg = json?.error_description || json?.error || `HTTP ${resp.status}`;
-    throw new Error(`Refresh token fallito: ${msg}`);
+  const json = await resp.json()
+  if (!resp.ok || !json.access_token) {
+    throw new Error(json?.error_description || "Refresh token fallito")
   }
 
-  const now = Date.now();
-  const expiresAt = new Date(now + (json.expires_in ?? 3600) * 1000).toISOString();
-
+  const now = Date.now()
   const newCache: TokenCache = {
     access_token: json.access_token,
-    refresh_token: json.refresh_token || cache.refresh_token, // spesso non torna: tieni il vecchio
-    scope: json.scope || cache.scope || null,
-    token_type: json.token_type || cache.token_type || "Bearer",
-    expires_at: expiresAt,
+    refresh_token: json.refresh_token || cache.refresh_token,
+    scope: json.scope || cache.scope,
+    token_type: json.token_type || "Bearer",
+    expires_at: new Date(now + (json.expires_in ?? 3600) * 1000).toISOString(),
     obtained_at: new Date(now).toISOString(),
-  };
+  }
 
-  const encrypted = encrypt(JSON.stringify(newCache));
-
-  const { error: upErr } = await supabaseAdmin
+  await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
     .update({
-      token_cache_encrypted: encrypted,
+      token_cache_encrypted: encrypt(JSON.stringify(newCache)),
       scopes: newCache.scope,
-      updated_at: new Date().toISOString(),
+      updated_at: iso(new Date()),
       revoked_at: null,
-    } as any)
+    })
     .eq("studio_id", studioId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
 
-  if (upErr) throw new Error(`Salvataggio token refresh fallito: ${upErr.message}`);
-
-  return newCache.access_token;
+  return newCache.access_token
 }
 
+/* =======================
+   HANDLER
+======================= */
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" })
+  }
 
   try {
-    // 0) auth utente (Supabase)
-    const bearer = getBearerToken(req);
-    if (!bearer) return res.status(401).json({ error: "Missing Authorization token" });
+    /* ===== AUTH ===== */
+    const bearer = getBearerToken(req)
+    if (!bearer) return res.status(401).json({ error: "Missing token" })
 
-    const { data: userRes, error: userErr } = await supabaseAdmin.auth.getUser(bearer);
-    if (userErr || !userRes?.user) return res.status(401).json({ error: "Utente non autenticato" });
+    const { data: auth } = await supabaseAdmin.auth.getUser(bearer)
+    if (!auth?.user) return res.status(401).json({ error: "Unauthorized" })
 
-    const authUser = userRes.user;
-
-    // 1) trova tbutenti (id o email fallback)
-    let userId: string | null = null;
-    let studioId: string | null = null;
-
-    const byId = await supabaseAdmin
+    /* ===== TROVA UTENTE + STUDIO ===== */
+    const { data: utente } = await supabaseAdmin
       .from("tbutenti")
-      .select("id, studio_id, email")
-      .eq("id", authUser.id)
-      .maybeSingle();
+      .select("id, studio_id")
+      .or(`id.eq.${auth.user.id},email.eq.${auth.user.email}`)
+      .maybeSingle()
 
-    if (byId.data?.studio_id) {
-      userId = byId.data.id;
-      studioId = byId.data.studio_id;
-    } else if (authUser.email) {
-      const byEmail = await supabaseAdmin
-        .from("tbutenti")
-        .select("id, studio_id, email")
-        .eq("email", authUser.email)
-        .maybeSingle();
-      if (byEmail.data?.studio_id) {
-        userId = byEmail.data.id;
-        studioId = byEmail.data.studio_id;
-      }
+    if (!utente?.studio_id) {
+      return res.status(400).json({ error: "Studio non trovato" })
     }
 
-    if (!userId || !studioId) {
-      return res.status(400).json({ error: "Studio utente non trovato" });
-    }
+    const userId = utente.id
+    const studioId = utente.studio_id
 
-    // 2) leggi token delegato
-    const { data: tok, error: tokErr } = await supabaseAdmin
+    /* ===== TOKEN ===== */
+    const { data: tok } = await supabaseAdmin
       .from("tbmicrosoft365_user_tokens")
       .select("token_cache_encrypted, revoked_at")
       .eq("studio_id", studioId)
       .eq("user_id", userId)
-      .maybeSingle();
+      .maybeSingle()
 
-    if (tokErr) return res.status(400).json({ error: tokErr.message });
     if (!tok?.token_cache_encrypted || tok.revoked_at) {
-      return res.status(400).json({ error: "Account Microsoft non connesso" });
+      return res.status(400).json({ error: "Account Microsoft non connesso" })
     }
 
-    const cache = JSON.parse(decrypt(tok.token_cache_encrypted)) as TokenCache;
-    let accessToken = cache.access_token;
+    let accessToken = (JSON.parse(decrypt(tok.token_cache_encrypted)) as TokenCache).access_token
 
-    // 3) range sync (default: -30 giorni / +90 giorni)
-    const body = (req.body ?? {}) as { start?: string; end?: string };
-    const start = body.start ? new Date(body.start) : new Date(Date.now() - 30 * 24 * 3600 * 1000);
-    const end = body.end ? new Date(body.end) : new Date(Date.now() + 90 * 24 * 3600 * 1000);
+    /* ===== RANGE ===== */
+    const start = new Date(Date.now() - 30 * 24 * 3600 * 1000)
+    const end = new Date(Date.now() + 90 * 24 * 3600 * 1000)
 
-    // 4) chiama Graph calendarView (meglio di /me/events per range)
-    const base = "https://graph.microsoft.com/v1.0/me/calendarView";
-    const params = new URLSearchParams({
-      startDateTime: iso(start),
-      endDateTime: iso(end),
-      $top: "200",
-      $orderby: "start/dateTime",
-      $select:
-        "id,subject,bodyPreview,start,end,isAllDay,location,organizer,attendees,webLink,lastModifiedDateTime,createdDateTime",
-    });
+    /* ===== GRAPH ===== */
+    let url =
+      "https://graph.microsoft.com/v1.0/me/calendarView?" +
+      new URLSearchParams({
+        startDateTime: iso(start),
+        endDateTime: iso(end),
+        $top: "200",
+        $orderby: "start/dateTime",
+        $select:
+          "id,subject,bodyPreview,start,end,isAllDay,location,webLink,lastModifiedDateTime",
+      }).toString()
 
-    let url = `${base}?${params.toString()}`;
+    const events: any[] = []
 
-    let events: any[] = [];
     while (url) {
-      let g = await graphFetch(accessToken, url);
+      let g = await graphFetch(accessToken, url)
 
-      // se token scaduto → refresh e riprova 1 volta
       if (!g.ok && (g.status === 401 || g.status === 403)) {
-        accessToken = await refreshAccessToken(studioId, userId);
-        g = await graphFetch(accessToken, url);
+        accessToken = await refreshAccessToken(studioId, userId)
+        g = await graphFetch(accessToken, url)
       }
 
       if (!g.ok) {
-        const msg = g.data?.error?.message || JSON.stringify(g.data);
-        return res.status(400).json({ error: `Graph error: ${msg}` });
+        return res.status(400).json({ error: g.data?.error?.message })
       }
 
-      events = events.concat(g.data?.value ?? []);
-      url = g.data?.["@odata.nextLink"] ?? "";
+      events.push(...(g.data?.value ?? []))
+      url = g.data?.["@odata.nextLink"] ?? ""
     }
 
-    // 5) upsert su DB
-    // =========================
-    // ✅ ADATTA QUI (1 MINUTO)
-    // =========================
-    // Cambia i campi in base alle colonne REALI di tbagenda
+    /* ===== UPSERT tbagenda ===== */
     const rows = events.map((ev) => ({
-      // consigliato tenere sempre:
       studio_id: studioId,
-      user_id: userId,
+      utente_id: userId,
 
-      // identificatore esterno per upsert
       external_id: ev.id,
+      provider: "microsoft365",
 
       titolo: ev.subject ?? "",
       descrizione: ev.bodyPreview ?? null,
-      data_inizio: ev.start?.dateTime ? new Date(ev.start.dateTime).toISOString() : null,
-      data_fine: ev.end?.dateTime ? new Date(ev.end.dateTime).toISOString() : null,
+
+      data_inizio: ev.start?.dateTime
+        ? new Date(ev.start.dateTime).toISOString()
+        : null,
+
+      data_fine: ev.end?.dateTime
+        ? new Date(ev.end.dateTime).toISOString()
+        : null,
+
       tutto_giorno: !!ev.isAllDay,
       luogo: ev.location?.displayName ?? null,
-      weblink: ev.webLink ?? null,
-      provider: "microsoft365",
-      last_modified_at: ev.lastModifiedDateTime ?? null,
 
-      // utile: salvataggio raw per debug/audit
-      raw: ev,
-      updated_at: new Date().toISOString(),
-    }));
+      updated_at: ev.lastModifiedDateTime
+        ? new Date(ev.lastModifiedDateTime).toISOString()
+        : new Date().toISOString(),
+    }))
 
-    // ⚠️ se tbagenda NON ha questi campi, cambia mapping sopra.
-    // ⚠️ se non hai vincolo unico su (studio_id,user_id,external_id), crealo o cambia onConflict.
     const { error: upErr } = await supabaseAdmin
       .from("tbagenda")
-      .upsert(rows as any, { onConflict: "studio_id,user_id,external_id" });
+      .upsert(rows, { onConflict: "provider,external_id" })
 
     if (upErr) {
-      return res.status(400).json({
-        error:
-          "Upsert fallito su tbagenda. Probabile mismatch colonne o onConflict. " +
-          upErr.message,
-      });
+      return res.status(400).json({ error: upErr.message })
     }
 
     return res.status(200).json({
       success: true,
       synced: rows.length,
-      range: { start: iso(start), end: iso(end) },
-      redirectUriUsed: `${appBaseUrl(req)}/api/m365/callback`,
-    });
+    })
   } catch (e: any) {
-    console.error("[calendar/sync] fatal", e);
-    return res.status(500).json({ error: e?.message || "Errore interno" });
+    console.error("[calendar/sync]", e)
+    return res.status(500).json({ error: e.message || "Errore interno" })
   }
 }
