@@ -2,6 +2,21 @@ import { decrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
 import { supabase } from "@/lib/supabase/client"; // o dove lo importi già
 
+export async function hasMicrosoft365(
+  studioId: string,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("tbmicrosoft365_user_tokens")
+    .select("id")
+    .eq("studio_id", studioId)
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  return !!data && !error;
+}
+
 type M365SettingsRow = {
   client_id: string;
   tenant_id: string;
