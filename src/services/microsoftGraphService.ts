@@ -3,24 +3,50 @@ import { decrypt, encrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
 import { supabase } from "@/lib/supabase/client";
 
+export function hasMicrosoft365(studioId: string, userId: string): Promise<boolean>;
+export function hasMicrosoft365(userId: string): Promise<boolean>;
+
 /**
  * Verifica se l'utente ha un token M365 attivo per lo studio.
  */
-export async function hasMicrosoft365(
-  studioId: string,
-  userId: string
-): Promise<boolean> {
+export async function hasMicrosoft365(a: string, b?: string): Promise<boolean> {
+  // firma nuova: (studioId, userId)
+  if (typeof b === "string") {
+    const studioId = a;
+    const userId = b;
+
+    const { data, error } = await supabase
+      .from("tbmicrosoft365_user_tokens")
+      .select("id")
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    return !!data && !error;
+  }
+
+  // firma compatibile: (userId) -> ricavo studioId da tbutenti
+  const userId = a;
+
+  const { data: uRow, error: uErr } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (uErr || !uRow?.studio_id) return false;
+
   const { data, error } = await supabase
     .from("tbmicrosoft365_user_tokens")
     .select("id")
-    .eq("studio_id", studioId)
+    .eq("studio_id", uRow.studio_id)
     .eq("user_id", userId)
     .is("revoked_at", null)
     .maybeSingle();
 
   return !!data && !error;
 }
-
 type M365SettingsRow = {
   client_id: string;
   tenant_id: string;
