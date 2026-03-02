@@ -554,19 +554,6 @@ export default function AgendaPage() {
   }
 }
 
-          const isConnected = await microsoftGraphService.isConnected(currentUserId);
-
-          if (!isConnected) {
-            toast({
-              title: "⚠️ Connessione Microsoft 365 Richiesta",
-              description:
-                "Per creare meeting Teams, devi prima connettere Microsoft 365. Vai in Impostazioni → Microsoft 365.",
-              variant: "destructive",
-              duration: 8000,
-            });
-            return;
-          }
-
           toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
 
           const { teamsService } = await import("@/services/teamsService");
