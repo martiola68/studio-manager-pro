@@ -499,21 +499,60 @@ export default function AgendaPage() {
       // Genera meeting Teams se richiesto
       let teamsLink = formData.link_teams;
 
-      if (formData.riunione_teams && !teamsLink) {
-        try {
-          toast({ title: "Verifica connessione Microsoft 365...", description: "Attendere prego" });
+     if (formData.riunione_teams && !teamsLink) {
+  try {
+    toast({
+      title: "Verifica connessione Microsoft 365...",
+      description: "Attendere prego",
+    });
 
-          const { microsoftGraphService } = await import("@/services/microsoftGraphService");
+    // 1️⃣ controlliamo lo stato UFFICIALE
+    const statusRes = await fetch("/api/m365/status");
+    const status = await statusRes.json();
 
-          if (!currentUserId) {
-            toast({
-              title: "⚠️ Errore Autenticazione",
-              description: "Impossibile verificare l'utente loggato. Ricarica la pagina.",
-              variant: "destructive",
-              duration: 5000,
-            });
-            return;
-          }
+    if (!status.connected) {
+      toast({
+        title: "⚠️ Connessione Microsoft 365 richiesta",
+        description: "Connetti Microsoft 365 prima di creare una riunione Teams.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    // 2️⃣ creiamo il meeting Teams
+    const teamsRes = await fetch("/api/m365/teams/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject: formData.titolo || "Riunione",
+        start: formData.data_inizio,
+        end: formData.data_fine,
+      }),
+    });
+
+    const teamsJson = await teamsRes.json();
+
+    if (!teamsRes.ok || !teamsJson.joinUrl) {
+      toast({
+        title: "Errore creazione Teams",
+        description: teamsJson.error || "Impossibile creare il meeting Teams",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 3️⃣ salviamo il link Teams nell’evento
+    teamsLink = teamsJson.joinUrl;
+  } catch (e) {
+    toast({
+      title: "Errore Teams",
+      description: "Errore imprevisto durante la creazione del meeting Teams",
+      variant: "destructive",
+    });
+    return;
+  }
+}
 
           const isConnected = await microsoftGraphService.isConnected(currentUserId);
 
