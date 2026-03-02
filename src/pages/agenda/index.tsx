@@ -478,6 +478,60 @@ export default function AgendaPage() {
           });
           return;
         }
+              // =========================
+      // START/END + TEAMS (UNICO)
+      // =========================
+
+      // 1) start/end UNA SOLA VOLTA (ADATTA SOLO I NOMI CAMPO)
+      const startDateTime = new Date(`${formData.data}T${formData.ora}:00`);
+      if (Number.isNaN(startDateTime.getTime())) {
+        toast({ title: "Errore", description: "Data/ora non valide", variant: "destructive" });
+        return;
+      }
+
+      const durataMinuti = formData.durata_minuti ?? 30;
+      const endDateTime = new Date(startDateTime.getTime() + durataMinuti * 60 * 1000);
+
+      const startISO = startDateTime.toISOString();
+      const endISO = endDateTime.toISOString();
+
+      // 2) Teams: UNA SOLA CREAZIONE
+      let teamsJoinUrl: string | null = null;
+      let teamsMeetingId: string | null = null;
+
+      if (formData.creaTeams === true) {
+        // LASCIA UNA SOLA CHIAMATA A STATUS (se più sotto ne hai un'altra, la elimini)
+        const statusRes = await fetch("/api/m365/status");
+        const statusJson = await statusRes.json();
+
+        if (!statusRes.ok || !statusJson?.connected) {
+          toast({
+            title: "Microsoft 365 non connesso",
+            description: "Collega l'account M365 prima di creare un meeting Teams.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // USA SOLO teamsService (se hai un fetch /api/m365/teams/create, lo elimini)
+        const meeting = await teamsService.createTeamsMeeting({
+          subject: formData.titolo,
+          startDateTime: startISO,
+          endDateTime: endISO,
+        });
+
+        teamsJoinUrl = meeting?.joinUrl ?? null;
+        teamsMeetingId = meeting?.id ?? null;
+
+        if (!teamsJoinUrl) {
+          toast({
+            title: "Errore",
+            description: "Meeting Teams creato ma link non disponibile.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
         if (!formData.durata_giorni || formData.durata_giorni <= 0) {
           toast({
             title: "Errore",
@@ -492,7 +546,7 @@ export default function AgendaPage() {
 // Date evento (UNICA DEFINIZIONE)
 // ================
 
-      let startDateTime = "";
+let startDateTime = "";
 let endDateTime = "";
 
 startDateTime = formData.tutto_giorno
@@ -512,20 +566,6 @@ endDateTime = formData.tutto_giorno
       title: "Verifica connessione Microsoft 365...",
       description: "Attendere prego",
     });
-
-    // 1️⃣ controlliamo lo stato UFFICIALE
-    const statusRes = await fetch("/api/m365/status");
-    const status = await statusRes.json();
-
-    if (!status.connected) {
-      toast({
-        title: "⚠️ Connessione Microsoft 365 richiesta",
-        description: "Connetti Microsoft 365 prima di creare una riunione Teams.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
-    }
 
     // 2️⃣ creiamo il meeting Teams
     const teamsRes = await fetch("/api/m365/teams/create", {
@@ -561,20 +601,6 @@ endDateTime = formData.tutto_giorno
   }
 }
 
-        const statusRes = await fetch("/api/m365/status");
-const status = await statusRes.json();
-
-if (!status.connected) {
-  toast({
-    title: "⚠️ Connessione Microsoft 365 richiesta",
-    description: "Connetti Microsoft 365 prima di creare una riunione Teams.",
-    variant: "destructive",
-    duration: 5000,
-  });
-  return;
-}
-
-      
           toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
 
           const { teamsService } = await import("@/services/teamsService");
@@ -592,16 +618,6 @@ if (!currentUserId) {
   });
   return;
 }
-
-          const meeting = await teamsService.createTeamsMeeting(
-            currentUserId,
-            formData.titolo,
-            new Date(startDateTime),
-            new Date(endDateTime),
-            attendeesEmails
-          );
-
-          teamsLink = meeting.joinUrl || "";
 
           toast({
             title: "Meeting Teams creato!",
@@ -700,11 +716,17 @@ if (!currentUserId) {
               ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
               : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
-            occurrences.push({
-              ...basePayload,
-              data_inizio: occurrenceStartDateTime,
-              data_fine: occurrenceEndDateTime,
-            });
+         occurrences.push({
+  ...basePayload,
+  data_inizio: occurrenceStartDateTime,
+  data_fine: occurrenceEndDateTime,
+
+  // ✅ aggiungi questi 4 campi
+  start_datetime: occurrenceStartDateTime,
+  end_datetime: occurrenceEndDateTime,
+  teams_join_url: teamsJoinUrl,
+  teams_meeting_id: teamsMeetingId,
+});
 
             current = new Date(current);
             current.setDate(current.getDate() + formData.frequenza_giorni);
