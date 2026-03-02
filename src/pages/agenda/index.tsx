@@ -502,109 +502,120 @@ export default function AgendaPage() {
         ? new Date(formData.data_fine || formData.data_inizio).toISOString()
         : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
-      // =========================
-      // TEAMS (UNICO BLOCCO)
-      // =========================
-      let teamsLink = formData.link_teams || "";
-      let teamsJoinUrl: string | null = null;
-      let teamsMeetingId: string | null = null;
+ // =========================
+// TEAMS (UNICO BLOCCO) ✅
+// ===========================
+let teamsLink = formData.link_teams || "";
+let teamsJoinUrl: string | null = null;
+let teamsMeetingId: string | null = null;
 
-      if (formData.riunione_teams && !teamsLink) {
-const supabase = getSupabaseClient();
-const {
-  data: { session },
-} = await supabase.auth.getSession();
+if (formData.riunione_teams) {
+  // 1) se l’utente ha incollato un link manuale, lo accettiamo (ma deve essere URL)
+  if (teamsLink.trim().length > 0) {
+    const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
+    if (!isUrl) {
+      toast({
+        title: "Errore",
+        description: "Il Link Teams deve essere un URL valido (es. https://...).",
+        variant: "destructive",
+      });
+      return;
+    }
+  } else {
+    // 2) link vuoto -> creiamo meeting via M365
 
-if (!session?.access_token) {
-  toast({
-    title: "Errore autenticazione",
-    description: "Sessione non valida. Ricarica la pagina.",
-    variant: "destructive",
-  });
-  return;
+    if (!currentUserId) {
+      toast({
+        title: "⚠️ Errore Autenticazione",
+        description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: { session: m365Session } } = await supabase.auth.getSession();
+
+    if (!m365Session?.access_token) {
+      toast({
+        title: "Microsoft 365 non connesso",
+        description: "Collega l'account M365 prima di creare un meeting Teams.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // status con Bearer token (il tuo endpoint lo richiede)
+    const statusResponse = await fetch("/api/m365/status", {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${m365Session.access_token}`,
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+
+    const statusJson = await statusResponse.json();
+
+    if (!statusResponse.ok || !statusJson?.connected) {
+      toast({
+        title: "Microsoft 365 non connesso",
+        description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // crea meeting - USA currentUserId (utente loggato, quello che ha token)
+    const { teamsService } = await import("@/services/teamsService");
+
+    // date ISO usate per meeting
+    const startDateTimeISO = formData.tutto_giorno
+      ? new Date(formData.data_inizio).toISOString()
+      : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
+
+    const endDateTimeISO = formData.tutto_giorno
+      ? new Date(formData.data_fine || formData.data_inizio).toISOString()
+      : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
+
+    const attendeesEmails = formData.partecipanti
+      .map((pId) => utenti.find((u) => u.id === pId)?.email)
+      .filter((v): v is string => Boolean(v));
+
+    const meeting = await teamsService.createTeamsMeeting(
+      currentUserId,
+      formData.titolo || "Riunione",
+      new Date(startDateTimeISO),
+      new Date(endDateTimeISO),
+      attendeesEmails
+    );
+
+    if (!meeting?.success) {
+      toast({
+        title: "Errore Teams",
+        description: meeting?.error || "Impossibile creare il meeting Teams.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    teamsJoinUrl = meeting.joinUrl ?? null;
+    teamsMeetingId = meeting.id ?? null;
+
+    if (!teamsJoinUrl) {
+      toast({
+        title: "Errore",
+        description: "Meeting Teams creato ma link non disponibile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    teamsLink = teamsJoinUrl ?? "";
+  }
 }
-
-        const { teamsService } = await import("@/services/teamsService");
-
-const attendeesEmails = formData.partecipanti
-  .map((pId) => utenti.find((u) => u.id === pId)?.email)
-  .filter((v): v is string => Boolean(v));
-
-if (!currentUserId) {
-  toast({
-    title: "⚠️ Errore Autenticazione",
-    description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
-    variant: "destructive",
-    duration: 5000,
-  });
-  return;
-}
-
-// ✅ prende token Supabase per chiamare le API M365
-const {
-  data: { session: m365Session },
-} = await supabase.auth.getSession();
-
-if (!m365Session?.access_token) {
-  toast({
-    title: "Errore autenticazione",
-    description: "Sessione non valida. Ricarica la pagina.",
-    variant: "destructive",
-  });
-  return;
-}
-
-const statusRes = await fetch("/api/m365/status", {
-  method: "GET",
-  cache: "no-store",
-  headers: {
-    Authorization: `Bearer ${m365Session.access_token}`,
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-  },
-});
-
-const statusJson = await statusRes.json();
-
-if (!statusRes.ok || !statusJson?.connected) {
-  toast({
-    title: "Microsoft 365 non connesso",
-    description: "Collega l'account M365 prima di creare un meeting Teams.",
-    variant: "destructive",
-  });
-  return;
-}
-
-const teamsRes = await fetch("/api/m365/teams/create", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${m365Session.access_token}`,
-  },
-  body: JSON.stringify({
-    subject: formData.titolo || "Riunione",
-    startDateTime: startDateTimeISO,
-    endDateTime: endDateTimeISO,
-    attendeesEmails,
-  }),
-});
-
-const teamsJson = await teamsRes.json();
-
-if (!teamsRes.ok || !teamsJson?.joinUrl) {
-  toast({
-    title: "Errore Teams",
-    description: teamsJson?.error || "Impossibile creare il meeting Teams",
-    variant: "destructive",
-    duration: 8000,
-  });
-  return;
-}
-
-teamsLink = teamsJoinUrl ?? "";
-
-      }
-
       // ===============================
       // PAYLOAD BASE
       // ===============================
