@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { microsoftGraphService } from "@/services/microsoftGraphService";
+import { graphApiCall } from "@/services/microsoftGraphService";
 
 export default async function handler(
   req: NextApiRequest,
