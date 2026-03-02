@@ -219,14 +219,14 @@ async function graphApiCall<T = any>(
 
 async function hasMicrosoft365(userId: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from("tbmicrosoft_tokens")
-    .select("user_id")
+    .from("tbmicrosoft365_user_tokens")
+    .select("id")
     .eq("user_id", userId)
+    .is("revoked_at", null)
     .maybeSingle();
 
-  return !error && !!data;
+  return !!data && !error;
 }
-
 async function disconnectAccount(userId: string): Promise<void> {
   const { error } = await supabase
     .from("tbmicrosoft_tokens")
