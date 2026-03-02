@@ -565,6 +565,10 @@ const meeting = await teamsService.createTeamsMeeting(
   attendeesEmails
 );
 
+        // 🔍 DEBUG — NON TOCCARE ALTRO
+console.log("MEETING TEAMS RAW =>", meeting);
+console.log("MEETING TEAMS KEYS =>", meeting ? Object.keys(meeting as any) : null);
+
         teamsJoinUrl =
   (meeting as any)?.joinUrl ??
   (meeting as any)?.join_url ??
@@ -582,14 +586,15 @@ teamsMeetingId =
   (meeting as any)?.meeting_id ??
   null;
 
-        if (!teamsJoinUrl) {
-          toast({
-            title: "Errore",
-            description: "Meeting Teams creato ma link non disponibile.",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (!teamsJoinUrl) {
+  console.log("MEETING TEAMS RAW (NO LINK) =>", meeting);
+  toast({
+    title: "Errore",
+    description: "Meeting Teams creato ma link non disponibile. Guarda la console.",
+    variant: "destructive",
+  });
+  return;
+}
 
         teamsLink = teamsJoinUrl;
       }
