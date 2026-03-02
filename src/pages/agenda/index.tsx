@@ -559,10 +559,10 @@ if (!currentUserId) {
 
 // ✅ prende token Supabase per chiamare le API M365
 const {
-  data: { session },
+  data: { session: m365Session },
 } = await supabase.auth.getSession();
 
-if (!session?.access_token) {
+if (!m365Session?.access_token) {
   toast({
     title: "Errore autenticazione",
     description: "Sessione non valida. Ricarica la pagina.",
@@ -571,14 +571,16 @@ if (!session?.access_token) {
   return;
 }
 
-// ✅ (opzionale ma consigliato) controlla status passando Authorization
 const statusRes = await fetch("/api/m365/status", {
+  method: "GET",
+  cache: "no-store",
   headers: {
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${m365Session.access_token}`,
     "Cache-Control": "no-cache",
     Pragma: "no-cache",
   },
 });
+
 const statusJson = await statusRes.json();
 
 if (!statusRes.ok || !statusJson?.connected) {
@@ -590,12 +592,11 @@ if (!statusRes.ok || !statusJson?.connected) {
   return;
 }
 
-// ✅ crea meeting Teams via API route
 const teamsRes = await fetch("/api/m365/teams/create", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${m365Session.access_token}`,
   },
   body: JSON.stringify({
     subject: formData.titolo || "Riunione",
@@ -616,6 +617,8 @@ if (!teamsRes.ok || !teamsJson?.joinUrl) {
   });
   return;
 }
+
+teamsLink = teamsJson.joinUrl;
 
 teamsLink = teamsJson.joinUrl;
 
