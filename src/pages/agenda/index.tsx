@@ -524,11 +524,27 @@ export default function AgendaPage() {
 
         const { teamsService } = await import("@/services/teamsService");
 
-        const meeting = await teamsService.createTeamsMeeting({
-          subject: formData.titolo || "Riunione",
-          startDateTime: startDateTimeISO,
-          endDateTime: endDateTimeISO,
-        });
+const attendeesEmails = formData.partecipanti
+  .map((pId) => utenti.find((u) => u.id === pId)?.email)
+  .filter((v): v is string => Boolean(v));
+
+if (!currentUserId) {
+  toast({
+    title: "⚠️ Errore Autenticazione",
+    description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
+    variant: "destructive",
+    duration: 5000,
+  });
+  return;
+}
+
+const meeting = await teamsService.createTeamsMeeting(
+  currentUserId,
+  formData.titolo || "Riunione",
+  new Date(startDateTimeISO),
+  new Date(endDateTimeISO),
+  attendeesEmails
+);
 
         teamsJoinUrl = meeting?.joinUrl ?? null;
         teamsMeetingId = meeting?.id ?? null;
