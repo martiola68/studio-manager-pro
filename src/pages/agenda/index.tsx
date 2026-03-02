@@ -601,7 +601,7 @@ if (!teamsRes.ok || !teamsJson?.joinUrl) {
   return;
 }
 
-teamsLink = teamsJson.joinUrl;
+teamsLink = teamsJoinUrl ?? "";
 
       }
 
