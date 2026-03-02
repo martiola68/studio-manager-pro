@@ -112,21 +112,20 @@ createTeamsMeeting: async (
       }));
     }
 
-    const response = await graphApiCall<any>(tokenUserId, "/me/events", {
-      method: "POST",
-      body: JSON.stringify(meeting),
-    });
+   const response = await graphApiCall<any>(tokenUserId, "/me/onlineMeetings", {
+  method: "POST",
+  body: JSON.stringify({
+    subject,
+    startDateTime: startTime.toISOString(),
+    endDateTime: endTime.toISOString(),
+  }),
+});
 
-    return {
-      success: true,
-      // ✅ Graph spesso ritorna join URL qui:
-      joinUrl:
-        response?.onlineMeeting?.joinUrl ??
-        response?.onlineMeetingUrl ??
-        response?.webLink ??
-        null,
-      id: response?.id ?? null,
-    };
+  return {
+  success: true,
+  joinUrl: response?.joinUrl ?? null,
+  id: response?.id ?? null,
+};
   } catch (error: any) {
     console.error("Error creating Teams meeting:", error);
     return { success: false, error: error?.message || String(error) };
