@@ -589,8 +589,8 @@ const endDateTime = formData.tutto_giorno
           const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
-            startDateTime,
-            endDateTime,
+            new Date(startDateTime),
+            new Date(endDateTime),
             attendeesEmails
           );
 
