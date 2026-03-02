@@ -62,50 +62,76 @@ export const teamsService = {
   },
   
   /**
-   * Crea un link per una riunione Teams
-   */
-  createTeamsMeeting: async (userId: string, subject: string, startTime: Date, endTime: Date, attendeesEmails?: string[]) => {
-    try {
-      const meeting: any = {
-        subject,
-        start: {
-          dateTime: startTime.toISOString(),
-          timeZone: "UTC"
-        },
-        end: {
-          dateTime: endTime.toISOString(),
-          timeZone: "UTC"
-        },
-        isOnlineMeeting: true,
-        onlineMeetingProvider: "teamsForBusiness"
-      };
+createTeamsMeeting: async (
+  userId: string,
+  subject: string,
+  startTime: Date,
+  endTime: Date,
+  attendeesEmails?: string[]
+) => {
+  try {
+    // ✅ userId che arriva potrebbe NON essere quello dei token.
+    // Risolviamo l'utente "tbutenti" corretto usando l'email dell'utente loggato.
+    const { getSupabaseClient } = await import("@/lib/supabase/client");
+    const supabase = getSupabaseClient();
 
-      if (attendeesEmails && attendeesEmails.length > 0) {
-        meeting.attendees = attendeesEmails.map(email => ({
-          emailAddress: {
-            address: email,
-            name: email 
-          },
-          type: "required"
-        }));
-      }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const response = await graphApiCall<any>(userId, "/me/events", {
-        method: "POST",
-        body: JSON.stringify(meeting)
-      });
-      
-      return {
-        success: true,
-        joinUrl: response.onlineMeeting?.joinUrl || response.webLink,
-        id: response.id
-      };
-    } catch (error: any) {
-      console.error("Error creating Teams meeting:", error);
-      return { success: false, error: error.message };
+    const authEmail = session?.user?.email;
+    if (!authEmail) {
+      throw new Error("Utente non autenticato. Ricarica la pagina.");
     }
-  },
 
+    const { data: utenteRow, error: utenteErr } = await supabase
+      .from("tbutenti")
+      .select("id")
+      .eq("email", authEmail)
+      .maybeSingle();
+
+    if (utenteErr) throw utenteErr;
+    if (!utenteRow?.id) {
+      throw new Error("Utente (tbutenti) non trovato per email loggata.");
+    }
+
+    const tokenUserId = utenteRow.id; // ✅ questo è l'id coerente con tbmicrosoft365_user_tokens.user_id
+
+    const meeting: any = {
+      subject,
+      start: { dateTime: startTime.toISOString(), timeZone: "UTC" },
+      end: { dateTime: endTime.toISOString(), timeZone: "UTC" },
+      isOnlineMeeting: true,
+      onlineMeetingProvider: "teamsForBusiness",
+    };
+
+    if (attendeesEmails && attendeesEmails.length > 0) {
+      meeting.attendees = attendeesEmails.map((email) => ({
+        emailAddress: { address: email, name: email },
+        type: "required",
+      }));
+    }
+
+    const response = await graphApiCall<any>(tokenUserId, "/me/events", {
+      method: "POST",
+      body: JSON.stringify(meeting),
+    });
+
+    return {
+      success: true,
+      // ✅ Graph spesso ritorna join URL qui:
+      joinUrl:
+        response?.onlineMeeting?.joinUrl ??
+        response?.onlineMeetingUrl ??
+        response?.webLink ??
+        null,
+      id: response?.id ?? null,
+    };
+  } catch (error: any) {
+    console.error("Error creating Teams meeting:", error);
+    return { success: false, error: error?.message || String(error) };
+  }
+},
   /**
    * Invia un messaggio diretto (chat 1:1) a un utente
    */
