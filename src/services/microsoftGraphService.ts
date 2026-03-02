@@ -329,3 +329,8 @@ async function graphApiCallInternal<T = any>(
 
   return JSON.parse(text) as T;
 }
+// ✅ compatibilità con vecchi import: import { microsoftGraphService } from "./microsoftGraphService";
+export const microsoftGraphService = {
+  graphApiCall,
+  hasMicrosoft365,
+};
