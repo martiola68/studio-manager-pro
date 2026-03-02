@@ -176,6 +176,3 @@ createTeamsMeeting: async (
     }
   }
 };
-
-// ma qui stiamo estendendo l'oggetto teamsService originale in-place per mantenere i riferimenti
-Object.assign(teamsService, { createOnlineMeeting: teamsService.createTeamsMeeting });
