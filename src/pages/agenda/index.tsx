@@ -565,8 +565,22 @@ const meeting = await teamsService.createTeamsMeeting(
   attendeesEmails
 );
 
-        teamsJoinUrl = meeting?.joinUrl ?? null;
-        teamsMeetingId = meeting?.id ?? null;
+        teamsJoinUrl =
+  (meeting as any)?.joinUrl ??
+  (meeting as any)?.join_url ??
+  (meeting as any)?.joinWebUrl ??
+  (meeting as any)?.join_web_url ??
+  (meeting as any)?.onlineMeeting?.joinUrl ??
+  (meeting as any)?.onlineMeeting?.joinWebUrl ??
+  (meeting as any)?.online_meeting?.joinUrl ??
+  (meeting as any)?.online_meeting?.joinWebUrl ??
+  null;
+
+teamsMeetingId =
+  (meeting as any)?.id ??
+  (meeting as any)?.meetingId ??
+  (meeting as any)?.meeting_id ??
+  null;
 
         if (!teamsJoinUrl) {
           toast({
