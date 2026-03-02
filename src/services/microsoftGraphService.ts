@@ -1,6 +1,7 @@
-import { decrypt } from "@/lib/encryption365";
+// src/services/microsoftGraphService.ts
+import { decrypt, encrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
-import { supabase } from "@/lib/supabase/client"; // o dove lo importi già
+import { supabase } from "@/lib/supabase/client";
 
 export async function hasMicrosoft365(
   studioId: string,
@@ -23,54 +24,89 @@ type M365SettingsRow = {
   client_secret_encrypted: string;
 };
 
-async function graphApiCall<T = any>(
-  studioId: string,
-  userId: string,
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  // 1) leggi token cache utente
-  const { data: tokenRow, error: tokenErr } = await supabase
+type TokenRow = {
+  token_cache_encrypted: string;
+  scopes: string | null;
+  revoked_at: string | null;
+};
+
+function buildScopes(scopesStr: string | null): string[] {
+  const scopes =
+    scopesStr
+      ?.split(" ")
+      .map((s) => s.trim())
+      .filter(Boolean) ?? [];
+
+  // fallback sicuro: se non hai salvato scopes, qui è meglio fallire esplicitamente
+  // oppure usare un default che sai essere quello richiesto dal tuo flusso.
+  if (scopes.length === 0) {
+    // esempio tipico per eventi + online meeting:
+    // "User.Read Calendars.ReadWrite OnlineMeetings.ReadWrite"
+    // ma lascio fallback "User.Read" per evitare .default delegato.
+    return ["User.Read"];
+  }
+
+  return scopes;
+}
+
+async function getUserTokenRow(studioId: string, userId: string): Promise<TokenRow> {
+  const { data, error } = await supabase
     .from("tbmicrosoft365_user_tokens")
     .select("token_cache_encrypted, scopes, revoked_at")
     .eq("studio_id", studioId)
     .eq("user_id", userId)
     .is("revoked_at", null)
-    .single();
+    .single<TokenRow>();
 
-  if (tokenErr || !tokenRow?.token_cache_encrypted) {
+  if (error || !data?.token_cache_encrypted) {
     throw new Error(
       "Microsoft 365 non configurato o token non valido. Connetti il tuo account in Impostazioni → Microsoft 365"
     );
   }
 
-  // 2) leggi configurazione studio (client credentials)
-  const { data: settings, error: setErr } = await supabase
+  return data;
+}
+
+async function getStudioSettings(studioId: string): Promise<M365SettingsRow> {
+  const { data, error } = await supabase
     .from("tbmicrosoft_settings")
     .select("client_id, tenant_id, client_secret_encrypted")
     .eq("studio_id", studioId)
     .single<M365SettingsRow>();
 
-  if (setErr || !settings?.client_id || !settings?.tenant_id || !settings?.client_secret_encrypted) {
-    throw new Error("Microsoft 365 non configurato per lo studio (client credentials mancanti).");
+  if (
+    error ||
+    !data?.client_id ||
+    !data?.tenant_id ||
+    !data?.client_secret_encrypted
+  ) {
+    throw new Error(
+      "Microsoft 365 non configurato per lo studio (client credentials mancanti)."
+    );
   }
 
-  const clientSecret = decrypt(settings.client_secret_encrypted);
+  return data;
+}
 
-  // 3) ricostruisci MSAL token cache da token_cache_encrypted
-  const serializedCache = decrypt(tokenRow.token_cache_encrypted);
+async function createMsalAppWithCache(
+  settings: M365SettingsRow,
+  decryptedSerializedCache: string
+): Promise<{ msalApp: ConfidentialClientApplication; cacheState: { cacheHasChanged: boolean } }> {
+  const cacheState = { cacheHasChanged: false };
 
-  let cacheHasChanged = false;
   const cachePlugin = {
     beforeCacheAccess: async (cacheContext: any) => {
-      cacheContext.tokenCache.deserialize(serializedCache);
+      // carica la cache “as-is” dal DB (decriptata)
+      cacheContext.tokenCache.deserialize(decryptedSerializedCache);
     },
     afterCacheAccess: async (cacheContext: any) => {
       if (cacheContext.cacheHasChanged) {
-        cacheHasChanged = true;
+        cacheState.cacheHasChanged = true;
       }
     },
   };
+
+  const clientSecret = decrypt(settings.client_secret_encrypted);
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
@@ -87,75 +123,121 @@ async function graphApiCall<T = any>(
     },
   });
 
+  return { msalApp, cacheState };
+}
+
+async function persistUpdatedCacheIfNeeded(
+  studioId: string,
+  userId: string,
+  msalApp: ConfidentialClientApplication,
+  cacheHasChanged: boolean
+) {
+  if (!cacheHasChanged) return;
+
+  const newSerialized = msalApp.getTokenCache().serialize();
+  const newEncrypted = encrypt(newSerialized);
+
+  const { error } = await supabase
+    .from("tbmicrosoft365_user_tokens")
+    .update({
+      token_cache_encrypted: newEncrypted,
+      revoked_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("studio_id", studioId)
+    .eq("user_id", userId);
+
+  if (error) {
+    // non blocco la chiamata Graph, ma loggo perché al prossimo giro potresti perdere refresh/rotazioni
+    console.error("[Graph Service] Failed to persist updated token cache:", error);
+  }
+}
+
+async function acquireAccessToken(
+  studioId: string,
+  userId: string
+): Promise<{ accessToken: string; msalApp: ConfidentialClientApplication; cacheHasChanged: boolean }> {
+  const [tokenRow, settings] = await Promise.all([
+    getUserTokenRow(studioId, userId),
+    getStudioSettings(studioId),
+  ]);
+
+  const serializedCache = decrypt(tokenRow.token_cache_encrypted);
+
+  const { msalApp, cacheState } = await createMsalAppWithCache(settings, serializedCache);
+
   const accounts = await msalApp.getTokenCache().getAllAccounts();
   const account = accounts?.[0];
+
   if (!account) {
     throw new Error(
       "Token cache Microsoft non valido (account mancante). Riconnetti in Impostazioni → Microsoft 365"
     );
   }
 
-  const scopes =
-    tokenRow.scopes?.split(" ").map((s: string) => s.trim()).filter(Boolean) ??
-    ["https://graph.microsoft.com/.default"];
+  const scopes = buildScopes(tokenRow.scopes);
 
-  let accessToken: string;
+  let result;
   try {
-    const result = await msalApp.acquireTokenSilent({
+    result = await msalApp.acquireTokenSilent({
       account,
       scopes,
     });
-    accessToken = result?.accessToken || "";
-  } catch (e: any) {
+  } catch (e) {
     throw new Error(
       "Token Microsoft scaduto o non rinnovabile. Riconnetti in Impostazioni → Microsoft 365"
     );
   }
 
+  const accessToken = result?.accessToken;
   if (!accessToken) {
     throw new Error(
       "Impossibile ottenere access token Microsoft. Riconnetti in Impostazioni → Microsoft 365"
     );
   }
 
-  // 4) se cache è cambiata, risalva token_cache_encrypted (refresh token/rotazioni)
-  if (cacheHasChanged) {
-    const newSerialized = msalApp.getTokenCache().serialize();
-    const newEncrypted = (await import("@/lib/encryption365")).encrypt(newSerialized);
+  // se MSAL ha aggiornato cache (refresh/rotazione), persistila
+  await persistUpdatedCacheIfNeeded(studioId, userId, msalApp, cacheState.cacheHasChanged);
 
-    await supabase
-      .from("tbmicrosoft365_user_tokens")
-      .update({
-        token_cache_encrypted: newEncrypted,
-        revoked_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("studio_id", studioId)
-      .eq("user_id", userId);
-  }
+  return { accessToken, msalApp, cacheHasChanged: cacheState.cacheHasChanged };
+}
 
-  // 5) chiamata Graph
+export async function graphApiCall<T = any>(
+  studioId: string,
+  userId: string,
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const { accessToken } = await acquireAccessToken(studioId, userId);
+
   const url = endpoint.startsWith("https://")
     ? endpoint
     : `https://graph.microsoft.com/v1.0${endpoint}`;
 
-  const response = await fetch(url, {
+  const headers = new Headers(options.headers);
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  // imposta content-type solo se stai mandando body (evita problemi su GET senza body in alcune proxy)
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  headers.set("Accept", "application/json");
+
+  const res = await fetch(url, {
     ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
+    headers,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Graph Service] API error (${response.status}):`, errorText);
-    throw new Error(`Microsoft Graph API error: ${errorText}`);
+  if (res.status === 204) return {} as T;
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "");
+    console.error(`[Graph Service] API error (${res.status}):`, errorText);
+    throw new Error(`Microsoft Graph API error (${res.status}): ${errorText}`);
   }
 
-  if (response.status === 204) return {} as T;
-  return (await response.json()) as T;
-}
+  // alcune risposte possono essere vuote anche se non 204 (raro, ma possibile)
+  const text = await res.text();
+  if (!text) return {} as T;
 
-export { graphApiCall };
+  return JSON.parse(text) as T;
+}
