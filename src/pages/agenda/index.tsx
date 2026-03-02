@@ -576,6 +576,16 @@ if (!status.connected) {
             .map((pId) => utenti.find((u) => u.id === pId)?.email)
             .filter((v): v is string => Boolean(v));
 
+if (!currentUserId) {
+  toast({
+    title: "⚠️ Errore Autenticazione",
+    description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
+    variant: "destructive",
+    duration: 5000,
+  });
+  return;
+}
+      
           const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
