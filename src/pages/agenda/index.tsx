@@ -634,9 +634,6 @@ teamsLink = teamsJson.joinUrl;
 
         ricorrente: formData.ricorrente,
         frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-        durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
-
-        // Se in DB esistono (tu li stavi già usando nelle ricorrenze)
        
       };
 
