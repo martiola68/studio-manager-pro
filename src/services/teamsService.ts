@@ -1,3 +1,4 @@
+// src/services/teamsService.ts
 import { graphApiCall } from "./microsoftGraphService";
 
 interface Team {
@@ -6,10 +7,6 @@ interface Team {
   description?: string;
 }
 
-export type TeamsMeetingResult =
-  | { success: true; joinUrl: string | null; id: string | null }
-  | { success: false; error: string };
-
 interface Channel {
   id: string;
   displayName: string;
@@ -17,14 +14,30 @@ interface Channel {
   webUrl?: string;
 }
 
+export type TeamsMeetingResult =
+  | { success: true; joinUrl: string | null; id: string | null }
+  | { success: false; error: string };
+
+type SendMessageResult = { success: true } | { success: false; error: string };
+
+type DirectMessagePayload = {
+  content: string;
+  contentType: "html" | "text";
+  importance?: "normal" | "high" | "urgent";
+};
+
 export const teamsService = {
   /**
    * Ottiene i team dell'utente
    */
-  getUserTeams: async (userId: string) => {
+  getUserTeams: async (studioId: string, userId: string): Promise<Team[]> => {
     try {
-      const response = await graphApiCall<{ value: Team[] }>(userId, "/me/joinedTeams");
-      return response.value || [];
+      const response = await graphApiCall<{ value: Team[] }>(
+        studioId,
+        userId,
+        "/me/joinedTeams"
+      );
+      return response.value ?? [];
     } catch (error) {
       console.error("Error fetching user teams:", error);
       return [];
@@ -34,10 +47,18 @@ export const teamsService = {
   /**
    * Ottiene i canali di un team
    */
-  getTeamChannels: async (userId: string, teamId: string) => {
+  getTeamChannels: async (
+    studioId: string,
+    userId: string,
+    teamId: string
+  ): Promise<Channel[]> => {
     try {
-      const response = await graphApiCall<{ value: Channel[] }>(userId, `/teams/${teamId}/channels`);
-      return response.value || [];
+      const response = await graphApiCall<{ value: Channel[] }>(
+        studioId,
+        userId,
+        `/teams/${teamId}/channels`
+      );
+      return response.value ?? [];
     } catch (error) {
       console.error(`Error fetching channels for team ${teamId}:`, error);
       return [];
@@ -47,96 +68,131 @@ export const teamsService = {
   /**
    * Invia un messaggio a un canale Teams
    */
-  sendMessageToChannel: async (userId: string, teamId: string, channelId: string, message: string) => {
+  sendMessageToChannel: async (
+    studioId: string,
+    userId: string,
+    teamId: string,
+    channelId: string,
+    messageHtml: string
+  ): Promise<SendMessageResult> => {
     try {
-      await graphApiCall(userId, `/teams/${teamId}/channels/${channelId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({
-          body: {
-            contentType: "html",
-            content: message
-          }
-        })
-      });
+      await graphApiCall(
+        studioId,
+        userId,
+        `/teams/${teamId}/channels/${channelId}/messages`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            body: {
+              contentType: "html",
+              content: messageHtml,
+            },
+          }),
+        }
+      );
       return { success: true };
     } catch (error: any) {
       console.error("Error sending message to Teams:", error);
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || String(error) };
     }
   },
-  
-  /**
-*createTeamsMeeting: 
-*/
-createTeamsMeeting: async (
-  userId: string,
-  subject: string,
-  startTime: Date,
-  endTime: Date,
-  attendeesEmails?: string[]
-): Promise<TeamsMeetingResult> => {
-  const tokenUserId = userId;
 
-  try {
-    const response = await graphApiCall<any>(tokenUserId, "/me/onlineMeetings", {
-      method: "POST",
-      body: JSON.stringify({
-        subject,
-        startDateTime: startTime.toISOString(),
-        endDateTime: endTime.toISOString(),
-      }),
-    });
-
-    return {
-      success: true,
-      joinUrl: response?.joinUrl ?? null,
-      id: response?.id ?? null,
-    };
-  } catch (error: any) {
-    return { success: false, error: error?.message || String(error) };
-  }
-},
   /**
-   * Invia un messaggio diretto (chat 1:1) a un utente
+   * Crea un meeting Teams (OnlineMeeting) e ritorna joinUrl + id
+   * NOTE: per /me/onlineMeetings spesso serve scope OnlineMeetings.ReadWrite (delegato)
    */
-  sendDirectMessage: async (senderId: string, recipientEmail: string, message: { content: string, contentType: "html" | "text", importance?: "normal" | "high" | "urgent" }) => {
+  createTeamsMeeting: async (
+    studioId: string,
+    userId: string,
+    subject: string,
+    startTime: Date,
+    endTime: Date
+  ): Promise<TeamsMeetingResult> => {
     try {
-      // 1. Trova/Crea la chat
-      const chat = await graphApiCall<any>(senderId, "/chats", {
+      const response = await graphApiCall<any>(studioId, userId, "/me/onlineMeetings", {
         method: "POST",
         body: JSON.stringify({
-          chatType: "oneOnOne",
-          members: [
-            {
-              "@odata.type": "#microsoft.graph.aadUserConversationMember",
-              roles: ["owner"],
-              "user@odata.bind": `https://graph.microsoft.com/v1.0/me`
-            },
-            {
-              "@odata.type": "#microsoft.graph.aadUserConversationMember",
-              roles: ["owner"],
-              "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${recipientEmail}')`
-            }
-          ]
-        })
+          subject,
+          startDateTime: startTime.toISOString(),
+          endDateTime: endTime.toISOString(),
+        }),
       });
 
-      // 2. Invia il messaggio
-      await graphApiCall(senderId, `/chats/${chat.id}/messages`, {
+      return {
+        success: true,
+        joinUrl: response?.joinUrl ?? null,
+        id: response?.id ?? null,
+      };
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) };
+    }
+  },
+
+  /**
+   * Invia un messaggio diretto (chat 1:1)
+   *
+   * Importante:
+   * - Creare la chat 1:1 via POST /chats con members spesso fallisce se la chat esiste già
+   *   oppure se user bind non è corretto.
+   * - Qui: prova a trovare una chat 1:1 esistente con quella persona; se non c'è, la crea.
+   */
+  sendDirectMessage: async (
+    studioId: string,
+    userId: string,
+    recipientEmail: string,
+    message: DirectMessagePayload
+  ): Promise<SendMessageResult> => {
+    try {
+      // 1) prova a trovare chat 1:1 esistente (best-effort)
+      const chats = await graphApiCall<{ value: any[] }>(studioId, userId, "/me/chats?$top=50");
+      let oneOnOne = (chats.value ?? []).find((c) => c?.chatType === "oneOnOne");
+
+      // 2) se non trovata, crea chat 1:1
+      if (!oneOnOne) {
+        const created = await graphApiCall<any>(studioId, userId, "/chats", {
+          method: "POST",
+          body: JSON.stringify({
+            chatType: "oneOnOne",
+            members: [
+              {
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                roles: ["owner"],
+                "user@odata.bind": "https://graph.microsoft.com/v1.0/me",
+              },
+              {
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                roles: ["owner"],
+                // NB: in Graph il binding corretto è con /users('{id}') dove id può essere UPN/email
+                "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(
+                  recipientEmail
+                )}')`,
+              },
+            ],
+          }),
+        });
+        oneOnOne = created;
+      }
+
+      if (!oneOnOne?.id) {
+        return { success: false, error: "Impossibile determinare/creare la chat 1:1." };
+      }
+
+      // 3) invia messaggio
+      await graphApiCall(studioId, userId, `/chats/${oneOnOne.id}/messages`, {
         method: "POST",
         body: JSON.stringify({
           body: {
             contentType: message.contentType,
-            content: message.content
+            content: message.content,
           },
-          importance: message.importance || "normal"
-        })
+          importance: message.importance ?? "normal",
+        }),
       });
 
       return { success: true };
     } catch (error: any) {
       console.error("Error sending direct message:", error);
-      return { success: false, error: error.message };
+      return { success: false, error: error?.message || String(error) };
     }
-  }
+  },
 };
