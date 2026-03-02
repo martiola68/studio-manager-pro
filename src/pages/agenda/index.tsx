@@ -558,7 +558,7 @@ if (!currentUserId) {
 }
 
 const meeting = await teamsService.createTeamsMeeting(
-  currentUserId,
+  formData.utente_id,
   formData.titolo || "Riunione",
   new Date(startDateTimeISO),
   new Date(endDateTimeISO),
