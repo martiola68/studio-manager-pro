@@ -488,6 +488,17 @@ export default function AgendaPage() {
         }
       }
 
+// ===============================
+// Date evento (UNICA DEFINIZIONE)
+// ===============================
+const startDateTime = formData.tutto_giorno
+  ? new Date(formData.data_inizio).toISOString()
+  : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
+
+const endDateTime = formData.tutto_giorno
+  ? new Date(formData.data_fine || formData.data_inizio).toISOString()
+  : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
+      
       // Genera meeting Teams se richiesto
       let teamsLink = formData.link_teams;
 
@@ -578,14 +589,6 @@ if (!currentUserId) {
   return;
 }
 
-const startDateTime = formData.tutto_giorno
-  ? new Date(formData.data_inizio).toISOString()
-  : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString()
-
-const endDateTime = formData.tutto_giorno
-  ? new Date(formData.data_fine).toISOString()
-  : new Date(`${formData.data_fine}T${formData.ora_fine}`).toISOString()
-      
           const meeting = await teamsService.createTeamsMeeting(
             currentUserId,
             formData.titolo,
