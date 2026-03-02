@@ -3,12 +3,15 @@ import { decrypt, encrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
 import { supabase } from "@/lib/supabase/client";
 
+/* =========================================
+   hasMicrosoft365 (retro-compatibile)
+   - nuova firma: (studioId, userId)
+   - firma comoda: (userId)
+========================================= */
+
 export function hasMicrosoft365(studioId: string, userId: string): Promise<boolean>;
 export function hasMicrosoft365(userId: string): Promise<boolean>;
 
-/**
- * Verifica se l'utente ha un token M365 attivo per lo studio.
- */
 export async function hasMicrosoft365(a: string, b?: string): Promise<boolean> {
   // firma nuova: (studioId, userId)
   if (typeof b === "string") {
@@ -47,6 +50,11 @@ export async function hasMicrosoft365(a: string, b?: string): Promise<boolean> {
 
   return !!data && !error;
 }
+
+/* =========================================
+   Types
+========================================= */
+
 type M365SettingsRow = {
   client_id: string;
   tenant_id: string;
@@ -58,6 +66,10 @@ type TokenRow = {
   scopes: string | null;
   revoked_at: string | null;
 };
+
+/* =========================================
+   Helpers
+========================================= */
 
 function buildScopes(scopesStr: string | null): string[] {
   const scopes =
@@ -72,10 +84,7 @@ function buildScopes(scopesStr: string | null): string[] {
   return scopes;
 }
 
-async function getUserTokenRow(
-  studioId: string,
-  userId: string
-): Promise<TokenRow> {
+async function getUserTokenRow(studioId: string, userId: string): Promise<TokenRow> {
   const { data, error } = await supabase
     .from("tbmicrosoft365_user_tokens")
     .select("token_cache_encrypted, scopes, revoked_at")
@@ -100,12 +109,7 @@ async function getStudioSettings(studioId: string): Promise<M365SettingsRow> {
     .eq("studio_id", studioId)
     .single<M365SettingsRow>();
 
-  if (
-    error ||
-    !data?.client_id ||
-    !data?.tenant_id ||
-    !data?.client_secret_encrypted
-  ) {
+  if (error || !data?.client_id || !data?.tenant_id || !data?.client_secret_encrypted) {
     throw new Error(
       "Microsoft 365 non configurato per lo studio (client credentials mancanti)."
     );
@@ -205,10 +209,7 @@ async function acquireAccessToken(
 
   let result;
   try {
-    result = await msalApp.acquireTokenSilent({
-      account,
-      scopes,
-    });
+    result = await msalApp.acquireTokenSilent({ account, scopes });
   } catch {
     throw new Error(
       "Token Microsoft scaduto o non rinnovabile. Riconnetti in Impostazioni → Microsoft 365"
@@ -227,28 +228,25 @@ async function acquireAccessToken(
   return { accessToken };
 }
 
-/**
- * ✅ graphApiCall retro-compatibile:
- * - Nuova firma: (studioId, userId, endpoint, options)
- * - Vecchia firma: (userId, endpoint, options)
- */
+/* =========================================
+   graphApiCall (retro-compatibile)
+   - nuova firma: (studioId, userId, endpoint, options)
+   - vecchia firma: (userId, endpoint, options)
+========================================= */
 
-// overload nuova firma
-export async function graphApiCall<T = any>(
+export function graphApiCall<T = any>(
   studioId: string,
   userId: string,
   endpoint: string,
   options?: RequestInit
 ): Promise<T>;
 
-// overload vecchia firma
-export async function graphApiCall<T = any>(
+export function graphApiCall<T = any>(
   userId: string,
   endpoint: string,
   options?: RequestInit
 ): Promise<T>;
 
-// implementazione unica
 export async function graphApiCall<T = any>(
   a: string,
   b: any,
@@ -261,7 +259,6 @@ export async function graphApiCall<T = any>(
     const endpoint = b;
     const options: RequestInit = (c ?? {}) as RequestInit;
 
-    // ricava studioId dal DB
     const { data: uRow, error: uErr } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -269,9 +266,7 @@ export async function graphApiCall<T = any>(
       .maybeSingle();
 
     if (uErr || !uRow?.studio_id) {
-      throw new Error(
-        "Impossibile determinare lo studio dell'utente (studioId) per Microsoft Graph."
-      );
+      throw new Error("Impossibile determinare lo studio dell'utente (studioId) per Microsoft Graph.");
     }
 
     const studioId = uRow.studio_id as string;
@@ -287,9 +282,6 @@ export async function graphApiCall<T = any>(
   return graphApiCallInternal<T>(studioId, userId, endpoint, options);
 }
 
-/**
- * Implementazione reale (richiede studioId + userId).
- */
 async function graphApiCallInternal<T = any>(
   studioId: string,
   userId: string,
@@ -306,15 +298,11 @@ async function graphApiCallInternal<T = any>(
   headers.set("Authorization", `Bearer ${accessToken}`);
   headers.set("Accept", "application/json");
 
-  // content-type solo se invii un body
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(url, { ...options, headers });
 
   if (res.status === 204) return {} as T;
 
@@ -329,8 +317,42 @@ async function graphApiCallInternal<T = any>(
 
   return JSON.parse(text) as T;
 }
-// ✅ compatibilità con vecchi import: import { microsoftGraphService } from "./microsoftGraphService";
+
+/* =========================================
+   sendEmail (per compatibilità con emailService)
+========================================= */
+
+export type GraphSendMailMessage = {
+  subject: string;
+  body: {
+    contentType: "Text" | "HTML";
+    content: string;
+  };
+  toRecipients: Array<{
+    emailAddress: { address: string };
+  }>;
+  ccRecipients?: Array<{
+    emailAddress: { address: string };
+  }>;
+};
+
+export async function sendEmail(userId: string, message: GraphSendMailMessage): Promise<void> {
+  // usa la firma compatibile: graphApiCall(userId, endpoint, options)
+  await graphApiCall(userId, `/users/${userId}/sendMail`, {
+    method: "POST",
+    body: JSON.stringify({
+      message,
+      saveToSentItems: true,
+    }),
+  });
+}
+
+/* =========================================
+   microsoftGraphService export (legacy)
+========================================= */
+
 export const microsoftGraphService = {
   graphApiCall,
   hasMicrosoft365,
+  sendEmail,
 };
