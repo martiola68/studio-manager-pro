@@ -603,10 +603,6 @@ if (!teamsRes.ok || !teamsJson?.joinUrl) {
 
 teamsLink = teamsJson.joinUrl;
 
-teamsLink = teamsJson.joinUrl;
-
-teamsLink = (meeting as any)?.joinUrl || "";
-
         // 🔍 DEBUG — NON TOCCARE ALTRO
 console.log("MEETING TEAMS RAW =>", meeting);
 console.log("MEETING TEAMS KEYS =>", meeting ? Object.keys(meeting as any) : null);
