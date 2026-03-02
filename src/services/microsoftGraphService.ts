@@ -19,59 +19,8 @@ interface GraphTokenResponse {
 }
 
 async function getValidToken(userId: string): Promise<string | null> {
-  try {
-    const { data: tokenData, error } = await supabase
-      .from("tbmicrosoft_tokens")
-      .select("access_token, refresh_token, expires_at")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("[Graph Service] Database error:", error);
-      return null;
-    }
-
-    if (!tokenData) {
-      console.log("[Graph Service] No token found for user:", userId);
-      return null;
-    }
-
-    const accessToken = decrypt(tokenData.access_token);
-    
-    if (!accessToken || typeof accessToken !== "string" || accessToken.trim().length === 0) {
-      console.error("[Graph Service] Invalid access token (empty or corrupted)");
-      await cleanupInvalidToken(userId);
-      return null;
-    }
-
-    const tokenParts = accessToken.split(".");
-    if (tokenParts.length !== 3) {
-      console.error("[Graph Service] Invalid JWT format");
-      await cleanupInvalidToken(userId);
-      return null;
-    }
-
-    const expiresAt = new Date(tokenData.expires_at);
-    const now = new Date();
-
-    if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
-      return accessToken;
-    }
-
-    console.log("[Graph Service] Token expired, attempting refresh...");
-    
-    if (!tokenData.refresh_token) {
-      console.error("[Graph Service] No refresh token available");
-      await cleanupInvalidToken(userId);
-      return null;
-    }
-
-    const newAccessToken = await refreshToken(userId, tokenData.refresh_token);
-    return newAccessToken;
-  } catch (error) {
-    console.error("[Graph Service] Error in getValidToken:", error);
-    return null;
-  }
+  // DISABILITATA: usava tbmicrosoft_tokens (schema vecchio)
+  return null;
 }
 
 async function cleanupInvalidToken(userId: string): Promise<void> {
@@ -186,14 +135,28 @@ async function graphApiCall<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = await getValidToken(userId);
+  // 1) Leggo il token cache dal DB giusto
+  const { data: tokenRow, error } = await supabase
+    .from("tbmicrosoft365_user_tokens")
+    .select("token_cache_encrypted, scopes, revoked_at")
+    .eq("user_id", userId)
+    .is("revoked_at", null)
+    .single();
 
-  if (!token) {
+  if (error || !tokenRow?.token_cache_encrypted) {
     throw new Error(
       "Microsoft 365 non configurato o token non valido. " +
       "Connetti il tuo account in Impostazioni → Microsoft 365"
     );
   }
+
+  // 2) TEMP: qui va la decriptazione + MSAL acquireTokenSilent
+  // Per ora fermiamo tutto con un errore chiaro così verifichiamo che la riga DB è trovata.
+  throw new Error("TODO_DECRYPT_TOKEN_CACHE");
+
+  // 3) Quando avremo accessToken valido, la parte sotto resta uguale:
+  /*
+  const token = accessToken;
 
   const url = endpoint.startsWith("https://")
     ? endpoint
@@ -204,8 +167,8 @@ async function graphApiCall<T = any>(
     headers: {
       ...options.headers,
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
 
   if (!response.ok) {
@@ -214,7 +177,11 @@ async function graphApiCall<T = any>(
     throw new Error(`Microsoft Graph API error: ${errorText}`);
   }
 
-  return response.json();
+  // alcune chiamate Graph ritornano 204 (no content)
+  if (response.status === 204) return {} as T;
+
+  return (await response.json()) as T;
+  */
 }
 
 async function hasMicrosoft365(userId: string): Promise<boolean> {
