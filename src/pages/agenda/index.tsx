@@ -637,10 +637,7 @@ teamsLink = teamsJson.joinUrl;
         durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
 
         // Se in DB esistono (tu li stavi già usando nelle ricorrenze)
-        start_datetime: startDateTimeISO,
-        end_datetime: endDateTimeISO,
-        teams_join_url: teamsJoinUrl,
-        teams_meeting_id: teamsMeetingId,
+       
       };
 
       if (editingEventoId) {
@@ -689,10 +686,6 @@ teamsLink = teamsJson.joinUrl;
               data_inizio: occurrenceStartDateTime,
               data_fine: occurrenceEndDateTime,
 
-              start_datetime: occurrenceStartDateTime,
-              end_datetime: occurrenceEndDateTime,
-              teams_join_url: teamsJoinUrl,
-              teams_meeting_id: teamsMeetingId,
             });
 
             current = new Date(current);
