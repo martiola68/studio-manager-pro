@@ -6,6 +6,10 @@ interface Team {
   description?: string;
 }
 
+export type TeamsMeetingResult =
+  | { success: true; joinUrl: string | null; id: string | null }
+  | { success: false; error: string };
+
 interface Channel {
   id: string;
   displayName: string;
@@ -64,24 +68,13 @@ export const teamsService = {
   /**
 *createTeamsMeeting: 
 */
-createTeamsMeeting:async (
+createTeamsMeeting: async (
   userId: string,
   subject: string,
   startTime: Date,
   endTime: Date,
   attendeesEmails?: string[]
-) => {
-
-const tokenUserId = userId;
-  
-  try {
-  createTeamsMeeting: async (
-  userId: string,
-  subject: string,
-  startTime: Date,
-  endTime: Date,
-  attendeesEmails?: string[]
-) => {
+): Promise<TeamsMeetingResult> => {
   const tokenUserId = userId;
 
   try {
@@ -100,7 +93,6 @@ const tokenUserId = userId;
       id: response?.id ?? null,
     };
   } catch (error: any) {
-    console.error("Error creating Teams meeting:", error);
     return { success: false, error: error?.message || String(error) };
   }
 },
