@@ -69,10 +69,10 @@ async function syncFromOutlook(userId: string): Promise<number> {
     const filter = `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`;
     
     const response = await graphApiCall<{ value: OutlookEvent[] }>(
-      userId,
-      `/me/calendar/events?$filter=${encodeURIComponent(filter)}&$top=100`
-    );
-
+  studioId,
+  userId,
+  `/me/calendar/events?$filter=${encodeURIComponent(filter)}&$top=100`
+);
     const outlookEvents = response.value;
     console.log(`📅 Trovati ${outlookEvents.length} eventi in Outlook`);
 
