@@ -1,6 +1,8 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import { supabaseAdmin } from "@/lib/supabase/admin"
-import { encrypt, decrypt } from "@/lib/encryption365"
+// src/pages/api/m365/callback.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { encrypt, decrypt } from "@/lib/encryption365";
+import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
 
 /* =======================
    Utils
@@ -10,64 +12,100 @@ function appBaseUrl(req: NextApiRequest) {
   const proto =
     (req.headers["x-forwarded-proto"] as string) ||
     (req.headers["x-forwarded-protocol"] as string) ||
-    "https"
+    "https";
 
-  const host =
-    (req.headers["x-forwarded-host"] as string) ||
-    req.headers.host
+  const host = (req.headers["x-forwarded-host"] as string) || req.headers.host;
 
-  return `${proto}://${host}`
+  return `${proto}://${host}`;
 }
 
 function redirectOk(res: NextApiResponse) {
-  res.writeHead(302, {
-    Location: "/microsoft365?m365=connected",
-  })
-  res.end()
+  res.writeHead(302, { Location: "/microsoft365?m365=connected" });
+  res.end();
 }
 
 function redirectErr(res: NextApiResponse, msg: string) {
-  const m = encodeURIComponent(msg)
-  res.writeHead(302, {
-    Location: `/microsoft365?error=true&message=${m}`,
-  })
-  res.end()
+  const m = encodeURIComponent(msg);
+  res.writeHead(302, { Location: `/microsoft365?error=true&message=${m}` });
+  res.end();
+}
+
+/**
+ * Serializza una "token cache" MSAL reale a partire dalla response di acquireTokenByCode.
+ * Questo serve perché poi lato server userai MSAL acquireTokenSilent con token_cache_encrypted.
+ */
+async function buildMsalSerializedCache(params: {
+  clientId: string;
+  tenantId: string;
+  clientSecret: string;
+  redirectUri: string;
+  code: string;
+}): Promise<{ serializedCache: string; scopes: string }> {
+  const msalApp = new ConfidentialClientApplication({
+    auth: {
+      clientId: params.clientId,
+      authority: `https://login.microsoftonline.com/${params.tenantId}`,
+      clientSecret: params.clientSecret,
+    },
+    system: {
+      loggerOptions: {
+        logLevel: LogLevel.Error,
+        piiLoggingEnabled: false,
+      },
+    },
+  });
+
+  // Scope OIDC + permessi che ti servono (aggiungi/togli in base a cosa usi)
+  // - offline_access: refresh token
+  // - Calendars.ReadWrite: eventi
+  // - OnlineMeetings.ReadWrite: meeting Teams via /me/onlineMeetings
+  // - Chat.ReadWrite: chat/messages (se lo usi)
+  // - ChannelMessage.Send: post nei canali (se lo usi)
+  const scopes = [
+    "openid",
+    "profile",
+    "offline_access",
+    "User.Read",
+    "Calendars.ReadWrite",
+    "OnlineMeetings.ReadWrite",
+    "Chat.ReadWrite",
+    "ChannelMessage.Send",
+    "Team.ReadBasic.All",
+  ].join(" ");
+
+  // acquire token by code (delegated)
+  await msalApp.acquireTokenByCode({
+    code: params.code,
+    redirectUri: params.redirectUri,
+    scopes: scopes.split(" "),
+  });
+
+  // A questo punto MSAL ha popolato la cache (access token, refresh token, account, ecc.)
+  const serializedCache = msalApp.getTokenCache().serialize();
+
+  return { serializedCache, scopes };
 }
 
 /* =======================
    Handler
 ======================= */
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== "GET") {
-    return res.status(405).send("Method not allowed")
-  }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "GET") return res.status(405).send("Method not allowed");
 
   try {
     /* =======================
        Parametri OAuth
     ======================= */
-    const code = typeof req.query.code === "string" ? req.query.code : null
-    const state = typeof req.query.state === "string" ? req.query.state : null
+    const code = typeof req.query.code === "string" ? req.query.code : null;
+    const state = typeof req.query.state === "string" ? req.query.state : null;
 
-    const msError =
-      typeof req.query.error === "string" ? req.query.error : null
-
+    const msError = typeof req.query.error === "string" ? req.query.error : null;
     const msErrorDesc =
-      typeof req.query.error_description === "string"
-        ? req.query.error_description
-        : null
+      typeof req.query.error_description === "string" ? req.query.error_description : null;
 
-    if (msError) {
-      return redirectErr(res, msErrorDesc || msError)
-    }
-
-    if (!code || !state) {
-      return redirectErr(res, "Parametri OAuth mancanti")
-    }
+    if (msError) return redirectErr(res, msErrorDesc || msError);
+    if (!code || !state) return redirectErr(res, "Parametri OAuth mancanti");
 
     /* =======================
        1) Recupero user_id dallo state
@@ -77,13 +115,13 @@ export default async function handler(
       .from("tbmicrosoft_settings")
       .select("user_id")
       .eq("m365_oauth_state", state)
-      .maybeSingle()
+      .maybeSingle();
 
     if (stateErr || !stateRow?.user_id) {
-      return redirectErr(res, "State OAuth non valido o scaduto")
+      return redirectErr(res, "State OAuth non valido o scaduto");
     }
 
-    const userId = stateRow.user_id
+    const userId = stateRow.user_id;
 
     /* =======================
        2) Recupero studio_id
@@ -92,85 +130,58 @@ export default async function handler(
       .from("tbutenti")
       .select("studio_id")
       .eq("id", userId)
-      .maybeSingle()
+      .maybeSingle();
 
     if (userErr || !userRow?.studio_id) {
-      return redirectErr(res, "Studio utente non trovato")
+      return redirectErr(res, "Studio utente non trovato");
     }
 
-    const studioId = userRow.studio_id
+    const studioId = userRow.studio_id;
 
     /* =======================
-       3) Config Microsoft 365
+       3) Config Microsoft 365 (client credentials)
+       NB: allinea il nome tabella al resto del progetto.
+       Qui uso tbmicrosoft_settings (come nel graph service).
     ======================= */
     const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, tenant_id, client_secret, enabled")
+      .from("tbmicrosoft_settings")
+      .select("client_id, tenant_id, client_secret_encrypted, enabled")
       .eq("studio_id", studioId)
-      .maybeSingle()
+      .maybeSingle<{
+        client_id: string;
+        tenant_id: string | null;
+        client_secret_encrypted: string;
+        enabled: boolean | null;
+      }>();
 
-    if (cfgErr || !cfg?.client_id || !cfg.client_secret) {
-      return redirectErr(res, "Configurazione Microsoft 365 incompleta")
+    if (cfgErr || !cfg?.client_id || !cfg?.client_secret_encrypted) {
+      return redirectErr(res, "Configurazione Microsoft 365 incompleta");
     }
 
     if (cfg.enabled === false) {
-      return redirectErr(res, "Microsoft 365 disabilitato per lo studio")
+      return redirectErr(res, "Microsoft 365 disabilitato per lo studio");
     }
 
-    const tenant = cfg.tenant_id || "common"
-
-    const redirectUri = `${appBaseUrl(req)}/api/m365/callback`
+    const tenantId = cfg.tenant_id || "common";
+    const redirectUri = `${appBaseUrl(req)}/api/m365/callback`;
+    const clientSecret = decrypt(cfg.client_secret_encrypted);
 
     /* =======================
-       4) Exchange CODE → TOKEN
+       4) Exchange CODE → MSAL token cache (vera)
+       (così poi graphApiCall può fare acquireTokenSilent)
     ======================= */
-    const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`
+    const { serializedCache, scopes } = await buildMsalSerializedCache({
+      clientId: cfg.client_id,
+      tenantId,
+      clientSecret,
+      redirectUri,
+      code,
+    });
 
-    const tokenResp = await fetch(tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: cfg.client_id,
-        client_secret: decrypt(cfg.client_secret),
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: redirectUri,
-      }),
-    })
-
-    const tokenJson = await tokenResp.json()
-
-    if (!tokenResp.ok || !tokenJson.access_token) {
-      return redirectErr(
-        res,
-        tokenJson?.error_description ||
-          tokenJson?.error ||
-          "Token exchange fallito"
-      )
-    }
+    const encryptedCache = encrypt(serializedCache);
 
     /* =======================
-       5) Costruzione token cache
-    ======================= */
-    const now = Date.now()
-
-    const tokenCache = {
-      access_token: tokenJson.access_token,
-      refresh_token: tokenJson.refresh_token || null,
-      scope: tokenJson.scope || null,
-      token_type: tokenJson.token_type || "Bearer",
-      expires_at: new Date(
-        now + (tokenJson.expires_in ?? 3600) * 1000
-      ).toISOString(),
-      obtained_at: new Date(now).toISOString(),
-    }
-
-    const encrypted = encrypt(JSON.stringify(tokenCache))
-
-    /* =======================
-       6) Salvataggio token utente
+       5) Salvataggio token utente
     ======================= */
     const { error: upErr } = await supabaseAdmin
       .from("tbmicrosoft365_user_tokens")
@@ -178,20 +189,21 @@ export default async function handler(
         {
           studio_id: studioId,
           user_id: userId,
-          token_cache_encrypted: encrypted,
-          scopes: tokenCache.scope,
+          token_cache_encrypted: encryptedCache,
+          scopes,
           connected_at: new Date().toISOString(),
           revoked_at: null,
+          updated_at: new Date().toISOString(),
         },
         { onConflict: "studio_id,user_id" }
-      )
+      );
 
     if (upErr) {
-      return redirectErr(res, `Errore DB token: ${upErr.message}`)
+      return redirectErr(res, `Errore DB token: ${upErr.message}`);
     }
 
     /* =======================
-       7) Cleanup OAuth state
+       6) Cleanup OAuth state
     ======================= */
     await supabaseAdmin
       .from("tbmicrosoft_settings")
@@ -199,14 +211,11 @@ export default async function handler(
         m365_oauth_state: null,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", userId)
+      .eq("user_id", userId);
 
-    /* =======================
-       OK
-    ======================= */
-    return redirectOk(res)
+    return redirectOk(res);
   } catch (e: any) {
-    console.error("[m365 callback]", e)
-    return redirectErr(res, e?.message || "Errore callback Microsoft 365")
+    console.error("[m365 callback]", e);
+    return redirectErr(res, e?.message || "Errore callback Microsoft 365");
   }
 }
