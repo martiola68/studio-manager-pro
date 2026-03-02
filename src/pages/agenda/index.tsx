@@ -603,37 +603,6 @@ if (!teamsRes.ok || !teamsJson?.joinUrl) {
 
 teamsLink = teamsJson.joinUrl;
 
-        // 🔍 DEBUG — NON TOCCARE ALTRO
-console.log("MEETING TEAMS RAW =>", meeting);
-console.log("MEETING TEAMS KEYS =>", meeting ? Object.keys(meeting as any) : null);
-
-        teamsJoinUrl =
-  (meeting as any)?.joinUrl ??
-  (meeting as any)?.join_url ??
-  (meeting as any)?.joinWebUrl ??
-  (meeting as any)?.join_web_url ??
-  (meeting as any)?.onlineMeeting?.joinUrl ??
-  (meeting as any)?.onlineMeeting?.joinWebUrl ??
-  (meeting as any)?.online_meeting?.joinUrl ??
-  (meeting as any)?.online_meeting?.joinWebUrl ??
-  null;
-
-teamsMeetingId =
-  (meeting as any)?.id ??
-  (meeting as any)?.meetingId ??
-  (meeting as any)?.meeting_id ??
-  null;
-
-      if (!teamsJoinUrl) {
-  console.log("MEETING TEAMS RAW (NO LINK) =>", meeting);
-  toast({
-    title: "Errore",
-    description: "Meeting Teams creato ma link non disponibile. Guarda la console.",
-    variant: "destructive",
-  });
-  return;
-}
-
         teamsLink = teamsJoinUrl;
       }
 
