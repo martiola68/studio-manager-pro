@@ -554,6 +554,20 @@ export default function AgendaPage() {
   }
 }
 
+        const statusRes = await fetch("/api/m365/status");
+const status = await statusRes.json();
+
+if (!status.connected) {
+  toast({
+    title: "⚠️ Connessione Microsoft 365 richiesta",
+    description: "Connetti Microsoft 365 prima di creare una riunione Teams.",
+    variant: "destructive",
+    duration: 5000,
+  });
+  return;
+}
+
+      
           toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
 
           const { teamsService } = await import("@/services/teamsService");
