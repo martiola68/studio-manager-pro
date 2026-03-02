@@ -49,8 +49,19 @@ export async function sendEmailViaMicrosoft(
   userId: string,
   params: SendEmailParams
 ): Promise<void> {
+ 
+  const { data: u, error: uErr } = await supabase
+  .from("tbutenti")
+  .select("studio_id")
+  .eq("id", userId)
+  .single();
+
+if (uErr || !u?.studio_id) return false;
+
+const studioId = u.studio_id as string;
+  
   // Verifica che l'utente abbia Microsoft 365 configurato
-  const hasMicrosoft = await hasMicrosoft365(userId);
+  const hasMicrosoft = await hasMicrosoft365(studioId, userId);
   if (!hasMicrosoft) {
     throw new Error("Microsoft 365 non configurato per questo utente");
   }
