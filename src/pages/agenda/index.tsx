@@ -524,23 +524,6 @@ if (!session?.access_token) {
   return;
 }
 
-const statusRes = await fetch("/api/m365/status", {
-  headers: {
-    Authorization: `Bearer ${session.access_token}`,
-  },
-});
-
-const statusJson = await statusRes.json();
-
-if (!statusRes.ok || !statusJson?.connected) {
-  toast({
-    title: "Microsoft 365 non connesso",
-    description: "Collega l'account M365 prima di creare un meeting Teams.",
-    variant: "destructive",
-  });
-  return;
-}
-
         const { teamsService } = await import("@/services/teamsService");
 
 const attendeesEmails = formData.partecipanti
