@@ -503,7 +503,7 @@ export default function AgendaPage() {
         : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
 // =========================
-// TEAMS (UNICO BLOCCO) ✅  — con logica studioId/userId (M365) corretta
+// TEAMS (UNICO BLOCCO) ✅  — senza currentStudioId
 // =========================
 let teamsLink = formData.link_teams || "";
 let teamsJoinUrl: string | null = null;
@@ -524,7 +524,6 @@ if (formData.riunione_teams) {
   } else {
     // 2) Link vuoto -> creiamo meeting via M365 usando studioId + utente loggato (token owner)
 
-    // user loggato (token owner)
     if (!currentUserId) {
       toast({
         title: "⚠️ Errore Autenticazione",
@@ -535,31 +534,16 @@ if (formData.riunione_teams) {
       return;
     }
 
-    // studioId (serve al graphApiCall per recuperare client credentials + token cache)
-    // - se lo hai già in stato/props, usa quello.
-    // - fallback: lo recupero dal DB (tbutenti)
-    let studioId = (currentStudioId as string | undefined) || "";
+    const supabase = getSupabaseClient();
 
-    try {
-      if (!studioId) {
-        const supabase = getSupabaseClient();
-        const { data: uRow, error: uErr } = await supabase
-          .from("tbutenti")
-          .select("studio_id")
-          .eq("id", currentUserId)
-          .maybeSingle();
+    // ✅ studioId ricavato dal DB (tbutenti) usando l'utente loggato
+    const { data: uRow, error: uErr } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", currentUserId)
+      .maybeSingle();
 
-        if (uErr || !uRow?.studio_id) {
-          toast({
-            title: "Errore",
-            description: "Impossibile determinare lo studio dell'utente loggato.",
-            variant: "destructive",
-          });
-          return;
-        }
-        studioId = uRow.studio_id;
-      }
-    } catch (e) {
+    if (uErr || !uRow?.studio_id) {
       toast({
         title: "Errore",
         description: "Impossibile determinare lo studio dell'utente loggato.",
@@ -568,9 +552,9 @@ if (formData.riunione_teams) {
       return;
     }
 
-    // (opzionale ma consigliato) status m365: se il tuo endpoint richiede bearer supabase, ok.
-    // Nota: lo stato M365 reale è legato alla riga tokens, non al JWT supabase: questo check evita UX confusa.
-    const supabase = getSupabaseClient();
+    const studioId = uRow.studio_id as string;
+
+    // (opzionale) check session supabase per chiamare /api/m365/status se il tuo endpoint lo richiede
     const {
       data: { session: m365Session },
     } = await supabase.auth.getSession();
@@ -584,6 +568,7 @@ if (formData.riunione_teams) {
       return;
     }
 
+    // status con Bearer token (il tuo endpoint lo richiede)
     const statusResponse = await fetch("/api/m365/status", {
       method: "GET",
       cache: "no-store",
@@ -614,22 +599,15 @@ if (formData.riunione_teams) {
       ? new Date(formData.data_fine || formData.data_inizio).toISOString()
       : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
-    // (OnlineMeeting API non accetta "attendees" come in /events; se vuoi invitare,
-    // lo fai creando un evento Outlook con isOnlineMeeting / onlineMeetingProvider)
-    // Qui li calcolo solo se ti servono altrove.
-    const attendeesEmails = formData.partecipanti
-      .map((pId) => utenti.find((u) => u.id === pId)?.email)
-      .filter((v): v is string => Boolean(v));
-
     const { teamsService } = await import("@/services/teamsService");
 
+    // ✅ createTeamsMeeting(studioId, userId, ...)
     const meeting = await teamsService.createTeamsMeeting(
-      studioId, // ✅ studioId
-      currentUserId, // ✅ userId del token owner
+      studioId,
+      currentUserId,
       formData.titolo || "Riunione",
       new Date(startDateTimeISO),
       new Date(endDateTimeISO)
-      // attendeesEmails <- NON passato: /me/onlineMeetings non lo usa
     );
 
     if (!meeting?.success) {
