@@ -603,7 +603,6 @@ if (!teamsRes.ok || !teamsJson?.joinUrl) {
 
 teamsLink = teamsJson.joinUrl;
 
-        teamsLink = teamsJoinUrl;
       }
 
       // ===============================
