@@ -753,72 +753,101 @@ if (formData.riunione_teams) {
           }
 
           // Notifica Teams ai partecipanti
-          if (formData.riunione_teams && teamsLink) {
-            try {
-              const { teamsService } = await import("@/services/teamsService");
-              for (const pId of formData.partecipanti) {
-                const user = utenti.find((u) => u.id === pId);
-                if (user?.email) {
-                  await teamsService.sendDirectMessage(formData.utente_id, user.email, {
-                    content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                    contentType: "html",
-                  });
-                }
+if (formData.riunione_teams && teamsLink) {
+  try {
+    const supabase = getSupabaseClient();
+
+    // sender = utente loggato (token owner M365)
+    if (!currentUserId) {
+      console.error("Errore invio notifiche Teams: currentUserId mancante.");
+    } else {
+      // studioId dallo user loggato
+      const { data: uRow, error: uErr } = await supabase
+        .from("tbutenti")
+        .select("studio_id")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (uErr || !uRow?.studio_id) {
+        console.error("Errore invio notifiche Teams: studioId non trovato.", uErr);
+      } else {
+        const studioId = uRow.studio_id as string;
+
+        const { teamsService } = await import("@/services/teamsService");
+        for (const pId of formData.partecipanti) {
+          const user = utenti.find((u) => u.id === pId);
+          if (user?.email) {
+            const dmRes = await teamsService.sendDirectMessage(
+              studioId,
+              currentUserId,
+              user.email,
+              {
+                content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+                contentType: "html",
               }
-            } catch (err) {
-              console.error("Errore invio notifiche Teams:", err);
+            );
+
+            if (!dmRes?.success) {
+              console.error("Errore invio DM Teams:", (dmRes as any)?.error);
             }
           }
-
-          toast({ title: "Successo", description: "Evento creato" });
         }
       }
-
-      setDialogOpen(false);
-      void loadData();
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Errore", description: "Salvataggio fallito", variant: "destructive" });
     }
-  };
-  const handleDeleteEvento = async () => {
-    const supabase = getSupabaseClient();
-    if (!eventoToDelete) return;
+  } catch (err) {
+    console.error("Errore invio notifiche Teams:", err);
+  }
+}
 
-    try {
-      // Cancella da Outlook prima del DB (non bloccare)
-      if (currentUserId) {
-        try {
-          await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
-        } catch (syncError) {
-          console.error("Errore cancellazione Outlook:", syncError);
-        }
-      }
+toast({ title: "Successo", description: "Evento creato" });
+}
+}
 
-      const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
-      if (error) throw error;
+setDialogOpen(false);
+void loadData();
+} catch (error) {
+console.error(error);
+toast({ title: "Errore", description: "Salvataggio fallito", variant: "destructive" });
+}
+};
+const handleDeleteEvento = async () => {
+const supabase = getSupabaseClient();
+if (!eventoToDelete) return;
 
-      setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
-      setDeleteDialogOpen(false);
-      setDialogOpen(false);
-      setEventoToDelete(null);
-      setEditingEventoId(null);
+try {
+// Cancella da Outlook prima del DB (non bloccare)
+if (currentUserId) {
+  try {
+    await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
+  } catch (syncError) {
+    console.error("Errore cancellazione Outlook:", syncError);
+  }
+}
 
-      toast({
-        title: "Evento eliminato",
-        description: "L'evento è stato eliminato con successo",
-      });
-    } catch (error) {
-      console.error("Errore eliminazione evento:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile eliminare l'evento",
-        variant: "destructive",
-      });
-      setDeleteDialogOpen(false);
-      setEventoToDelete(null);
-    }
-  };
+const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
+if (error) throw error;
+
+setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
+setDeleteDialogOpen(false);
+setDialogOpen(false);
+setEventoToDelete(null);
+setEditingEventoId(null);
+
+toast({
+  title: "Evento eliminato",
+  description: "L'evento è stato eliminato con successo",
+});
+} catch (error) {
+console.error("Errore eliminazione evento:", error);
+toast({
+  title: "Errore",
+  description: "Impossibile eliminare l'evento",
+  variant: "destructive",
+});
+setDeleteDialogOpen(false);
+setEventoToDelete(null);
+}
+};
 
   const handleDeleteEventoDirect = (eventoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
