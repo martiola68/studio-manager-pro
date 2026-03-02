@@ -459,6 +459,9 @@ export default function AgendaPage() {
     const supabase = getSupabaseClient();
 
     try {
+      // --------------------
+      // VALIDAZIONI BASE
+      // --------------------
       if (!formData.titolo.trim()) {
         toast({ title: "Errore", description: "Titolo obbligatorio", variant: "destructive" });
         return;
@@ -478,29 +481,35 @@ export default function AgendaPage() {
           });
           return;
         }
-              // =========================
-      // START/END + TEAMS (UNICO)
-      // =========================
-
-      // 1) start/end UNA SOLA VOLTA (ADATTA SOLO I NOMI CAMPO)
-      const startDateTime = new Date(`${formData.data}T${formData.ora}:00`);
-      if (Number.isNaN(startDateTime.getTime())) {
-        toast({ title: "Errore", description: "Data/ora non valide", variant: "destructive" });
-        return;
+        if (!formData.durata_giorni || formData.durata_giorni <= 0) {
+          toast({
+            title: "Errore",
+            description: "Durata obbligatoria per eventi ricorrenti (> 0)",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      const durataMinuti = formData.durata_minuti ?? 30;
-      const endDateTime = new Date(startDateTime.getTime() + durataMinuti * 60 * 1000);
+      // ===============================
+      // DATE EVENTO (UNICA DEFINIZIONE)
+      // ===============================
+      const startDateTimeISO = formData.tutto_giorno
+        ? new Date(formData.data_inizio).toISOString()
+        : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
 
-      const startISO = startDateTime.toISOString();
-      const endISO = endDateTime.toISOString();
+      const endDateTimeISO = formData.tutto_giorno
+        ? new Date(formData.data_fine || formData.data_inizio).toISOString()
+        : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
-      // 2) Teams: UNA SOLA CREAZIONE
+      // =========================
+      // TEAMS (UNICO BLOCCO)
+      // =========================
+      let teamsLink = formData.link_teams || "";
       let teamsJoinUrl: string | null = null;
       let teamsMeetingId: string | null = null;
 
-      if (formData.creaTeams === true) {
-        // LASCIA UNA SOLA CHIAMATA A STATUS (se più sotto ne hai un'altra, la elimini)
+      if (formData.riunione_teams && !teamsLink) {
         const statusRes = await fetch("/api/m365/status");
         const statusJson = await statusRes.json();
 
@@ -513,11 +522,12 @@ export default function AgendaPage() {
           return;
         }
 
-        // USA SOLO teamsService (se hai un fetch /api/m365/teams/create, lo elimini)
+        const { teamsService } = await import("@/services/teamsService");
+
         const meeting = await teamsService.createTeamsMeeting({
-          subject: formData.titolo,
-          startDateTime: startISO,
-          endDateTime: endISO,
+          subject: formData.titolo || "Riunione",
+          startDateTime: startDateTimeISO,
+          endDateTime: endDateTimeISO,
         });
 
         teamsJoinUrl = meeting?.joinUrl ?? null;
@@ -531,134 +541,49 @@ export default function AgendaPage() {
           });
           return;
         }
-      }
-        if (!formData.durata_giorni || formData.durata_giorni <= 0) {
-          toast({
-            title: "Errore",
-            description: "Durata obbligatoria per eventi ricorrenti (> 0)",
-            variant: "destructive",
-          });
-          return;
-        }
+
+        teamsLink = teamsJoinUrl;
       }
 
-// ===============================
-// Date evento (UNICA DEFINIZIONE)
-// ================
-
-let startDateTime = "";
-let endDateTime = "";
-
-startDateTime = formData.tutto_giorno
-  ? new Date(formData.data_inizio).toISOString()
-  : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
-
-endDateTime = formData.tutto_giorno
-  ? new Date(formData.data_fine || formData.data_inizio).toISOString()
-  : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
-
-      // Genera meeting Teams se richiesto
-      let teamsLink = formData.link_teams;
-
-     if (formData.riunione_teams && !teamsLink) {
-  try {
-    toast({
-      title: "Verifica connessione Microsoft 365...",
-      description: "Attendere prego",
-    });
-
-    // 2️⃣ creiamo il meeting Teams
-    const teamsRes = await fetch("/api/m365/teams/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subject: formData.titolo || "Riunione",
-        start: formData.data_inizio,
-        end: formData.data_fine,
-      }),
-    });
-
-    const teamsJson = await teamsRes.json();
-
-    if (!teamsRes.ok || !teamsJson.joinUrl) {
-      toast({
-        title: "Errore creazione Teams",
-        description: teamsJson.error || "Impossibile creare il meeting Teams",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // 3️⃣ salviamo il link Teams nell’evento
-    teamsLink = teamsJson.joinUrl;
-  } catch (e) {
-    toast({
-      title: "Errore Teams",
-      description: "Errore imprevisto durante la creazione del meeting Teams",
-      variant: "destructive",
-    });
-    return;
-  }
-}
-
-          toast({ title: "Creazione meeting Teams...", description: "Attendere prego" });
-
-          const { teamsService } = await import("@/services/teamsService");
-
-          const attendeesEmails = formData.partecipanti
-            .map((pId) => utenti.find((u) => u.id === pId)?.email)
-            .filter((v): v is string => Boolean(v));
-
-if (!currentUserId) {
-  toast({
-    title: "⚠️ Errore Autenticazione",
-    description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
-    variant: "destructive",
-    duration: 5000,
-  });
-  return;
-}
-
-          toast({
-            title: "Meeting Teams creato!",
-            description: "Link aggiunto all'evento",
-          });
-        } catch (error) {
-          console.error("❌ ERRORE creazione meeting Teams:", error);
-          toast({
-            title: "Avviso",
-            description:
-              "Impossibile creare meeting Teams. Assicurati di essere connesso a Microsoft 365 nelle impostazioni.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
+      // ===============================
+      // PAYLOAD BASE
+      // ===============================
       const basePayload: Partial<AgendaRow> & Record<string, unknown> = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
-        data_inizio: startDateTime,
-        data_fine: endDateTime,
+
+        data_inizio: startDateTimeISO,
+        data_fine: endDateTimeISO,
         ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
         ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
         tutto_giorno: formData.tutto_giorno as any,
+
         cliente_id: formData.cliente_id || null,
         utente_id: formData.utente_id as any,
+
         in_sede: formData.in_sede as any,
         sala: formData.in_sede ? formData.sala : null,
         luogo: !formData.in_sede ? formData.luogo : null,
+
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
         link_teams: teamsLink || null,
+
         partecipanti: formData.partecipanti.length ? formData.partecipanti : null,
+
         ricorrente: formData.ricorrente,
         frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
         durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
+
+        // Se in DB esistono (tu li stavi già usando nelle ricorrenze)
+        start_datetime: startDateTimeISO,
+        end_datetime: endDateTimeISO,
+        teams_join_url: teamsJoinUrl,
+        teams_meeting_id: teamsMeetingId,
       };
 
       if (editingEventoId) {
-        // Update
+        // UPDATE
         const { data, error } = await supabase
           .from("tbagenda")
           .update(basePayload as any)
@@ -698,7 +623,7 @@ if (!currentUserId) {
 
         toast({ title: "Successo", description: "Evento aggiornato" });
       } else {
-        // Create
+        // CREATE
         if (formData.ricorrente) {
           const startDate = new Date(formData.data_inizio);
           const endDate = new Date(startDate);
@@ -716,17 +641,16 @@ if (!currentUserId) {
               ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
               : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
-         occurrences.push({
-  ...basePayload,
-  data_inizio: occurrenceStartDateTime,
-  data_fine: occurrenceEndDateTime,
+            occurrences.push({
+              ...basePayload,
+              data_inizio: occurrenceStartDateTime,
+              data_fine: occurrenceEndDateTime,
 
-  // ✅ aggiungi questi 4 campi
-  start_datetime: occurrenceStartDateTime,
-  end_datetime: occurrenceEndDateTime,
-  teams_join_url: teamsJoinUrl,
-  teams_meeting_id: teamsMeetingId,
-});
+              start_datetime: occurrenceStartDateTime,
+              end_datetime: occurrenceEndDateTime,
+              teams_join_url: teamsJoinUrl,
+              teams_meeting_id: teamsMeetingId,
+            });
 
             current = new Date(current);
             current.setDate(current.getDate() + formData.frequenza_giorni);
@@ -796,7 +720,6 @@ if (!currentUserId) {
       toast({ title: "Errore", description: "Salvataggio fallito", variant: "destructive" });
     }
   };
-
   const handleDeleteEvento = async () => {
     const supabase = getSupabaseClient();
     if (!eventoToDelete) return;
