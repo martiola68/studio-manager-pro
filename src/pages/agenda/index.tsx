@@ -557,23 +557,67 @@ if (!currentUserId) {
   return;
 }
 
-const meeting = await teamsService.createTeamsMeeting(
-  formData.utente_id,
-  formData.titolo || "Riunione",
-  new Date(startDateTimeISO),
-  new Date(endDateTimeISO),
-  attendeesEmails
-);
+// ✅ prende token Supabase per chiamare le API M365
+const {
+  data: { session },
+} = await supabase.auth.getSession();
 
-if (!(meeting as any)?.success) {
+if (!session?.access_token) {
+  toast({
+    title: "Errore autenticazione",
+    description: "Sessione non valida. Ricarica la pagina.",
+    variant: "destructive",
+  });
+  return;
+}
+
+// ✅ (opzionale ma consigliato) controlla status passando Authorization
+const statusRes = await fetch("/api/m365/status", {
+  headers: {
+    Authorization: `Bearer ${session.access_token}`,
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+  },
+});
+const statusJson = await statusRes.json();
+
+if (!statusRes.ok || !statusJson?.connected) {
+  toast({
+    title: "Microsoft 365 non connesso",
+    description: "Collega l'account M365 prima di creare un meeting Teams.",
+    variant: "destructive",
+  });
+  return;
+}
+
+// ✅ crea meeting Teams via API route
+const teamsRes = await fetch("/api/m365/teams/create", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({
+    subject: formData.titolo || "Riunione",
+    startDateTime: startDateTimeISO,
+    endDateTime: endDateTimeISO,
+    attendeesEmails,
+  }),
+});
+
+const teamsJson = await teamsRes.json();
+
+if (!teamsRes.ok || !teamsJson?.joinUrl) {
   toast({
     title: "Errore Teams",
-    description: (meeting as any)?.error || "Impossibile creare il meeting Teams",
+    description: teamsJson?.error || "Impossibile creare il meeting Teams",
     variant: "destructive",
     duration: 8000,
   });
   return;
 }
+
+teamsLink = teamsJson.joinUrl;
 
 teamsLink = (meeting as any)?.joinUrl || "";
 
