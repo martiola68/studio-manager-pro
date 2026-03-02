@@ -1,163 +1,125 @@
-import { supabase } from "@/lib/supabase/client";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { decrypt } from "@/lib/encryption365";
+import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
+import { supabase } from "@/lib/supabase/client"; // o dove lo importi già
 
-/**
- * Microsoft Graph API Service - DELEGATED ONLY
- * 
- * Uses OAuth 2.0 delegated permissions (user tokens).
- * NO app-only fallback - all operations require authenticated user.
- * Uses supabaseAdmin (service role) to bypass RLS when reading config.
- * 
- * Token refresh is automatic when token expires.
- */
-
-interface GraphTokenResponse {
-  access_token: string;
-  refresh_token?: string;
-  expires_in: number;
-}
-
-async function getValidToken(userId: string): Promise<string | null> {
-  // DISABILITATA: usava tbmicrosoft_tokens (schema vecchio)
-  return null;
-}
-
-async function cleanupInvalidToken(userId: string): Promise<void> {
-  try {
-    await supabase
-      .from("tbmicrosoft_tokens")
-      .delete()
-      .eq("user_id", userId);
-    
-    console.log("[Graph Service] Cleaned up invalid token for user:", userId);
-  } catch (error) {
-    console.error("[Graph Service] Failed to cleanup token:", error);
-  }
-}
-
-async function refreshToken(userId: string, encryptedRefreshToken: string): Promise<string> {
-  try {
-    const refreshTokenValue = decrypt(encryptedRefreshToken);
-    
-    if (!refreshTokenValue) {
-      throw new Error("Invalid refresh token (decryption failed)");
-    }
-
-    const { data: userData, error: userError } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
-      .single();
-
-    if (userError || !userData?.studio_id) {
-      throw new Error("Studio not found for user");
-    }
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: rawConfigData, error: configError } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, client_secret, tenant_id")
-      .eq("studio_id", userData.studio_id)
-      .single();
-
-    if (configError || !rawConfigData) {
-      throw new Error("Microsoft 365 configuration not found");
-    }
-
-    const configData = rawConfigData as unknown as {
-      client_id: string;
-      client_secret: string;
-      tenant_id: string;
-    };
-
-    const clientSecret = decrypt(configData.client_secret);
-
-    const tokenUrl = `https://login.microsoftonline.com/${configData.tenant_id}/oauth2/v2.0/token`;
-
-    const params = new URLSearchParams({
-      client_id: configData.client_id,
-      client_secret: clientSecret,
-      refresh_token: refreshTokenValue,
-      grant_type: "refresh_token"
-    });
-
-    const response = await fetch(tokenUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString()
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[Graph Service] Refresh token failed:", errorText);
-      
-      await cleanupInvalidToken(userId);
-      
-      throw new Error("Token refresh failed. Please reconnect your Microsoft 365 account.");
-    }
-
-    const tokenData: GraphTokenResponse = await response.json();
-
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
-
-    const { encrypt } = await import("@/lib/encryption365");
-    const encryptedAccessToken = encrypt(tokenData.access_token);
-    const newEncryptedRefreshToken = tokenData.refresh_token ? encrypt(tokenData.refresh_token) : encryptedRefreshToken;
-
-    const { error: updateError } = await supabase
-      .from("tbmicrosoft_tokens")
-      .update({
-        access_token: encryptedAccessToken,
-        refresh_token: newEncryptedRefreshToken,
-        expires_at: expiresAt.toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("[Graph Service] Failed to update token:", updateError);
-      throw new Error("Failed to save refreshed token");
-    }
-
-    console.log("[Graph Service] Token refreshed successfully");
-    return tokenData.access_token;
-  } catch (error) {
-    console.error("[Graph Service] Refresh error:", error);
-    throw error;
-  }
-}
+type M365SettingsRow = {
+  client_id: string;
+  tenant_id: string;
+  client_secret_encrypted: string;
+};
 
 async function graphApiCall<T = any>(
+  studioId: string,
   userId: string,
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // 1) Leggo il token cache dal DB giusto
-  const { data: tokenRow, error } = await supabase
+  // 1) leggi token cache utente
+  const { data: tokenRow, error: tokenErr } = await supabase
     .from("tbmicrosoft365_user_tokens")
     .select("token_cache_encrypted, scopes, revoked_at")
+    .eq("studio_id", studioId)
     .eq("user_id", userId)
     .is("revoked_at", null)
     .single();
 
-  if (error || !tokenRow?.token_cache_encrypted) {
+  if (tokenErr || !tokenRow?.token_cache_encrypted) {
     throw new Error(
-      "Microsoft 365 non configurato o token non valido. " +
-      "Connetti il tuo account in Impostazioni → Microsoft 365"
+      "Microsoft 365 non configurato o token non valido. Connetti il tuo account in Impostazioni → Microsoft 365"
     );
   }
 
-  // 2) TEMP: qui va la decriptazione + MSAL acquireTokenSilent
-  // Per ora fermiamo tutto con un errore chiaro così verifichiamo che la riga DB è trovata.
-  throw new Error("TODO_DECRYPT_TOKEN_CACHE");
+  // 2) leggi configurazione studio (client credentials)
+  const { data: settings, error: setErr } = await supabase
+    .from("tbmicrosoft_settings")
+    .select("client_id, tenant_id, client_secret_encrypted")
+    .eq("studio_id", studioId)
+    .single<M365SettingsRow>();
 
-  // 3) Quando avremo accessToken valido, la parte sotto resta uguale:
-  /*
-  const token = accessToken;
+  if (setErr || !settings?.client_id || !settings?.tenant_id || !settings?.client_secret_encrypted) {
+    throw new Error("Microsoft 365 non configurato per lo studio (client credentials mancanti).");
+  }
 
+  const clientSecret = decrypt(settings.client_secret_encrypted);
+
+  // 3) ricostruisci MSAL token cache da token_cache_encrypted
+  const serializedCache = decrypt(tokenRow.token_cache_encrypted);
+
+  let cacheHasChanged = false;
+  const cachePlugin = {
+    beforeCacheAccess: async (cacheContext: any) => {
+      cacheContext.tokenCache.deserialize(serializedCache);
+    },
+    afterCacheAccess: async (cacheContext: any) => {
+      if (cacheContext.cacheHasChanged) {
+        cacheHasChanged = true;
+      }
+    },
+  };
+
+  const msalApp = new ConfidentialClientApplication({
+    auth: {
+      clientId: settings.client_id,
+      authority: `https://login.microsoftonline.com/${settings.tenant_id}`,
+      clientSecret,
+    },
+    cache: { cachePlugin },
+    system: {
+      loggerOptions: {
+        logLevel: LogLevel.Error,
+        piiLoggingEnabled: false,
+      },
+    },
+  });
+
+  const accounts = await msalApp.getTokenCache().getAllAccounts();
+  const account = accounts?.[0];
+  if (!account) {
+    throw new Error(
+      "Token cache Microsoft non valido (account mancante). Riconnetti in Impostazioni → Microsoft 365"
+    );
+  }
+
+  const scopes =
+    tokenRow.scopes?.split(" ").map((s: string) => s.trim()).filter(Boolean) ??
+    ["https://graph.microsoft.com/.default"];
+
+  let accessToken: string;
+  try {
+    const result = await msalApp.acquireTokenSilent({
+      account,
+      scopes,
+    });
+    accessToken = result?.accessToken || "";
+  } catch (e: any) {
+    throw new Error(
+      "Token Microsoft scaduto o non rinnovabile. Riconnetti in Impostazioni → Microsoft 365"
+    );
+  }
+
+  if (!accessToken) {
+    throw new Error(
+      "Impossibile ottenere access token Microsoft. Riconnetti in Impostazioni → Microsoft 365"
+    );
+  }
+
+  // 4) se cache è cambiata, risalva token_cache_encrypted (refresh token/rotazioni)
+  if (cacheHasChanged) {
+    const newSerialized = msalApp.getTokenCache().serialize();
+    const newEncrypted = (await import("@/lib/encryption365")).encrypt(newSerialized);
+
+    await supabase
+      .from("tbmicrosoft365_user_tokens")
+      .update({
+        token_cache_encrypted: newEncrypted,
+        revoked_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("studio_id", studioId)
+      .eq("user_id", userId);
+  }
+
+  // 5) chiamata Graph
   const url = endpoint.startsWith("https://")
     ? endpoint
     : `https://graph.microsoft.com/v1.0${endpoint}`;
@@ -166,7 +128,7 @@ async function graphApiCall<T = any>(
     ...options,
     headers: {
       ...options.headers,
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
   });
@@ -177,113 +139,8 @@ async function graphApiCall<T = any>(
     throw new Error(`Microsoft Graph API error: ${errorText}`);
   }
 
-  // alcune chiamate Graph ritornano 204 (no content)
   if (response.status === 204) return {} as T;
-
   return (await response.json()) as T;
-  */
 }
 
-async function hasMicrosoft365(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("tbmicrosoft365_user_tokens")
-    .select("id")
-    .eq("user_id", userId)
-    .is("revoked_at", null)
-    .maybeSingle();
-
-  return !!data && !error;
-}
-async function disconnectAccount(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from("tbmicrosoft_tokens")
-    .delete()
-    .eq("user_id", userId);
-
-  if (error) {
-    throw new Error("Failed to disconnect Microsoft 365 account");
-  }
-
-  console.log("[Graph Service] User disconnected:", userId);
-}
-
-export const microsoftGraphService = {
-  getValidToken,
-  graphApiCall,
-  graphRequest: async (userId: string, endpoint: string, method: string = "GET", body?: any) => {
-    return graphApiCall(userId, endpoint, {
-      method,
-      body: body ? JSON.stringify(body) : undefined
-    });
-  },
-  
-  isConnected: hasMicrosoft365,
-  disconnectAccount,
-
-  getTeamsWithChannels: async (userId: string) => {
-    try {
-      const teamsResponse = await graphApiCall<{ value: any[] }>(userId, "/me/joinedTeams");
-      const teams = teamsResponse.value || [];
-      
-      const teamsWithChannels = [];
-      
-      for (const team of teams) {
-        try {
-          const channelsResponse = await graphApiCall<{ value: any[] }>(
-            userId, 
-            `/teams/${team.id}/channels`
-          );
-          
-          teamsWithChannels.push({
-            id: team.id,
-            displayName: team.displayName,
-            description: team.description,
-            channels: channelsResponse.value || []
-          });
-        } catch (e) {
-          console.warn(`Could not fetch channels for team ${team.id}`, e);
-          teamsWithChannels.push({
-            id: team.id,
-            displayName: team.displayName,
-            description: team.description,
-            channels: []
-          });
-        }
-      }
-      
-      return { success: true, teams: teamsWithChannels };
-    } catch (error: any) {
-      console.error("Error fetching teams:", error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  sendChannelMessage: async (userId: string, teamId: string, channelId: string, messageHtml: string) => {
-    try {
-      await graphApiCall(userId, `/teams/${teamId}/channels/${channelId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({
-          body: {
-            contentType: "html",
-            content: messageHtml
-          }
-        })
-      });
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  },
-
-  sendEmail: async (userId: string, message: any) => {
-    return graphApiCall(userId, "/me/sendMail", {
-      method: "POST",
-      body: JSON.stringify({
-        message,
-        saveToSentItems: true
-      })
-    });
-  }
-};
-
-export { getValidToken, graphApiCall, hasMicrosoft365 };
+export { graphApiCall };
