@@ -177,12 +177,5 @@ createTeamsMeeting: async (
   }
 };
 
-// Aggiungi alias per retrocompatibilità e comodità
-export const teamsServiceExtended = {
-  ...teamsService,
-  createOnlineMeeting: teamsService.createTeamsMeeting
-};
-
-// Sovrascrivi l'export di default o named export se necessario, 
 // ma qui stiamo estendendo l'oggetto teamsService originale in-place per mantenere i riferimenti
 Object.assign(teamsService, { createOnlineMeeting: teamsService.createTeamsMeeting });
