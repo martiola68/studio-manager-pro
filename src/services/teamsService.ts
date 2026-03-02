@@ -71,63 +71,34 @@ createTeamsMeeting:async (
   endTime: Date,
   attendeesEmails?: string[]
 ) => {
+
+const tokenUserId = userId;
+  
   try {
-    // ✅ userId che arriva potrebbe NON essere quello dei token.
-    // Risolviamo l'utente "tbutenti" corretto usando l'email dell'utente loggato.
-    const { getSupabaseClient } = await import("@/lib/supabase/client");
-    const supabase = getSupabaseClient();
+  createTeamsMeeting: async (
+  userId: string,
+  subject: string,
+  startTime: Date,
+  endTime: Date,
+  attendeesEmails?: string[]
+) => {
+  const tokenUserId = userId;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+  try {
+    const response = await graphApiCall<any>(tokenUserId, "/me/onlineMeetings", {
+      method: "POST",
+      body: JSON.stringify({
+        subject,
+        startDateTime: startTime.toISOString(),
+        endDateTime: endTime.toISOString(),
+      }),
+    });
 
-    const authEmail = session?.user?.email;
-    if (!authEmail) {
-      throw new Error("Utente non autenticato. Ricarica la pagina.");
-    }
-
-    const { data: utenteRow, error: utenteErr } = await supabase
-      .from("tbutenti")
-      .select("id")
-      .eq("email", authEmail)
-      .maybeSingle();
-
-    if (utenteErr) throw utenteErr;
-    if (!utenteRow?.id) {
-      throw new Error("Utente (tbutenti) non trovato per email loggata.");
-    }
-
-    const tokenUserId = utenteRow.id; // ✅ questo è l'id coerente con tbmicrosoft365_user_tokens.user_id
-
-    const meeting: any = {
-      subject,
-      start: { dateTime: startTime.toISOString(), timeZone: "UTC" },
-      end: { dateTime: endTime.toISOString(), timeZone: "UTC" },
-      isOnlineMeeting: true,
-      onlineMeetingProvider: "teamsForBusiness",
+    return {
+      success: true,
+      joinUrl: response?.joinUrl ?? null,
+      id: response?.id ?? null,
     };
-
-    if (attendeesEmails && attendeesEmails.length > 0) {
-      meeting.attendees = attendeesEmails.map((email) => ({
-        emailAddress: { address: email, name: email },
-        type: "required",
-      }));
-    }
-
-   const response = await graphApiCall<any>(tokenUserId, "/me/onlineMeetings", {
-  method: "POST",
-  body: JSON.stringify({
-    subject,
-    startDateTime: startTime.toISOString(),
-    endDateTime: endTime.toISOString(),
-  }),
-});
-
-  return {
-  success: true,
-  joinUrl: response?.joinUrl ?? null,
-  id: response?.id ?? null,
-};
   } catch (error: any) {
     console.error("Error creating Teams meeting:", error);
     return { success: false, error: error?.message || String(error) };
