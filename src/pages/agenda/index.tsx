@@ -488,14 +488,6 @@ export default function AgendaPage() {
         }
       }
 
-      const startDateTime = formData.tutto_giorno
-        ? `${formData.data_inizio}T00:00:00+00:00`
-        : `${formData.data_inizio}T${formData.ora_inizio}:00+00:00`;
-
-      const endDateTime = formData.tutto_giorno
-        ? `${formData.data_fine || formData.data_inizio}T23:59:59+00:00`
-        : `${formData.data_fine || formData.data_inizio}T${formData.ora_fine}:00+00:00`;
-
       // Genera meeting Teams se richiesto
       let teamsLink = formData.link_teams;
 
