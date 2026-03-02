@@ -490,15 +490,19 @@ export default function AgendaPage() {
 
 // ===============================
 // Date evento (UNICA DEFINIZIONE)
-// ===============================
-const startDateTime = formData.tutto_giorno
+// ================
+
+      let startDateTime = "";
+let endDateTime = "";
+
+startDateTime = formData.tutto_giorno
   ? new Date(formData.data_inizio).toISOString()
   : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
 
-const endDateTime = formData.tutto_giorno
+endDateTime = formData.tutto_giorno
   ? new Date(formData.data_fine || formData.data_inizio).toISOString()
   : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
-      
+
       // Genera meeting Teams se richiesto
       let teamsLink = formData.link_teams;
 
@@ -618,8 +622,8 @@ if (!currentUserId) {
       const basePayload: Partial<AgendaRow> & Record<string, unknown> = {
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
-        data_inizio: startDateTime as any,
-        data_fine: endDateTime as any,
+        data_inizio: startDateTime,
+        data_fine: endDateTime,
         ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
         ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
         tutto_giorno: formData.tutto_giorno as any,
