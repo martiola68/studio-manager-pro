@@ -565,6 +565,18 @@ const meeting = await teamsService.createTeamsMeeting(
   attendeesEmails
 );
 
+if (!(meeting as any)?.success) {
+  toast({
+    title: "Errore Teams",
+    description: (meeting as any)?.error || "Impossibile creare il meeting Teams",
+    variant: "destructive",
+    duration: 8000,
+  });
+  return;
+}
+
+teamsLink = (meeting as any)?.joinUrl || "";
+
         // 🔍 DEBUG — NON TOCCARE ALTRO
 console.log("MEETING TEAMS RAW =>", meeting);
 console.log("MEETING TEAMS KEYS =>", meeting ? Object.keys(meeting as any) : null);
@@ -655,24 +667,6 @@ teamsMeetingId =
           await calendarSyncService.syncEventToOutlook(formData.utente_id, editingEventoId);
         } catch (syncError) {
           console.error("Errore sincronizzazione Outlook:", syncError);
-        }
-
-        // Notifica Teams ai partecipanti
-        if (formData.riunione_teams && teamsLink) {
-          try {
-            const { teamsService } = await import("@/services/teamsService");
-            for (const pId of formData.partecipanti) {
-              const user = utenti.find((u) => u.id === pId);
-              if (user?.email) {
-                await teamsService.sendDirectMessage(formData.utente_id, user.email, {
-                  content: `<strong>Riunione Teams aggiornata:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                  contentType: "html",
-                });
-              }
-            }
-          } catch (err) {
-            console.error("Errore invio notifiche Teams:", err);
-          }
         }
 
         toast({ title: "Successo", description: "Evento aggiornato" });
