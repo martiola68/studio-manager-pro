@@ -262,7 +262,7 @@ async function deleteOutlookEvent(
 async function syncEventToOutlook(userId: string, eventoId: string): Promise<boolean> {
   try {
     // Verifica se l'utente ha Microsoft 365 configurato
-    const hasMicrosoft = await hasMicrosoft365(studioId, userId);
+    const hasMicrosoft = await hasMicrosoft365(userId);
     if (!hasMicrosoft) {
       console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
       return false;
