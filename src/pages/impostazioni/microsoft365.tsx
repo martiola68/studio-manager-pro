@@ -335,24 +335,6 @@ async function handleConnect() {
    window.location.href = "/api/m365/connect";
 return;
 
-    const data = await r.json().catch(() => null);
-
-    if (!r.ok || !data?.url) {
-      console.error("m365 connect error", data);
-      setError(data?.error || "Errore connessione Microsoft 365");
-      return;
-    }
-
-    // 3) Redirect verso Microsoft
-    window.location.href = data.url;
-  } catch (e) {
-    console.error("M365 connect fatal", e);
-    setError(e instanceof Error ? e.message : "Errore imprevisto");
-  } finally {
-    setConnecting(false);
-  }
-}
-
   async function handleDisconnect() {
     const confirmed = window.confirm(
       "Sei sicuro di voler disconnettere il tuo account Microsoft 365?\n\n" +
