@@ -63,7 +63,7 @@ async function loadM365Status() {
  try {
    const res = await fetch("/api/m365/status", {
      headers: {
-       Authorization: `Bearer ${bearer}`,
+      Authorization: `Bearer ${sessionRes?.session?.access_token ?? ""}`,
     },
   })
   const json = await res.json();
