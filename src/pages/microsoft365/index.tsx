@@ -62,10 +62,10 @@ async function loadM365Status() {
 
  try {
    const res = await fetch("/api/m365/status", {
-65     headers: {
-66       Authorization: `Bearer ${bearer}`,
-67     },
-68   })
+     headers: {
+       Authorization: `Bearer ${bearer}`,
+    },
+  })
   const json = await res.json();
 
   setM365Connected(json.connected === true);
