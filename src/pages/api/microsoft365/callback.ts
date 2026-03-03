@@ -219,4 +219,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return redirectErr(res, e?.message || "Errore callback Microsoft 365");
   }
 }
-
