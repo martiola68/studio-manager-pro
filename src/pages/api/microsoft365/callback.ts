@@ -171,7 +171,7 @@ if (cfg.enabled === false) {
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    const clientSecret = decrypt(cfg.client_secret_encrypted);
+    const clientSecret = cfg.client_secret;
 
     /* =======================
        4) Exchange CODE → MSAL token cache (vera)
