@@ -146,7 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // ✅ 3) Leggi config studio
 const { data: cfg, error: cfgErr } = await supabaseAdmin
   .from("microsoft365_config")
-  .select("client_id, tenant_id, client_secret_encrypted, enabled")
+  .select("client_id, tenant_id, client_secret, enabled")
   .eq("studio_id", studioId)
   .maybeSingle();
 
@@ -171,7 +171,7 @@ if (cfg.enabled === false) {
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    const clientSecret = decrypt(cfg.client_secret_encrypted);
+    const clientSecret = cfg.client_secret;
 
     /* =======================
        4) Exchange CODE → MSAL token cache (vera)
