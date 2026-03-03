@@ -317,8 +317,7 @@ async function handleConnect() {
   setError(null);
   setSuccessMessage(null);
 
-  try {
-    // 1) Recupera sessione Supabase
+      // 1) Recupera sessione Supabase
     const { data: sessionRes, error: sessionErr } =
       await supabase.auth.getSession();
     if (sessionErr) throw sessionErr;
