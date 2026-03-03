@@ -143,24 +143,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        NB: allinea il nome tabella al resto del progetto.
        Qui uso tbmicrosoft_settings (come nel graph service).
     ======================= */
-    const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("tbmicrosoft_settings")
-      .select("client_id, tenant_id, client_secret_encrypted, enabled")
-      .eq("studio_id", studioId)
-      .maybeSingle<{
-        client_id: string;
-        tenant_id: string | null;
-        client_secret_encrypted: string;
-        enabled: boolean | null;
-      }>();
+   // ✅ 3) Leggi config studio
+const { data: cfg, error: cfgErr } = await supabaseAdmin
+  .from("microsoft365_config")
+  .select("client_id, tenant_id, client_secret, enabled")
+  .eq("studio_id", studioId)
+  .maybeSingle();
 
-    if (cfgErr || !cfg?.client_id || !cfg?.client_secret_encrypted) {
-      return redirectErr(res, "Configurazione Microsoft 365 incompleta");
-    }
+console.log("CFG ERR:", cfgErr);
+console.log("CFG KEYS:", cfg ? Object.keys(cfg) : null);
+console.log("CLIENT_ID OK:", !!cfg?.client_id, "LEN:", cfg?.client_id?.length);
+console.log("CLIENT_SECRET OK:", !!cfg?.client_secret, "LEN:", cfg?.client_secret?.length);
+     
+if (cfgErr || !cfg?.client_id || !cfg?.client_secret) {
+  return res.redirect(
+    "/microsoft365?error=true&message=" +
+      encodeURIComponent("Configurazione Microsoft 365 incompleta")
+  );
+}
 
-    if (cfg.enabled === false) {
-      return redirectErr(res, "Microsoft 365 disabilitato per lo studio");
-    }
+if (cfg.enabled === false) {
+  return res.redirect(
+    "/microsoft365?error=true&message=" +
+      encodeURIComponent("Microsoft 365 disabilitato per lo studio")
+  );
+}
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
