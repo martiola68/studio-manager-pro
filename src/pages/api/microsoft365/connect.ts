@@ -26,6 +26,7 @@ function randomState(len = 32) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+   console.log("[m365/connect] HIT", { method: req.method });
  if (req.method !== "GET" && req.method !== "POST") {
   return res.status(405).json({ error: "Method not allowed" });
 }
