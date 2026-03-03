@@ -332,7 +332,7 @@ async function handleConnect() {
     // 2) Chiamata backend: genera STATE + URL OAuth (NO PKCE)
    window.location.href = "/api/m365/connect";
 return;
-
+}
   async function handleDisconnect() {
     const confirmed = window.confirm(
       "Sei sicuro di voler disconnettere il tuo account Microsoft 365?\n\n" +
