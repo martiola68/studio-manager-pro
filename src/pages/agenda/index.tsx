@@ -554,7 +554,7 @@ if (formData.riunione_teams) {
 
     const studioId = uRow.studio_id as string;
 
-    // (opzionale) check session supabase per chiamare /api/m365/status se il tuo endpoint lo richiede
+    // (opzionale) check session supabase per chiamare /api/microsoft365/status se il tuo endpoint lo richiede
     const {
       data: { session: m365Session },
     } = await supabase.auth.getSession();
@@ -569,7 +569,7 @@ if (formData.riunione_teams) {
     }
 
     // status con Bearer token (il tuo endpoint lo richiede)
-    const statusResponse = await fetch("/api/m365/status", {
+    const statusResponse = await fetch("/api/microsoft365/status", {
       method: "GET",
       cache: "no-store",
       headers: {
