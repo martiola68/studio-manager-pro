@@ -10,10 +10,21 @@ export function hasMicrosoft365(userId: string): Promise<boolean>;
  * Manteniamo la firma retro-compatibile ma NON usiamo direttamente studioId/userId lato client.
  */
 export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+
+  // Se non ho sessione, sicuramente non è connesso
+  if (!token) return false;
+
   const res = await fetch("/api/m365/status", {
     method: "GET",
     cache: "no-store",
     headers: {
+      Authorization: `Bearer ${token}`,
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
     },
@@ -49,73 +60,78 @@ export async function graphApiCall<T = any>(
   c?: any,
   d?: any
 ): Promise<T> {
+  // --- 1) Normalizza firme legacy (2 arg / 3 arg / 4 arg)
   let endpoint: string;
   let options: RequestInit | undefined;
 
-  // vecchia firma: (userId, endpoint, options)
+  // vecchia firma: (userId, endpoint, options?)
   if (typeof b === "string" && (typeof c === "object" || typeof c === "undefined")) {
     endpoint = b;
-    options = c;
+    options = c as RequestInit | undefined;
   } else {
-    // nuova firma: (studioId, userId, endpoint, options)
+    // nuova firma: (studioId, userId, endpoint, options?)
     endpoint = c as string;
     options = d as RequestInit | undefined;
   }
 
-  const method = (options?.method || "GET").toUpperCase();
+  // --- 2) Costruisci request per proxy (endpoint/method/body SEMPRE presenti)
+  const method = String(options?.method || "GET").toUpperCase();
+
+  // body: se è già stringa la passo così; se è oggetto lo serializzo; se null/undefined -> undefined
+  const rawBody: any = (options as any)?.body;
   const body =
-    typeof options?.body === "string"
-      ? options.body
-      : options?.body
-      ? JSON.stringify(options.body)
+    typeof rawBody === "string"
+      ? rawBody
+      : rawBody != null
+      ? JSON.stringify(rawBody)
       : undefined;
 
-const supabase = getSupabaseClient();
-const { data: { session } } = await supabase.auth.getSession();
-const token = session?.access_token;
+  // --- 3) Token Supabase (Authorization verso proxy)
+  const supabase = getSupabaseClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
 
-if (!token) {
-  throw new Error("Sessione non valida. Rifai login.");
-}
-
-// ✅ Normalizza input
-const endpointFinal =
-  typeof endpoint === "string" ? endpoint : (options as any)?.endpoint;
-
-const methodFinal =
-  typeof method === "string"
-    ? method
-    : ((options as any)?.method as string) || "GET";
-
-if (!endpointFinal || typeof endpointFinal !== "string") {
-  throw new Error("Missing endpoint/method: endpoint mancante");
-}
-
-const res = await fetch("/api/m365/graph", {
-  method: "POST",
- headers: {
-  "Content-Type": "application/json",
-  ...(options?.headers || {}),
-  Authorization: `Bearer ${token}`,
-} as any,
-  body: JSON.stringify({
-    endpoint: endpointFinal,
-    method: methodFinal,
-    body,
-  }),
-});
-
-  if (res.status === 204) return {} as T;
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Graph proxy error (${res.status}): ${errText}`);
+  if (!token) {
+    throw new Error("Sessione non valida. Rifai login.");
   }
 
-  const text = await res.text();
-  if (!text) return {} as T;
+  // --- 4) Validazioni minime (evita 400 dal proxy)
+  if (!endpoint || typeof endpoint !== "string") {
+    throw new Error("Missing endpoint/method: endpoint mancante");
+  }
+  if (!method || typeof method !== "string") {
+    throw new Error("Missing endpoint/method: method mancante");
+  }
 
-  return JSON.parse(text) as T;
+  // --- 5) Call proxy
+  const res = await fetch("/api/m365/graph", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {}),
+      Authorization: `Bearer ${token}`, // dopo, così non viene sovrascritto
+    } as any,
+    body: JSON.stringify({
+      endpoint,
+      method,
+      body,
+    }),
+  });
+
+  // --- 6) Parse risposta
+  if (res.status === 204) return {} as T;
+
+  const text = await res.text().catch(() => "");
+  const json = text ? (JSON.parse(text) as any) : null;
+
+  if (!res.ok) {
+    const msg = (json && (json.error || json.message)) || text || "Errore proxy Graph";
+    throw new Error(`Graph proxy error (${res.status}): ${msg}`);
+  }
+
+  return (json ?? ({} as any)) as T;
 }
 
 /* =========================
@@ -132,13 +148,16 @@ export type GraphSendMailMessage = {
   ccRecipients?: Array<{ emailAddress: { address: string } }>;
 };
 
-export async function sendEmail(_userId: string, message: GraphSendMailMessage): Promise<void> {
+export async function sendEmail(
+  _userId: string,
+  message: GraphSendMailMessage
+): Promise<void> {
   await graphApiCall("/me/sendMail", {
     method: "POST",
-    body: JSON.stringify({
+    body: {
       message,
       saveToSentItems: true,
-    }),
+    },
   } as any);
 }
 
@@ -151,9 +170,9 @@ export async function sendChannelMessage(
   try {
     await graphApiCall(`/teams/${teamId}/channels/${channelId}/messages`, {
       method: "POST",
-      body: JSON.stringify({
+      body: {
         body: { contentType: "html", content: messageHtml },
-      }),
+      },
     } as any);
 
     return { success: true };
