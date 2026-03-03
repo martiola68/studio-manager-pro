@@ -173,6 +173,9 @@ if (cfg.enabled === false) {
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
     const clientSecret = cfg.client_secret;
 
+console.log("[m365] clientSecret len:", clientSecret?.length);
+console.log("[m365] clientSecret starts:", (clientSecret || "").slice(0, 4));
+     
     /* =======================
        4) Exchange CODE → MSAL token cache (vera)
        (così poi graphApiCall può fare acquireTokenSilent)
