@@ -306,9 +306,7 @@ async function handleConnect() {
   }
 
   if (!config.enabled) {
-    setError(
-      "Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore."
-    );
+    setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
     return;
   }
 
@@ -316,22 +314,26 @@ async function handleConnect() {
   setError(null);
   setSuccessMessage(null);
 
-      // 1) Recupera sessione Supabase
-    const { data: sessionRes, error: sessionErr } =
-      await supabase.auth.getSession();
+  try {
+    // 1) Recupera sessione Supabase
+    const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
     if (sessionErr) throw sessionErr;
 
-    const session = sessionRes?.session;
-    const token = session?.access_token;
+    const token = sessionRes?.session?.access_token;
 
     if (!token) {
       setError("Sessione non valida. Rifai login.");
       return;
     }
 
-    // 2) Chiamata backend: genera STATE + URL OAuth (NO PKCE)
-   window.location.href = "/api/microsoft365/connect";
-return;
+    // 2) Redirect diretto passando il token al backend
+    window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(token)}`;
+  } catch (e) {
+    console.error("M365 connect fatal", e);
+    setError(e instanceof Error ? e.message : "Errore imprevisto");
+  } finally {
+    setConnecting(false);
+  }
 }
   async function handleDisconnect() {
     const confirmed = window.confirm(
