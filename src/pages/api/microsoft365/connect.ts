@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
       // 5) Costruisci URL authorize (NO PKCE)
-      const redirectUri = `${appBaseUrl(req)}/api/m365/callback`;
+      const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
 
       const params = new URLSearchParams({
         client_id: cfg.client_id,
@@ -138,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         { onConflict: "user_id" }
       );
 
-    const redirectUri = `${appBaseUrl(req)}/api/m365/callback`;
+    const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
 
     const params = new URLSearchParams({
       client_id: cfg.client_id,
