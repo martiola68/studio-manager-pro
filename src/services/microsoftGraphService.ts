@@ -1,5 +1,6 @@
 // src/services/microsoftGraphService.ts
 // ✅ CLIENT-SAFE: niente @azure/msal-node qui dentro
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export function hasMicrosoft365(studioId: string, userId: string): Promise<boolean>;
 export function hasMicrosoft365(userId: string): Promise<boolean>;
@@ -69,18 +70,27 @@ export async function graphApiCall<T = any>(
       ? JSON.stringify(options.body)
       : undefined;
 
-  const res = await fetch("/api/m365/graph", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    } as any,
-    body: JSON.stringify({
-      endpoint,
-      method,
-      body,
-    }),
-  });
+const supabase = getSupabaseClient();
+const { data: { session } } = await supabase.auth.getSession();
+const token = session?.access_token;
+
+if (!token) {
+  throw new Error("Sessione non valida. Rifai login.");
+}
+
+const res = await fetch("/api/m365/graph", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    ...(options?.headers || {}),
+  } as any,
+  body: JSON.stringify({
+    endpoint,
+    method,
+    body,
+  }),
+});
 
   if (res.status === 204) return {} as T;
 
