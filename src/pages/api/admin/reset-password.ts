@@ -49,7 +49,7 @@ export default async function handler(
     let emailError: string | null = null;
 
     try {
-      await sendPasswordResetEmail(email, tempPassword, { userId });
+      await sendPasswordResetEmail("Utente", email, tempPassword);
       emailSent = true;
     } catch (e: any) {
       console.error("Errore invio email:", e);
