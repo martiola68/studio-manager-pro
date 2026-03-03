@@ -110,7 +110,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       const url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`;
-      return res.status(200).json({ url });
+      if (req.method === "GET") {
+  res.writeHead(302, { Location: url });
+  return res.end();
+}
+
+return res.status(200).json({ url });
     }
 
     // caso normale: trovato per id
@@ -152,7 +157,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`;
-    return res.status(200).json({ url });
+    if (req.method === "GET") {
+  res.writeHead(302, { Location: url });
+  return res.end();
+}
+
+return res.status(200).json({ url });
   } catch (e: any) {
     console.error("[m365/connect] fatal", e);
     return res.status(500).json({ error: e?.message || "Errore interno" });
