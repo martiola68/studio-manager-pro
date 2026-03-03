@@ -146,16 +146,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    // ✅ 3) Leggi config studio
 const { data: cfg, error: cfgErr } = await supabaseAdmin
   .from("microsoft365_config")
-  .select("client_id, tenant_id, client_secret, enabled")
+  .select("client_id, tenant_id, client_secret_encrypted, enabled")
   .eq("studio_id", studioId)
   .maybeSingle();
 
 console.log("CFG ERR:", cfgErr);
 console.log("CFG KEYS:", cfg ? Object.keys(cfg) : null);
 console.log("CLIENT_ID OK:", !!cfg?.client_id, "LEN:", cfg?.client_id?.length);
-console.log("CLIENT_SECRET OK:", !!cfg?.client_secret, "LEN:", cfg?.client_secret?.length);
+console.log("CLIENT_SECRET_ENC OK:", !!cfg?.client_secret_encrypted, "LEN:", cfg?.client_secret_encrypted?.length);
      
-if (cfgErr || !cfg?.client_id || !cfg?.client_secret) {
+if (cfgErr || !cfg?.client_id || !cfg?.client_secret_encrypted) {
   return res.redirect(
     "/microsoft365?error=true&message=" +
       encodeURIComponent("Configurazione Microsoft 365 incompleta")
@@ -171,7 +171,7 @@ if (cfg.enabled === false) {
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    const clientSecret = cfg.client_secret;
+    const clientSecret = decrypt(cfg.client_secret_encrypted);
 
     /* =======================
        4) Exchange CODE → MSAL token cache (vera)
