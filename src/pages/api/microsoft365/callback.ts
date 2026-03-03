@@ -115,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from("tbmicrosoft_settings")
       .select("user_id")
       .eq("m365_oauth_state", state)
-      .maybeSingle();
+      .single();
 
     if (stateErr || !stateRow?.user_id) {
       return redirectErr(res, "State OAuth non valido o scaduto");
