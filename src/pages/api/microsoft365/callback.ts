@@ -1,4 +1,4 @@
-// src/pages/api/m365/callback.ts
+// src/pages/api/microsoft365/callback.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { encrypt, decrypt } from "@/lib/encryption365";
@@ -163,7 +163,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const tenantId = cfg.tenant_id || "common";
-    const redirectUri = `${appBaseUrl(req)}/api/m365/callback`;
+    const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
     const clientSecret = decrypt(cfg.client_secret_encrypted);
 
     /* =======================
