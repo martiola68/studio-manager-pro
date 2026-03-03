@@ -255,47 +255,46 @@ export default function Microsoft365Settings() {
     }
   }
 
-  async function handleTest() {
-    if (!studioId) {
-      setError("Studio ID non trovato");
-      return;
-    }
+ async function handleTest() {
+  if (!studioId) {
+    setError("Studio ID non trovato");
+    return;
+  }
 
-    setTesting(true);
-    setError(null);
-    setTestResult(null);
+  setTesting(true);
+  setError(null);
+  setTestResult(null);
 
-    try {
-      const response = await fetch("/api/microsoft365/test-delegated", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({}), // body non null
-});
+  try {
+    const response = await fetch("/api/m365/status", {
+      method: "GET",
+      cache: "no-store",
+    });
 
-      const result = await response.json().catch(() => ({}));
+    const result = await response.json().catch(() => ({} as any));
 
-      if (response.ok && result.success) {
-        setTestResult({
-          success: true,
-          message: result.message,
-          organization: result.organization,
-        });
-      } else {
-        setTestResult({
-          success: false,
-          error: result.error || "Test fallito",
-        });
-      }
-    } catch (err) {
-      console.error("Test error:", err);
+    if (response.ok && (result as any).success) {
+      setTestResult({
+        success: true,
+        message: (result as any).message,
+        organization: (result as any).organization,
+      });
+    } else {
       setTestResult({
         success: false,
-        error: err instanceof Error ? err.message : "Errore nel test",
+        error: (result as any).error || "Test fallito",
       });
-    } finally {
-      setTesting(false);
     }
+  } catch (err) {
+    console.error("Test error:", err);
+    setTestResult({
+      success: false,
+      error: err instanceof Error ? err.message : "Errore nel test",
+    });
+  } finally {
+    setTesting(false);
   }
+}
 
 // ✅ FLOW DEFINITIVO: POST /api/m365/connect -> { url } -> redirect browser
 async function handleConnect() {
