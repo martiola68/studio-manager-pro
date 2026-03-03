@@ -153,9 +153,9 @@ const { data: cfg, error: cfgErr } = await supabaseAdmin
 console.log("CFG ERR:", cfgErr);
 console.log("CFG KEYS:", cfg ? Object.keys(cfg) : null);
 console.log("CLIENT_ID OK:", !!cfg?.client_id, "LEN:", cfg?.client_id?.length);
-console.log("CLIENT_SECRET_ENC OK:", !!cfg?.client_secret_encrypted, "LEN:", cfg?.client_secret_encrypted?.length);
+console.log("CLIENT_SECRET OK:", !!cfg?.client_secret, "LEN:", cfg?.client_secret?.length);
      
-if (cfgErr || !cfg?.client_id || !cfg?.client_secret_encrypted) {
+if (cfgErr || !cfg?.client_id || !cfg?.client_secret) {
   return res.redirect(
     "/microsoft365?error=true&message=" +
       encodeURIComponent("Configurazione Microsoft 365 incompleta")
