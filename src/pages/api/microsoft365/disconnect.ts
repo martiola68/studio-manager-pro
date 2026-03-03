@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin"; // <-- se non ce l'hai, vedi nota sotto
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 interface DisconnectResponse {
   success: boolean;
@@ -15,7 +15,10 @@ function getBearerToken(req: NextApiRequest): string | null {
   return m?.[1] ?? null;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<DisconnectResponse>) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<DisconnectResponse>
+) {
   if (req.method !== "POST") {
     return res.status(405).json({
       success: false,
@@ -32,21 +35,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       error: sessionError,
     } = await supabase.auth.getSession();
 
-    let userId: string | null = session?.user?.id ?? null;
+    let authUserId: string | null = session?.user?.id ?? null;
 
-    // 2) Fallback: Bearer token (se cookie assente o errore sessione)
-    if (!userId) {
+    // 2) Fallback: Bearer token
+    if (!authUserId) {
       const bearer = getBearerToken(req);
       if (bearer) {
-        // Qui uso un client admin o "public" server-side che possa validare JWT.
-        // Se usi supabaseAdmin (service role) è super affidabile.
         const { data, error } = await supabaseAdmin.auth.getUser(bearer);
-        if (!error) userId = data.user?.id ?? null;
+        if (!error) authUserId = data.user?.id ?? null;
       }
     }
 
-    if (!userId) {
-      // Se vuoi, puoi loggare sessionError per debug, senza esporlo al client
+    if (!authUserId) {
       console.warn("[Microsoft 365 Disconnect] Not authenticated", {
         hasCookieSession: Boolean(session),
         sessionError: sessionError?.message,
@@ -59,28 +59,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       });
     }
 
-    const { error: deleteError, data: deletedRows } = await supabase
-      .from("tbmicrosoft_tokens")
-      .delete()
-      .eq("user_id", userId)
-      .select("user_id"); // per avere feedback su quante righe hai eliminato
+    // 3) Trova studio_id e user_id (tabella tbutenti)
+    const { data: utente, error: utenteErr } = await supabaseAdmin
+      .from("tbutenti")
+      .select("id, studio_id")
+      .or(`id.eq.${authUserId},email.eq.${session?.user?.email ?? ""}`)
+      .maybeSingle();
 
-    if (deleteError) {
-      console.error("[Microsoft 365 Disconnect] Delete error:", {
-        userId,
-        error: deleteError.message,
+    if (utenteErr || !utente?.id || !utente?.studio_id) {
+      console.error("[Microsoft 365 Disconnect] tbutenti not found:", {
+        authUserId,
+        utenteErr: utenteErr?.message,
       });
+      return res.status(500).json({
+        success: false,
+        error: "Impossibile determinare studio/utente.",
+      });
+    }
 
+    const studioId = utente.studio_id;
+    const userId = utente.id;
+
+    // 4) Marca come revocato (NON cancellare la riga)
+    const { error: revErr } = await supabaseAdmin
+      .from("tbmicrosoft365_user_tokens")
+      .update({
+        revoked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("studio_id", studioId)
+      .eq("user_id", userId);
+
+    if (revErr) {
+      console.error("[Microsoft 365 Disconnect] revoke update error:", {
+        studioId,
+        userId,
+        error: revErr.message,
+      });
       return res.status(500).json({
         success: false,
         error: "Errore durante la disconnessione. Riprova.",
       });
     }
 
-    console.log("[Microsoft 365 Disconnect] Success:", {
-      userId,
-      tokensDeleted: deletedRows?.length ?? 0,
-    });
+    console.log("[Microsoft 365 Disconnect] Success:", { studioId, userId });
 
     return res.status(200).json({
       success: true,
@@ -88,7 +110,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     });
   } catch (error) {
     console.error("[Microsoft 365 Disconnect] Unexpected error:", error);
-
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Errore sconosciuto",
