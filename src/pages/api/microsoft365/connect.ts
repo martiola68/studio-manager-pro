@@ -26,11 +26,13 @@ function randomState(len = 32) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+ if (req.method !== "GET" && req.method !== "POST") {
+  return res.status(405).json({ error: "Method not allowed" });
+}
 
   try {
     // 1) Verifica utente (Supabase access token)
-    const token = getBearerToken(req);
+    const token = getBearerToken(req) || (req.query.token as string) || null;
     if (!token) return res.status(401).json({ error: "Missing Authorization Bearer token" });
 
     const { data: userRes, error: userErr } = await supabaseAdmin.auth.getUser(token);
