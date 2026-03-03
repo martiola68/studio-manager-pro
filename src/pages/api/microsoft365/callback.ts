@@ -171,7 +171,7 @@ if (cfg.enabled === false) {
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    const clientSecret = cfg.client_secret;
+    const clientSecret = decrypt(cfg.client_secret);
 
 console.log("[m365] clientSecret len:", clientSecret?.length);
 console.log("[m365] clientSecret starts:", (clientSecret || "").slice(0, 4));
