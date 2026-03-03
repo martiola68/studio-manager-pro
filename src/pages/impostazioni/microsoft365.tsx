@@ -332,15 +332,8 @@ async function handleConnect() {
     }
 
     // 2) Chiamata backend: genera STATE + URL OAuth (NO PKCE)
-    const r = await fetch("/api/m365/connect", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}), // body vuoto ma presente
-      credentials: "include",
-    });
+   window.location.href = "/api/m365/connect";
+return;
 
     const data = await r.json().catch(() => null);
 
