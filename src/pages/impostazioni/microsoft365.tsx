@@ -315,19 +315,36 @@ async function handleConnect() {
   setSuccessMessage(null);
 
   try {
-    // 1) Recupera sessione Supabase
+    // 1) Recupera token supabase
     const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
     if (sessionErr) throw sessionErr;
 
     const token = sessionRes?.session?.access_token;
-
     if (!token) {
       setError("Sessione non valida. Rifai login.");
       return;
     }
 
-    // 2) Redirect diretto passando il token al backend
-    window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(token)}`;
+    // 2) Chiede al backend la URL di login Microsoft
+    const r = await fetch("/api/microsoft365/connect", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    const data = await r.json().catch(() => null);
+
+    if (!r.ok || !data?.url) {
+      console.error("m365 connect error", data);
+      setError(data?.error || "Errore connessione Microsoft 365");
+      return;
+    }
+
+    // 3) Redirect vero alla pagina Microsoft
+    window.location.href = data.url;
   } catch (e) {
     console.error("M365 connect fatal", e);
     setError(e instanceof Error ? e.message : "Errore imprevisto");
