@@ -78,16 +78,29 @@ if (!token) {
   throw new Error("Sessione non valida. Rifai login.");
 }
 
+// ✅ Normalizza input
+const endpointFinal =
+  typeof endpoint === "string" ? endpoint : (options as any)?.endpoint;
+
+const methodFinal =
+  typeof method === "string"
+    ? method
+    : ((options as any)?.method as string) || "GET";
+
+if (!endpointFinal || typeof endpointFinal !== "string") {
+  throw new Error("Missing endpoint/method: endpoint mancante");
+}
+
 const res = await fetch("/api/m365/graph", {
   method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-    ...(options?.headers || {}),
-  } as any,
+ headers: {
+  "Content-Type": "application/json",
+  ...(options?.headers || {}),
+  Authorization: `Bearer ${token}`,
+} as any,
   body: JSON.stringify({
-    endpoint,
-    method,
+    endpoint: endpointFinal,
+    method: methodFinal,
     body,
   }),
 });
