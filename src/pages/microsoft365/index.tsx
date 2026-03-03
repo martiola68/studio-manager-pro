@@ -83,6 +83,7 @@ async function loadM365Status() {
 } finally {
   setM365Loading(false);
 }
+  }
 useEffect(() => {
   loadM365Status()
 }, [])
