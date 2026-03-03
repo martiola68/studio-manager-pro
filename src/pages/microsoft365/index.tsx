@@ -61,11 +61,11 @@ async function loadM365Status() {
   setM365Loading(true)
 
  try {
-  const res = await fetch("/api/m365/status", {
-    headers: {
-      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
-    },
-  });
+   const res = await fetch("/api/m365/status", {
+65     headers: {
+66       Authorization: `Bearer ${bearer}`,
+67     },
+68   })
   const json = await res.json();
 
   setM365Connected(json.connected === true);
@@ -169,6 +169,7 @@ useEffect(() => {
       if (sessionErr) throw sessionErr;
 
       const session = sessionRes?.session;
+      const bearer = session.access_token;
       if (!session) {
         router.push("/login");
         return;
