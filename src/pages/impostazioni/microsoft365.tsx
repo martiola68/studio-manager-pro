@@ -266,7 +266,7 @@ export default function Microsoft365Settings() {
   setTestResult(null);
 
   try {
-    const response = await fetch("/api/m365/status", {
+    const response = await fetch("/api/microsoft365/status", {
       method: "GET",
       cache: "no-store",
     });
@@ -296,7 +296,7 @@ export default function Microsoft365Settings() {
   }
 }
 
-// ✅ FLOW DEFINITIVO: POST /api/m365/connect -> { url } -> redirect browser
+// ✅ FLOW DEFINITIVO: POST /api/microsoft365/connect -> { url } -> redirect browser
 async function handleConnect() {
   if (!config) {
     setError(
@@ -330,7 +330,7 @@ async function handleConnect() {
     }
 
     // 2) Chiamata backend: genera STATE + URL OAuth (NO PKCE)
-   window.location.href = "/api/m365/connect";
+   window.location.href = "/api/microsoft365/connect";
 return;
 }
   async function handleDisconnect() {
