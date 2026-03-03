@@ -61,18 +61,27 @@ async function loadM365Status() {
   setM365Loading(true)
 
  try {
-   const res = await fetch("/api/m365/status", {
-     headers: {
-      Authorization: `Bearer ${sessionRes?.session?.access_token ?? ""}`,
-    },
-  })
-  const json = await res.json();
+  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+  if (sessionErr) throw sessionErr;
 
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) {
+    setM365Connected(false);
+    return;
+  }
+
+  const res = await fetch("/api/m365/status", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const json = await res.json();
   setM365Connected(json.connected === true);
 } catch (e) {
   setM365Connected(false);
-}
-  setM365Loading(false)
+} finally {
+  setM365Loading(false);
 }
 useEffect(() => {
   loadM365Status()
