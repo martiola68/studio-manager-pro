@@ -350,9 +350,35 @@ export async function sendEmail(userId: string, message: GraphSendMailMessage): 
 /* =========================================
    microsoftGraphService export (legacy)
 ========================================= */
+export async function sendChannelMessage(
+  userId: string,
+  teamId: string,
+  channelId: string,
+  messageHtml: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await graphApiCall(
+      userId,
+      `/teams/${teamId}/channels/${channelId}/messages`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          body: {
+            contentType: "html",
+            content: messageHtml,
+          },
+        }),
+      }
+    );
 
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || String(e) };
+  }
+}
 export const microsoftGraphService = {
   graphApiCall,
   hasMicrosoft365,
   sendEmail,
+  sendChannelMessage,
 };
