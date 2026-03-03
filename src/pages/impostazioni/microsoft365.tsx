@@ -465,7 +465,7 @@ return;
                 {userConnection.lastConnection && (
                   <p className="text-sm text-muted-foreground">
                     Ultima connessione:{" "}
-                    {userConnection.lastConnection.toLocaleString("it-IT", {
+                    {userConnection.lastConnection!.toLocaleString("it-IT", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
