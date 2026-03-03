@@ -56,7 +56,9 @@ export async function sendEmailViaMicrosoft(
   .eq("id", userId)
   .single();
 
-if (uErr || !u?.studio_id) return false;
+if (uErr || !u?.studio_id) {
+  throw new Error("Studio non trovato per invio email Microsoft.");
+}
 
 const studioId = u.studio_id as string;
   
