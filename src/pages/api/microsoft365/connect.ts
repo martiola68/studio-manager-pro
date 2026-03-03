@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (cfgErr || !cfg?.client_id) return res.status(400).json({ error: "Configurazione Microsoft 365 incompleta" });
       if (cfg.enabled === false) return res.status(400).json({ error: "Microsoft 365 disabilitato per lo studio" });
 
-      const tenant = cfg.tenant_id || "common";
+      const tenant = cfg.tenant_id;
       const state = randomState(48);
 
       // 4) Salva lo state in tbmicrosoft_settings (NO PKCE: niente code_verifier)
