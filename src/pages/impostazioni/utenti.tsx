@@ -241,7 +241,7 @@ export default function GestioneUtentiPage() {
         },
         body: JSON.stringify({
           userId: utente.id,
-          userEmail: utente.email,
+          email: utente.email,
           nome: utente.nome
         })
       });
