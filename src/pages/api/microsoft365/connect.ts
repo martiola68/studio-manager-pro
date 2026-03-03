@@ -99,6 +99,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // 5) Costruisci URL authorize (NO PKCE)
       const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
+      
+console.log("[m365/connect] tenant used:", tenant);
 
       const params = new URLSearchParams({
         client_id: cfg.client_id,
