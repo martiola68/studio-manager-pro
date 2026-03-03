@@ -38,19 +38,18 @@ async function acquireAccessToken(studioId: string, userId: string): Promise<str
     throw new Error("Microsoft 365 non configurato o token non valido.");
   }
 
-  const { data: settings, error: setErr } = await supabaseAdmin
-    .from("tbmicrosoft_settings")
-    .select("client_id, tenant_id, client_secret_encrypted")
-    .eq("studio_id", studioId)
-    .single<M365SettingsRow>();
+const { data: settings, error: setErr } = await supabaseAdmin
+  .from("microsoft365_config")
+  .select("client_id, tenant_id, client_secret")
+  .eq("studio_id", studioId)
+  .single<{ client_id: string; tenant_id: string; client_secret: string }>();
 
-  if (setErr || !settings?.client_id || !settings?.tenant_id || !settings?.client_secret_encrypted) {
-    throw new Error("Microsoft 365 non configurato per lo studio (client credentials mancanti).");
-  }
+if (setErr || !settings?.client_id || !settings?.tenant_id || !settings?.client_secret) {
+  throw new Error("Microsoft 365 non configurato per lo studio (client credentials mancanti).");
+}
 
-  const serializedCache = decrypt(tokenRow.token_cache_encrypted);
-  const clientSecret = decrypt(settings.client_secret_encrypted);
-
+const serializedCache = decrypt(tokenRow.token_cache_encrypted); // lascia com’è
+const clientSecret = decrypt(settings.client_secret); // ✅ qui decrypt sul campo giusto
   let cacheHasChanged = false;
   const cachePlugin = {
     beforeCacheAccess: async (ctx: any) => {
@@ -144,7 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: body ?? undefined,
+      body: body != null ? JSON.stringify(body) : undefined,
     });
 
     if (graphRes.status === 204) return res.status(204).end();
