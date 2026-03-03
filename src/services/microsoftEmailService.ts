@@ -1,5 +1,5 @@
 import { graphApiCall, hasMicrosoft365 } from "./microsoftGraphService";
-
+import { supabase } from "@/lib/supabase/client";
 /**
  * Microsoft Email Service
  * Invia email tramite Microsoft Graph API usando Outlook
