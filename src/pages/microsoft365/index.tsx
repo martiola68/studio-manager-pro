@@ -70,7 +70,7 @@ async function loadM365Status() {
     return;
   }
 
-  const res = await fetch("/api/m365/status", {
+  const res = await fetch("/api/microsoft365/status", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -408,7 +408,7 @@ const bearer = session.access_token;
         return;
       }
 
-      const r = await fetch("/api/m365/connect", {
+      const r = await fetch("/api/microsoft365/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
