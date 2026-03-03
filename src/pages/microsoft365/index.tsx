@@ -178,11 +178,11 @@ useEffect(() => {
       if (sessionErr) throw sessionErr;
 
       const session = sessionRes?.session;
-      const bearer = session.access_token;
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+if (!session) {
+  router.push("/login");
+  return;
+}
+const bearer = session.access_token;
 
       const currentUserId = session.user.id;
       setUserId(currentUserId);
