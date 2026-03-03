@@ -43,6 +43,13 @@ export default async function handler(
       .eq("user_id", utente.id)
       .maybeSingle()
 
+    console.log("[m365/status] studio_id:", utente.studio_id, "user_id:", utente.id);
+console.log("[m365/status] tokenRow:", {
+  hasCache: !!tokenRow?.token_cache_encrypted,
+  revoked_at: tokenRow?.revoked_at,
+  connected_at: tokenRow?.connected_at,
+});
+
     const connected =
       !!tokenRow?.token_cache_encrypted && tokenRow.revoked_at === null
 
