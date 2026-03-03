@@ -60,16 +60,18 @@ const [m365Loading, setM365Loading] = useState(true)
 async function loadM365Status() {
   setM365Loading(true)
 
-  try {
-    const res = await fetch("/api/m365/status")
-    const json = await res.json()
+ try {
+  const res = await fetch("/api/m365/status", {
+    headers: {
+      ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+    },
+  });
+  const json = await res.json();
 
-    setM365Connected(json.connected === true)
-  } catch (e) {
-    // se qualcosa va storto → consideriamo NON connesso
-    setM365Connected(false)
-  }
-
+  setM365Connected(json.connected === true);
+} catch (e) {
+  setM365Connected(false);
+}
   setM365Loading(false)
 }
 useEffect(() => {
