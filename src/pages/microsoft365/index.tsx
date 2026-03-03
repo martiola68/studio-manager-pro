@@ -384,56 +384,41 @@ const bearer = session.access_token;
   }
 
   // ✅ FLOW: POST /api/microsoft365/connect -> { url } -> redirect browser
-  async function handleConnect() {
-    if (!config) {
-      setError(
-        "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
-      );
-      return;
-    }
-
-    if (!config.enabled) {
-      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
-      return;
-    }
-
-    setConnecting(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const bearer = await getSupabaseBearer();
-      if (!bearer) {
-        setError("Sessione non valida. Rifai login.");
-        return;
-      }
-
-      const r = await fetch("/api/microsoft365/connect", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${bearer}`,
-        },
-        body: JSON.stringify({}),
-        credentials: "include",
-      });
-
-      const data = await r.json().catch(() => null);
-
-      if (!r.ok || !data?.url) {
-        console.error("m365 connect error", data);
-        setError(data?.error || "Errore connessione Microsoft 365");
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch (e) {
-      console.error("M365 connect fatal", e);
-      setError(e instanceof Error ? e.message : "Errore imprevisto");
-    } finally {
-      setConnecting(false);
-    }
+ async function handleConnect() {
+  if (!config) {
+    setError(
+      "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
+    );
+    return;
   }
+
+  if (!config.enabled) {
+    setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+    return;
+  }
+
+  setConnecting(true);
+  setError(null);
+  setSuccessMessage(null);
+
+  try {
+    const bearer = await getSupabaseBearer();
+
+    if (!bearer) {
+      setError("Sessione non valida. Rifai login.");
+      return;
+    }
+
+    // 🔥 AVVIO OAUTH CON REDIRECT DIRETTO (niente fetch)
+    window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}`;
+
+  } catch (e) {
+    console.error("M365 connect fatal", e);
+    setError(e instanceof Error ? e.message : "Errore imprevisto");
+  } finally {
+    setConnecting(false);
+  }
+}
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
