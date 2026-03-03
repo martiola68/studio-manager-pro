@@ -18,7 +18,7 @@ export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean>
   const token = session?.access_token;
   if (!token) return false;
 
-  const res = await fetch("/api/m365/status", {
+  const res = await fetch("/api/microsoft365/status", {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -33,7 +33,7 @@ export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean>
 }
 
 /* =========================================================
-   graphApiCall (client facade -> /api/m365/graph)
+   graphApiCall (client facade -> /api/microsoft365/graph)
    ✅ Supporta TUTTE le firme legacy:
    - (endpoint)
    - (endpoint, options)
@@ -103,7 +103,7 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
     throw new Error("endpoint/method: method mancante");
   }
 
-  const res = await fetch("/api/m365/graph", {
+  const res = await fetch("/api/microsoft365/graph", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
