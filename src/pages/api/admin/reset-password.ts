@@ -1,128 +1,73 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { generateSecurePassword, validatePassword } from "@/lib/passwordGenerator";
+import { generateSecurePassword } from "@/lib/passwordGenerator";
 import { sendPasswordResetEmail } from "@/services/emailService";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabaseAdmin = supabaseUrl && serviceRoleKey ? createClient(
-  supabaseUrl,
-  serviceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-) : null;
+// ⚠️ USA SERVICE ROLE KEY (server-side only)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // NON ANON KEY
+);
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  if (!supabaseAdmin) {
-    return res.status(500).json({ 
-      error: "Configurazione server non valida",
-      details: "Service Role Key mancante o non valida"
-    });
+    return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
   try {
-    const { userId, userEmail } = req.body;
+    const { userId, email } = req.body;
 
-    console.log("🔄 Reset password richiesto per:", { userId, userEmail });
-
-    if (!userId || !userEmail) {
-      return res.status(400).json({ error: "userId e userEmail richiesti" });
-    }
-
-    const { data: utente, error: selectError } = await supabaseAdmin
-      .from("tbutenti")
-      .select("nome, cognome, email")
-      .eq("id", userId)
-      .single();
-
-    if (selectError || !utente) {
-      console.error("❌ Errore recupero utente:", selectError);
-      return res.status(404).json({ 
-        error: "Utente non trovato",
-        details: selectError?.message
+    if (!userId || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "userId ed email obbligatori",
       });
     }
 
-    console.log("✅ Utente trovato:", { nome: utente.nome, email: utente.email });
+    // 1️⃣ Genera nuova password temporanea
+    const tempPassword = generateSecurePassword();
 
-    const nuovaPassword = generateSecurePassword();
-    console.log("✅ Password generata");
+    // 2️⃣ Aggiorna password tramite admin API
+    const { error: updateError } =
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: tempPassword,
+      });
 
-    if (!validatePassword(nuovaPassword)) {
-      console.error("❌ Password generata non valida:", nuovaPassword);
-      return res.status(500).json({ error: "Errore generazione password sicura" });
-    }
-
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      { password: nuovaPassword }
-    );
-
-    if (error) {
-      console.error("❌ Errore Supabase Admin updateUserById:", error);
-      return res.status(500).json({ 
-        error: "Errore durante il reset della password",
-        details: error.message,
-        code: error.code
+    if (updateError) {
+      console.error("Errore update password:", updateError);
+      return res.status(500).json({
+        success: false,
+        message: "Errore aggiornamento password",
       });
     }
 
-    console.log("✅ Password aggiornata in Supabase Auth");
+    // 3️⃣ Prova invio email
+    let emailSent = false;
+    let emailError: string | null = null;
 
     try {
-      const nomeCompleto = `${utente.nome} ${utente.cognome || ""}`.trim();
-      console.log("📧 Invio email a:", utente.email, "Nome:", nomeCompleto);
-      
-      const emailResult = await sendPasswordResetEmail(
-        nomeCompleto,
-        utente.email,
-        nuovaPassword
-      );
-
-      if (emailResult.success) {
-        console.log("✅ Email inviata con successo");
-      } else {
-        console.error("⚠️ Email non inviata:", emailResult.error);
-      }
-
-      return res.status(200).json({
-        success: true,
-        tempPassword: nuovaPassword,
-        message: "Password resettata con successo",
-        emailSent: emailResult.success,
-        emailError: emailResult.error
-      });
-
-    } catch (emailError: any) {
-      console.error("💥 Errore invio email:", emailError);
-      
-      return res.status(200).json({
-        success: true,
-        tempPassword: nuovaPassword,
-        message: "Password resettata, ma email non inviata",
-        emailSent: false,
-        emailError: emailError.message
-      });
+      await sendPasswordResetEmail(email, tempPassword);
+      emailSent = true;
+    } catch (e: any) {
+      console.error("Errore invio email:", e);
+      emailError = e?.message || String(e);
     }
 
+    return res.status(200).json({
+      success: true,
+      tempPassword,
+      message: "Password resettata con successo",
+      emailSent,
+      emailError,
+    });
   } catch (error: any) {
-    console.error("💥 Errore API reset password:", error);
-    return res.status(500).json({ 
-      error: "Errore interno del server",
-      details: error.message,
-      name: error.name
+    console.error("RESET PASSWORD ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error?.message || "Errore interno server",
     });
   }
 }
