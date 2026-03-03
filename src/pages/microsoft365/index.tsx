@@ -395,7 +395,7 @@ useEffect(() => {
         return;
       }
 
-      const r = await fetch("/api/microsoft365/connect", {
+      const r = await fetch("/api/m365/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
