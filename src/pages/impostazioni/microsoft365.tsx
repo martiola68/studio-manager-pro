@@ -512,24 +512,32 @@ return;
         </CardContent>
       </Card>
 
-      {testResult && (
-        <Alert variant={testResult.success ? "default" : "destructive"}>
-          {testResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          <AlertDescription>
-            {testResult.success ? (
-              <>
-                <strong>✅ Connessione riuscita!</strong>
-                {testResult.organization && <div className="mt-1">Organizzazione: {testResult.organization}</div>}
-              </>
-            ) : (
-              <>
-                <strong>❌ Connessione fallita</strong>
-                <div className="mt-1">{testResult.error}</div>
-              </>
-            )}
-          </AlertDescription>
-        </Alert>
+     {testResult && (
+  <Alert variant={testResult!.success ? "default" : "destructive"}>
+    {testResult!.success ? (
+      <CheckCircle2 className="h-4 w-4" />
+    ) : (
+      <AlertCircle className="h-4 w-4" />
+    )}
+    <AlertDescription>
+      {testResult!.success ? (
+        <>
+          <strong>✅ Connessione riuscita!</strong>
+          {testResult!.organization && (
+            <div className="mt-1">
+              Organizzazione: {testResult!.organization}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <strong>❌ Connessione fallita</strong>
+          <div className="mt-1">{testResult!.error}</div>
+        </>
       )}
+    </AlertDescription>
+  </Alert>
+)}
 
       <Card>
         <CardHeader>
