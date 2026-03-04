@@ -72,10 +72,11 @@ async function buildMsalSerializedCache(params: {
 
   // acquire token by code (delegated)
   await msalApp.acquireTokenByCode({
-    code: params.code,
-    redirectUri: params.redirectUri,
-    scopes: scopes.split(" "),
-  });
+  code: params.code,
+  redirectUri: params.redirectUri,
+  scopes: scopes.split(" "),
+  prompt: "consent",
+});
 
   // A questo punto MSAL ha popolato la cache (access token, refresh token, account, ecc.)
   const serializedCache = msalApp.getTokenCache().serialize();
