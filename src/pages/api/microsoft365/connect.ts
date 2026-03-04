@@ -103,8 +103,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
 console.log("[m365/connect] tenant used:", tenant);
 
-      params.append("prompt", "consent");
-
 const tenantId = cfg.tenant_id;
 console.log("[m365/connect] authorize tenant:", tenantId);
 
@@ -146,7 +144,7 @@ return res.status(200).json({ url });
       );
 
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-
+    
     const params = new URLSearchParams({
       client_id: cfg.client_id,
       response_type: "code",
