@@ -108,7 +108,7 @@ console.log("[m365/connect] tenant used:", tenant);
         response_type: "code",
         redirect_uri: redirectUri,
         response_mode: "query",
-        scope: "offline_access User.Read Mail.Read Calendars.Read",
+        scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
         state,
       });
 
@@ -158,7 +158,7 @@ return res.status(200).json({ url });
       response_type: "code",
       redirect_uri: redirectUri,
       response_mode: "query",
-      scope: "offline_access User.Read Mail.Read Calendars.Read",
+      scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
       state,
     });
 
