@@ -120,7 +120,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       response_mode: "query",
       scope: "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send",
       prompt: "consent",
-      consent_prompt: "admin_consent",
       state,
     });
 
