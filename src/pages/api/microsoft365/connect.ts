@@ -114,7 +114,10 @@ console.log("[m365/connect] tenant used:", tenant);
 
       params.append("prompt", "consent");
 
-const url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`;
+const tenantId = cfg.tenant_id;
+console.log("[m365/connect] authorize tenant:", tenantId);
+
+const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 
 if (req.method === "GET") {
   res.writeHead(302, { Location: url });
@@ -162,7 +165,11 @@ return res.status(200).json({ url });
       state,
     });
 
-    const url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/authorize?${params.toString()}`;
+   const tenantId = cfg.tenant_id;
+console.log("[m365/connect] authorize tenant:", tenantId);
+
+const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+    
     if (req.method === "GET") {
   res.writeHead(302, { Location: url });
   return res.end();
