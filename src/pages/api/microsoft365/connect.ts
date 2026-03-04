@@ -11,30 +11,34 @@ function getBearerToken(req: NextApiRequest) {
 }
 
 function appBaseUrl(req: NextApiRequest) {
-  const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+  const proto =
+    (req.headers["x-forwarded-proto"] as string) ||
+    (req.headers["x-forwarded-protocol"] as string) ||
+    "https";
   const host = (req.headers["x-forwarded-host"] as string) || req.headers.host;
   return `${proto}://${host}`;
 }
 
 function randomState(len = 32) {
-  // state semplice, url-safe
-  const chars =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let out = "";
   for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-   console.log("[m365/connect] HIT", { method: req.method });
- if (req.method !== "GET" && req.method !== "POST") {
-  return res.status(405).json({ error: "Method not allowed" });
-}
+  console.log("[m365/connect] HIT", { method: req.method });
+
+  if (req.method !== "GET" && req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     // 1) Verifica utente (Supabase access token)
     const token = getBearerToken(req) || (req.query.token as string) || null;
-    if (!token) return res.status(401).json({ error: "Missing Authorization Bearer token" });
+    if (!token) {
+      return res.status(401).json({ error: "Missing Authorization Bearer token" });
+    }
 
     const { data: userRes, error: userErr } = await supabaseAdmin.auth.getUser(token);
     if (userErr || !userRes?.user) {
@@ -42,18 +46,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const authUser = userRes.user;
 
-    // 2) Mappa su tbutenti (se il tuo id coincide con auth.uid usa quello; altrimenti usa email)
-    // Qui assumo che tbutenti.id = auth.uid (comune). Se non è così, cambia la query a .eq("email", authUser.email)
-    const { data: utente, error: uErr } = await supabaseAdmin
+    // 2) Recupera riga utente su tbutenti: prima per id, fallback per email
+    const { data: utenteById, error: uErr } = await supabaseAdmin
       .from("tbutenti")
       .select("id, studio_id, email")
       .eq("id", authUser.id)
       .maybeSingle();
 
-    const userRow = utente ?? null;
+    let userRow = utenteById ?? null;
 
     if (!userRow?.studio_id) {
-      // fallback: prova per email se non trovi per id
       if (!authUser.email) {
         return res.status(400).json({ error: "Impossibile determinare l'utente (email mancante)" });
       }
@@ -68,53 +70,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: "Studio utente non trovato" });
       }
 
-      // usa questo come userId “interno”
-      // NB: per coerenza con callback che cerca state->user_id, salviamo user_id = utenteByEmail.id
-      userId = utenteByEmail.id;
-      studioId = utenteByEmail.studio_id;
+      userRow = utenteByEmail; // usa fallback
+    }
 
-      // 3) Leggi config studio (client_id, tenant_id)
-      const { data: cfg, error: cfgErr } = await supabaseAdmin
-        .from("microsoft365_config")
-        .select("client_id, tenant_id, enabled")
-        .eq("studio_id", studioId)
-        .maybeSingle();
+    // ✅ Da qui in poi: userId/studioId ESISTONO sempre
+    const userId = userRow.id;
+    const studioId = userRow.studio_id;
 
-      if (cfgErr || !cfg?.client_id) return res.status(400).json({ error: "Configurazione Microsoft 365 incompleta" });
-      if (cfg.enabled === false) return res.status(400).json({ error: "Microsoft 365 disabilitato per lo studio" });
-
-      const tenant = cfg.tenant_id;
-      const state = randomState(48);
-
-      // 4) Salva lo state in tbmicrosoft_settings (NO PKCE: niente code_verifier)
-      await supabaseAdmin
-        .from("tbmicrosoft_settings")
-        .upsert(
-          {
-            user_id: userId,
-            m365_oauth_state: state,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
-
-    // caso normale: trovato per id
-    let userId = userRow.id;
-let studioId = userRow.studio_id;
-
+    // 3) Leggi config studio
     const { data: cfg, error: cfgErr } = await supabaseAdmin
       .from("microsoft365_config")
       .select("client_id, tenant_id, enabled")
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    if (cfgErr || !cfg?.client_id) return res.status(400).json({ error: "Configurazione Microsoft 365 incompleta" });
-    if (cfg.enabled === false) return res.status(400).json({ error: "Microsoft 365 disabilitato per lo studio" });
+    if (cfgErr || !cfg?.client_id || !cfg?.tenant_id) {
+      return res.status(400).json({ error: "Configurazione Microsoft 365 incompleta" });
+    }
+    if (cfg.enabled === false) {
+      return res.status(400).json({ error: "Microsoft 365 disabilitato per lo studio" });
+    }
 
-    const tenant = cfg.tenant_id || "common";
+    const tenantId = cfg.tenant_id;
     const state = randomState(48);
 
-    await supabaseAdmin
+    // 4) Salva lo state in tbmicrosoft_settings
+    const { error: upStateErr } = await supabaseAdmin
       .from("tbmicrosoft_settings")
       .upsert(
         {
@@ -125,8 +106,13 @@ let studioId = userRow.studio_id;
         { onConflict: "user_id" }
       );
 
+    if (upStateErr) {
+      return res.status(500).json({ error: `Errore salvataggio state: ${upStateErr.message}` });
+    }
+
+    // 5) Costruisci authorize URL (delegated)
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    
+
     const params = new URLSearchParams({
       client_id: cfg.client_id,
       response_type: "code",
@@ -137,20 +123,19 @@ let studioId = userRow.studio_id;
       state,
     });
 
-   const tenantId = cfg.tenant_id;
-console.log("[m365/connect] authorize tenant:", tenantId);
+    console.log("[m365/connect] authorize tenant:", tenantId);
 
-const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
-    
+    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+
+    // 6) Redirect o JSON
     if (req.method === "GET") {
-  res.writeHead(302, { Location: url });
-  return res.end();
-}
+      res.writeHead(302, { Location: url });
+      return res.end();
+    }
 
-return res.status(200).json({ url });
+    return res.status(200).json({ url });
   } catch (e: any) {
     console.error("[m365/connect] fatal", e);
     return res.status(500).json({ error: e?.message || "Errore interno" });
   }
 }
-
