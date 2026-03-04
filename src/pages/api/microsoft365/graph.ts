@@ -154,7 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // se è JSON valido lo rimando tale e quale
     return res.status(200).send(text || "{}");
   } catch (e: any) {
-    console.error("[/api/m365/graph]", e);
+    console.error("[/api/microsoft365/graph]", e);
     return res.status(500).json({ error: e?.message || String(e) });
   }
 }
