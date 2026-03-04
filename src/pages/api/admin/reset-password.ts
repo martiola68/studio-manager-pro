@@ -1,73 +1,77 @@
+// src/pages/api/admin/reset-password.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import { generateSecurePassword } from "@/lib/passwordGenerator";
 import { sendPasswordResetEmail } from "@/services/emailService";
 
-// ⚠️ USA SERVICE ROLE KEY (server-side only)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // NON ANON KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+type Ok = {
+  success: true;
+  message: string;
+  emailSent: true;
+};
+
+type Err = {
+  success: false;
+  message: string;
+  details?: string;
+  emailSent?: false;
+};
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<Ok | Err>) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
   try {
-    const { userId, email } = req.body;
+    const { userId, email, nome } = req.body ?? {};
 
     if (!userId || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "userId ed email obbligatori",
-      });
+      return res.status(400).json({ success: false, message: "userId ed email obbligatori" });
     }
 
-    // 1️⃣ Genera nuova password temporanea
+    // 1) Genera nuova password
     const tempPassword = generateSecurePassword();
 
-    // 2️⃣ Aggiorna password tramite admin API
-    const { error: updateError } =
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: tempPassword,
-      });
+    // 2) Aggiorna password via Admin API
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: tempPassword,
+    });
 
     if (updateError) {
-      console.error("Errore update password:", updateError);
+      console.error("[reset-password] updateUserById error:", updateError);
       return res.status(500).json({
         success: false,
         message: "Errore aggiornamento password",
+        details: updateError.message,
       });
     }
 
-    // 3️⃣ Prova invio email
-    let emailSent = false;
-    let emailError: string | null = null;
-
+    // 3) Invia email (SE FALLISCE -> ERRORE)
     try {
-      await sendPasswordResetEmail("Utente", email, tempPassword);
-      emailSent = true;
+      await sendPasswordResetEmail(nome || "Utente", email, tempPassword);
     } catch (e: any) {
-      console.error("Errore invio email:", e);
-      emailError = e?.message || String(e);
+      console.error("[reset-password] sendPasswordResetEmail error:", e);
+      // opzionale: qui potresti decidere di fare rollback della password, ma non è banale/utile.
+      return res.status(502).json({
+        success: false,
+        message: "Password aggiornata ma invio email fallito",
+        details: e?.message || String(e),
+        emailSent: false,
+      });
     }
 
     return res.status(200).json({
       success: true,
-      tempPassword,
-      message: "Password resettata con successo",
-      emailSent,
-      emailError,
+      message: "Password resettata e email inviata con successo",
+      emailSent: true,
     });
   } catch (error: any) {
-    console.error("RESET PASSWORD ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error?.message || "Errore interno server",
-    });
+    console.error("[reset-password] fatal:", error);
+    return res.status(500).json({ success: false, message: error?.message || "Errore interno server" });
   }
 }
