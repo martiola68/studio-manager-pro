@@ -1,14 +1,12 @@
 // 4) Salva lo state in tbmicrosoft_settings
 
-
+// 4) Salva lo state in tbmicrosoft_settings
 const { error: upStateErr } = await supabaseAdmin
   .from("tbmicrosoft_settings")
   .upsert(
     {
       user_id: userId,
       m365_oauth_state: state,
-      // opzionale (se hai le colonne):
-      // m365_oauth_nonce: nonce,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" }
@@ -29,7 +27,6 @@ const params = new URLSearchParams({
   scope: "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send",
   prompt: "consent",
   state,
-  nonce, // ✅ consigliato (se vuoi)
 });
 
 const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
