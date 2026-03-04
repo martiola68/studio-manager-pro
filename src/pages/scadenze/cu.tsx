@@ -293,7 +293,39 @@ export default function ScadenzeCUPage() {
           </div>
         </CardContent>
       </Card>
+function maskDateDDMMYYYY(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  const d = digits.slice(0, 2);
+  const m = digits.slice(2, 4);
+  const y = digits.slice(4, 8);
+  let out = d;
+  if (digits.length > 2) out += "/" + m;
+  if (digits.length > 4) out += "/" + y;
+  return out;
+}
 
+function ddmmyyyyToIso(value: string): string | null {
+  const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  const dt = new Date(Date.UTC(yyyy, mm - 1, dd));
+  if (
+    dt.getUTCFullYear() !== yyyy ||
+    dt.getUTCMonth() !== mm - 1 ||
+    dt.getUTCDate() !== dd
+  ) return null;
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
+function isoToDDMMYYYY(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+      
       <Card>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
@@ -329,13 +361,13 @@ export default function ScadenzeCUPage() {
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.professionista}</td>
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.operatore}</td>
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[140px]">
-                        <Input
-                          type="number"
-                          value={scadenza.cu_autonomi?.toString() ?? ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "cu_autonomi", e.target.value ? parseInt(e.target.value) : null)}
-                          className="w-full"
-                          placeholder="0"
-                        />
+                       <Input
+                      type="checkbox"
+                      checked={!!scadenza.cu_autonomi}
+                      onChange={(e) =>
+                        handleUpdateField(scadenza.id, "cu_autonomi", e.target.checked)
+                      }
+                      />
                       </td>
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
                         <Checkbox
@@ -356,12 +388,22 @@ export default function ScadenzeCUPage() {
                         />
                       </td>
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_invio || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                          className="w-full"
-                        />
+                      <Input
+  type="text"
+  inputMode="numeric"
+  placeholder="gg/mm/aaaa"
+  value={isoToDDMMYYYY(scadenza.data_invio)}
+  onChange={(e) => {
+    const masked = maskDateDDMMYYYY(e.target.value);
+    const iso = ddmmyyyyToIso(masked);
+
+    // Salva su DB solo quando la data è completa e valida
+    if (iso) {
+      handleUpdateField(scadenza.id, "data_invio", iso);
+    }
+  }}
+  className="w-full"
+/>
                       </td>
                       <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">
                         <Input
