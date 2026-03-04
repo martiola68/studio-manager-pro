@@ -109,6 +109,7 @@ console.log("[m365/connect] tenant used:", tenant);
         redirect_uri: redirectUri,
         response_mode: "query",
         scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
+         prompt: "consent",
         state,
       });
 
@@ -162,6 +163,7 @@ return res.status(200).json({ url });
       redirect_uri: redirectUri,
       response_mode: "query",
       scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
+      prompt: "consent",
       state,
     });
 
