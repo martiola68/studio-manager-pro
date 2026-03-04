@@ -1,5 +1,5 @@
 // 4) Salva lo state in tbmicrosoft_settings
-const nonce = randomState(32);
+
 
 const { error: upStateErr } = await supabaseAdmin
   .from("tbmicrosoft_settings")
