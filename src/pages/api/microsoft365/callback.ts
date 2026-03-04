@@ -75,7 +75,6 @@ async function buildMsalSerializedCache(params: {
   code: params.code,
   redirectUri: params.redirectUri,
   scopes: scopes.split(" "),
-  prompt: "consent",
 });
 
   // A questo punto MSAL ha popolato la cache (access token, refresh token, account, ecc.)
