@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { decrypt, encrypt } from "@/lib/encryption365";
-import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
+import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msal-node";
 
 function getBearerToken(req: NextApiRequest): string | null {
   const h = req.headers.authorization || "";
@@ -10,13 +10,121 @@ function getBearerToken(req: NextApiRequest): string | null {
   return m?.[1] ?? null;
 }
 
-function appBaseUrl(req: NextApiRequest) {
-  const proto =
-    (req.headers["x-forwarded-proto"] as string) ||
-    (req.headers["x-forwarded-protocol"] as string) ||
-    "https";
-  const host = (req.headers["x-forwarded-host"] as string) || req.headers.host;
-  return `${proto}://${host}`;
+async function getAuthUser(req: NextApiRequest) {
+  const token = getBearerToken(req);
+  if (!token) return { error: "Missing Authorization Bearer token" as const };
+
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data?.user) return { error: "Utente non autenticato" as const };
+
+  return { user: data.user, token };
+}
+
+async function getUtenteStudio(authUser: { id: string; email?: string | null }) {
+  const { data: utente, error } = await supabaseAdmin
+    .from("tbutenti")
+    .select("id, studio_id, email")
+    .or(`id.eq.${authUser.id},email.eq.${authUser.email}`)
+    .maybeSingle();
+
+  if (error || !utente?.studio_id) return { error: "Studio utente non trovato" as const };
+  return { utente };
+}
+
+async function getM365Config(studioId: string) {
+  const { data: cfg, error } = await supabaseAdmin
+    .from("microsoft365_config")
+    .select("client_id, tenant_id, client_secret, enabled")
+    .eq("studio_id", studioId)
+    .maybeSingle();
+
+  if (error || !cfg?.client_id) return { error: "Configurazione Microsoft 365 incompleta" as const };
+  if (cfg.enabled === false) return { error: "Microsoft 365 disabilitato per lo studio" as const };
+
+  return { cfg };
+}
+
+async function getTokenCacheRow(studioId: string, userId: string) {
+  const { data: tokenRow, error } = await supabaseAdmin
+    .from("tbmicrosoft365_user_tokens")
+    .select("token_cache_encrypted, revoked_at")
+    .eq("studio_id", studioId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !tokenRow?.token_cache_encrypted) {
+    return { error: "Token cache mancante: connetti Microsoft 365" as const };
+  }
+  if (tokenRow.revoked_at !== null) {
+    return { error: "Token revocato: riconnetti Microsoft 365" as const };
+  }
+  return { tokenRow };
+}
+
+function buildMsalApp(params: { clientId: string; tenantId: string; clientSecret: string }) {
+  return new ConfidentialClientApplication({
+    auth: {
+      clientId: params.clientId,
+      authority: `https://login.microsoftonline.com/${params.tenantId || "common"}`,
+      clientSecret: params.clientSecret,
+    },
+    system: {
+      loggerOptions: {
+        logLevel: LogLevel.Error,
+        piiLoggingEnabled: false,
+      },
+    },
+  });
+}
+
+async function acquireAccessTokenFromCache(opts: {
+  msalApp: ConfidentialClientApplication;
+  serializedCache: string;
+  scopes: string[];
+}) {
+  opts.msalApp.getTokenCache().deserialize(opts.serializedCache);
+
+  const accounts = await opts.msalApp.getTokenCache().getAllAccounts();
+  const account: AccountInfo | undefined = accounts?.[0];
+
+  if (!account) {
+    return { error: "Account MSAL non trovato in cache: riconnetti Microsoft 365" as const };
+  }
+
+  try {
+    const result = await opts.msalApp.acquireTokenSilent({
+      account,
+      scopes: opts.scopes,
+    });
+
+    if (!result?.accessToken) return { error: "Access token mancante" as const };
+
+    const newSerializedCache = opts.msalApp.getTokenCache().serialize();
+    return {
+      accessToken: result.accessToken,
+      account,
+      newSerializedCache,
+    };
+  } catch (e: any) {
+    // Tipicamente: interaction_required / invalid_grant / refresh scaduto
+    return {
+      error:
+        "Impossibile ottenere token silent: riconnetti Microsoft 365 (token scaduto o consenso mancante)" as const,
+      details: e?.message ?? String(e),
+    };
+  }
+}
+
+async function persistCacheIfChanged(studioId: string, userId: string, oldSerialized: string, newSerialized: string) {
+  if (!newSerialized || newSerialized === oldSerialized) return;
+
+  const newEncryptedCache = encrypt(newSerialized);
+
+  await supabaseAdmin
+    .from("tbmicrosoft365_user_tokens")
+    .update({ token_cache_encrypted: newEncryptedCache, updated_at: new Date().toISOString() })
+    .eq("studio_id", studioId)
+    .eq("user_id", userId);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -24,124 +132,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 1) Auth utente (Supabase access token)
-    const token = getBearerToken(req) || null;
-    if (!token) return res.status(401).json({ error: "Missing Authorization Bearer token" });
-
-    const { data: userRes, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userRes?.user) return res.status(401).json({ error: "Utente non autenticato" });
-    const authUser = userRes.user;
+    const auth = await getAuthUser(req);
+    if ("error" in auth) return res.status(401).json({ error: auth.error });
 
     // 2) Mappa su tbutenti
-    const { data: utente, error: uErr } = await supabaseAdmin
-      .from("tbutenti")
-      .select("id, studio_id, email")
-      .or(`id.eq.${authUser.id},email.eq.${authUser.email}`)
-      .maybeSingle();
+    const mapped = await getUtenteStudio({ id: auth.user.id, email: auth.user.email });
+    if ("error" in mapped) return res.status(400).json({ error: mapped.error });
 
-    if (uErr || !utente?.studio_id) return res.status(400).json({ error: "Studio utente non trovato" });
+    const userId = mapped.utente.id;
+    const studioId = mapped.utente.studio_id;
 
-    const userId = utente.id;
-    const studioId = utente.studio_id;
+    // 3) Config studio MSAL
+    const cfgRes = await getM365Config(studioId);
+    if ("error" in cfgRes) return res.status(400).json({ error: cfgRes.error });
 
-    // 3) Leggi config studio (serve per MSAL)
-    const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, tenant_id, client_secret, enabled")
-      .eq("studio_id", studioId)
-      .maybeSingle();
+    const tenantId = cfgRes.cfg.tenant_id || "common";
+    const clientSecret = cfgRes.cfg.client_secret; // se cifrato in DB: decrypt qui (campo dedicato)
 
-    if (cfgErr || !cfg?.client_id) return res.status(400).json({ error: "Configurazione Microsoft 365 incompleta" });
-    if (cfg.enabled === false) return res.status(400).json({ error: "Microsoft 365 disabilitato per lo studio" });
+    if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
-    const tenantId = cfg.tenant_id || "common";
-    const clientSecret = cfg.client_secret; // (se tu lo cifri in DB, qui devi fare decrypt sul campo giusto)
+    // 4) Token cache (FONTE UNICA)
+    const tRes = await getTokenCacheRow(studioId, userId);
+    if ("error" in tRes) return res.status(401).json({ error: tRes.error });
 
-    // 4) Leggi token cache (questa è LA fonte)
-    const { data: tokenRow, error: tErr } = await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .select("token_cache_encrypted, revoked_at")
-      .eq("studio_id", studioId)
-      .eq("user_id", userId)
-      .maybeSingle();
+    const oldSerializedCache = decrypt(tRes.tokenRow.token_cache_encrypted);
 
-    if (tErr || !tokenRow?.token_cache_encrypted) {
-      return res.status(401).json({ error: "Token cache mancante: connetti Microsoft 365" });
-    }
-    if (tokenRow.revoked_at !== null) {
-      return res.status(401).json({ error: "Token revocato: riconnetti Microsoft 365" });
-    }
-
-    const serializedCache = decrypt(tokenRow.token_cache_encrypted);
-
-    // 5) MSAL con cache deserializzata
-    const msalApp = new ConfidentialClientApplication({
-      auth: {
-        clientId: cfg.client_id,
-        authority: `https://login.microsoftonline.com/${tenantId}`,
-        clientSecret,
-      },
-      system: {
-        loggerOptions: {
-          logLevel: LogLevel.Error,
-          piiLoggingEnabled: false,
-        },
-      },
+    // 5) MSAL deserialize + acquireTokenSilent
+    const msalApp = buildMsalApp({
+      clientId: cfgRes.cfg.client_id,
+      tenantId,
+      clientSecret,
     });
 
-    msalApp.getTokenCache().deserialize(serializedCache);
-
-    const accounts = await msalApp.getTokenCache().getAllAccounts();
-    const account = accounts?.[0];
-    if (!account) {
-      return res.status(401).json({ error: "Account MSAL non trovato in cache: riconnetti Microsoft 365" });
-    }
-
-    // 6) Prendi access token SILENT (qui MSAL usa refresh token internamente)
     const scopes = [
-      "openid",
-      "profile",
-      "offline_access",
+      // per Graph "me/events" bastano Calendars.Read, ma ok ReadWrite se fai sync bidirezionale
       "User.Read",
       "Calendars.ReadWrite",
+      // NOTA: openid/profile/offline_access non sono necessari qui (servono nel consent/initial auth),
+      // ma non danno fastidio. Se vuoi, puoi rimuoverli.
     ];
 
-    const result = await msalApp.acquireTokenSilent({
-      account,
+    const tokenRes = await acquireAccessTokenFromCache({
+      msalApp,
+      serializedCache: oldSerializedCache,
       scopes,
     });
 
-    if (!result?.accessToken) {
-      return res.status(500).json({ error: "Access token mancante" });
+    if ("error" in tokenRes) {
+      return res.status(401).json({ error: tokenRes.error, details: tokenRes.details });
     }
 
-    // 7) (Opzionale ma consigliato) risalva cache aggiornata (rotazione refresh token ecc.)
-    const newSerializedCache = msalApp.getTokenCache().serialize();
-    const newEncryptedCache = encrypt(newSerializedCache);
-
-    await supabaseAdmin
-      .from("tbmicrosoft365_user_tokens")
-      .update({ token_cache_encrypted: newEncryptedCache, updated_at: new Date().toISOString() })
-      .eq("studio_id", studioId)
-      .eq("user_id", userId);
-
-    // 8) Ora fai Graph con result.accessToken
-    // ESEMPIO: prendi 10 eventi
-    const graphRes = await fetch("https://graph.microsoft.com/v1.0/me/events?$top=10", {
-      headers: { Authorization: `Bearer ${result.accessToken}` },
+    // 6) Chiamata Graph (esempio)
+    const graphUrl = "https://graph.microsoft.com/v1.0/me/events?$top=10&$orderby=start/dateTime";
+    const graphRes = await fetch(graphUrl, {
+      headers: {
+        Authorization: `Bearer ${tokenRes.accessToken}`,
+        Accept: "application/json",
+      },
     });
 
-    const graphJson = await graphRes.json();
+    const contentType = graphRes.headers.get("content-type") || "";
+    const graphBody = contentType.includes("application/json")
+      ? await graphRes.json()
+      : await graphRes.text();
+
+    // 7) Persisti cache aggiornata (rotazione refresh token ecc.)
+    await persistCacheIfChanged(studioId, userId, oldSerializedCache, tokenRes.newSerializedCache);
+
     if (!graphRes.ok) {
-      return res.status(500).json({
+      // 401/403 tipicamente: consent mancante o token invalido
+      return res.status(graphRes.status).json({
         error: "Errore Graph",
-        details: graphJson,
+        status: graphRes.status,
+        details: graphBody,
       });
     }
 
-    // Qui al posto di "return" devi fare la tua vera logica di sync su DB
+    // 8) Qui metti la tua logica di sync vera
     return res.status(200).json({
       ok: true,
-      fetched: Array.isArray(graphJson?.value) ? graphJson.value.length : 0,
+      fetched: Array.isArray((graphBody as any)?.value) ? (graphBody as any).value.length : 0,
     });
   } catch (e: any) {
     console.error("[calendar/sync]", e);
