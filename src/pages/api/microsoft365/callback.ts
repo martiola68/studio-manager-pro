@@ -48,39 +48,33 @@ async function buildMsalSerializedCache(params: {
       clientSecret: params.clientSecret,
     },
     system: {
-      loggerOptions: {
-        logLevel: LogLevel.Error,
-        piiLoggingEnabled: false,
-      },
+      loggerOptions: { logLevel: LogLevel.Error, piiLoggingEnabled: false },
     },
   });
 
-  // Scope OIDC + permessi che ti servono (aggiungi/togli in base a cosa usi)
-  // - offline_access: refresh token
-  // - Calendars.ReadWrite: eventi
-  // - OnlineMeetings.ReadWrite: meeting Teams via /me/onlineMeetings
-  // - Chat.ReadWrite: chat/messages (se lo usi)
-  // - ChannelMessage.Send: post nei canali (se lo usi)
- const scopes = [
-  "openid",
-  "profile",
-  "offline_access",
-  "User.Read",
-  "Calendars.ReadWrite",
-  "Mail.Send",
-].join(" ");
+  // 1) Scopes usati per LOGIN/CONSENSO (include offline_access)
+  const loginScopes = [
+    "openid",
+    "profile",
+    "offline_access",
+    "User.Read",
+    "Calendars.ReadWrite",
+    "Mail.Send",
+  ];
 
-  // acquire token by code (delegated)
+  // 2) Scopes che userai dopo nel proxy/sync (solo Graph scopes)
+  const graphScopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
+
   await msalApp.acquireTokenByCode({
-  code: params.code,
-  redirectUri: params.redirectUri,
-  scopes: scopes.split(" "),
-});
+    code: params.code,
+    redirectUri: params.redirectUri,
+    scopes: loginScopes,
+  });
 
-  // A questo punto MSAL ha popolato la cache (access token, refresh token, account, ecc.)
   const serializedCache = msalApp.getTokenCache().serialize();
 
-  return { serializedCache, scopes };
+  // Salva SOLO gli scopes Graph per le chiamate successive
+  return { serializedCache, scopes: graphScopes.join(" ") };
 }
 
 /* =======================
