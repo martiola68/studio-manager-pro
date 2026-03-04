@@ -61,17 +61,14 @@ async function buildMsalSerializedCache(params: {
   // - OnlineMeetings.ReadWrite: meeting Teams via /me/onlineMeetings
   // - Chat.ReadWrite: chat/messages (se lo usi)
   // - ChannelMessage.Send: post nei canali (se lo usi)
-  const scopes = [
-    "openid",
-    "profile",
-    "offline_access",
-    "User.Read",
-    "Calendars.ReadWrite",
-    "OnlineMeetings.ReadWrite",
-    "Chat.ReadWrite",
-    "ChannelMessage.Send",
-    "Team.ReadBasic.All",
-  ].join(" ");
+ const scopes = [
+  "openid",
+  "profile",
+  "offline_access",
+  "User.Read",
+  "Calendars.ReadWrite",
+  "Mail.Send",
+].join(" ");
 
   // acquire token by code (delegated)
   await msalApp.acquireTokenByCode({
