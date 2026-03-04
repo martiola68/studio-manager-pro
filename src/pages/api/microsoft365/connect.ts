@@ -70,8 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // usa questo come userId “interno”
       // NB: per coerenza con callback che cerca state->user_id, salviamo user_id = utenteByEmail.id
-      const userId = utenteByEmail.id;
-      const studioId = utenteByEmail.studio_id;
+      userId = utenteByEmail.id;
+      studioId = utenteByEmail.studio_id;
 
       // 3) Leggi config studio (client_id, tenant_id)
       const { data: cfg, error: cfgErr } = await supabaseAdmin
@@ -99,8 +99,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
     // caso normale: trovato per id
-    const userId = userRow.id;
-    const studioId = userRow.studio_id;
+    let userId = userRow.id;
+let studioId = userRow.studio_id;
 
     const { data: cfg, error: cfgErr } = await supabaseAdmin
       .from("microsoft365_config")
