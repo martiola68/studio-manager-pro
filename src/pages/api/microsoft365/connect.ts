@@ -118,8 +118,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       response_type: "code",
       redirect_uri: redirectUri,
       response_mode: "query",
-      scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
+      scope: "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send",
       prompt: "consent",
+      consent_prompt: "admin_consent",
       state,
     });
 
