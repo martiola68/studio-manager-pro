@@ -103,16 +103,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
 console.log("[m365/connect] tenant used:", tenant);
 
-      const params = new URLSearchParams({
-        client_id: cfg.client_id,
-        response_type: "code",
-        redirect_uri: redirectUri,
-        response_mode: "query",
-        scope: "offline_access openid profile User.Read Calendars.ReadWrite Mail.Send",
-         prompt: "consent",
-        state,
-      });
-
       params.append("prompt", "consent");
 
 const tenantId = cfg.tenant_id;
