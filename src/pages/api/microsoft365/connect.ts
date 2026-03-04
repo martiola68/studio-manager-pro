@@ -98,24 +98,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           { onConflict: "user_id" }
         );
 
-      // 5) Costruisci URL authorize (NO PKCE)
-      const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-      
-console.log("[m365/connect] tenant used:", tenant);
-
-const tenantId = cfg.tenant_id;
-console.log("[m365/connect] authorize tenant:", tenantId);
-
-const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
-
-if (req.method === "GET") {
-  res.writeHead(302, { Location: url });
-  return res.end();
-}
-
-return res.status(200).json({ url });
-    }
-
     // caso normale: trovato per id
     const userId = userRow.id;
     const studioId = userRow.studio_id;
