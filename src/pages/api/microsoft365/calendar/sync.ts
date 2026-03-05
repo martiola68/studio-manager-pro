@@ -249,6 +249,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           // E) Salva su tbagenda (chiave unica provider+external_id)
           for (const e of events) {
+   if (!studioId || !targetUserId) {
+  errors.push({
+    user_id: targetUserId || "MISSING",
+    message: "SALVATAGGIO BLOCCATO: studio_id o utente_id mancante",
+  });
+  continue;
+}
+              // controllo 2 (AGGIUNGI QUESTO)
+if (!e?.id) continue;
+if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+
+  const { error: upErr } = await supabaseAdmin
+    .from("tbagenda")
+    .upsert(
             const { error: upErr } = await supabaseAdmin
               .from("tbagenda")
               .upsert(
