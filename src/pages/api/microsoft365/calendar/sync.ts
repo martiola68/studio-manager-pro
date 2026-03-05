@@ -189,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 5) Loop utenti: sync per ognuno
-    const scopes = ["User.Read", "Calendars.ReadWrite"];
+    const scopes = ["User.Read", "Calendars.Read"];
     const RANGE_DAYS = 60;
 
     let totalFetched = 0;
