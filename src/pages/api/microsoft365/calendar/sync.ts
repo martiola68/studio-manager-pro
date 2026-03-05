@@ -260,10 +260,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 if (!e?.id) continue;
 if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
 
-  const { error: upErr } = await supabaseAdmin
-    .from("tbagenda")
-    .upsert(
-            const { error: upErr } = await supabaseAdmin
+             const { error: upErr } = await supabaseAdmin
               .from("tbagenda")
               .upsert(
                 {
