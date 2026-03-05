@@ -63,7 +63,7 @@ async function buildMsalSerializedCache(params: {
 ];
 
   // 2) Scopes che userai dopo nel proxy/sync (solo Graph scopes)
-  const graphScopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
+  const graphScopes = ["User.Read", "Calendars.Read"];
 
   await msalApp.acquireTokenByCode({
     code: params.code,
