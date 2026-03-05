@@ -21,10 +21,11 @@ async function getAuthUser(req: NextApiRequest) {
   return { user: data.user, token };
 }
 
+// Serve: studio_id + controllo "responsabile"
 async function getUtenteStudio(authUser: { id: string; email?: string | null }) {
   const { data: utente, error } = await supabaseAdmin
     .from("tbutenti")
-    .select("id, studio_id, email")
+    .select("id, studio_id, email, responsabile")
     .or(`id.eq.${authUser.id},email.eq.${authUser.email}`)
     .maybeSingle();
 
@@ -43,23 +44,6 @@ async function getM365Config(studioId: string) {
   if (cfg.enabled === false) return { error: "Microsoft 365 disabilitato per lo studio" as const };
 
   return { cfg };
-}
-
-async function getTokenCacheRow(studioId: string, userId: string) {
-  const { data: tokenRow, error } = await supabaseAdmin
-    .from("tbmicrosoft365_user_tokens")
-    .select("token_cache_encrypted, revoked_at")
-    .eq("studio_id", studioId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error || !tokenRow?.token_cache_encrypted) {
-    return { error: "Token cache mancante: connetti Microsoft 365" as const };
-  }
-  if (tokenRow.revoked_at !== null) {
-    return { error: "Token revocato: riconnetti Microsoft 365" as const };
-  }
-  return { tokenRow };
 }
 
 function buildMsalApp(params: { clientId: string; tenantId: string; clientSecret: string }) {
@@ -107,7 +91,6 @@ async function acquireAccessTokenFromCache(opts: {
       newSerializedCache,
     };
   } catch (e: any) {
-    // Tipicamente: interaction_required / invalid_grant / refresh scaduto
     return {
       error:
         "Impossibile ottenere token silent: riconnetti Microsoft 365 (token scaduto o consenso mancante)" as const,
@@ -128,6 +111,30 @@ async function persistCacheIfChanged(studioId: string, userId: string, oldSerial
     .eq("user_id", userId);
 }
 
+type TokenUserRow = {
+  user_id: string;
+  token_cache_encrypted: string;
+  revoked_at: string | null;
+};
+
+function buildCalendarViewUrl(rangeDays: number) {
+  const start = new Date(); // oggi
+  const end = new Date();
+  end.setDate(end.getDate() + rangeDays);
+
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+
+  // calendarView = eventi in un range date
+  return (
+    `https://graph.microsoft.com/v1.0/me/calendarView` +
+    `?startDateTime=${encodeURIComponent(startIso)}` +
+    `&endDateTime=${encodeURIComponent(endIso)}` +
+    `&$top=50` +
+    `&$orderby=start/dateTime`
+  );
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -136,12 +143,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const auth = await getAuthUser(req);
     if ("error" in auth) return res.status(401).json({ error: auth.error });
 
-    // 2) Mappa su tbutenti
+    // 2) Mappa su tbutenti + verifica responsabile
     const mapped = await getUtenteStudio({ id: auth.user.id, email: auth.user.email });
     if ("error" in mapped) return res.status(400).json({ error: mapped.error });
 
-    const userId = mapped.utente.id;
+    const requesterUserId = mapped.utente.id;
     const studioId = mapped.utente.studio_id;
+
+    if (!mapped.utente.responsabile) {
+      return res.status(403).json({ error: "Permesso negato: solo il Responsabile può eseguire la sync dello studio." });
+    }
 
     // 3) Config studio MSAL
     const cfgRes = await getM365Config(studioId);
@@ -149,108 +160,152 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const tenantId = cfgRes.cfg.tenant_id || "common";
     const clientSecret = getDecryptedClientSecret(cfgRes.cfg.client_secret);
-
     if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
-    // 4) Token cache (FONTE UNICA)
-    const tRes = await getTokenCacheRow(studioId, userId);
-    if ("error" in tRes) return res.status(401).json({ error: tRes.error });
+    // 4) Prendi tutti gli utenti dello studio con token attivo
+    const { data: tokenUsers, error: tokenUsersErr } = await supabaseAdmin
+      .from("tbmicrosoft365_user_tokens")
+      .select("user_id, token_cache_encrypted, revoked_at")
+      .eq("studio_id", studioId)
+      .is("revoked_at", null);
 
-    const oldSerializedCache = decrypt(tRes.tokenRow.token_cache_encrypted);
-
-    // 5) MSAL deserialize + acquireTokenSilent
-    const msalApp = buildMsalApp({
-      clientId: cfgRes.cfg.client_id,
-      tenantId,
-      clientSecret,
-    });
-
-    const scopes = [
-      // per Graph "me/events" bastano Calendars.Read, ma ok ReadWrite se fai sync bidirezionale
-      "User.Read",
-      "Calendars.ReadWrite",
-      // NOTA: openid/profile/offline_access non sono necessari qui (servono nel consent/initial auth),
-      // ma non danno fastidio. Se vuoi, puoi rimuoverli.
-    ];
-
-    const tokenRes = await acquireAccessTokenFromCache({
-      msalApp,
-      serializedCache: oldSerializedCache,
-      scopes,
-    });
-
-    if ("error" in tokenRes) {
-      return res.status(401).json({ error: tokenRes.error, details: tokenRes.details });
+    if (tokenUsersErr) {
+      return res.status(500).json({ error: "Errore lettura utenti Microsoft", details: tokenUsersErr.message });
     }
 
-    // 6) Chiamata Graph (esempio)
-    const graphUrl = "https://graph.microsoft.com/v1.0/me/events?$top=10&$orderby=start/dateTime";
-    const graphRes = await fetch(graphUrl, {
-      headers: {
-        Authorization: `Bearer ${tokenRes.accessToken}`,
-        Accept: "application/json",
-      },
-    });
+    const rows = (tokenUsers || []) as TokenUserRow[];
 
-    const contentType = graphRes.headers.get("content-type") || "";
-    const graphBody = contentType.includes("application/json")
-      ? await graphRes.json()
-      : await graphRes.text();
-
-    // 7) Persisti cache aggiornata (rotazione refresh token ecc.)
-    await persistCacheIfChanged(studioId, userId, oldSerializedCache, tokenRes.newSerializedCache);
-
-    if (!graphRes.ok) {
-      // 401/403 tipicamente: consent mancante o token invalido
-      return res.status(graphRes.status).json({
-        error: "Errore Graph",
-        status: graphRes.status,
-        details: graphBody,
+    if (rows.length === 0) {
+      return res.status(200).json({
+        ok: true,
+        studio_id: studioId,
+        users_processed: 0,
+        totalFetched: 0,
+        totalSaved: 0,
+        perUser: [],
+        errors: [],
+        message: "Nessun utente con connessione Microsoft attiva nello studio.",
       });
     }
 
-    // 8) Qui metti la tua logica di sync vera
+    // 5) Loop utenti: sync per ognuno
+    const scopes = ["User.Read", "Calendars.ReadWrite"];
+    const RANGE_DAYS = 60;
 
-const events = (graphBody as any)?.value || [];
+    let totalFetched = 0;
+    let totalSaved = 0;
 
-for (const e of events) {
-  await supabaseAdmin
-    .from("tbagenda")
-    .upsert(
-      {
-        // campi obbligatori
-        titolo: e.subject || "(senza titolo)",
-        data_inizio: e.start?.dateTime,
-        data_fine: e.end?.dateTime,
+    const perUser: Array<{ user_id: string; ok: boolean; fetched?: number; saved?: number; error?: string }> = [];
+    const errors: Array<{ user_id: string; event_id?: string; message: string }> = [];
 
-        // campi utili per legare l’evento a Microsoft
-        microsoft_event_id: e.id,
-        provider: "microsoft",
-        external_id: e.id,
+    for (const row of rows) {
+      const targetUserId = row.user_id;
 
-        // opzionali (se li vuoi)
-        outlook_synced: true,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        // usa la chiave unica che hai già nello schema
-        onConflict: "provider,external_id",
+      try {
+        // A) Deserializza cache utente
+        const oldSerializedCache = decrypt(row.token_cache_encrypted);
+
+        // B) MSAL app
+        const msalApp = buildMsalApp({
+          clientId: cfgRes.cfg.client_id,
+          tenantId,
+          clientSecret,
+        });
+
+        // C) access token (silent)
+        const tokenRes = await acquireAccessTokenFromCache({
+          msalApp,
+          serializedCache: oldSerializedCache,
+          scopes,
+        });
+
+        if ("error" in tokenRes) {
+          perUser.push({ user_id: targetUserId, ok: false, error: tokenRes.error });
+          continue;
+        }
+
+        // D) Graph calendarView (oggi -> +60 giorni) con paginazione
+        let graphUrl = buildCalendarViewUrl(RANGE_DAYS);
+
+        let fetchedThisUser = 0;
+        let savedThisUser = 0;
+
+        while (graphUrl) {
+          const graphRes = await fetch(graphUrl, {
+            headers: {
+              Authorization: `Bearer ${tokenRes.accessToken}`,
+              Accept: "application/json",
+            },
+          });
+
+          const body = await graphRes.json();
+
+          if (!graphRes.ok) {
+            throw new Error(`Graph error ${graphRes.status}: ${JSON.stringify(body).slice(0, 300)}`);
+          }
+
+          const events = Array.isArray(body?.value) ? body.value : [];
+          fetchedThisUser += events.length;
+
+          // E) Salva su tbagenda (chiave unica provider+external_id)
+          for (const e of events) {
+            const { error: upErr } = await supabaseAdmin
+              .from("tbagenda")
+              .upsert(
+                {
+                  titolo: e.subject || "(senza titolo)",
+                  data_inizio: e.start?.dateTime,
+                  data_fine: e.end?.dateTime,
+
+                  // campi collegamento Microsoft
+                  microsoft_event_id: e.id,
+                  provider: "microsoft",
+                  external_id: e.id,
+
+                  // IMPORTANTI: legame con studio e utente
+                  studio_id: studioId,
+                  utente_id: targetUserId,
+
+                  outlook_synced: true,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "provider,external_id" }
+              );
+
+            if (upErr) {
+              errors.push({ user_id: targetUserId, event_id: e.id, message: upErr.message });
+            } else {
+              savedThisUser++;
+            }
+          }
+
+          graphUrl = body?.["@odata.nextLink"] || "";
+        }
+
+        // F) Salva cache se cambiata
+        await persistCacheIfChanged(studioId, targetUserId, oldSerializedCache, tokenRes.newSerializedCache);
+
+        totalFetched += fetchedThisUser;
+        totalSaved += savedThisUser;
+
+        perUser.push({ user_id: targetUserId, ok: true, fetched: fetchedThisUser, saved: savedThisUser });
+      } catch (e: any) {
+        perUser.push({ user_id: targetUserId, ok: false, error: e?.message || String(e) });
       }
-    );
-}
-    
-return res.status(200).json({
-  ok: true,
-  fetched: Array.isArray(events) ? events.length : 0,
-  events: Array.isArray(events) ? events.map((e: any) => ({
-    id: e.id,
-    subject: e.subject,
-    start: e.start,
-    end: e.end,
-    organizer: e.organizer,
-    lastModifiedDateTime: e.lastModifiedDateTime,
-  })) : [],
-});
+    }
+
+    // 6) Risposta per UI
+    return res.status(200).json({
+      ok: true,
+      studio_id: studioId,
+      requested_by: requesterUserId,
+      users_processed: rows.length,
+      range_days: 60,
+      totalFetched,
+      totalSaved,
+      perUser,
+      errors,
+    });
   } catch (e: any) {
     console.error("[calendar/sync]", e);
     return res.status(500).json({ error: e?.message || "Errore interno sync" });
