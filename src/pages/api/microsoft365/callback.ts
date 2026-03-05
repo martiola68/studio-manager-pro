@@ -55,13 +55,12 @@ async function buildMsalSerializedCache(params: {
 
   // 1) Scopes usati per LOGIN/CONSENSO (include offline_access)
   const loginScopes = [
-    "openid",
-    "profile",
-    "offline_access",
-    "User.Read",
-    "Calendars.ReadWrite",
-    "Mail.Send",
-  ];
+  "openid",
+  "profile",
+  "offline_access",
+  "User.Read",
+  "Calendars.Read",
+];
 
   // 2) Scopes che userai dopo nel proxy/sync (solo Graph scopes)
   const graphScopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
