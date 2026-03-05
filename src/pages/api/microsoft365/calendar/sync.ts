@@ -210,7 +210,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 8) Qui metti la tua logica di sync vera
- const events = (graphBody as any)?.value || [];
 
 const events = (graphBody as any)?.value || [];
 
