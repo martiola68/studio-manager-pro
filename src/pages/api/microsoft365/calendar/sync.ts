@@ -147,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if ("error" in cfgRes) return res.status(400).json({ error: cfgRes.error });
 
     const tenantId = cfgRes.cfg.tenant_id || "common";
-    const clientSecret = cfgRes.cfg.client_secret; // se cifrato in DB: decrypt qui (campo dedicato)
+    const clientSecret = decrypt(cfgRes.cfg.client_secret);// se cifrato in DB: decrypt qui (campo dedicato)
 
     if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
