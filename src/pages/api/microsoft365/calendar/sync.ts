@@ -210,10 +210,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 8) Qui metti la tua logica di sync vera
-    return res.status(200).json({
-      ok: true,
-      fetched: Array.isArray((graphBody as any)?.value) ? (graphBody as any).value.length : 0,
-    });
+ const events = (graphBody as any)?.value || [];
+
+return res.status(200).json({
+  ok: true,
+  fetched: Array.isArray(events) ? events.length : 0,
+  events: Array.isArray(events) ? events.map((e: any) => ({
+    id: e.id,
+    subject: e.subject,
+    start: e.start,
+    end: e.end,
+    organizer: e.organizer,
+    lastModifiedDateTime: e.lastModifiedDateTime,
+  })) : [],
+});
   } catch (e: any) {
     console.error("[calendar/sync]", e);
     return res.status(500).json({ error: e?.message || "Errore interno sync" });
