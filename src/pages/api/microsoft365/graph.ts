@@ -10,8 +10,6 @@ type TokenRow = {
   revoked_at: string | null;
 };
 
-import { decrypt } from "@/lib/encryption365";
-
 export function getDecryptedClientSecret(encryptedSecret: string) {
   if (!encryptedSecret) throw new Error("client_secret mancante");
 
