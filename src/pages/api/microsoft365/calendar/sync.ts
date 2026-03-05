@@ -212,6 +212,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 8) Qui metti la tua logica di sync vera
  const events = (graphBody as any)?.value || [];
 
+const events = (graphBody as any)?.value || [];
+
+for (const e of events) {
+  await supabaseAdmin
+    .from("tbagenda")
+    .upsert(
+      {
+        // campi obbligatori
+        titolo: e.subject || "(senza titolo)",
+        data_inizio: e.start?.dateTime,
+        data_fine: e.end?.dateTime,
+
+        // campi utili per legare l’evento a Microsoft
+        microsoft_event_id: e.id,
+        provider: "microsoft",
+        external_id: e.id,
+
+        // opzionali (se li vuoi)
+        outlook_synced: true,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        // usa la chiave unica che hai già nello schema
+        onConflict: "provider,external_id",
+      }
+    );
+}
+    
 return res.status(200).json({
   ok: true,
   fetched: Array.isArray(events) ? events.length : 0,
