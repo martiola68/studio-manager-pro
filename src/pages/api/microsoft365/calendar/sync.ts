@@ -303,6 +303,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       range_days: 60,
       totalFetched,
       totalSaved,
+       updated: totalSaved,   // <-- AGGIUNGI QUESTA RIGA
       perUser,
       errors,
     });
