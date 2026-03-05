@@ -10,6 +10,21 @@ type TokenRow = {
   revoked_at: string | null;
 };
 
+import { decrypt } from "@/lib/encryption365";
+
+export function getDecryptedClientSecret(encryptedSecret: string) {
+  if (!encryptedSecret) throw new Error("client_secret mancante");
+
+  const plain = decrypt(encryptedSecret);
+
+  // controllo “minimo” per evitare valori vuoti o strani
+  if (!plain || plain.length < 20) {
+    throw new Error("client_secret decrypt fallito o troppo corto");
+  }
+
+  return plain;
+}
+
 function buildScopes(scopesStr: string | null): string[] {
   const scopes =
     scopesStr
