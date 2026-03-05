@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { decrypt, encrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msal-node";
+import { getDecryptedClientSecret } from "../graph";
 
 function getBearerToken(req: NextApiRequest): string | null {
   const h = req.headers.authorization || "";
@@ -147,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if ("error" in cfgRes) return res.status(400).json({ error: cfgRes.error });
 
     const tenantId = cfgRes.cfg.tenant_id || "common";
-    const clientSecret = decrypt(cfgRes.cfg.client_secret);// se cifrato in DB: decrypt qui (campo dedicato)
+    const clientSecret = getDecryptedClientSecret(cfgRes.cfg.client_secret);
 
     if (!clientSecret) return res.status(400).json({ error: "client_secret mancante in configurazione Microsoft 365" });
 
