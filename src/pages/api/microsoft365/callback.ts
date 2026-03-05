@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { encrypt, decrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel } from "@azure/msal-node";
+import { getDecryptedClientSecret } from "./graph";
 
 /* =======================
    Utils
@@ -162,7 +163,7 @@ if (cfg.enabled === false) {
 
     const tenantId = cfg.tenant_id || "common";
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
-    const clientSecret = decrypt(cfg.client_secret);
+    const clientSecret = getDecryptedClientSecret(cfg.client_secret);
 
 console.log("[m365] clientSecret len:", clientSecret?.length);
 console.log("[m365] clientSecret starts:", (clientSecret || "").slice(0, 4));
