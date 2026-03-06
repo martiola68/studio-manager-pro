@@ -395,7 +395,7 @@ export default function ScadenzeCCGGPage() {
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Professionista</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Operatore</th>
@@ -410,7 +410,7 @@ export default function ScadenzeCCGGPage() {
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td colSpan={10} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessun record trovato
                     </td>
@@ -422,7 +422,7 @@ export default function ScadenzeCCGGPage() {
                     return (
                       <tr
                         key={scadenza.id}
-                        className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                        className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
                           isGreenRow ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
                         }`}
                       >
