@@ -447,7 +447,7 @@ export default function ScadenzeCUPage() {
                             isGrayRow
                               ? "!bg-gray-200"
                               : isGreenRow
-                              ? "!bg-green-100"
+                              ? "!bg-green-300"
                               : ""
                           }`}
                         >
