@@ -106,6 +106,51 @@ export default function ScadenzeBilanciPage() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+const formatToISODate = (date: string): string | null => {
+  if (!date) return null;
+
+  const parts = date.split("/");
+  if (parts.length !== 3) return null;
+
+  const [dd, mm, yyyy] = parts;
+
+  if (dd.length !== 2 || mm.length !== 2 || yyyy.length !== 4) return null;
+
+  const day = Number(dd);
+  const month = Number(mm);
+  const year = Number(yyyy);
+
+  if (
+    Number.isNaN(day) ||
+    Number.isNaN(month) ||
+    Number.isNaN(year) ||
+    day < 1 ||
+    day > 31 ||
+    month < 1 ||
+    month > 12
+  ) {
+    return null;
+  }
+
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const formatFromISODate = (iso: string | null): string => {
+  if (!iso) return "";
+
+  const [yyyy, mm, dd] = iso.split("-");
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+const formatDateInput = (value: string): string => {
+  const numbersOnly = value.replace(/\D/g, "").slice(0, 8);
+
+  if (numbersOnly.length <= 2) return numbersOnly;
+  if (numbersOnly.length <= 4) return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(2)}`;
+
+  return `${numbersOnly.slice(0, 2)}/${numbersOnly.slice(2, 4)}/${numbersOnly.slice(4, 8)}`;
+};
+  
 const handleToggleField = async (
   scadenzaId: string,
   field: keyof ScadenzaBilancioExt,
@@ -174,7 +219,13 @@ const handleUpdateField = async (
     if (field === "data_approvazione") {
    const record = scadenze.find((s) => s.id === scadenzaId);
 const currentYear = new Date().getFullYear();
-const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? addDaysToISODate(value, 30) : null;
+const isoDate = formatToISODate(value);
+
+const newDataScadPres = record?.consorzio
+  ? `${currentYear}-02-28`
+  : isoDate
+  ? addDaysToISODate(isoDate, 30)
+  : null;
 
       setScadenze((prev) =>
         prev.map((s) =>
@@ -184,10 +235,10 @@ const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? add
         )
       );
 
-      const updates: any = {
-        data_approvazione: value || null,
-        data_scad_pres: newDataScadPres
-      };
+     const updates: any = {
+  data_approvazione: isoDate,
+  data_scad_pres: newDataScadPres
+};
 
       const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
@@ -195,11 +246,16 @@ const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? add
       return;
     }
 
-    setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value } : s)));
+    const finalValue =
+  field === "data_invio"
+    ? formatToISODate(value)
+    : value || null;
 
-    const updates: any = { [field]: value || null };
+setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: finalValue } : s)));
 
-    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
+const updates: any = { [field]: finalValue };
+
+const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
     if (error) throw error;
   } catch (error) {
@@ -540,13 +596,15 @@ const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? add
                       </td>
 
                      <td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={scadenza.data_approvazione || ""}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-    className={dateInputClass(scadenza.data_approvazione)}
-    placeholder="YYYY-MM-DD"
-  />
+<Input
+  type="text"
+  value={formatFromISODate(scadenza.data_approvazione)}
+  maxLength={10}
+  onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", formatDateInput(e.target.value))}
+  className={dateInputClass(scadenza.data_approvazione)}
+  placeholder="DD/MM/YYYY"
+  inputMode="numeric"
+/>
 </td>
 
    <td className="p-2 align-middle min-w-[150px]">
@@ -577,13 +635,15 @@ const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? add
                       </td>
 
                     <td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={scadenza.data_invio || ""}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-    className={dateInputClass(scadenza.data_invio)}
-    placeholder="YYYY-MM-DD"
-  />
+ <Input
+  type="text"
+  value={formatFromISODate(scadenza.data_invio)}
+  maxLength={10}
+  onChange={(e) => handleUpdateField(scadenza.id, "data_invio", formatDateInput(e.target.value))}
+  className={dateInputClass(scadenza.data_invio)}
+  placeholder="DD/MM/YYYY"
+  inputMode="numeric"
+/>
 </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
