@@ -93,7 +93,26 @@ export default function PromemoriaPage() {
   const [selectAll, setSelectAll] = useState(false);
 
   // NUOVO: Stato per filtro destinatario
+    // NUOVO: Stato per filtro destinatario
   const [filtroDestinatario, setFiltroDestinatario] = useState<string>("tutti");
+
+  // NUOVO: flag per responsabili di settore
+  const [visualizzaTuttiSettore, setVisualizzaTuttiSettore] = useState(false);
+
+  const isResponsabileSettore = currentUser?.responsabile === true && !!currentUser?.settore;
+
+  const getPrioritaOrder = (priorita?: string | null) => {
+    switch ((priorita || "").toLowerCase()) {
+      case "alta":
+        return 0;
+      case "media":
+        return 1;
+      case "bassa":
+        return 2;
+      default:
+        return 3;
+    }
+  };
 
   const [formData, setFormData] = useState({
     titolo: "",
@@ -144,8 +163,13 @@ export default function PromemoriaPage() {
         .eq("id", user.id)
         .single();
       
-      if (userProfile) setCurrentUser(userProfile);
-
+      if (userProfile) {
+        setCurrentUser(userProfile);
+        if (userProfile.responsabile !== true) {
+          setVisualizzaTuttiSettore(false);
+        }
+      }
+      
       // Determina se l'utente è responsabile
       const isResponsabile = userProfile?.responsabile === true;
       const currentUserId = userProfile?.id;
@@ -590,22 +614,40 @@ export default function PromemoriaPage() {
         </div>
       </div>
 
-      {/* FILTRO PER DESTINATARIO */}
-      <div className="mb-4 flex items-center gap-4">
-        <Label className="text-sm font-medium">Filtra per Destinatario:</Label>
-        <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Tutti i destinatari" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="tutti">Tutti i destinatari</SelectItem>
-            {utenti.map(u => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* FILTRI */}
+      <div className="mb-4 flex flex-wrap items-center gap-6">
+        <div className="flex items-center gap-4">
+          <Label className="text-sm font-medium">Filtra per Destinatario:</Label>
+          <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Tutti i destinatari" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tutti">Tutti i destinatari</SelectItem>
+              {utenti.map(u => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="visualizza-tutti-settore"
+            checked={visualizzaTuttiSettore}
+            disabled={!isResponsabileSettore}
+            onCheckedChange={(checked) => setVisualizzaTuttiSettore(!!checked)}
+          />
+          <Label
+            htmlFor="visualizza-tutti-settore"
+            className={!isResponsabileSettore ? "cursor-not-allowed opacity-60" : "cursor-pointer"}
+          >
+            Visualizza tutti i promemoria
+            {currentUser?.settore ? ` del settore ${currentUser.settore}` : ""}
+          </Label>
+        </div>
       </div>
 
       <Table>
@@ -618,6 +660,7 @@ export default function PromemoriaPage() {
               />
             </TableHead>
             <TableHead>Tipo</TableHead>
+            <TableHead>Priorità</TableHead>
             <TableHead>Titolo</TableHead>
             <TableHead>Descrizione</TableHead>
             <TableHead>Data Scadenza</TableHead>
@@ -632,102 +675,141 @@ export default function PromemoriaPage() {
         <TableBody>
           {promemoria
             .filter(p => {
+              // Se il responsabile di settore attiva il flag, mostra tutti i promemoria del proprio settore
+              if (visualizzaTuttiSettore && isResponsabileSettore) {
+                if (p.settore !== currentUser?.settore) return false;
+              }
+
               // Filtra per destinatario specifico se selezionato
               if (filtroDestinatario !== "tutti") {
                 return p.destinatario_id === filtroDestinatario;
               }
+
               return true;
             })
+            .sort((a, b) => {
+              const prioritaDiff = getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
+              if (prioritaDiff !== 0) return prioritaDiff;
+
+              const dataA = a.data_scadenza ? new Date(a.data_scadenza).getTime() : Number.MAX_SAFE_INTEGER;
+              const dataB = b.data_scadenza ? new Date(b.data_scadenza).getTime() : Number.MAX_SAFE_INTEGER;
+
+              return dataA - dataB;
+            })
             .map((p) => {
-            const isOverdue = new Date(p.data_scadenza) < new Date() && p.working_progress !== "Completato";
-            const isCompleted = p.working_progress === "Completato";
-            const isAnnullata = p.working_progress === "Annullata";
-            
-            return (
-              <TableRow 
-                key={p.id}
-                className={
-                  isOverdue ? "bg-red-50" :
-                  isCompleted ? "bg-green-50" :
-                  isAnnullata ? "bg-gray-100" :
-                  ""
-                }
-              >
-                <TableCell>
-                  <Checkbox 
-                    checked={selectedIds.includes(p.id)}
-                    onCheckedChange={() => handleToggleSelect(p.id)}
-                  />
-                </TableCell>
-                <TableCell>{tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || "-"}</TableCell>
-                <TableCell className="font-medium">{p.titolo}</TableCell>
-                <TableCell>{p.descrizione}</TableCell>
-                <TableCell>{p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy") : "-"}</TableCell>
-                <TableCell>{utenti.find(u => u.id === p.operatore_id)?.nome || "-"}</TableCell>
-                <TableCell>{utenti.find(u => u.id === p.destinatario_id)?.nome || "-"}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={
-                      p.working_progress === "Completato" ? "default" :
-                      p.working_progress === "In lavorazione" ? "secondary" :
-                      p.working_progress === "Aperto" ? "outline" :
-                      p.working_progress === "Presa visione" ? "outline" :
-                      p.working_progress === "Richiesta confronto" ? "secondary" :
-                      p.working_progress === "Annullata" ? "destructive" :
-                      "outline"
-                    }
-                    className={
-                      p.working_progress === "Aperto" ? "border-blue-500 text-blue-700" :
-                      p.working_progress === "In lavorazione" ? "bg-yellow-100 text-yellow-800" :
-                      p.working_progress === "Completato" ? "bg-green-100 text-green-800" :
-                      p.working_progress === "Presa visione" ? "border-cyan-500 text-cyan-700 bg-cyan-50" :
-                      p.working_progress === "Richiesta confronto" ? "bg-purple-100 text-purple-800" :
-                      p.working_progress === "Annullata" ? "bg-red-100 text-red-800" :
-                      ""
-                    }
-                  >
-                    {p.working_progress}
-                  </Badge>
-                </TableCell>
-                <TableCell>{p.settore}</TableCell>
-                <TableCell>
-                  {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center gap-1 text-gray-600">
-                        <Paperclip className="h-4 w-4" />
-                        {p.allegati.length}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewAllegati(p)}
-                        className="h-8 w-8 p-0"
-                        title="Visualizza allegati"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-          {promemoria.length === 0 && (
+              const isOverdue = new Date(p.data_scadenza) < new Date() && p.working_progress !== "Completato";
+              const isCompleted = p.working_progress === "Completato";
+              const isAnnullata = p.working_progress === "Annullata";
+              
+              return (
+                <TableRow 
+                  key={p.id}
+                  className={
+                    isOverdue ? "bg-red-50" :
+                    isCompleted ? "bg-green-50" :
+                    isAnnullata ? "bg-gray-100" :
+                    ""
+                  }
+                >
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedIds.includes(p.id)}
+                      onCheckedChange={() => handleToggleSelect(p.id)}
+                    />
+                  </TableCell>
+                  <TableCell>{tipiPromemoria.find(t => t.id === p.tipo_promemoria_id)?.nome || "-"}</TableCell>
+                   <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        p.priorita === "Alta"
+                          ? "border-red-500 text-red-700 bg-red-50"
+                          : p.priorita === "Media"
+                          ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+                          : p.priorita === "Bassa"
+                          ? "border-green-500 text-green-700 bg-green-50"
+                          : ""
+                      }
+                    >
+                      {p.priorita || "-"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{p.titolo}</TableCell>
+                  <TableCell>{p.descrizione}</TableCell>
+                  <TableCell>{p.data_scadenza ? format(new Date(p.data_scadenza), "dd/MM/yyyy") : "-"}</TableCell>
+                  <TableCell>{utenti.find(u => u.id === p.operatore_id)?.nome || "-"}</TableCell>
+                  <TableCell>{utenti.find(u => u.id === p.destinatario_id)?.nome || "-"}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={
+                        p.working_progress === "Completato" ? "default" :
+                        p.working_progress === "In lavorazione" ? "secondary" :
+                        p.working_progress === "Aperto" ? "outline" :
+                        p.working_progress === "Presa visione" ? "outline" :
+                        p.working_progress === "Richiesta confronto" ? "secondary" :
+                        p.working_progress === "Annullata" ? "destructive" :
+                        "outline"
+                      }
+                      className={
+                        p.working_progress === "Aperto" ? "border-blue-500 text-blue-700" :
+                        p.working_progress === "In lavorazione" ? "bg-yellow-100 text-yellow-800" :
+                        p.working_progress === "Completato" ? "bg-green-100 text-green-800" :
+                        p.working_progress === "Presa visione" ? "border-cyan-500 text-cyan-700 bg-cyan-50" :
+                        p.working_progress === "Richiesta confronto" ? "bg-purple-100 text-purple-800" :
+                        p.working_progress === "Annullata" ? "bg-red-100 text-red-800" :
+                        ""
+                      }
+                    >
+                      {p.working_progress}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{p.settore}</TableCell>
+                  <TableCell>
+                    {p.allegati && Array.isArray(p.allegati) && p.allegati.length > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-gray-600">
+                          <Paperclip className="h-4 w-4" />
+                          {p.allegati.length}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewAllegati(p)}
+                          className="h-8 w-8 p-0"
+                          title="Visualizza allegati"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          {promemoria
+            .filter(p => {
+              if (visualizzaTuttiSettore && isResponsabileSettore) {
+                if (p.settore !== currentUser?.settore) return false;
+              }
+              if (filtroDestinatario !== "tutti") {
+                return p.destinatario_id === filtroDestinatario;
+              }
+              return true;
+            }).length === 0 && (
             <TableRow>
-              <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
               </TableCell>
             </TableRow>
           )}
         </TableBody>
-      </Table>
 
       {/* DIALOG CREAZIONE */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
