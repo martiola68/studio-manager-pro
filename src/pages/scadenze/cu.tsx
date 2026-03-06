@@ -71,7 +71,6 @@ export default function ScadenzeCUPage() {
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
 
-  // ✅ Stato locale per rendere editabile "Data Invio" senza reset mentre scrivi
   const [dateInputs, setDateInputs] = useState<Record<string, string>>({});
 
   const [stats, setStats] = useState({
@@ -112,7 +111,6 @@ export default function ScadenzeCUPage() {
       setScadenze(scadenzeData);
       setUtenti(utentiData);
 
-      // ✅ inizializza i valori editabili della data dalla sorgente DB
       setDateInputs(
         Object.fromEntries(
           scadenzeData.map((s) => [s.id, isoToDDMMYYYY(s.data_invio)])
@@ -379,7 +377,7 @@ export default function ScadenzeCUPage() {
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th className="h-12 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
                     Nominativo
                   </th>
@@ -418,7 +416,7 @@ export default function ScadenzeCUPage() {
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                  <tr className="border-b border-gray-400 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <td
                       colSpan={11}
                       className="p-2 align-middle text-center text-gray-500"
@@ -427,171 +425,188 @@ export default function ScadenzeCUPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredScadenze.map((scadenza) => (
-                    <tr
-                key={scadenza.id}
-              className={`border-b transition-colors data-[state=selected]:bg-muted ${
-              scadenza.cu_autonomi === false
-              ? "bg-gray-200 hover:bg-gray-200"
-                : "hover:bg-green-50"
-                  }`}
+                  filteredScadenze.map((scadenza) => {
+                    const isGrayRow = scadenza.cu_autonomi === false;
+                    const isGreenRow =
+                      scadenza.conferma_riga === true &&
+                      scadenza.cu_autonomi === true;
+
+                    return (
+                      <tr
+                        key={scadenza.id}
+                        className={`border-b border-gray-400 transition-colors data-[state=selected]:bg-muted ${
+                          isGrayRow
+                            ? "bg-gray-200 hover:bg-gray-200"
+                            : isGreenRow
+                            ? "bg-green-100 hover:bg-green-100"
+                            : "hover:bg-muted/50"
+                        }`}
                       >
-                     <td
-  className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
-       scadenza.cu_autonomi === false ? "!bg-gray-200" : ""
-  }`}
->
-  {scadenza.nominativo}
-</td>
+                        <td
+                          className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+                            isGrayRow
+                              ? "!bg-gray-200"
+                              : isGreenRow
+                              ? "!bg-green-100"
+                              : ""
+                          }`}
+                        >
+                          {scadenza.nominativo}
+                        </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">
-                        {scadenza.professionista}
-                      </td>
+                        <td className="p-2 align-middle min-w-[180px]">
+                          {scadenza.professionista}
+                        </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">
-                        {scadenza.operatore}
-                      </td>
+                        <td className="p-2 align-middle min-w-[180px]">
+                          {scadenza.operatore}
+                        </td>
 
-                     <td className="p-2 align-middle text-center min-w-[140px]">
-  <Select
-    value={scadenza.cu_autonomi === false ? "NO" : "SI"}
-    onValueChange={(value) =>
-      handleUpdateField(scadenza.id, "cu_autonomi", value === "SI")
-    }
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue placeholder="Seleziona" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="SI">SI</SelectItem>
-      <SelectItem value="NO">NO</SelectItem>
-    </SelectContent>
-  </Select>
-</td>
-
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.inserite || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "inserite",
-                              scadenza.inserite
-                            )
-                          }
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.generate || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "generate",
-                              scadenza.generate
-                            )
-                          }
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.inviate || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "inviate",
-                              scadenza.inviate
-                            )
-                          }
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle min-w-[150px]">
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="gg/mm/aaaa"
-                          value={dateInputs[scadenza.id] ?? ""}
-                          onChange={(e) => {
-                            const masked = maskDateDDMMYYYY(e.target.value);
-                            setDateInputs((prev) => ({
-                              ...prev,
-                              [scadenza.id]: masked,
-                            }));
-                          }}
-                          onBlur={() => {
-                            const current = (dateInputs[scadenza.id] ?? "").trim();
-
-                            if (!current) {
-                              handleUpdateField(scadenza.id, "data_invio", null);
-                              return;
+                        <td className="p-2 align-middle text-center min-w-[140px]">
+                          <Select
+                            value={scadenza.cu_autonomi === false ? "NO" : "SI"}
+                            onValueChange={(value) =>
+                              handleUpdateField(
+                                scadenza.id,
+                                "cu_autonomi",
+                                value === "SI"
+                              )
                             }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Seleziona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SI">SI</SelectItem>
+                              <SelectItem value="NO">NO</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
 
-                            const iso = ddmmyyyyToIso(current);
+                        <td className="p-2 align-middle text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.inserite || false}
+                            onCheckedChange={() =>
+                              handleToggleField(
+                                scadenza.id,
+                                "inserite",
+                                scadenza.inserite
+                              )
+                            }
+                          />
+                        </td>
 
-                            if (iso) {
-                              handleUpdateField(scadenza.id, "data_invio", iso);
-                            } else {
-                              const back = isoToDDMMYYYY(scadenza.data_invio);
+                        <td className="p-2 align-middle text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.generate || false}
+                            onCheckedChange={() =>
+                              handleToggleField(
+                                scadenza.id,
+                                "generate",
+                                scadenza.generate
+                              )
+                            }
+                          />
+                        </td>
+
+                        <td className="p-2 align-middle text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.inviate || false}
+                            onCheckedChange={() =>
+                              handleToggleField(
+                                scadenza.id,
+                                "inviate",
+                                scadenza.inviate
+                              )
+                            }
+                          />
+                        </td>
+
+                        <td className="p-2 align-middle min-w-[150px]">
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="gg/mm/aaaa"
+                            value={dateInputs[scadenza.id] ?? ""}
+                            onChange={(e) => {
+                              const masked = maskDateDDMMYYYY(e.target.value);
                               setDateInputs((prev) => ({
                                 ...prev,
-                                [scadenza.id]: back,
+                                [scadenza.id]: masked,
                               }));
-                              toast({
-                                title: "Data non valida",
-                                description:
-                                  "Inserisci una data valida nel formato gg/mm/aaaa.",
-                                variant: "destructive",
-                              });
+                            }}
+                            onBlur={() => {
+                              const current = (dateInputs[scadenza.id] ?? "").trim();
+
+                              if (!current) {
+                                handleUpdateField(scadenza.id, "data_invio", null);
+                                return;
+                              }
+
+                              const iso = ddmmyyyyToIso(current);
+
+                              if (iso) {
+                                handleUpdateField(scadenza.id, "data_invio", iso);
+                              } else {
+                                const back = isoToDDMMYYYY(scadenza.data_invio);
+                                setDateInputs((prev) => ({
+                                  ...prev,
+                                  [scadenza.id]: back,
+                                }));
+                                toast({
+                                  title: "Data non valida",
+                                  description:
+                                    "Inserisci una data valida nel formato gg/mm/aaaa.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="w-full"
+                          />
+                        </td>
+
+                        <td className="p-2 align-middle min-w-[120px]">
+                          <Input
+                            type="text"
+                            value={scadenza.num_cu || ""}
+                            onChange={(e) =>
+                              handleUpdateField(
+                                scadenza.id,
+                                "num_cu",
+                                e.target.value
+                              )
                             }
-                          }}
-                          className="w-full"
-                        />
-                      </td>
+                            className="w-full"
+                            placeholder="Numero CU"
+                          />
+                        </td>
 
-                      <td className="p-2 align-middle min-w-[120px]">
-                        <Input
-                          type="text"
-                          value={scadenza.num_cu || ""}
-                          onChange={(e) =>
-                            handleUpdateField(
-                              scadenza.id,
-                              "num_cu",
-                              e.target.value
-                            )
-                          }
-                          className="w-full"
-                          placeholder="Numero CU"
-                        />
-                      </td>
+                        <td className="p-2 align-middle text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.conferma_riga || false}
+                            onCheckedChange={() =>
+                              handleToggleField(
+                                scadenza.id,
+                                "conferma_riga",
+                                scadenza.conferma_riga
+                              )
+                            }
+                          />
+                        </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.conferma_riga || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "conferma_riga",
-                              scadenza.conferma_riga
-                            )
-                          }
-                        />
-                      </td>
-
-                      <td className="p-2 align-middle text-center min-w-[100px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(scadenza.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                        <td className="p-2 align-middle text-center min-w-[100px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(scadenza.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
