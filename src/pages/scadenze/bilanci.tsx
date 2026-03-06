@@ -230,8 +230,7 @@ const handleUpdateField = async (
     if (!record) return;
 
     if (field === "data_approvazione") {
-      const displayValue = formatDateInput(String(value || ""));
-      const isoDate = formatToISODate(displayValue);
+      const isoDate = value || null;
       const currentYear = new Date().getFullYear();
 
       const newDataScadPres = record.consorzio
@@ -252,22 +251,20 @@ const handleUpdateField = async (
         )
       );
 
-      if (displayValue.length === 10) {
-        const updates: any = {
+      const { error } = await supabase
+        .from("tbscadbilanci")
+        .update({
           data_approvazione: isoDate,
           data_scad_pres: newDataScadPres
-        };
+        })
+        .eq("id", scadenzaId);
 
-        const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-        if (error) throw error;
-      }
-
+      if (error) throw error;
       return;
     }
 
     if (field === "data_invio") {
-      const displayValue = formatDateInput(String(value || ""));
-      const isoDate = formatToISODate(displayValue);
+      const isoDate = value || null;
 
       setScadenze((prev) =>
         prev.map((s) =>
@@ -280,19 +277,18 @@ const handleUpdateField = async (
         )
       );
 
-      if (displayValue.length === 10) {
-        const { error } = await supabase
-          .from("tbscadbilanci")
-          .update({ data_invio: isoDate })
-          .eq("id", scadenzaId);
+      const { error } = await supabase
+        .from("tbscadbilanci")
+        .update({ data_invio: isoDate })
+        .eq("id", scadenzaId);
 
-        if (error) throw error;
-      }
-
+      if (error) throw error;
       return;
     }
 
-    setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value || null } : s)));
+    setScadenze((prev) =>
+      prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value || null } : s))
+    );
 
     const updates: any = { [field]: value || null };
     const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
@@ -308,7 +304,7 @@ const handleUpdateField = async (
     await loadData();
   }
 };
-
+  
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
 
@@ -648,15 +644,15 @@ const handleUpdateField = async (
   />
 </td>
 
- <td className="p-2 align-middle min-w-[150px]">
+<td className="p-2 align-middle min-w-[150px]">
   <Input
-    type="text"
-    value={formatFromISODate(scadenza.data_scad_pres)}
-    readOnly
-    className={dateInputClass(scadenza.data_scad_pres, true)}
-    placeholder="DD/MM/YYYY"
+    type="date"
+    value={scadenza.data_approvazione ?? ""}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+    className={dateInputClass(scadenza.data_approvazione)}
   />
 </td>
+
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -675,17 +671,12 @@ const handleUpdateField = async (
                         />
                       </td>
 
- <td className="p-2 align-middle min-w-[150px]">
+<td className="p-2 align-middle min-w-[150px]">
   <Input
-    type="text"
-    value={formatFromISODate(scadenza.data_invio)}
-    maxLength={10}
-    onChange={(e) =>
-      handleUpdateField(scadenza.id, "data_invio", e.target.value)
-    }
+    type="date"
+    value={scadenza.data_invio ?? ""}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
     className={dateInputClass(scadenza.data_invio)}
-    placeholder="DD/MM/YYYY"
-    inputMode="numeric"
   />
 </td>
 
