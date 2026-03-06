@@ -675,9 +675,7 @@ const handleUpdateField = async (
                         />
                       </td>
 
-                   <td className="p-2 align-middle min-w-[150px]">
-
-                     <td className="p-2 align-middle min-w-[150px]">
+ <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={formatFromISODate(scadenza.data_invio)}
