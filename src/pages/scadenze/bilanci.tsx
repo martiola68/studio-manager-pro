@@ -28,8 +28,7 @@ export default function ScadenzeBilanciPage() {
   const [filterConferma, setFilterConferma] = useState("__all__");
 
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
-  const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
-
+ const [noteTimers, setNoteTimers] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
   const [stats, setStats] = useState({
     totale: 0,
     confermate: 0,
@@ -635,7 +634,7 @@ const handleUpdateField = async (
                         />
                       </td>
 
-                     <td className="p-2 align-middle min-w-[150px]">
+                   
 <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
@@ -675,8 +674,7 @@ const handleUpdateField = async (
                         />
                       </td>
 
-                    <td className="p-2 align-middle min-w-[150px]">
-<td className="p-2 align-middle min-w-[150px]">
+                   <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={formatFromISODate(scadenza.data_invio)}
