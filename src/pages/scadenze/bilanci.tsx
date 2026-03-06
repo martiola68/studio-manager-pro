@@ -138,7 +138,14 @@ const formatToISODate = (date: string): string | null => {
 const formatFromISODate = (iso: string | null): string => {
   if (!iso) return "";
 
-  const [yyyy, mm, dd] = iso.split("-");
+  if (!iso.includes("-")) return "";
+
+  const parts = iso.split("-");
+  if (parts.length !== 3) return "";
+
+  const [yyyy, mm, dd] = parts;
+  if (!yyyy || !mm || !dd) return "";
+
   return `${dd}/${mm}/${yyyy}`;
 };
 
@@ -169,7 +176,11 @@ const handleToggleField = async (
           return {
             ...s,
             consorzio: newValue,
-            data_scad_pres: newValue ? dataConsorzio : s.data_approvazione ? addDaysToISODate(s.data_approvazione, 30) : null
+            data_scad_pres: newValue
+              ? dataConsorzio
+              : s.data_approvazione
+              ? addDaysToISODate(s.data_approvazione, 30)
+              : null
           };
         }
 
@@ -189,6 +200,7 @@ const handleToggleField = async (
 
     if (field === "consorzio") {
       const record = scadenze.find((s) => s.id === scadenzaId);
+
       updates.data_scad_pres = newValue
         ? dataConsorzio
         : record?.data_approvazione
@@ -197,7 +209,6 @@ const handleToggleField = async (
     }
 
     const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-
     if (error) throw error;
   } catch (error) {
     console.error("Errore aggiornamento:", error);
@@ -216,46 +227,76 @@ const handleUpdateField = async (
   value: any
 ) => {
   try {
-    if (field === "data_approvazione") {
-   const record = scadenze.find((s) => s.id === scadenzaId);
-const currentYear = new Date().getFullYear();
-const isoDate = formatToISODate(value);
+    const record = scadenze.find((s) => s.id === scadenzaId);
+    if (!record) return;
 
-const newDataScadPres = record?.consorzio
-  ? `${currentYear}-02-28`
-  : isoDate
-  ? addDaysToISODate(isoDate, 30)
-  : null;
+    if (field === "data_approvazione") {
+      const displayValue = formatDateInput(String(value || ""));
+      const isoDate = formatToISODate(displayValue);
+      const currentYear = new Date().getFullYear();
+
+      const newDataScadPres = record.consorzio
+        ? `${currentYear}-02-28`
+        : isoDate
+        ? addDaysToISODate(isoDate, 30)
+        : null;
 
       setScadenze((prev) =>
         prev.map((s) =>
           s.id === scadenzaId
-            ? { ...s, data_approvazione: value, data_scad_pres: newDataScadPres }
+            ? {
+                ...s,
+                data_approvazione: isoDate,
+                data_scad_pres: newDataScadPres
+              }
             : s
         )
       );
 
-     const updates: any = {
-  data_approvazione: isoDate,
-  data_scad_pres: newDataScadPres
-};
+      if (displayValue.length === 10) {
+        const updates: any = {
+          data_approvazione: isoDate,
+          data_scad_pres: newDataScadPres
+        };
 
-      const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
+        const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
       return;
     }
 
-    const finalValue =
-  field === "data_invio"
-    ? formatToISODate(value)
-    : value || null;
+    if (field === "data_invio") {
+      const displayValue = formatDateInput(String(value || ""));
+      const isoDate = formatToISODate(displayValue);
 
-setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: finalValue } : s)));
+      setScadenze((prev) =>
+        prev.map((s) =>
+          s.id === scadenzaId
+            ? {
+                ...s,
+                data_invio: isoDate
+              }
+            : s
+        )
+      );
 
-const updates: any = { [field]: finalValue };
+      if (displayValue.length === 10) {
+        const { error } = await supabase
+          .from("tbscadbilanci")
+          .update({ data_invio: isoDate })
+          .eq("id", scadenzaId);
 
-const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
+        if (error) throw error;
+      }
+
+      return;
+    }
+
+    setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value || null } : s)));
+
+    const updates: any = { [field]: value || null };
+    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
     if (error) throw error;
   } catch (error) {
@@ -265,6 +306,7 @@ const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", 
       description: "Impossibile aggiornare il campo",
       variant: "destructive"
     });
+    await loadData();
   }
 };
 
@@ -344,12 +386,10 @@ const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", 
     );
   }
 
-  const dateInputClass = (value?: string | null, locked: boolean = false) =>
+ const dateInputClass = (_value?: string | null, locked: boolean = false) =>
   [
     "w-full",
-    locked ? "bg-gray-100 cursor-not-allowed" : "",
-    !value ? "text-transparent caret-transparent" : "",
-    "focus:text-gray-900 focus:caret-auto"
+    locked ? "bg-gray-100 cursor-not-allowed" : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -596,24 +636,25 @@ const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", 
                       </td>
 
                      <td className="p-2 align-middle min-w-[150px]">
-<Input
-  type="text"
-  value={formatFromISODate(scadenza.data_approvazione)}
-  maxLength={10}
-  onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", formatDateInput(e.target.value))}
-  className={dateInputClass(scadenza.data_approvazione)}
-  placeholder="DD/MM/YYYY"
-  inputMode="numeric"
-/>
-</td>
-
-   <td className="p-2 align-middle min-w-[150px]">
+<td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
-    value={scadenza.data_scad_pres || ""}
+    value={formatFromISODate(scadenza.data_approvazione)}
+    maxLength={10}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+    className={dateInputClass(scadenza.data_approvazione)}
+    placeholder="DD/MM/YYYY"
+    inputMode="numeric"
+  />
+</td>
+
+ <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={formatFromISODate(scadenza.data_scad_pres)}
     readOnly
     className={dateInputClass(scadenza.data_scad_pres, true)}
-    placeholder="YYYY-MM-DD"
+    placeholder="DD/MM/YYYY"
   />
 </td>
                       <td className="p-2 align-middle text-center min-w-[120px]">
@@ -635,15 +676,16 @@ const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", 
                       </td>
 
                     <td className="p-2 align-middle min-w-[150px]">
- <Input
-  type="text"
-  value={formatFromISODate(scadenza.data_invio)}
-  maxLength={10}
-  onChange={(e) => handleUpdateField(scadenza.id, "data_invio", formatDateInput(e.target.value))}
-  className={dateInputClass(scadenza.data_invio)}
-  placeholder="DD/MM/YYYY"
-  inputMode="numeric"
-/>
+<td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={formatFromISODate(scadenza.data_invio)}
+    maxLength={10}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+    className={dateInputClass(scadenza.data_invio)}
+    placeholder="DD/MM/YYYY"
+    inputMode="numeric"
+  />
 </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
