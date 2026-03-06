@@ -103,72 +103,103 @@ export default function ScadenzeBilanciPage() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaBilancio, currentValue: any) => {
-    try {
-      const newValue = !currentValue;
+const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaBilancio, currentValue: any) => {
+  try {
+    const newValue = !currentValue;
+    const currentYear = new Date().getFullYear();
+    const dataConsorzio = `${currentYear}-02-28`;
 
-      setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: newValue } : s)));
+    setScadenze((prev) =>
+      prev.map((s) => {
+        if (s.id !== scadenzaId) return s;
 
-      if (field === "conferma_riga") {
-        setStats((prev) => ({
-          ...prev,
-          confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
-          nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
-        }));
-      }
+        if (field === "consorzio") {
+          return {
+            ...s,
+            consorzio: newValue,
+            data_scad_pres: newValue ? dataConsorzio : s.data_approvazione ? addDaysToISODate(s.data_approvazione, 30) : null
+          };
+        }
 
-      const updates: any = { [field]: newValue };
+        return { ...s, [field]: newValue };
+      })
+    );
+
+    if (field === "conferma_riga") {
+      setStats((prev) => ({
+        ...prev,
+        confermate: newValue ? prev.confermate + 1 : prev.confermate - 1,
+        nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
+      }));
+    }
+
+    const updates: any = { [field]: newValue };
+
+    if (field === "consorzio") {
+      const record = scadenze.find((s) => s.id === scadenzaId);
+      updates.data_scad_pres = newValue
+        ? dataConsorzio
+        : record?.data_approvazione
+        ? addDaysToISODate(record.data_approvazione, 30)
+        : null;
+    }
+
+    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error("Errore aggiornamento:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile aggiornare il campo",
+      variant: "destructive"
+    });
+    await loadData();
+  }
+};
+
+const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaBilancio, value: any) => {
+  try {
+    if (field === "data_approvazione") {
+      const record = scadenze.find((s) => s.id === scadenzaId);
+      const currentYear = new Date().getFullYear();
+      const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? addDaysToISODate(value, 30) : null;
+
+      setScadenze((prev) =>
+        prev.map((s) =>
+          s.id === scadenzaId
+            ? { ...s, data_approvazione: value, data_scad_pres: newDataScadPres }
+            : s
+        )
+      );
+
+      const updates: any = {
+        data_approvazione: value || null,
+        data_scad_pres: newDataScadPres
+      };
+
       const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
       if (error) throw error;
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il campo",
-        variant: "destructive"
-      });
-      await loadData();
+      return;
     }
-  };
 
-  const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaBilancio, value: any) => {
-    try {
-      // Regola: data_scad_pres = data_approvazione + 30
-      if (field === "data_approvazione") {
-        const newDataScadPres = value ? addDaysToISODate(value, 30) : null;
+    setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value } : s)));
 
-        setScadenze((prev) =>
-          prev.map((s) => (s.id === scadenzaId ? { ...s, data_approvazione: value, data_scad_pres: newDataScadPres } : s))
-        );
+    const updates: any = { [field]: value || null };
 
-        const updates: any = {
-          data_approvazione: value || null,
-          data_scad_pres: newDataScadPres
-        };
+    const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
 
-        const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-
-        if (error) throw error;
-        return;
-      }
-
-      setScadenze((prev) => prev.map((s) => (s.id === scadenzaId ? { ...s, [field]: value } : s)));
-
-      const updates: any = { [field]: value || null };
-
-      const { error } = await supabase.from("tbscadbilanci").update(updates).eq("id", scadenzaId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error("Errore aggiornamento:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il campo",
-        variant: "destructive"
-      });
-    }
-  };
+    if (error) throw error;
+  } catch (error) {
+    console.error("Errore aggiornamento:", error);
+    toast({
+      title: "Errore",
+      description: "Impossibile aggiornare il campo",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes((prev) => ({ ...prev, [scadenzaId]: value }));
@@ -246,17 +277,16 @@ export default function ScadenzeBilanciPage() {
     );
   }
 
-  const dateInputClass = (value?: string | null) =>
-    [
-      "w-full",
-      // nasconde il testo "gg/mm/aaaa" quando vuoto, ma mostra il calendario
-      !value ? "text-transparent caret-transparent" : "",
-      // quando focus, il testo deve essere visibile anche se vuoto
-      "focus:text-gray-900 focus:caret-auto"
-    ]
-      .filter(Boolean)
-      .join(" ");
-
+  const dateInputClass = (value?: string | null, locked: boolean = false) =>
+  [
+    "w-full",
+    locked ? "bg-gray-100 cursor-not-allowed" : "",
+    !value ? "text-transparent caret-transparent" : "",
+    "focus:text-gray-900 focus:caret-auto"
+  ]
+    .filter(Boolean)
+    .join(" ");
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -358,93 +388,105 @@ export default function ScadenzeBilanciPage() {
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
             <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r min-w-[200px]">
-                    Nominativo
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
-                    Professionista
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
-                    Operatore
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Bilancio def
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Verbale def
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Rel. gestione
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Rel. Sindaci
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Rel. Revisore
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-                    Data approvazione
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-                    Data scadenza
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Approvato
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Inviato
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
-                    Data invio
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
-                    Ricevuta
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
-                    Note
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
-                    Conferma
-                  </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
-                    Azioni
-                  </th>
-                </tr>
-              </thead>
+            <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white shadow-sm">
+  <tr className="border-b-2 border-gray-300 transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground sticky-col-header border-r-2 border-gray-300 min-w-[200px]">
+      Nominativo
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+      Professionista
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+      Operatore
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Consorzio
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Bilancio def
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Verbale def
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Rel. gestione
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Rel. Sindaci
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Rel. Revisore
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+      Data approvazione
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+      Data scadenza
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Approvato
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Inviato
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[150px]">
+      Data invio
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground text-center min-w-[120px]">
+      Ricevuta
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[300px]">
+      Note
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[120px] text-center">
+      Conferma
+    </th>
+    <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[100px] text-center">
+      Azioni
+    </th>
+  </tr>
+</thead>
 
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                    <td colSpan={17} className="p-2 align-middle text-center py-8 text-gray-500">
-                      Nessun record trovato
-                    </td>
+                   <td colSpan={18} className="p-2 align-middle text-center py-8 text-gray-500">
+  Nessun record trovato
+</td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr
-                      key={scadenza.id}
-                      className={[
-                        "border-b transition-colors",
-                        scadenza.conferma_riga ? "bg-red-50 hover:bg-red-50" : "hover:bg-green-50"
-                      ].join(" ")}
-                    >
-                      <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
-                        {scadenza.nominativo}
-                      </td>
+                 <tr
+  key={scadenza.id}
+  className={[
+    "border-b-2 border-gray-300 transition-colors",
+    scadenza.conferma_riga ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
+  ].join(" ")}
+>
+  <td className="p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]">
+    {scadenza.nominativo}
+  </td>
 
-                      <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</td>
-                      <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
+  <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</td>
+  <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.bilancio_def || false}
-                          onChange={() => handleToggleField(scadenza.id, "bilancio_def", scadenza.bilancio_def)}
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
-                      </td>
+  <td className="p-2 align-middle text-center min-w-[120px]">
+    <input
+      type="checkbox"
+      checked={(scadenza as any).consorzio || false}
+      onChange={() => handleToggleField(scadenza.id, "consorzio" as keyof ScadenzaBilancio, (scadenza as any).consorzio)}
+      className="rounded w-4 h-4 cursor-pointer"
+    />
+  </td>
+
+  <td className="p-2 align-middle text-center min-w-[120px]">
+    <input
+      type="checkbox"
+      checked={scadenza.bilancio_def || false}
+      onChange={() => handleToggleField(scadenza.id, "bilancio_def", scadenza.bilancio_def)}
+      className="rounded w-4 h-4 cursor-pointer"
+    />
+  </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
@@ -486,23 +528,26 @@ export default function ScadenzeBilanciPage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_approvazione || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-                          className={dateInputClass(scadenza.data_approvazione)}
-                        />
-                      </td>
+                     <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={scadenza.data_approvazione || ""}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+    className={dateInputClass(scadenza.data_approvazione)}
+    placeholder="YYYY-MM-DD"
+  />
+</td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_scad_pres || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_scad_pres", e.target.value)}
-                          className={dateInputClass(scadenza.data_scad_pres)}
-                        />
-                      </td>
+                     <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={scadenza.data_scad_pres || ""}
+    readOnly
+    locked
+    className={dateInputClass(scadenza.data_scad_pres, true)}
+    placeholder="YYYY-MM-DD"
+  />
+</td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
@@ -522,14 +567,15 @@ export default function ScadenzeBilanciPage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_invio || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                          className={dateInputClass(scadenza.data_invio)}
-                        />
-                      </td>
+                    <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={scadenza.data_invio || ""}
+    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+    className={dateInputClass(scadenza.data_invio)}
+    placeholder="YYYY-MM-DD"
+  />
+</td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
