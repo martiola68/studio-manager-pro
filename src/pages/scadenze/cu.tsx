@@ -429,13 +429,13 @@ export default function ScadenzeCUPage() {
                 ) : (
                   filteredScadenze.map((scadenza) => (
                     <tr
-                      key={scadenza.id}
-                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                        scadenza.cu_autonomi === "NO"
-                          ? "bg-gray-500 hover:bg-gray-500"
-                          : "hover:bg-green-50"
-                      }`}
-                    >
+                key={scadenza.id}
+              className={`border-b transition-colors data-[state=selected]:bg-muted ${
+              scadenza.cu_autonomi === false
+              ? "bg-gray-500 hover:bg-gray-500"
+                : "hover:bg-green-50"
+                  }`}
+                      >
                       <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
@@ -448,22 +448,22 @@ export default function ScadenzeCUPage() {
                         {scadenza.operatore}
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[140px]">
-                        <Select
-                          value={scadenza.cu_autonomi || "SI"}
-                          onValueChange={(value) =>
-                            handleUpdateField(scadenza.id, "cu_autonomi", value)
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Seleziona" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SI">SI</SelectItem>
-                            <SelectItem value="NO">NO</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
+                     <td className="p-2 align-middle text-center min-w-[140px]">
+  <Select
+    value={scadenza.cu_autonomi === false ? "NO" : "SI"}
+    onValueChange={(value) =>
+      handleUpdateField(scadenza.id, "cu_autonomi", value === "SI")
+    }
+  >
+    <SelectTrigger className="w-full">
+      <SelectValue placeholder="Seleziona" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="SI">SI</SelectItem>
+      <SelectItem value="NO">NO</SelectItem>
+    </SelectContent>
+  </Select>
+</td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <Checkbox
