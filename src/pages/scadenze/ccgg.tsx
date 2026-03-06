@@ -11,6 +11,41 @@ import { Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
+function maskDateDDMMYYYY(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  const d = digits.slice(0, 2);
+  const m = digits.slice(2, 4);
+  const y = digits.slice(4, 8);
+  let out = d;
+  if (digits.length > 2) out += "/" + m;
+  if (digits.length > 4) out += "/" + y;
+  return out;
+}
+
+function ddmmyyyyToIso(value: string): string | null {
+  const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  const dt = new Date(Date.UTC(yyyy, mm - 1, dd));
+  if (
+    dt.getUTCFullYear() !== yyyy ||
+    dt.getUTCMonth() !== mm - 1 ||
+    dt.getUTCDate() !== dd
+  ) {
+    return null;
+  }
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
+function isoToDDMMYYYY(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 type ScadenzaCCGGRow = Database["public"]["Tables"]["tbscadccgg"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
@@ -29,9 +64,9 @@ export default function ScadenzeCCGGPage() {
   const [filterOperatore, setFilterOperatore] = useState("__all__");
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
-  
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
   const [noteTimers, setNoteTimers] = useState<Record<string, NodeJS.Timeout>>({});
+  const [dateInputs, setDateInputs] = useState<Record<string, string>>({});
 
   const [stats, setStats] = useState({
     totale: 0,
@@ -66,7 +101,13 @@ export default function ScadenzeCCGGPage() {
       ]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
-      
+
+      setDateInputs(
+        Object.fromEntries(
+          scadenzeData.map((s) => [s.id, isoToDDMMYYYY(s.data_comunicato)])
+        )
+      );
+
       const confermate = scadenzeData.filter(s => s.conferma_riga).length;
       setStats({
         totale: scadenzeData.length,
@@ -94,12 +135,12 @@ export default function ScadenzeCCGGPage() {
         operatore:tbutenti!tbscadccgg_utente_operatore_id_fkey(nome, cognome)
       `)
       .order("nominativo", { ascending: true });
-    
+
     if (error) throw error;
-    
+
     return (data || []).map(record => ({
       ...record,
-      professionista: record.professionista 
+      professionista: record.professionista
         ? `${record.professionista.nome} ${record.professionista.cognome}`
         : "-",
       operatore: record.operatore
@@ -113,7 +154,7 @@ export default function ScadenzeCCGGPage() {
       .from("tbutenti")
       .select("*")
       .order("cognome", { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
   };
@@ -121,11 +162,11 @@ export default function ScadenzeCCGGPage() {
   const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaCCGG, currentValue: any) => {
     try {
       const newValue = !currentValue;
-      
-      setScadenze(prev => prev.map(s => 
+
+      setScadenze(prev => prev.map(s =>
         s.id === scadenzaId ? { ...s, [field]: newValue } : s
       ));
-      
+
       if (field === "conferma_riga") {
         setStats(prev => ({
           ...prev,
@@ -133,7 +174,7 @@ export default function ScadenzeCCGGPage() {
           nonConfermate: newValue ? prev.nonConfermate - 1 : prev.nonConfermate + 1
         }));
       }
-      
+
       const { error } = await supabase
         .from("tbscadccgg")
         .update({ [field]: newValue })
@@ -156,10 +197,10 @@ export default function ScadenzeCCGGPage() {
         .from("tbscadccgg")
         .update({ [field]: value || null })
         .eq("id", scadenzaId);
-      
+
       if (error) throw error;
-      
-      setScadenze(prev => prev.map(s => 
+
+      setScadenze(prev => prev.map(s =>
         s.id === scadenzaId ? { ...s, [field]: value } : s
       ));
     } catch (error: any) {
@@ -170,14 +211,14 @@ export default function ScadenzeCCGGPage() {
       });
     }
   };
-  
+
   const handleNoteChange = (scadenzaId: string, value: string) => {
     setLocalNotes(prev => ({ ...prev, [scadenzaId]: value }));
-    
+
     if (noteTimers[scadenzaId]) {
       clearTimeout(noteTimers[scadenzaId]);
     }
-    
+
     const timer = setTimeout(async () => {
       try {
         const { error } = await supabase
@@ -186,8 +227,8 @@ export default function ScadenzeCCGGPage() {
           .eq("id", scadenzaId);
 
         if (error) throw error;
-        
-        setScadenze(prev => prev.map(s => 
+
+        setScadenze(prev => prev.map(s =>
           s.id === scadenzaId ? { ...s, note: value } : s
         ));
       } catch (error) {
@@ -199,7 +240,7 @@ export default function ScadenzeCCGGPage() {
         });
       }
     }, 1000);
-    
+
     setNoteTimers(prev => ({ ...prev, [scadenzaId]: timer }));
   };
 
@@ -233,7 +274,7 @@ export default function ScadenzeCCGGPage() {
     const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
-    const matchConferma = filterConferma === "__all__" || 
+    const matchConferma = filterConferma === "__all__" ||
       (filterConferma === "true" ? s.conferma_riga : !s.conferma_riga);
     return matchSearch && matchOperatore && matchProfessionista && matchConferma;
   });
@@ -358,7 +399,7 @@ export default function ScadenzeCCGGPage() {
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-header border-r min-w-[200px]">Nominativo</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Professionista</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">Operatore</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Importo Calcolato</th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Importo Calcolato</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">F24 Generato</th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[120px]">F24 Comunicato</th>
                   <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">Data Comunicato</th>
@@ -375,69 +416,111 @@ export default function ScadenzeCCGGPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted">
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px]">
-                        {scadenza.nominativo}
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.professionista}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.operatore}</td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={scadenza.importo_calcolato?.toString() ?? ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "importo_calcolato", parseFloat(e.target.value) || null)}
-                          className="w-full"
-                          placeholder="0.00"
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.f24_generato || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.f24_comunicato || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_comunicato || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_comunicato", e.target.value)}
-                          className="w-full"
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
-                        <Textarea
-                          value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
-                          onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
-                          placeholder="Aggiungi note..."
-                          className="min-h-[60px] resize-none"
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
-                        <Checkbox
-                          checked={scadenza.conferma_riga || false}
-                          onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
-                        />
-                      </td>
-                      <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(scadenza.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  filteredScadenze.map((scadenza) => {
+                    const isGreenRow = scadenza.conferma_riga === true;
+
+                    return (
+                      <tr
+                        key={scadenza.id}
+                        className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                          isGreenRow ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
+                        }`}
+                      >
+                        <td
+                          className={`p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] sticky-col-cell border-r font-medium min-w-[200px] ${
+                            isGreenRow ? "!bg-green-300" : ""
+                          }`}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                          {scadenza.nominativo}
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.professionista}</td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[180px]">{scadenza.operatore}</td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[150px]">
+                          <Checkbox
+                            checked={!!scadenza.importo_calcolato}
+                            onCheckedChange={() => handleToggleField(scadenza.id, "importo_calcolato", scadenza.importo_calcolato)}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.f24_generato || false}
+                            onCheckedChange={() => handleToggleField(scadenza.id, "f24_generato", scadenza.f24_generato)}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.f24_comunicato || false}
+                            onCheckedChange={() => handleToggleField(scadenza.id, "f24_comunicato", scadenza.f24_comunicato)}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[150px]">
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="gg/mm/aaaa"
+                            value={dateInputs[scadenza.id] ?? ""}
+                            onChange={(e) => {
+                              const masked = maskDateDDMMYYYY(e.target.value);
+                              setDateInputs((prev) => ({
+                                ...prev,
+                                [scadenza.id]: masked,
+                              }));
+                            }}
+                            onBlur={() => {
+                              const current = (dateInputs[scadenza.id] ?? "").trim();
+
+                              if (!current) {
+                                handleUpdateField(scadenza.id, "data_comunicato", null);
+                                return;
+                              }
+
+                              const iso = ddmmyyyyToIso(current);
+
+                              if (iso) {
+                                handleUpdateField(scadenza.id, "data_comunicato", iso);
+                              } else {
+                                const back = isoToDDMMYYYY(scadenza.data_comunicato);
+                                setDateInputs((prev) => ({
+                                  ...prev,
+                                  [scadenza.id]: back,
+                                }));
+                                toast({
+                                  title: "Data non valida",
+                                  description: "Inserisci una data valida nel formato gg/mm/aaaa.",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] min-w-[300px]">
+                          <Textarea
+                            value={localNotes[scadenza.id] ?? scadenza.note ?? ""}
+                            onChange={(e) => handleNoteChange(scadenza.id, e.target.value)}
+                            placeholder="Aggiungi note..."
+                            className="min-h-[60px] resize-none"
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[120px]">
+                          <Checkbox
+                            checked={scadenza.conferma_riga || false}
+                            onCheckedChange={() => handleToggleField(scadenza.id, "conferma_riga", scadenza.conferma_riga)}
+                          />
+                        </td>
+                        <td className="p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] text-center min-w-[100px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(scadenza.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
