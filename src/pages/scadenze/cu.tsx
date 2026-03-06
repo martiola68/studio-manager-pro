@@ -431,8 +431,8 @@ export default function ScadenzeCUPage() {
                     <tr
                       key={scadenza.id}
                       className={`border-b transition-colors data-[state=selected]:bg-muted ${
-                        String(scadenza.cu_autonomi || "").toUpperCase() === "NO"
-                          ? "bg-gray-400 hover:bg-gray-400"
+                        scadenza.cu_autonomi === "NO"
+                          ? "bg-gray-500 hover:bg-gray-500"
                           : "hover:bg-green-50"
                       }`}
                     >
@@ -449,48 +449,20 @@ export default function ScadenzeCUPage() {
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[140px]">
-                        <Input
-                          type="text"
-                          value={String(scadenza.cu_autonomi || "")}
-                          onChange={(e) => {
-                            const value = e.target.value.toUpperCase();
-                            if (value === "SI" || value === "NO" || value === "") {
-                              setScadenze((prev) =>
-                                prev.map((s) =>
-                                  s.id === scadenza.id
-                                    ? { ...s, cu_autonomi: value as any }
-                                    : s
-                                )
-                              );
-                            }
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value.trim().toUpperCase();
-                            if (value === "SI" || value === "NO") {
-                              handleUpdateField(scadenza.id, "cu_autonomi", value);
-                            } else {
-                              setScadenze((prev) =>
-                                prev.map((s) =>
-                                  s.id === scadenza.id
-                                    ? {
-                                        ...s,
-                                        cu_autonomi: (scadenza.cu_autonomi ||
-                                          "") as any,
-                                      }
-                                    : s
-                                )
-                              );
-                              toast({
-                                title: "Valore non valido",
-                                description:
-                                  'Inserisci solo "SI" oppure "NO".',
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                          className="w-full text-center"
-                          placeholder="SI / NO"
-                        />
+                        <Select
+                          value={scadenza.cu_autonomi || "SI"}
+                          onValueChange={(value) =>
+                            handleUpdateField(scadenza.id, "cu_autonomi", value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleziona" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SI">SI</SelectItem>
+                            <SelectItem value="NO">NO</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
