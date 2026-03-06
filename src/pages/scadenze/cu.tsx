@@ -430,7 +430,11 @@ export default function ScadenzeCUPage() {
                   filteredScadenze.map((scadenza) => (
                     <tr
                       key={scadenza.id}
-                      className="border-b transition-colors hover:bg-green-50 data-[state=selected]:bg-muted"
+                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                        String(scadenza.cu_autonomi || "").toUpperCase() === "NO"
+                          ? "bg-gray-400 hover:bg-gray-400"
+                          : "hover:bg-green-50"
+                      }`}
                     >
                       <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
@@ -444,17 +448,48 @@ export default function ScadenzeCUPage() {
                         {scadenza.operatore}
                       </td>
 
-                      {/* ✅ CU Autonomi - ora uguale alle altre checkbox */}
                       <td className="p-2 align-middle text-center min-w-[140px]">
-                        <Checkbox
-                          checked={scadenza.cu_autonomi || false}
-                          onCheckedChange={() =>
-                            handleToggleField(
-                              scadenza.id,
-                              "cu_autonomi",
-                              scadenza.cu_autonomi
-                            )
-                          }
+                        <Input
+                          type="text"
+                          value={String(scadenza.cu_autonomi || "")}
+                          onChange={(e) => {
+                            const value = e.target.value.toUpperCase();
+                            if (value === "SI" || value === "NO" || value === "") {
+                              setScadenze((prev) =>
+                                prev.map((s) =>
+                                  s.id === scadenza.id
+                                    ? { ...s, cu_autonomi: value as any }
+                                    : s
+                                )
+                              );
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value.trim().toUpperCase();
+                            if (value === "SI" || value === "NO") {
+                              handleUpdateField(scadenza.id, "cu_autonomi", value);
+                            } else {
+                              setScadenze((prev) =>
+                                prev.map((s) =>
+                                  s.id === scadenza.id
+                                    ? {
+                                        ...s,
+                                        cu_autonomi: (scadenza.cu_autonomi ||
+                                          "") as any,
+                                      }
+                                    : s
+                                )
+                              );
+                              toast({
+                                title: "Valore non valido",
+                                description:
+                                  'Inserisci solo "SI" oppure "NO".',
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          className="w-full text-center"
+                          placeholder="SI / NO"
                         />
                       </td>
 
@@ -497,7 +532,6 @@ export default function ScadenzeCUPage() {
                         />
                       </td>
 
-                      {/* ✅ Data Invio - editabile senza reset; salva su blur */}
                       <td className="p-2 align-middle min-w-[150px]">
                         <Input
                           type="text"
@@ -514,7 +548,6 @@ export default function ScadenzeCUPage() {
                           onBlur={() => {
                             const current = (dateInputs[scadenza.id] ?? "").trim();
 
-                            // se svuoto, azzera anche su DB
                             if (!current) {
                               handleUpdateField(scadenza.id, "data_invio", null);
                               return;
@@ -522,7 +555,6 @@ export default function ScadenzeCUPage() {
 
                             const iso = ddmmyyyyToIso(current);
 
-                            // salva solo se valida, altrimenti ripristina valore DB
                             if (iso) {
                               handleUpdateField(scadenza.id, "data_invio", iso);
                             } else {
