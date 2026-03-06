@@ -103,7 +103,11 @@ export default function ScadenzeBilanciPage() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaBilancio, currentValue: any) => {
+const handleToggleField = async (
+  scadenzaId: string,
+  field: keyof ScadenzaBilancio | "consorzio",
+  currentValue: any
+) => {
   try {
     const newValue = !currentValue;
     const currentYear = new Date().getFullYear();
@@ -158,7 +162,11 @@ const handleToggleField = async (scadenzaId: string, field: keyof ScadenzaBilanc
   }
 };
 
-const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaBilancio, value: any) => {
+const handleUpdateField = async (
+  scadenzaId: string,
+  field: keyof ScadenzaBilancio | "consorzio",
+  value: any
+) => {
   try {
     if (field === "data_approvazione") {
       const record = scadenze.find((s) => s.id === scadenzaId);
@@ -471,12 +479,12 @@ const handleUpdateField = async (scadenzaId: string, field: keyof ScadenzaBilanc
   <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
 
   <td className="p-2 align-middle text-center min-w-[120px]">
-    <input
-      type="checkbox"
-      checked={(scadenza as any).consorzio || false}
-      onChange={() => handleToggleField(scadenza.id, "consorzio" as keyof ScadenzaBilancio, (scadenza as any).consorzio)}
-      className="rounded w-4 h-4 cursor-pointer"
-    />
+   <input
+  type="checkbox"
+  checked={(scadenza as any).consorzio || false}
+  onChange={() => handleToggleField(scadenza.id, "consorzio", (scadenza as any).consorzio)}
+  className="rounded w-4 h-4 cursor-pointer"
+/>
   </td>
 
   <td className="p-2 align-middle text-center min-w-[120px]">
