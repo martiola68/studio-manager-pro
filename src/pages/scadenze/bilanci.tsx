@@ -11,13 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 
 type ScadenzaBilancio = Database["public"]["Tables"]["tbscadbilanci"]["Row"];
+type ScadenzaBilancioExt = ScadenzaBilancio & {
+  consorzio?: boolean | null;
+};
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
 export default function ScadenzeBilanciPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [scadenze, setScadenze] = useState<ScadenzaBilancio[]>([]);
+  const [scadenze, setScadenze] = useState<ScadenzaBilancioExt[]>([]);
   const [utenti, setUtenti] = useState<Utente[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterOperatore, setFilterOperatore] = useState("__all__");
@@ -78,12 +81,12 @@ export default function ScadenzeBilanciPage() {
     }
   };
 
-  const loadScadenze = async (): Promise<ScadenzaBilancio[]> => {
-    const { data, error } = await supabase.from("tbscadbilanci").select("*").order("nominativo", { ascending: true });
+  const loadScadenze = async (): Promise<ScadenzaBilancioExt[]> => {
+  const { data, error } = await supabase.from("tbscadbilanci").select("*").order("nominativo", { ascending: true });
 
-    if (error) throw error;
-    return data || [];
-  };
+  if (error) throw error;
+  return (data as ScadenzaBilancioExt[]) || [];
+};
 
   const loadUtenti = async (): Promise<Utente[]> => {
     const { data, error } = await supabase.from("tbutenti").select("*").order("cognome", { ascending: true });
@@ -105,7 +108,7 @@ export default function ScadenzeBilanciPage() {
 
 const handleToggleField = async (
   scadenzaId: string,
-  field: keyof ScadenzaBilancio | "consorzio",
+  field: keyof ScadenzaBilancioExt,
   currentValue: any
 ) => {
   try {
@@ -164,14 +167,14 @@ const handleToggleField = async (
 
 const handleUpdateField = async (
   scadenzaId: string,
-  field: keyof ScadenzaBilancio | "consorzio",
+  field: keyof ScadenzaBilancioExt,
   value: any
 ) => {
   try {
     if (field === "data_approvazione") {
-      const record = scadenze.find((s) => s.id === scadenzaId);
-      const currentYear = new Date().getFullYear();
-      const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? addDaysToISODate(value, 30) : null;
+   const record = scadenze.find((s) => s.id === scadenzaId);
+const currentYear = new Date().getFullYear();
+const newDataScadPres = record?.consorzio ? `${currentYear}-02-28` : value ? addDaysToISODate(value, 30) : null;
 
       setScadenze((prev) =>
         prev.map((s) =>
@@ -260,7 +263,7 @@ const handleUpdateField = async (
   };
 
   const filteredScadenze = scadenze.filter((s) => {
-    const matchSearch = s.nominativo.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
     const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
     const matchConferma =
@@ -479,10 +482,10 @@ const handleUpdateField = async (
   <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
 
   <td className="p-2 align-middle text-center min-w-[120px]">
-   <input
+  <input
   type="checkbox"
-  checked={(scadenza as any).consorzio || false}
-  onChange={() => handleToggleField(scadenza.id, "consorzio", (scadenza as any).consorzio)}
+  checked={scadenza.consorzio || false}
+  onChange={() => handleToggleField(scadenza.id, "consorzio", scadenza.consorzio)}
   className="rounded w-4 h-4 cursor-pointer"
 />
   </td>
@@ -546,17 +549,15 @@ const handleUpdateField = async (
   />
 </td>
 
-                     <td className="p-2 align-middle min-w-[150px]">
+   <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={scadenza.data_scad_pres || ""}
     readOnly
-    locked
     className={dateInputClass(scadenza.data_scad_pres, true)}
     placeholder="YYYY-MM-DD"
   />
 </td>
-
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
