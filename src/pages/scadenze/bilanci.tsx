@@ -630,28 +630,25 @@ const handleUpdateField = async (
                         />
                       </td>
                    
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="text"
-    value={formatFromISODate(scadenza.data_approvazione)}
-    maxLength={10}
-    onChange={(e) =>
-      handleUpdateField(scadenza.id, "data_approvazione", e.target.value)
-    }
-    className={dateInputClass(scadenza.data_approvazione)}
-    placeholder="DD/MM/YYYY"
-    inputMode="numeric"
-  />
-</td>
+                      </td>
 
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="date"
-    value={scadenza.data_approvazione ?? ""}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-    className={dateInputClass(scadenza.data_approvazione)}
-  />
-</td>
+    <td className="p-2 align-middle min-w-[150px]">
+            <Input
+            type="date"
+             value={scadenza.data_approvazione || ""}
+              onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+              className={dateInputClass(scadenza.data_approvazione)}
+               />
+               </td>
+
+          <td className="p-2 align-middle min-w-[150px]">
+          <Input
+            type="text"
+              value={scadenza.data_approvazione ?? ""}
+                onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+                  className={dateInputClass(scadenza.data_approvazione)}
+                />
+                  </td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
@@ -671,14 +668,15 @@ const handleUpdateField = async (
                         />
                       </td>
 
-<td className="p-2 align-middle min-w-[150px]">
-  <Input
-    type="date"
-    value={scadenza.data_invio ?? ""}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-    className={dateInputClass(scadenza.data_invio)}
-  />
-</td>
+                      <td className="p-2 align-middle min-w-[150px]">
+                        <Input
+                          type="date"
+                          value={scadenza.data_invio || ""}
+                          onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+                          className={dateInputClass(scadenza.data_invio)}
+                        />
+                      </td>
+
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
