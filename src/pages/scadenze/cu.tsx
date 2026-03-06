@@ -438,7 +438,7 @@ export default function ScadenzeCUPage() {
                       >
                      <td
   className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
-    scadenza.cu_autonomi === false ? "bg-gray-200" : ""
+       scadenza.cu_autonomi === false ? "!bg-gray-200" : ""
   }`}
 >
   {scadenza.nominativo}
