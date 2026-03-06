@@ -438,7 +438,7 @@ export default function ScadenzeCUPage() {
                           isGrayRow
                             ? "bg-gray-200 hover:bg-gray-200"
                             : isGreenRow
-                            ? "bg-green-100 hover:bg-green-100"
+                            ? "bg-green-300 hover:bg-green-300"
                             : "hover:bg-muted/50"
                         }`}
                       >
