@@ -432,13 +432,17 @@ export default function ScadenzeCUPage() {
                 key={scadenza.id}
               className={`border-b transition-colors data-[state=selected]:bg-muted ${
               scadenza.cu_autonomi === false
-              ? "bg-gray-500 hover:bg-gray-500"
+              ? "bg-gray-200 hover:bg-gray-200"
                 : "hover:bg-green-50"
                   }`}
                       >
-                      <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
-                        {scadenza.nominativo}
-                      </td>
+                     <td
+  className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+    scadenza.cu_autonomi === false ? "bg-gray-200" : ""
+  }`}
+>
+  {scadenza.nominativo}
+</td>
 
                       <td className="p-2 align-middle min-w-[180px]">
                         {scadenza.professionista}
