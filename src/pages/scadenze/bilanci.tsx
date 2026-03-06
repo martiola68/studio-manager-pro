@@ -629,8 +629,6 @@ const handleUpdateField = async (
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
-                   
-                      </td>
 
     <td className="p-2 align-middle min-w-[150px]">
             <Input
