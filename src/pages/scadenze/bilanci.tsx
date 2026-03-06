@@ -633,14 +633,15 @@ const handleUpdateField = async (
                           className="rounded w-4 h-4 cursor-pointer"
                         />
                       </td>
-
                    
 <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={formatFromISODate(scadenza.data_approvazione)}
     maxLength={10}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
+    onChange={(e) =>
+      handleUpdateField(scadenza.id, "data_approvazione", e.target.value)
+    }
     className={dateInputClass(scadenza.data_approvazione)}
     placeholder="DD/MM/YYYY"
     inputMode="numeric"
@@ -675,11 +676,15 @@ const handleUpdateField = async (
                       </td>
 
                    <td className="p-2 align-middle min-w-[150px]">
+
+                     <td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={formatFromISODate(scadenza.data_invio)}
     maxLength={10}
-    onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
+    onChange={(e) =>
+      handleUpdateField(scadenza.id, "data_invio", e.target.value)
+    }
     className={dateInputClass(scadenza.data_invio)}
     placeholder="DD/MM/YYYY"
     inputMode="numeric"
