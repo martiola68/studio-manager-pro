@@ -27,6 +27,9 @@ export default function ScadenzeBilanciPage() {
   const [filterProfessionista, setFilterProfessionista] = useState("__all__");
   const [filterConferma, setFilterConferma] = useState("__all__");
 
+  const [dataApprovazioneInputs, setDataApprovazioneInputs] = useState<Record<string, string>>({});
+  const [dataInvioInputs, setDataInvioInputs] = useState<Record<string, string>>({});
+
   const [localNotes, setLocalNotes] = useState<Record<string, string>>({});
  const [noteTimers, setNoteTimers] = useState<Record<string, ReturnType<typeof setTimeout>>>({});
   const [stats, setStats] = useState({
@@ -61,6 +64,18 @@ export default function ScadenzeBilanciPage() {
       const [scadenzeData, utentiData] = await Promise.all([loadScadenze(), loadUtenti()]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
+
+      setDataApprovazioneInputs(
+  Object.fromEntries(
+    scadenzeData.map((s) => [s.id, formatFromISODate(s.data_approvazione)])
+  )
+);
+
+setDataInvioInputs(
+  Object.fromEntries(
+    scadenzeData.map((s) => [s.id, formatFromISODate(s.data_invio)])
+  )
+);
 
       const confermate = scadenzeData.filter((s) => s.conferma_riga).length;
       setStats({
@@ -630,24 +645,30 @@ const handleUpdateField = async (
                         />
                       </td>
 
-    <td className="p-2 align-middle min-w-[150px]">
-            <Input
-            type="date"
-             value={scadenza.data_approvazione || ""}
-              onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-              className={dateInputClass(scadenza.data_approvazione)}
-               />
-               </td>
-
-          <td className="p-2 align-middle min-w-[150px]">
-          <Input
-            type="text"
-              value={scadenza.data_approvazione ?? ""}
-                onChange={(e) => handleUpdateField(scadenza.id, "data_approvazione", e.target.value)}
-                  className={dateInputClass(scadenza.data_approvazione)}
-                />
-                  </td>
-
+ <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={dataApprovazioneInputs[scadenza.id] ?? ""}
+    maxLength={10}
+    onChange={(e) => {
+      const formatted = formatDateInput(e.target.value);
+      setDataApprovazioneInputs((prev) => ({
+        ...prev,
+        [scadenza.id]: formatted
+      }));
+    }}
+    onBlur={() =>
+      handleUpdateField(
+        scadenza.id,
+        "data_approvazione",
+        dataApprovazioneInputs[scadenza.id] ?? ""
+      )
+    }
+    placeholder="DD/MM/YYYY"
+    inputMode="numeric"
+    className={dateInputClass(scadenza.data_approvazione)}
+  />
+</td>
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
                           type="checkbox"
@@ -666,15 +687,30 @@ const handleUpdateField = async (
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[150px]">
-                        <Input
-                          type="date"
-                          value={scadenza.data_invio || ""}
-                          onChange={(e) => handleUpdateField(scadenza.id, "data_invio", e.target.value)}
-                          className={dateInputClass(scadenza.data_invio)}
-                        />
-                      </td>
-
+                    <td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={dataInvioInputs[scadenza.id] ?? ""}
+    maxLength={10}
+    onChange={(e) => {
+      const formatted = formatDateInput(e.target.value);
+      setDataInvioInputs((prev) => ({
+        ...prev,
+        [scadenza.id]: formatted
+      }));
+    }}
+    onBlur={() =>
+      handleUpdateField(
+        scadenza.id,
+        "data_invio",
+        dataInvioInputs[scadenza.id] ?? ""
+      )
+    }
+    placeholder="DD/MM/YYYY"
+    inputMode="numeric"
+    className={dateInputClass(scadenza.data_invio)}
+  />
+</td>
 
                       <td className="p-2 align-middle text-center min-w-[120px]">
                         <input
