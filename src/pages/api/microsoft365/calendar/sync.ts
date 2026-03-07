@@ -227,12 +227,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let savedThisUser = 0;
 
         while (graphUrl) {
-          const graphRes = await fetch(graphUrl, {
-            headers: {
-              Authorization: `Bearer ${tokenRes.accessToken}`,
-              Accept: "application/json",
-            },
-          });
+         const graphRes = await fetch(graphUrl, {
+        headers: {
+          Authorization: `Bearer ${tokenRes.accessToken}`,
+            Accept: "application/json",
+                Prefer: 'outlook.timezone="W. Europe Standard Time"',
+              },
+            });
 
           const body = await graphRes.json();
 
