@@ -21,11 +21,11 @@ async function getAuthUser(req: NextApiRequest) {
   return { user: data.user, token };
 }
 
-// Serve: studio_id + controllo "responsabile"
+// Serve: studio_id dell'utente che lancia il sync
 async function getUtenteStudio(authUser: { id: string; email?: string | null }) {
   const { data: utente, error } = await supabaseAdmin
     .from("tbutenti")
-    .select("id, studio_id, email, responsabile")
+    .select("id, studio_id, email")
     .or(`id.eq.${authUser.id},email.eq.${authUser.email}`)
     .maybeSingle();
 
@@ -150,11 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const requesterUserId = mapped.utente.id;
     const studioId = mapped.utente.studio_id;
 
-    if (!mapped.utente.responsabile) {
-      return res.status(403).json({ error: "Permesso negato: solo il Responsabile può eseguire la sync dello studio." });
-    }
-
-    // 3) Config studio MSAL
+      // 3) Config studio MSAL
     const cfgRes = await getM365Config(studioId);
     if ("error" in cfgRes) return res.status(400).json({ error: cfgRes.error });
 
