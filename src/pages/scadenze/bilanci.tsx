@@ -577,7 +577,7 @@ const handleUpdateField = async (
   key={scadenza.id}
   className={[
     "border-b-2 border-gray-500 transition-colors",
-    scadenza.conferma_riga ? "bg-green-500 hover:bg-green-500" : "hover:bg-green-50"
+    scadenza.conferma_riga ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
   ].join(" ")}
 >
 <td
