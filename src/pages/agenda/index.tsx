@@ -738,6 +738,7 @@ if (formData.riunione_teams) {
             title: "Successo",
             description: `${occurrences.length} eventi ricorrenti creati`,
           });
+
         } else {
           const { data, error } = await supabase.from("tbagenda").insert([basePayload as any]).select().single();
           if (error) throw error;
@@ -1100,7 +1101,7 @@ setEventoToDelete(null);
                               handleEditEvento(ev);
                             }}
                           >
-                            {ev.utente?.cognome} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+                            {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
                           </span>
 
                           <button
@@ -1134,7 +1135,7 @@ setEventoToDelete(null);
   const renderWeekView = () => {
     const weekStart = startOfWeek(currentDate, { locale: it });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    const hours = Array.from({ length: 13 }, (_, i) => i + 8);
+    const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
     return (
       <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
@@ -1198,10 +1199,21 @@ setEventoToDelete(null);
                                     }}
                                     className="pr-6"
                                   >
-                                    <div className="font-semibold text-gray-900">
-                                      👤 {evento.utente ? `${evento.utente.nome?.charAt(0)}. ${evento.utente.cognome}` : "?"}
+                                   <div className="font-semibold text-gray-900 truncate">
+                                  {evento.titolo || "(senza titolo)"}
+                                  </div>
+
+                                  {evento.utente && (
+                                  <div className="text-gray-600 truncate">
+                                  👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
                                     </div>
-                                    <div className="text-gray-600 truncate">🏢 {evento.cliente?.ragione_sociale || ""}</div>
+                                      )}
+
+                                    {evento.cliente?.ragione_sociale && (
+                                      <div className="text-gray-600 truncate">
+                                    🏢 {evento.cliente.ragione_sociale}
+                                      </div>
+                                      )}
 
                                     {evento.in_sede && evento.sala && (
                                       <div className="text-green-700 font-medium mt-1">📍 SALA {String(evento.sala)}</div>
