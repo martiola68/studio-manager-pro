@@ -185,7 +185,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 5) Loop utenti: sync per ognuno
-    const scopes = ["User.Read", "Calendars.Read"];
+   const scopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
     const RANGE_DAYS = 60;
 
     let totalFetched = 0;
@@ -255,29 +255,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               // controllo 2 (AGGIUNGI QUESTO)
 if (!e?.id) continue;
 if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+if (!studioId || !targetUserId) continue;
 
              const { error: upErr } = await supabaseAdmin
               .from("tbagenda")
               .upsert(
-                {
-                  titolo: e.subject || "(senza titolo)",
-                  data_inizio: e.start?.dateTime,
-                  data_fine: e.end?.dateTime,
+               {
+  titolo: e.subject || "(senza titolo)",
+  descrizione: e.bodyPreview || null,
 
-                  // campi collegamento Microsoft
-                  microsoft_event_id: e.id,
-                  provider: "microsoft",
-                  external_id: e.id,
+  data_inizio: e.start?.dateTime,
+  data_fine: e.end?.dateTime,
 
-                  // IMPORTANTI: legame con studio e utente
-                  studio_id: studioId,
-                  utente_id: targetUserId,
+  ora_inizio: e.start?.dateTime?.substring(11, 19) ?? null,
+  ora_fine: e.end?.dateTime?.substring(11, 19) ?? null,
 
-                  outlook_synced: true,
-                  updated_at: new Date().toISOString(),
-                },
-                { onConflict: "provider,external_id" }
-              );
+  tutto_giorno: !!e.isAllDay,
+  luogo: e.location?.displayName || null,
+
+  // campi collegamento Microsoft
+  microsoft_event_id: e.id,
+  provider: "microsoft",
+  external_id: e.id,
+
+  // IMPORTANTI: legame con studio e utente
+  studio_id: studioId,
+  utente_id: targetUserId,
+
+  outlook_synced: true,
+  updated_at: new Date().toISOString(),
+}
 
             if (upErr) {
               errors.push({ user_id: targetUserId, event_id: e.id, message: upErr.message });
@@ -302,18 +309,18 @@ if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
     }
 
     // 6) Risposta per UI
-    return res.status(200).json({
-      ok: true,
-      studio_id: studioId,
-      requested_by: requesterUserId,
-      users_processed: rows.length,
-      range_days: 60,
-      totalFetched,
-      totalSaved,
-       updated: totalSaved,   // <-- AGGIUNGI QUESTA RIGA
-      perUser,
-      errors,
-    });
+  return res.status(200).json({
+  ok: true,
+  studio_id: studioId,
+  requested_by: requesterUserId,
+  users_processed: rows.length,
+  range_days: 60,
+  totalFetched,
+  totalSaved,
+  updated: totalSaved,
+  perUser,
+  errors,
+});
   } catch (e: any) {
     console.error("[calendar/sync]", e);
     return res.status(500).json({ error: e?.message || "Errore interno sync" });
