@@ -645,7 +645,7 @@ const handleUpdateField = async (
                         />
                       </td>
 
- <td className="p-2 align-middle min-w-[150px]">
+<td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={dataApprovazioneInputs[scadenza.id] ?? ""}
@@ -669,25 +669,37 @@ const handleUpdateField = async (
     className={dateInputClass(scadenza.data_approvazione)}
   />
 </td>
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.bil_approvato || false}
-                          onChange={() => handleToggleField(scadenza.id, "bil_approvato", scadenza.bil_approvato)}
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
-                      </td>
 
-                      <td className="p-2 align-middle text-center min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          checked={scadenza.invio_bil || false}
-                          onChange={() => handleToggleField(scadenza.id, "invio_bil", scadenza.invio_bil)}
-                          className="rounded w-4 h-4 cursor-pointer"
-                        />
-                      </td>
+<td className="p-2 align-middle min-w-[150px]">
+  <Input
+    type="text"
+    value={formatFromISODate(scadenza.data_scad_pres)}
+    readOnly
+    placeholder="DD/MM/YYYY"
+    inputMode="numeric"
+    className={dateInputClass(scadenza.data_scad_pres, true)}
+  />
+</td>
 
-                    <td className="p-2 align-middle min-w-[150px]">
+<td className="p-2 align-middle text-center min-w-[120px]">
+  <input
+    type="checkbox"
+    checked={scadenza.bil_approvato || false}
+    onChange={() => handleToggleField(scadenza.id, "bil_approvato", scadenza.bil_approvato)}
+    className="rounded w-4 h-4 cursor-pointer"
+  />
+</td>
+
+<td className="p-2 align-middle text-center min-w-[120px]">
+  <input
+    type="checkbox"
+    checked={scadenza.invio_bil || false}
+    onChange={() => handleToggleField(scadenza.id, "invio_bil", scadenza.invio_bil)}
+    className="rounded w-4 h-4 cursor-pointer"
+  />
+</td>
+
+<td className="p-2 align-middle min-w-[150px]">
   <Input
     type="text"
     value={dataInvioInputs[scadenza.id] ?? ""}
