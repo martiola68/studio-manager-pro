@@ -245,7 +245,7 @@ const handleUpdateField = async (
     if (!record) return;
 
     if (field === "data_approvazione") {
-      const isoDate = value || null;
+      const isoDate = formatToISODate(value);
       const currentYear = new Date().getFullYear();
 
       const newDataScadPres = record.consorzio
@@ -279,7 +279,7 @@ const handleUpdateField = async (
     }
 
     if (field === "data_invio") {
-      const isoDate = value || null;
+      const isoDate = formatToISODate(value);
 
       setScadenze((prev) =>
         prev.map((s) =>
