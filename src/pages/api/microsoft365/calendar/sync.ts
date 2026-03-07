@@ -286,15 +286,15 @@ if (!studioId || !targetUserId) continue;
     { onConflict: "provider,external_id" }
   );
 
-            if (upErr) {
+           if (upErr) {
               errors.push({ user_id: targetUserId, event_id: e.id, message: upErr.message });
             } else {
               savedThisUser++;
             }
-          
+          } // <-- manca questa chiusura del for
+
           graphUrl = body?.["@odata.nextLink"] || "";
         }
-
         // F) Salva cache se cambiata
         await persistCacheIfChanged(studioId, targetUserId, oldSerializedCache, tokenRes.newSerializedCache);
 
