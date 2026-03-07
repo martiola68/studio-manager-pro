@@ -245,53 +245,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           // E) Salva su tbagenda (chiave unica provider+external_id)
           for (const e of events) {
-   if (!studioId || !targetUserId) {
-  errors.push({
-    user_id: targetUserId || "MISSING",
-    message: "SALVATAGGIO BLOCCATO: studio_id o utente_id mancante",
-  });
-  continue;
+  if (!studioId || !targetUserId) {
+    errors.push({
+      user_id: targetUserId || "MISSING",
+      message: "SALVATAGGIO BLOCCATO: studio_id o utente_id mancante",
+    });
+    continue;
+  }
+
+  if (!e?.id) continue;
+  if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
+  if (!studioId || !targetUserId) continue;
+
+  const isAllDay = !!e.isAllDay;
+
+  const startDateTime = e.start?.dateTime ?? null;
+  const endDateTime = e.end?.dateTime ?? null;
+
+  const oraInizio = isAllDay
+    ? null
+    : (startDateTime?.substring(11, 19) ?? null);
+
+  const oraFine = isAllDay
+    ? null
+    : (endDateTime?.substring(11, 19) ?? null);
+
+  const agendaPayload = {
+    titolo: e.subject || "(senza titolo)",
+    descrizione: e.bodyPreview || null,
+
+    data_inizio: startDateTime,
+    data_fine: endDateTime,
+
+    ora_inizio: oraInizio,
+    ora_fine: oraFine,
+
+    tutto_giorno: isAllDay,
+    luogo: e.location?.displayName || null,
+
+    microsoft_event_id: e.id,
+    provider: "microsoft",
+    external_id: e.id,
+
+    studio_id: studioId,
+    utente_id: targetUserId,
+
+    outlook_synced: true,
+
+    riunione_teams: !!e.isOnlineMeeting,
+    link_teams: e.onlineMeetingUrl || null,
+
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: upErr } = await supabaseAdmin
+    .from("tbagenda")
+    .upsert(agendaPayload, { onConflict: "provider,external_id" });
+
+  if (upErr) {
+    errors.push({
+      user_id: targetUserId,
+      event_id: e.id,
+      message: upErr.message,
+    });
+  } else {
+    savedThisUser++;
+  }
 }
-              // controllo 2 (AGGIUNGI QUESTO)
-if (!e?.id) continue;
-if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
-if (!studioId || !targetUserId) continue;
-
-           const { error: upErr } = await supabaseAdmin
-  .from("tbagenda")
-  .upsert(
-    {
-      titolo: e.subject || "(senza titolo)",
-      descrizione: e.bodyPreview || null,
-
-      data_inizio: e.start?.dateTime,
-      data_fine: e.end?.dateTime,
-
-      ora_inizio: e.start?.dateTime?.substring(11, 19) ?? null,
-      ora_fine: e.end?.dateTime?.substring(11, 19) ?? null,
-
-      tutto_giorno: !!e.isAllDay,
-      luogo: e.location?.displayName || null,
-
-      microsoft_event_id: e.id,
-      provider: "microsoft",
-      external_id: e.id,
-
-      studio_id: studioId,
-      utente_id: targetUserId,
-
-      outlook_synced: true,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "provider,external_id" }
-  );
-
-           if (upErr) {
-              errors.push({ user_id: targetUserId, event_id: e.id, message: upErr.message });
-            } else {
-              savedThisUser++;
-            }
-          } // <-- manca questa chiusura del for
 
           graphUrl = body?.["@odata.nextLink"] || "";
         }
