@@ -580,9 +580,14 @@ const handleUpdateField = async (
     scadenza.conferma_riga ? "bg-green-300 hover:bg-green-300" : "hover:bg-green-50"
   ].join(" ")}
 >
-  <td className="p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]">
-    {scadenza.nominativo}
-  </td>
+  <td
+  className={[
+    "p-2 align-middle sticky-col-cell border-r-2 border-gray-300 font-medium min-w-[200px]",
+    scadenza.conferma_riga ? "bg-green-300" : ""
+  ].join(" ")}
+>
+  {scadenza.nominativo}
+</td>
 
   <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_professionista_id)}</td>
   <td className="p-2 align-middle min-w-[180px]">{getUtenteNome(scadenza.utente_operatore_id)}</td>
