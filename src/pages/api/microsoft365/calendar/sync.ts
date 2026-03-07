@@ -257,42 +257,41 @@ if (!e?.id) continue;
 if (!e?.start?.dateTime || !e?.end?.dateTime) continue;
 if (!studioId || !targetUserId) continue;
 
-             const { error: upErr } = await supabaseAdmin
-              .from("tbagenda")
-              .upsert(
-               {
-  titolo: e.subject || "(senza titolo)",
-  descrizione: e.bodyPreview || null,
+           const { error: upErr } = await supabaseAdmin
+  .from("tbagenda")
+  .upsert(
+    {
+      titolo: e.subject || "(senza titolo)",
+      descrizione: e.bodyPreview || null,
 
-  data_inizio: e.start?.dateTime,
-  data_fine: e.end?.dateTime,
+      data_inizio: e.start?.dateTime,
+      data_fine: e.end?.dateTime,
 
-  ora_inizio: e.start?.dateTime?.substring(11, 19) ?? null,
-  ora_fine: e.end?.dateTime?.substring(11, 19) ?? null,
+      ora_inizio: e.start?.dateTime?.substring(11, 19) ?? null,
+      ora_fine: e.end?.dateTime?.substring(11, 19) ?? null,
 
-  tutto_giorno: !!e.isAllDay,
-  luogo: e.location?.displayName || null,
+      tutto_giorno: !!e.isAllDay,
+      luogo: e.location?.displayName || null,
 
-  // campi collegamento Microsoft
-  microsoft_event_id: e.id,
-  provider: "microsoft",
-  external_id: e.id,
+      microsoft_event_id: e.id,
+      provider: "microsoft",
+      external_id: e.id,
 
-  // IMPORTANTI: legame con studio e utente
-  studio_id: studioId,
-  utente_id: targetUserId,
+      studio_id: studioId,
+      utente_id: targetUserId,
 
-  outlook_synced: true,
-  updated_at: new Date().toISOString(),
-}
+      outlook_synced: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "provider,external_id" }
+  );
 
             if (upErr) {
               errors.push({ user_id: targetUserId, event_id: e.id, message: upErr.message });
             } else {
               savedThisUser++;
             }
-          }
-
+          
           graphUrl = body?.["@odata.nextLink"] || "";
         }
 
