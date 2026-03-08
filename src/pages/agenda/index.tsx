@@ -1100,27 +1100,28 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     : "bg-red-50 border-red-500 text-gray-900"
 } cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
 >
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEditEvento(ev);
-          }}
-        >
-          <div className="truncate font-medium">
-            {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
-          </div>
+      <div
+  onClick={(e) => {
+    e.stopPropagation();
+    handleEditEvento(ev);
+  }}
+  className="pr-6"
+>
+  <div className="truncate font-semibold text-gray-900">
+    {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+  </div>
 
-          {ev.utente && (
-            <div className="truncate text-[11px] text-white/90">
-              👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
-            </div>
-          )}
+  {ev.utente && (
+    <div className="truncate text-[11px] text-gray-700">
+      👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
+    </div>
+  )}
 
-          <div className="truncate text-[11px] text-white/90">
-            ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
-            {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
-          </div>
-        </div>
+  <div className="truncate text-[11px] text-gray-600">
+    ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
+    {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
+  </div>
+</div>
 
         <button
           className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
