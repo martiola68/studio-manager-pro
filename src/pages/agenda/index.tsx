@@ -1156,7 +1156,6 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
     const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
-    return (
  return (
   <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
 
