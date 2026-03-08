@@ -139,7 +139,7 @@ const message: EmailMessage = {
 
   try {
     // Invia email tramite Graph API
-    await graphApiCall(adminUserId, "/users/noreply@revisionicommerciali.it/sendMail", {
+    await graphApiCall(adminUserId, "/me/sendMail", {
       method: "POST",
       body: JSON.stringify({
         message,
