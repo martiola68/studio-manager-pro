@@ -5,13 +5,14 @@ import { supabase } from "@/lib/supabase/client";
  * Invia email tramite Microsoft Graph API usando Outlook
  */
 
-const ADMIN_EMAIL = "m.artiola@revisionicommerciali.it";
+const ADMIN_LOGIN_EMAIL = "m.artiola@revisionicommerciali.it";
+const SENDER_EMAIL = "noreply@revisionicommerciali.it";
 
 async function getAdminUserId(): Promise<string> {
   const { data, error } = await supabase
     .from("tbutenti")
     .select("id,email")
-    .eq("email", ADMIN_EMAIL)
+    .eq("email", ADMIN_LOGIN_EMAIL)
     .single();
 
   if (error || !data) {
@@ -110,7 +111,7 @@ const message: EmailMessage = {
 
   from: {
     emailAddress: {
-      address: ADMIN_EMAIL,
+      address: SENDER_EMAIL,
       name: "Studio Manager Pro"
     }
   },
@@ -138,7 +139,7 @@ const message: EmailMessage = {
 
   try {
     // Invia email tramite Graph API
-    await graphApiCall(userId, "/users/noreply@revisionicommerciali.it/sendMail", {
+    await graphApiCall(adminUserId, "/me/sendMail", {
       method: "POST",
       body: JSON.stringify({
         message,
