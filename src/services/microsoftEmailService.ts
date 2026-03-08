@@ -37,6 +37,20 @@ interface EmailMessage {
   toRecipients: EmailRecipient[];
   ccRecipients?: EmailRecipient[];
   bccRecipients?: EmailRecipient[];
+
+  from?: {
+    emailAddress: {
+      address: string;
+      name?: string;
+    };
+  };
+
+  sender?: {
+    emailAddress: {
+      address: string;
+      name?: string;
+    };
+  };
 }
 
 interface SendEmailParams {
