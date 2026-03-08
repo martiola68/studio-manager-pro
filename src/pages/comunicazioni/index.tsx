@@ -389,13 +389,13 @@ export default function ComunicazioniPage() {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Nuova Comunicazione</DialogTitle>
               <DialogDescription>Invia email a singoli clienti o gruppi di distribuzione</DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-2">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo Invio</Label>
                 <Select
@@ -491,7 +491,7 @@ export default function ComunicazioniPage() {
                         </Button>
                       </div>
 
-                      <div className="border rounded-md max-h-[300px] overflow-y-auto p-2 bg-white">
+                      <div className="border rounded-md max-h-[220px] overflow-y-auto p-2 bg-white">
                         {getUtentiFiltrati().map((utente) => (
                           <div key={utente.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                             <Checkbox
