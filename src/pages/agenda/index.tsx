@@ -1089,51 +1089,49 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((ev) => (
                   <TooltipProvider key={String(ev.id)}>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <div
-                          className="text-xs p-1 rounded truncate border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity group relative"
-                          style={{ backgroundColor: getEventColor(ev), borderLeftColor: "rgba(0,0,0,0.2)" }}
-                        >
-                          <span
-                         <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditEvento(ev);
-                            }}
-                            >
-                          <div className="truncate font-medium">
-                            {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
-                            </div>
+  <Tooltip delayDuration={300}>
+    <TooltipTrigger asChild>
+      <div
+        className="text-xs p-1 rounded border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity group relative"
+        style={{ backgroundColor: getEventColor(ev), borderLeftColor: "rgba(0,0,0,0.2)" }}
+      >
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditEvento(ev);
+          }}
+        >
+          <div className="truncate font-medium">
+            {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+          </div>
 
-                              {ev.utente && (
-                                <div className="truncate text-[11px] text-white/90">
-                              👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
-                            </div>
-                          )}
+          {ev.utente && (
+            <div className="truncate text-[11px] text-white/90">
+              👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
+            </div>
+          )}
 
-                              <div className="truncate text-[11px] text-white/90">
-                              ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
-                                {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
-                              </div>
-                              </div>
-                          </span>
+          <div className="truncate text-[11px] text-white/90">
+            ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
+            {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
+          </div>
+        </div>
 
-                          <button
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                            onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
-                            title="Elimina"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </TooltipTrigger>
+        <button
+          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+          onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
+          title="Elimina"
+        >
+          ×
+        </button>
+      </div>
+    </TooltipTrigger>
 
-                      <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-                        {getEventoSummary(ev)}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+    <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
+      {getEventoSummary(ev)}
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
                 ))}
 
                 {dayEvents.length > 3 && (
