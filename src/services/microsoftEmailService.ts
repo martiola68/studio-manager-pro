@@ -5,6 +5,22 @@ import { supabase } from "@/lib/supabase/client";
  * Invia email tramite Microsoft Graph API usando Outlook
  */
 
+const ADMIN_EMAIL = "m.artiola@revisionicommerciali.it";
+
+async function getAdminUserId(): Promise<string> {
+  const { data, error } = await supabase
+    .from("tbutenti")
+    .select("id,email")
+    .eq("email", ADMIN_EMAIL)
+    .single();
+
+  if (error || !data) {
+    throw new Error("Utente admin Microsoft non trovato");
+  }
+
+  return data.id;
+}
+
 interface EmailRecipient {
   emailAddress: {
     address: string;
@@ -50,12 +66,13 @@ export async function sendEmailViaMicrosoft(
   params: SendEmailParams
 ): Promise<void> {
  
-  const { data: u, error: uErr } = await supabase
+ const adminUserId = await getAdminUserId();
+
+const { data: u, error: uErr } = await supabase
   .from("tbutenti")
   .select("studio_id")
-  .eq("id", userId)
+  .eq("id", adminUserId)
   .single();
-
 if (uErr || !u?.studio_id) {
   throw new Error("Studio non trovato per invio email Microsoft.");
 }
@@ -94,7 +111,7 @@ const studioId = u.studio_id as string;
 
   try {
     // Invia email tramite Graph API
-    await graphApiCall(userId, "/me/sendMail", {
+    await graphApiCall(adminUserId, "/me/sendMail", {
       method: "POST",
       body: JSON.stringify({
         message,
