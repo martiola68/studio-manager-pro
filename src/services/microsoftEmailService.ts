@@ -118,7 +118,7 @@ const message: EmailMessage = {
 
   sender: {
     emailAddress: {
-      address: ADMIN_EMAIL,
+      address: SENDER_EMAIL,
       name: "Studio Manager Pro"
     }
   }
