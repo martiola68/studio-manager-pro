@@ -977,8 +977,8 @@ setEventoToDelete(null);
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
-                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "00:00"} -{" "}
-                      {evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "00:00"}
+                     {evento.ora_inizio && String(evento.ora_inizio).substring(0, 5)}
+                      {evento.ora_fine && ` - ${String(evento.ora_fine).substring(0, 5)}`}
                     </span>
                   </div>
                   <div className="flex gap-1">
