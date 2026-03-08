@@ -86,15 +86,28 @@ const studioId = u.studio_id as string;
   }
 
   // Costruisci messaggio in formato Graph API
-  const message: EmailMessage = {
-    subject: params.subject,
-    body: {
-      contentType: "HTML",
-      content: params.html,
-    },
-    toRecipients: formatRecipients(params.to),
-  };
+const message: EmailMessage = {
+  subject: params.subject,
+  body: {
+    contentType: "HTML",
+    content: params.html,
+  },
+  toRecipients: formatRecipients(params.to),
 
+  from: {
+    emailAddress: {
+      address: ADMIN_EMAIL,
+      name: "Studio Manager Pro"
+    }
+  },
+
+  sender: {
+    emailAddress: {
+      address: ADMIN_EMAIL,
+      name: "Studio Manager Pro"
+    }
+  }
+};
   // Aggiungi CC se presente
   if (params.cc) {
     message.ccRecipients = formatRecipients(params.cc);
