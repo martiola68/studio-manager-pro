@@ -1157,22 +1157,22 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
     return (
-      <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b bg-gray-50">
-          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">Ora</div>
+ <div className="border-b bg-gray-50 pr-[15px]">
+  <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+    <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">Ora</div>
 
-          {weekDays.map((day) => (
-            <div
-              key={day.toISOString()}
-              className={`p-2 text-center border-r ${isSameDay(day, new Date()) ? "bg-blue-50 text-blue-700" : ""}`}
-            >
-              <div className="text-xs font-medium uppercase">{format(day, "EEE", { locale: it })}</div>
-              <div className="text-lg font-bold">{format(day, "d")}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="overflow-y-auto flex-1">
+    {weekDays.map((day) => (
+      <div
+        key={day.toISOString()}
+        className={`p-2 text-center border-r ${isSameDay(day, new Date()) ? "bg-blue-50 text-blue-700" : ""}`}
+      >
+        <div className="text-xs font-medium uppercase">{format(day, "EEE", { locale: it })}</div>
+        <div className="text-lg font-bold">{format(day, "d")}</div>
+      </div>
+    ))}
+  </div>
+</div>
+        <div className="overflow-y-scroll flex-1">
           {hours.map((hour) => (
             <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b min-h-[100px]">
               <div className="p-2 text-xs text-gray-400 text-right border-r font-mono">
