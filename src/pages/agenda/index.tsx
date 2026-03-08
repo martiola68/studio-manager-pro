@@ -1092,9 +1092,14 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
   <Tooltip delayDuration={300}>
     <TooltipTrigger asChild>
       <div
-        className="text-xs p-1 rounded border-l-2 text-white font-medium shadow-sm cursor-pointer hover:opacity-90 transition-opacity group relative"
-        style={{ backgroundColor: getEventColor(ev), borderLeftColor: "rgba(0,0,0,0.2)" }}
-      >
+  className={`p-2 rounded border-l-2 ${
+  (ev as any).evento_generico
+    ? "bg-blue-50 border-blue-500 text-gray-900"
+    : ev.in_sede
+    ? "bg-green-50 border-green-500 text-gray-900"
+    : "bg-red-50 border-red-500 text-gray-900"
+} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+>
         <div
           onClick={(e) => {
             e.stopPropagation();
