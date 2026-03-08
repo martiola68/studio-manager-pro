@@ -924,8 +924,8 @@ setEventoToDelete(null);
       ? "Riunione Teams"
       : "Appuntamento";
 
-    const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "00:00";
-    const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "00:00";
+   const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
+const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
