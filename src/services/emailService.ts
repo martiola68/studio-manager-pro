@@ -537,8 +537,6 @@ export async function sendComunicazioneEmail(
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
     .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center; }
-    .header h1 { margin: 0; font-size: 24px; }
     .content { padding: 30px 20px; }
     .message { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; white-space: pre-wrap; }
     .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
@@ -547,14 +545,12 @@ export async function sendComunicazioneEmail(
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>📧 ${data.oggetto}</h1>
-    </div>
+   
     <div class="content">
       <div class="message">
         ${data.messaggio.replace(/\n/g, '<br>')}
       </div>
-      ${data.allegati ? '<p><strong>📎 Questa comunicazione contiene allegati</strong></p>' : ''}
+      ${data.allegati ? '<p><strong>Questa comunicazione contiene allegati</strong></p>' : ''}
     </div>
     <div class="footer">
       <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
