@@ -1051,7 +1051,7 @@ setEventoToDelete(null);
     );
   };
 
-  const renderMonthView = () => {
+    const renderMonthView = () => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const startDate = startOfWeek(monthStart, { locale: it });
@@ -1096,12 +1096,27 @@ setEventoToDelete(null);
                           style={{ backgroundColor: getEventColor(ev), borderLeftColor: "rgba(0,0,0,0.2)" }}
                         >
                           <span
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditEvento(ev);
+                         <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditEvento(ev);
                             }}
-                          >
+                            >
+                          <div className="truncate font-medium">
                             {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+                            </div>
+
+                              {ev.utente && (
+                                <div className="truncate text-[11px] text-white/90">
+                              👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
+                            </div>
+                          )}
+
+                              <div className="truncate text-[11px] text-white/90">
+                              ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
+                                {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
+                              </div>
+                              </div>
                           </span>
 
                           <button
@@ -1223,7 +1238,8 @@ setEventoToDelete(null);
                                     )}
 
                                     <div className="text-gray-500 mt-1">
-                                      ⏰ {evento.ora_inizio ? formatTimeWithTimezone(String(evento.ora_inizio)) : "00:00"}
+                                      ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0,5) : ""}
+                                          {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0,5)}` : ""}
                                     </div>
                                   </div>
 
