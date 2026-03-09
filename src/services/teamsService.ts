@@ -113,25 +113,33 @@ if (!currentMicrosoftUser) {
 }
 
     // 2) se non trovata, crea chat 1:1
-   if (!oneOnOne) {
-  const created = await graphApiCall<any>(studioId, userId, "/chats", {
-    method: "POST",
-    body: JSON.stringify({
-      chatType: "oneOnOne",
-      members: [
-        {
-          "@odata.type": "#microsoft.graph.aadUserConversationMember",
-          roles: ["owner"],
-          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(userId)}')`,
-        },
-        {
-          "@odata.type": "#microsoft.graph.aadUserConversationMember",
-          roles: ["owner"],
-          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
-        },
-      ],
-    }),
-  });
+ if (!oneOnOne) {
+  try {
+    const created = await graphApiCall<any>(studioId, userId, "/chats", {
+      method: "POST",
+      body: JSON.stringify({
+        chatType: "oneOnOne",
+        members: [
+          {
+            "@odata.type": "#microsoft.graph.aadUserConversationMember",
+            roles: ["owner"],
+            "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(currentMicrosoftUser)}')`,
+          },
+          {
+            "@odata.type": "#microsoft.graph.aadUserConversationMember",
+            roles: ["owner"],
+            "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
+          },
+        ],
+      }),
+    });
+
+    oneOnOne = created;
+  } catch (err: any) {
+    console.warn("DM Teams non inviabile per destinatario non risolto:", recipientEmail, err);
+
+    return { success: true };
+  }
       oneOnOne = created;
     }
 
