@@ -96,28 +96,25 @@ async function sendDirectMessage(
     let oneOnOne = (chats.value ?? []).find((c1) => c1?.chatType === "oneOnOne");
 
     // 2) se non trovata, crea chat 1:1
-    if (!oneOnOne) {
-      const created = await graphApiCall<any>(studioId, userId, "/chats", {
-        method: "POST",
-        body: JSON.stringify({
-          chatType: "oneOnOne",
-          members: [
-            {
-              "@odata.type": "#microsoft.graph.aadUserConversationMember",
-              roles: ["owner"],
-              "user@odata.bind": "https://graph.microsoft.com/v1.0/me",
-            },
-            {
-              "@odata.type": "#microsoft.graph.aadUserConversationMember",
-              roles: ["owner"],
-              "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(
-                recipientEmail
-              )}')`,
-            },
-          ],
-        }),
-      });
-
+   if (!oneOnOne) {
+  const created = await graphApiCall<any>(studioId, userId, "/chats", {
+    method: "POST",
+    body: JSON.stringify({
+      chatType: "oneOnOne",
+      members: [
+        {
+          "@odata.type": "#microsoft.graph.aadUserConversationMember",
+          roles: ["owner"],
+          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(userEmail)}')`,
+        },
+        {
+          "@odata.type": "#microsoft.graph.aadUserConversationMember",
+          roles: ["owner"],
+          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
+        },
+      ],
+    }),
+  });
       oneOnOne = created;
     }
 
