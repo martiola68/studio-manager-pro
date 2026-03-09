@@ -244,6 +244,7 @@ export const eventoService = {
         partecipantiNomi,
         clienteEmail,
         clienteNome,
+        link_teams: evento.link_teams || undefined,
       };
 
       console.log("📧 Sending notification via emailService");
