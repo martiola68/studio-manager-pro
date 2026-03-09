@@ -7,6 +7,9 @@ export default function Document() {
     <Html lang="it">
       <Head>
         <SEOElements />
+
+        {/* RESPONSIVE MOBILE */}
+        <meta name="viewport" content="width=device-width, initial-scale=1" />      
         
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
