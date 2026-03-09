@@ -105,7 +105,7 @@ async function sendDirectMessage(
         {
           "@odata.type": "#microsoft.graph.aadUserConversationMember",
           roles: ["owner"],
-          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(userEmail)}')`,
+          "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(userId)}')`,
         },
         {
           "@odata.type": "#microsoft.graph.aadUserConversationMember",
