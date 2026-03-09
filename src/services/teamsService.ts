@@ -95,6 +95,23 @@ async function sendDirectMessage(
     // best-effort: prendo una oneOnOne (senza filtrare per destinatario: API non è banale senza espansioni)
     let oneOnOne = (chats.value ?? []).find((c1) => c1?.chatType === "oneOnOne");
 
+    // recupero utente Microsoft corrente
+const me = await graphApiCall<any>(
+  studioId,
+  userId,
+  "/me?$select=id,mail,userPrincipalName"
+);
+
+const currentMicrosoftUser =
+  me?.id || me?.mail || me?.userPrincipalName;
+
+if (!currentMicrosoftUser) {
+  return {
+    success: false,
+    error: "Impossibile determinare l'utente Microsoft corrente.",
+  };
+}
+
     // 2) se non trovata, crea chat 1:1
    if (!oneOnOne) {
   const created = await graphApiCall<any>(studioId, userId, "/chats", {
