@@ -16,6 +16,8 @@ export interface EventEmailData {
   partecipantiNomi: string[];
   clienteEmail?: string;
   clienteNome?: string;
+  riunione_teams?: boolean;
+  link_teams?: string;
 }
 
 export interface ComunicazioneEmailData {
