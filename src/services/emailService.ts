@@ -340,6 +340,10 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
     console.log(`📧 Total valid recipients: ${recipients.length}`);
     console.log("📧 Recipients list:", recipients);
 
+    console.log("PAYLOAD send-event-notification:", {
+  ...data,
+  recipients
+});
     const { data: result, error } = await supabase.functions.invoke(
       "send-event-notification",
       {
