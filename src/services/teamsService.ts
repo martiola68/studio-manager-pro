@@ -113,7 +113,7 @@ if (!currentMicrosoftUser) {
 }
 
     // 2) se non trovata, crea chat 1:1
- if (!oneOnOne) {
+if (!oneOnOne) {
   try {
     const created = await graphApiCall<any>(studioId, userId, "/chats", {
       method: "POST",
@@ -136,12 +136,15 @@ if (!currentMicrosoftUser) {
 
     oneOnOne = created;
   } catch (err: any) {
-    console.warn("DM Teams non inviabile per destinatario non risolto:", recipientEmail, err);
+    console.warn(
+      "DM Teams non inviabile per destinatario non risolto:",
+      recipientEmail,
+      err
+    );
 
     return { success: true };
   }
-      oneOnOne = created;
-    }
+}
 
     if (!oneOnOne?.id) {
       return {
