@@ -1336,6 +1336,7 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-4">
+      <div className="hidden md:block">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
         <div className="flex items-center gap-4">
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
@@ -1433,7 +1434,70 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
           </div>
         </div>
       </div>
+ </div>
+      {/* MOBILE */}
+          <div className="md:hidden space-y-4">
+      <div className="bg-white p-4 rounded-lg shadow-sm border space-y-3">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              setCurrentDate((prev) => (view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)))
+            }
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
 
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground">Agenda</div>
+            <div className="font-bold">
+              {format(currentDate, "EEEE d MMMM yyyy", { locale: it })}
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              setCurrentDate((prev) => (view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)))
+            }
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
+          <Plus className="h-4 w-4" /> Nuovo Evento
+        </Button>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
+            Settimana
+          </Button>
+          <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
+            Mese
+          </Button>
+          <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
+            Scaduti
+          </Button>
+          <Button
+            variant={view === "ricorrenti" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("ricorrenti")}
+          >
+            Ricorrenti
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-3">
+        {view === "ricorrenti" && renderRicorrentiView()}
+        {view === "list" && renderListView()}
+        {view === "month" && renderMonthView()}
+        {view === "week" && renderListView()}
+      </div>
+    </div>
       <div className="bg-white rounded-lg shadow-sm">
         {view === "ricorrenti" && renderRicorrentiView()}
         {view === "list" && renderListView()}
