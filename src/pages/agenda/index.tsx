@@ -1560,14 +1560,7 @@ return (
     )}
   </div>
 </div>
-    
-      <div className="bg-white rounded-lg shadow-sm">
-        {view === "ricorrenti" && renderRicorrentiView()}
-        {view === "list" && renderListView()}
-        {view === "month" && renderMonthView()}
-        {view === "week" && renderWeekView()}
-      </div>
-   
+      
       {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
