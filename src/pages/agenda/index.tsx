@@ -1164,7 +1164,7 @@ const renderWeekView = () => {
       {/* HEADER */}
       <div className="border-b bg-gray-50 shrink-0">
         <div className={`grid ${weekGridCols}`}>
-          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200">
+          <div className="sticky left-0 z-30 p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200 bg-gray-50">
             Ora
           </div>
 
@@ -1202,7 +1202,7 @@ const renderWeekView = () => {
             key={hour}
             className={`grid ${weekGridCols} min-h-[100px] border-b border-gray-200`}
           >
-            <div className="p-2 text-xs text-gray-400 text-right border-r border-gray-200 font-mono bg-gray-50">
+           <div className="sticky left-0 z-20 p-2 text-xs text-gray-400 text-right border-r border-gray-200 font-mono bg-gray-50">
               {String(hour).padStart(2, "0")}:00
             </div>
 
