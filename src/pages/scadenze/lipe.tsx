@@ -71,6 +71,23 @@ const mesiDisabilitatiPerTipo: Record<TipoLiqValue, CampoMese[]> = {
   Esterna: ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
 };
 
+const baseHeaderClass =
+  "h-10 px-2 text-center align-middle font-medium text-muted-foreground border-r border-gray-300";
+
+const baseCellClass = "p-2 align-middle border-r border-gray-300";
+
+const groupHeaderQ1 = "bg-sky-100";
+const groupCellQ1 = "bg-sky-50";
+
+const groupHeaderQ2 = "bg-emerald-100";
+const groupCellQ2 = "bg-emerald-50";
+
+const groupHeaderQ3 = "bg-amber-100";
+const groupCellQ3 = "bg-amber-50";
+
+const groupHeaderQ4 = "bg-violet-100";
+const groupCellQ4 = "bg-violet-50";
+
 export default function ScadenzeLipePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -308,114 +325,80 @@ export default function ScadenzeLipePage() {
       <Card>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto max-h-[600px]">
-            <table className="w-full caption-bottom text-sm">
-              <thead className="[&_tr]:border-b sticky top-0 z-30 bg-white">
-                <tr className="border-b transition-colors hover:bg-muted/50">
-                  <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
+            <table className="w-full caption-bottom text-sm border-collapse">
+              <thead className="sticky top-0 z-30 bg-white">
+                <tr className="border-b border-gray-300">
+                  <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px] border-r border-gray-300 bg-white">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
                     Professionista
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px] border-r border-gray-300 bg-white">
                     Operatore
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px]">
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px] border-r border-gray-300 bg-white">
                     TipoLiq
                   </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Gen
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Feb
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Mar
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
-                    LIPE 1T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
-                    Data Invio 1T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Apr
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Mag
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Giu
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
-                    LIPE 2T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
-                    Data Invio 2T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Lug
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Ago
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Set
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
-                    LIPE 3T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
-                    Data Invio 3T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Ott
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Nov
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
-                    Dic
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
-                    Acconto
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
-                    Acconto Com
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
-                    LIPE 4T
-                  </th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+
+                  <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Gen</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Feb</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[60px]`}>Mar</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[80px]`}>LIPE 1T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ1} min-w-[140px]`}>Data Invio 1T</th>
+
+                  <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Apr</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Mag</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[60px]`}>Giu</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[80px]`}>LIPE 2T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ2} min-w-[140px]`}>Data Invio 2T</th>
+
+                  <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Lug</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Ago</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[60px]`}>Set</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[80px]`}>LIPE 3T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ3} min-w-[140px]`}>Data Invio 3T</th>
+
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Ott</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Nov</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[60px]`}>Dic</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[120px]`}>Acconto</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[100px]`}>Acconto Com</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[80px]`}>LIPE 4T</th>
+                  <th className={`${baseHeaderClass} ${groupHeaderQ4} min-w-[140px] border-r-0`}>
                     Data Invio 4T
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="[&_tr:last-child]:border-0">
+              <tbody>
                 {filteredScadenze.length === 0 ? (
-                  <tr className="border-b transition-colors hover:bg-muted/50">
+                  <tr className="border-b border-gray-300">
                     <td colSpan={26} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50">
-                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px]">
+                    <tr key={scadenza.id} className="border-b border-gray-300 hover:bg-green-50/40">
+                      <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px] border-r border-gray-300 bg-white">
                         {scadenza.nominativo}
                       </td>
-                      <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
-                      <td className="p-2 align-middle min-w-[180px]">{scadenza.operatore}</td>
+                      <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
+                        {scadenza.professionista}
+                      </td>
+                      <td className="p-2 align-middle min-w-[180px] border-r border-gray-300">
+                        {scadenza.operatore}
+                      </td>
 
-                      <td className="p-2 align-middle min-w-[170px]">
+                      <td className="p-2 align-middle min-w-[170px] border-r border-gray-300">
                         <Select
                           value={getTipoLiq(scadenza)}
                           onValueChange={(value: TipoLiqValue) =>
                             handleUpdateValue(scadenza.id, "TipoLiq", value)
                           }
                         >
-                          <SelectTrigger className="h-8 text-xs">
+                          <SelectTrigger className="h-8 text-xs bg-white">
                             <SelectValue placeholder="Seleziona tipo" />
                           </SelectTrigger>
                           <SelectContent>
@@ -426,8 +409,7 @@ export default function ScadenzeLipePage() {
                         </Select>
                       </td>
 
-                      {/* Mesi Trimestre 1 */}
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.gen || false}
                           disabled={isMonthDisabled(scadenza, "gen")}
@@ -436,7 +418,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.feb || false}
                           disabled={isMonthDisabled(scadenza, "feb")}
@@ -445,7 +427,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.mar || false}
                           disabled={isMonthDisabled(scadenza, "mar")}
@@ -454,8 +436,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-
-                      <td className="p-2 align-middle text-center min-w-[80px]">
+                      <td className={`${baseCellClass} ${groupCellQ1} text-center min-w-[80px]`}>
                         <Checkbox
                           checked={scadenza.lipe1t || false}
                           onCheckedChange={() =>
@@ -463,19 +444,18 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[140px]">
+                      <td className={`${baseCellClass} ${groupCellQ1} min-w-[140px]`}>
                         <Input
                           type="date"
                           value={scadenza.lipe1t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe1t_invio", e.target.value)
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-white"
                         />
                       </td>
 
-                      {/* Mesi Trimestre 2 */}
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.apr || false}
                           disabled={isMonthDisabled(scadenza, "apr")}
@@ -484,7 +464,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.mag || false}
                           disabled={isMonthDisabled(scadenza, "mag")}
@@ -493,7 +473,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.giu || false}
                           disabled={isMonthDisabled(scadenza, "giu")}
@@ -502,8 +482,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-
-                      <td className="p-2 align-middle text-center min-w-[80px]">
+                      <td className={`${baseCellClass} ${groupCellQ2} text-center min-w-[80px]`}>
                         <Checkbox
                           checked={scadenza.lipe2t || false}
                           onCheckedChange={() =>
@@ -511,19 +490,18 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[140px]">
+                      <td className={`${baseCellClass} ${groupCellQ2} min-w-[140px]`}>
                         <Input
                           type="date"
                           value={scadenza.lipe2t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe2t_invio", e.target.value)
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-white"
                         />
                       </td>
 
-                      {/* Mesi Trimestre 3 */}
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.lug || false}
                           disabled={isMonthDisabled(scadenza, "lug")}
@@ -532,7 +510,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.ago || false}
                           disabled={isMonthDisabled(scadenza, "ago")}
@@ -541,7 +519,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.set || false}
                           disabled={isMonthDisabled(scadenza, "set")}
@@ -550,8 +528,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-
-                      <td className="p-2 align-middle text-center min-w-[80px]">
+                      <td className={`${baseCellClass} ${groupCellQ3} text-center min-w-[80px]`}>
                         <Checkbox
                           checked={scadenza.lipe3t || false}
                           onCheckedChange={() =>
@@ -559,19 +536,18 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[140px]">
+                      <td className={`${baseCellClass} ${groupCellQ3} min-w-[140px]`}>
                         <Input
                           type="date"
                           value={scadenza.lipe3t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe3t_invio", e.target.value)
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-white"
                         />
                       </td>
 
-                      {/* Mesi Trimestre 4 */}
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.ott || false}
                           disabled={isMonthDisabled(scadenza, "ott")}
@@ -580,7 +556,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.nov || false}
                           disabled={isMonthDisabled(scadenza, "nov")}
@@ -589,7 +565,7 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[60px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[60px]`}>
                         <Checkbox
                           checked={scadenza.dic || false}
                           disabled={isMonthDisabled(scadenza, "dic")}
@@ -599,18 +575,18 @@ export default function ScadenzeLipePage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle min-w-[120px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[120px]`}>
                         <Input
                           type="text"
                           value={scadenza.acconto || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "acconto", e.target.value)
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-white"
                           placeholder="Metodo"
                         />
                       </td>
-                      <td className="p-2 align-middle text-center min-w-[100px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[100px]`}>
                         <Checkbox
                           checked={scadenza.acconto_com || false}
                           onCheckedChange={() =>
@@ -623,7 +599,7 @@ export default function ScadenzeLipePage() {
                         />
                       </td>
 
-                      <td className="p-2 align-middle text-center min-w-[80px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} text-center min-w-[80px]`}>
                         <Checkbox
                           checked={scadenza.lipe4t || false}
                           onCheckedChange={() =>
@@ -631,14 +607,14 @@ export default function ScadenzeLipePage() {
                           }
                         />
                       </td>
-                      <td className="p-2 align-middle min-w-[140px]">
+                      <td className={`${baseCellClass} ${groupCellQ4} min-w-[140px] border-r-0`}>
                         <Input
                           type="date"
                           value={scadenza.lipe4t_invio || ""}
                           onChange={(e) =>
                             handleUpdateValue(scadenza.id, "lipe4t_invio", e.target.value)
                           }
-                          className="h-8 text-xs"
+                          className="h-8 text-xs bg-white"
                         />
                       </td>
                     </tr>
