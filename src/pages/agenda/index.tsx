@@ -1334,9 +1334,9 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 
   if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
 
-  return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
-      <div className="hidden md:block">
+return (
+  <div className="p-6 max-w-[1600px] mx-auto space-y-4">
+    <div className="hidden md:block">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
         <div className="flex items-center gap-4">
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
@@ -1434,7 +1434,15 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
           </div>
         </div>
       </div>
- </div>
+
+      <div className="bg-white rounded-lg shadow-sm">
+        {view === "ricorrenti" && renderRicorrentiView()}
+        {view === "list" && renderListView()}
+        {view === "month" && renderMonthView()}
+        {view === "week" && renderWeekView()}
+      </div>
+    </div>
+    
       {/* MOBILE */}
       <div className="md:hidden space-y-3 px-1">
       <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
