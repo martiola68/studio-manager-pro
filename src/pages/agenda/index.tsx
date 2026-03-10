@@ -1436,8 +1436,8 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
       </div>
  </div>
       {/* MOBILE */}
-          <div className="md:hidden space-y-4">
-      <div className="bg-white p-4 rounded-lg shadow-sm border space-y-3">
+      <div className="md:hidden space-y-3 px-1">
+      <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
@@ -1471,19 +1471,38 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
           <Plus className="h-4 w-4" /> Nuovo Evento
         </Button>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
+              <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant={view === "week" ? "default" : "outline"}
+            size="sm"
+            className="h-9 text-xs px-2"
+            onClick={() => setView("week")}
+          >
             Settimana
           </Button>
-          <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
+
+          <Button
+            variant={view === "month" ? "default" : "outline"}
+            size="sm"
+            className="h-9 text-xs px-2"
+            onClick={() => setView("month")}
+          >
             Mese
           </Button>
-          <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
+
+          <Button
+            variant={view === "list" ? "default" : "outline"}
+            size="sm"
+            className="h-9 text-xs px-2"
+            onClick={() => setView("list")}
+          >
             Scaduti
           </Button>
+
           <Button
             variant={view === "ricorrenti" ? "default" : "outline"}
             size="sm"
+            className="h-9 text-xs px-2"
             onClick={() => setView("ricorrenti")}
           >
             Ricorrenti
@@ -1491,11 +1510,36 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-3">
+         <div className="bg-white rounded-lg shadow-sm p-3">
         {view === "ricorrenti" && renderRicorrentiView()}
         {view === "list" && renderListView()}
-        {view === "month" && renderMonthView()}
-        {view === "week" && renderListView()}
+
+        {view === "month" && (
+          <div className="overflow-x-auto">
+            <div className="min-w-[700px]">
+              {renderMonthView()}
+            </div>
+          </div>
+        )}
+
+        {view === "week" && (
+          <div className="space-y-3">
+            {filteredEvents
+              .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
+              .sort((a, b) => {
+                const aTime = String(a.ora_inizio || "00:00");
+                const bTime = String(b.ora_inizio || "00:00");
+                return aTime.localeCompare(bTime);
+              })
+              .map((e) => renderEventCard(e, false))}
+
+            {filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate)).length === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                Nessun evento per questo giorno
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
       <div className="bg-white rounded-lg shadow-sm">
@@ -1505,13 +1549,14 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
         {view === "week" && renderWeekView()}
       </div>
 
-      {/* Calendar (shadcn): aggiunto onSelect per compatibilità tipi */}
+     {/*
       <Calendar
         mode="single"
         selected={selectedDate ?? undefined}
         onSelect={(date) => setSelectedDate(date ?? null)}
       />
-
+      */}
+      
       {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
