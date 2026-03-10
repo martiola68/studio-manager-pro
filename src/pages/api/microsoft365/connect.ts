@@ -126,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log("[m365/connect] authorize tenant:", tenantId);
 
-    const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+    const url = `https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize?${params.toString()}`;
 
     // 6) Redirect o JSON
     if (req.method === "GET") {
