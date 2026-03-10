@@ -120,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       redirect_uri: redirectUri,
       response_mode: "query",
       scope: "openid profile offline_access User.Read",
-      prompt: "consent",
+      prompt: "select_account",
       state,
     });
 
