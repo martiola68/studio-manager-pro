@@ -52,14 +52,13 @@ export default function MessaggiPage() {
   const [groupTitle, setGroupTitle] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-  // NUOVO: stato per modifica gruppo
   const [isEditGroupOpen, setIsEditGroupOpen] = useState(false);
   const [editGroupId, setEditGroupId] = useState<string | null>(null);
   const [editGroupTitle, setEditGroupTitle] = useState("");
   const [editSelectedMembers, setEditSelectedMembers] = useState<string[]>([]);
 
   const subscriptionRef = useRef<any>(null);
-  const pollIntervalRef = useRef<any>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -74,7 +73,7 @@ export default function MessaggiPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedConvId) {
+    if (selectedConvId && authUserId) {
       loadMessaggi(selectedConvId);
       subscribeToChat(selectedConvId);
       startPolling(selectedConvId);
@@ -83,6 +82,7 @@ export default function MessaggiPage() {
     return () => {
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
       }
       stopPolling();
     };
@@ -112,10 +112,10 @@ export default function MessaggiPage() {
       const studio = await studioService.getStudio();
       if (studio) {
         setStudioId(studio.id);
-        loadUtentiStudio(studio.id);
+        await loadUtentiStudio(studio.id);
       }
 
-      loadConversazioni(authUser.id);
+      await loadConversazioni(authUser.id);
     } catch (error) {
       console.error("Auth error:", error);
       router.push("/login");
@@ -142,16 +142,14 @@ export default function MessaggiPage() {
       audioRef.current.currentTime = 0;
       await audioRef.current.play();
     } catch (error) {
-      // Alcuni browser bloccano autoplay finché l'utente non interagisce
-      console.warn("Audio play blocked:", error);
+      console.warn("Audio blocked:", error);
     }
   };
 
-  const mergeAndDetectIncoming = (incomingMessages: any[]) => {
+  const mergeMessagesAndNotify = (incoming: any[]) => {
     setMessaggi((prev) => {
       const prevIds = new Set(prev.map((m) => m.id));
-
-      const newRemoteMessages = incomingMessages.filter(
+      const newRemoteMessages = (incoming || []).filter(
         (m) => !prevIds.has(m.id) && m.mittente_id !== authUserId
       );
 
@@ -159,7 +157,7 @@ export default function MessaggiPage() {
         playIncomingSound();
       }
 
-      return incomingMessages;
+      return incoming || [];
     });
   };
 
@@ -167,23 +165,23 @@ export default function MessaggiPage() {
     if (!authUserId) return;
 
     const data = await messaggioService.getMessaggi(convId);
-    mergeAndDetectIncoming(data || []);
+    mergeMessagesAndNotify(data || []);
 
     await messaggioService.segnaComeLetto(convId, authUserId);
-    loadConversazioni(authUserId);
+    await loadConversazioni(authUserId);
   };
 
   const loadMessaggiSilent = async (convId: string) => {
     if (!authUserId) return;
 
     const data = await messaggioService.getMessaggi(convId);
-    mergeAndDetectIncoming(data || []);
+    mergeMessagesAndNotify(data || []);
 
     if (document.visibilityState === "visible") {
       await messaggioService.segnaComeLetto(convId, authUserId);
     }
 
-    loadConversazioni(authUserId);
+    await loadConversazioni(authUserId);
   };
 
   const startPolling = (convId: string) => {
@@ -208,6 +206,7 @@ export default function MessaggiPage() {
 
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
     }
 
     subscriptionRef.current = supabase
@@ -227,7 +226,10 @@ export default function MessaggiPage() {
             .eq("id", payload.new.mittente_id)
             .single();
 
-          const newMessage: any = { ...payload.new, mittente: sender };
+          const newMessage: any = {
+            ...payload.new,
+            mittente: sender,
+          };
 
           setMessaggi((prev) => {
             const exists = prev.some((m) => m.id === newMessage.id);
@@ -247,7 +249,7 @@ export default function MessaggiPage() {
             await messaggioService.segnaComeLetto(convId, currentUserId);
           }
 
-          loadConversazioni(currentUserId);
+          await loadConversazioni(currentUserId);
         }
       )
       .subscribe();
@@ -256,11 +258,13 @@ export default function MessaggiPage() {
   const handleSendMessage = async (testo: string, files?: File[]) => {
     if (!authUserId || !selectedConvId) return;
 
+    const testoFinale = (testo || "").trim() || " ";
+
     try {
       const sentMsg = await messaggioService.inviaMessaggio(
         selectedConvId,
         authUserId,
-        testo
+        testoFinale
       );
 
       if (sentMsg && files && files.length > 0) {
@@ -289,10 +293,12 @@ export default function MessaggiPage() {
           return [...prev, optimisticMsg];
         });
 
-        loadConversazioni(authUserId);
+        await loadConversazioni(authUserId);
 
         if (files && files.length > 0) {
-          setTimeout(() => loadMessaggi(selectedConvId), 500);
+          setTimeout(() => {
+            if (selectedConvId) loadMessaggi(selectedConvId);
+          }, 500);
         }
       }
     } catch (error) {
@@ -346,7 +352,7 @@ export default function MessaggiPage() {
   };
 
   const createGroupChat = async () => {
-    const trimmedTitle = groupTitle?.trim() || "";
+    const trimmedTitle = groupTitle.trim();
 
     if (!authUserId || !studioId || !trimmedTitle || selectedMembers.length < 2) {
       toast({
@@ -391,7 +397,7 @@ export default function MessaggiPage() {
     }
   };
 
-  const openEditGroupDialog = async () => {
+  const openEditGroupDialog = () => {
     if (!selectedConvId || !authUserId) return;
 
     const conv = conversazioni.find((c) => c.id === selectedConvId);
@@ -436,11 +442,6 @@ export default function MessaggiPage() {
       setEditSelectedMembers([]);
 
       await loadConversazioni(authUserId);
-
-      const convAggiornata = conversazioni.find((c) => c.id === editGroupId);
-      if (selectedConvId === editGroupId && convAggiornata) {
-        setSelectedCreatorId(convAggiornata.creato_da || null);
-      }
 
       toast({
         title: "✅ Gruppo aggiornato",
@@ -620,7 +621,6 @@ export default function MessaggiPage() {
         </div>
       </div>
 
-      {/* Dialog nuova conversazione */}
       <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
         <DialogContent className="max-w-md mx-4">
           <DialogHeader>
@@ -726,7 +726,6 @@ export default function MessaggiPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog modifica gruppo */}
       <Dialog open={isEditGroupOpen} onOpenChange={setIsEditGroupOpen}>
         <DialogContent className="max-w-md mx-4">
           <DialogHeader>
