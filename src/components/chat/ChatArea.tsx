@@ -219,6 +219,16 @@ export function ChatArea({
           </span>
         </div>
 
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost" size="icon">
+      <MoreVertical className="h-5 w-5" />
+    </Button>
+  </DropdownMenuTrigger>
+
+  <DropdownMenuContent align="end">
+
+        
     {conversationType === "gruppo" && canEditGroup && onEditGroup && (
       <DropdownMenuItem onClick={onEditGroup}>
         <Pencil className="h-4 w-4 mr-2" />
