@@ -20,6 +20,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { messaggioService } from "@/services/messaggioService";
 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+
 type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
@@ -39,6 +48,9 @@ interface ChatAreaProps {
   currentUserId: string;
   partnerName: string;
   creatorId: string;
+  conversationType?: "diretta" | "gruppo";
+  canEditGroup?: boolean;
+  onEditGroup?: () => void;
   onSendMessage: (testo: string, files?: File[]) => Promise<void>;
   onBack: () => void;
   onDeleteChat: () => void;
@@ -51,6 +63,9 @@ export function ChatArea({
   currentUserId,
   partnerName,
   creatorId,
+  conversationType,
+  canEditGroup,
+  onEditGroup,
   onSendMessage,
   onBack,
   onDeleteChat,
@@ -182,7 +197,8 @@ export function ChatArea({
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* Header - Fixed */}
-      <div className="flex items-center gap-3 p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
+      <div className="flex items-center justify-between p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
+        <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -205,6 +221,31 @@ export function ChatArea({
             Online
           </span>
         </div>
+          </div>
+
+        <DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost" size="icon">
+      <MoreVertical className="h-5 w-5" />
+    </Button>
+  </DropdownMenuTrigger>
+
+  <DropdownMenuContent align="end">
+
+    {conversationType === "gruppo" && canEditGroup && onEditGroup && (
+      <DropdownMenuItem onClick={onEditGroup}>
+        <Pencil className="h-4 w-4 mr-2" />
+        Modifica gruppo
+      </DropdownMenuItem>
+    )}
+
+    <DropdownMenuItem onClick={onDeleteChat} className="text-red-600">
+      <Trash2 className="h-4 w-4 mr-2" />
+      Elimina conversazione
+    </DropdownMenuItem>
+
+  </DropdownMenuContent>
+</DropdownMenu>
 
         {currentUserId === creatorId && (
           <Button 
