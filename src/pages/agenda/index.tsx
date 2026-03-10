@@ -1961,7 +1961,7 @@ return (
     <DialogHeader>
       <DialogTitle>
         Eventi del{" "}
-        {moreEventsDate ? format(moreEventsDate, "dd MMMM yyyy", { locale: it }) : ""}
+        {moreEventsDate ? format(moreEventsDate as Date, "dd MMMM yyyy", { locale: it }) : ""}
       </DialogTitle>
     </DialogHeader>
 
