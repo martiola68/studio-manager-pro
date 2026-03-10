@@ -1157,10 +1157,10 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
  return (
-  <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)]">
+  <div className="border rounded-lg bg-white overflow-x-auto flex flex-col h-[calc(100vh-250px)]">
 
-    <div className="border-b bg-gray-50 pr-[15px]">
-      <div className="grid grid-cols-[60px_repeat(7,1fr)]">
+    <div className="border-b bg-gray-50 pr-[15px] min-w-[1200px]">
+      <div className="grid grid-cols-[80px_repeat(7,160px)]">
 
         <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">
           Ora
@@ -1522,8 +1522,13 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
           </div>
         )}
 
-        {view === "week" && (
-          <div className="space-y-3">
+       {view === "week" && (
+  <div className="overflow-x-auto">
+    <div className="min-w-[900px]">
+      {renderWeekView()}
+    </div>
+  </div>
+)}
             {filteredEvents
               .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
               .sort((a, b) => {
@@ -1548,15 +1553,7 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
         {view === "month" && renderMonthView()}
         {view === "week" && renderWeekView()}
       </div>
-
-     {/*
-      <Calendar
-        mode="single"
-        selected={selectedDate ?? undefined}
-        onSelect={(date) => setSelectedDate(date ?? null)}
-      />
-      */}
-      
+   
       {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
