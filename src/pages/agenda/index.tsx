@@ -1178,12 +1178,13 @@ const renderWeekView = () => {
   // stessa larghezza per header e body
   const weekGridCols = "grid-cols-[64px_repeat(7,minmax(140px,1fr))]";
 
-  return (
-    <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)] min-w-[1044px]">
+ return (
+  <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-250px)] min-w-[1044px]">
+    <div className="overflow-y-auto h-full">
       {/* HEADER */}
-      <div className="border-b bg-gray-50 shrink-0">
+      <div className="sticky top-0 z-20 border-b bg-gray-50">
         <div className={`grid ${weekGridCols}`}>
-          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200">
+          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200 bg-gray-50">
             Ora
           </div>
 
@@ -1198,7 +1199,7 @@ const renderWeekView = () => {
                     ? "bg-blue-50 text-blue-700"
                     : isWeekend
                     ? "bg-gray-100"
-                    : ""
+                    : "bg-gray-50"
                 }`}
               >
                 <div className="text-xs font-medium uppercase">
@@ -1215,7 +1216,7 @@ const renderWeekView = () => {
       </div>
 
       {/* BODY */}
-      <div className="overflow-y-auto flex-1 [scrollbar-gutter:stable]">
+      <div>
         {hours.map((hour) => (
           <div
             key={hour}
@@ -1327,8 +1328,8 @@ const renderWeekView = () => {
         ))}
       </div>
     </div>
-  );
-};
+  </div>
+);
   const renderListView = () => {
     const now = new Date();
     const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio as any) < now);
