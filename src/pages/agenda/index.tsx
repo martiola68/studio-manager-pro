@@ -1215,7 +1215,7 @@ const renderWeekView = () => {
       </div>
 
       {/* BODY */}
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1 [scrollbar-gutter:stable]">
         {hours.map((hour) => (
           <div
             key={hour}
