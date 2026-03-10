@@ -198,7 +198,6 @@ export function ChatArea({
     <div className={cn("flex flex-col h-full bg-background", className)}>
       {/* Header - Fixed */}
       <div className="flex items-center justify-between p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
-        <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -221,16 +220,6 @@ export function ChatArea({
             Online
           </span>
         </div>
-          </div>
-
-        <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="ghost" size="icon">
-      <MoreVertical className="h-5 w-5" />
-    </Button>
-  </DropdownMenuTrigger>
-
-  <DropdownMenuContent align="end">
 
     {conversationType === "gruppo" && canEditGroup && onEditGroup && (
       <DropdownMenuItem onClick={onEditGroup}>
