@@ -2,7 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, MoreVertical, Paperclip, File, X, Trash2, Pencil } from "lucide-react";
+import {
+  Send,
+  ArrowLeft,
+  MoreVertical,
+  Paperclip,
+  File,
+  X,
+  Trash2,
+  Pencil,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -19,7 +28,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { messaggioService } from "@/services/messaggioService";
-
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -73,18 +81,52 @@ export function ChatArea({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const [deleteChatDialogOpen, setDeleteChatDialogOpen] = useState(false);
-  const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [localMessages, setLocalMessages] = useState<MessaggioConMittente[]>(messaggi);
+
+  const { toast } = useToast();
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Sincronizza i messaggi iniziali / caricati dal parent
+  useEffect(() => {
+    setLocalMessages(messaggi);
+  }, [messaggi, conversazioneId]);
+
+  // Realtime subscription per la conversazione attiva
+  useEffect(() => {
+    if (!conversazioneId) return;
+
+    const channel = messaggioService.subscribeToConversazione(
+      conversazioneId,
+      (payload: any) => {
+        const nuovoMessaggio = payload?.new as MessaggioConMittente | undefined;
+        if (!nuovoMessaggio?.id) return;
+
+        setLocalMessages((prev) => {
+          const exists = prev.some((msg) => msg.id === nuovoMessaggio.id);
+          if (exists) return prev;
+          return [...prev, nuovoMessaggio];
+        });
+
+        window.dispatchEvent(new Event("messaggi-updated"));
+      }
+    );
+
+    return () => {
+      if (channel) {
+        messaggioService.unsubscribeFromMessaggi(channel);
+      }
+    };
+  }, [conversazioneId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messaggi]);
+  }, [localMessages]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -92,7 +134,7 @@ export function ChatArea({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (selectedFiles.length + files.length > 5) {
       toast({
         variant: "destructive",
@@ -125,12 +167,19 @@ export function ChatArea({
 
     setSending(true);
     try {
-      await onSendMessage(newMessage || "(Allegato)", selectedFiles.length > 0 ? selectedFiles : undefined);
+      await onSendMessage(
+        newMessage || "(Allegato)",
+        selectedFiles.length > 0 ? selectedFiles : undefined
+      );
+
       setNewMessage("");
       setSelectedFiles([]);
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+
+      window.dispatchEvent(new Event("messaggi-updated"));
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -142,12 +191,16 @@ export function ChatArea({
 
     try {
       await messaggioService.eliminaMessaggio(messageToDelete, currentUserId);
-      
+
+      setLocalMessages((prev) => prev.filter((msg) => msg.id !== messageToDelete));
+
+      window.dispatchEvent(new Event("messaggi-updated"));
+
       toast({
         title: "Messaggio eliminato",
         description: "Il messaggio è stato eliminato con successo.",
       });
-      
+
       setDeleteDialogOpen(false);
       setMessageToDelete(null);
     } catch (error: any) {
@@ -166,51 +219,54 @@ export function ChatArea({
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const groupMessagesByDate = (msgs: MessaggioConMittente[]) => {
-    const groups: { [key: string]: MessaggioConMittente[] } = {};
-    
+    const groups: Record<string, MessaggioConMittente[]> = {};
+
     msgs.forEach((msg) => {
       if (!msg.created_at) return;
       const date = new Date(msg.created_at).toDateString();
       if (!groups[date]) groups[date] = [];
       groups[date].push(msg);
     });
-    
+
     return groups;
   };
 
-  const messageGroups = groupMessagesByDate(messaggi);
+  const messageGroups = groupMessagesByDate(localMessages);
 
   const getInitials = (name: string) => {
-    const parts = name.split(" ");
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    const parts = name.split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
     return name.slice(0, 2).toUpperCase();
   };
 
   return (
     <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Header - Fixed */}
       <div className="flex items-center justify-between p-3 md:p-4 border-b shadow-sm bg-background flex-shrink-0">
         <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        
+
         <Avatar className="h-9 w-9 md:h-10 md:w-10 shrink-0">
           <AvatarFallback className="bg-primary/10 text-primary text-sm">
             {getInitials(partnerName)}
           </AvatarFallback>
         </Avatar>
-        
-        <div className="flex-1 min-w-0">
-          <h2 className={cn(
-            "font-semibold text-sm md:text-base truncate",
-            currentUserId === creatorId ? "text-foreground" : "text-red-600"
-          )}>
+
+        <div className="flex-1 min-w-0 ml-3">
+          <h2
+            className={cn(
+              "font-semibold text-sm md:text-base truncate",
+              currentUserId === creatorId ? "text-foreground" : "text-red-600"
+            )}
+          >
             {partnerName}
           </h2>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -219,50 +275,35 @@ export function ChatArea({
           </span>
         </div>
 
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="ghost" size="icon">
-      <MoreVertical className="h-5 w-5" />
-    </Button>
-  </DropdownMenuTrigger>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
 
-  <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end">
+            {conversationType === "gruppo" && canEditGroup && onEditGroup && (
+              <DropdownMenuItem onClick={onEditGroup}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Modifica gruppo
+              </DropdownMenuItem>
+            )}
 
-        
-    {conversationType === "gruppo" && canEditGroup && onEditGroup && (
-      <DropdownMenuItem onClick={onEditGroup}>
-        <Pencil className="h-4 w-4 mr-2" />
-        Modifica gruppo
-      </DropdownMenuItem>
-    )}
-
-    <DropdownMenuItem onClick={onDeleteChat} className="text-red-600">
-      <Trash2 className="h-4 w-4 mr-2" />
-      Elimina conversazione
-    </DropdownMenuItem>
-
-  </DropdownMenuContent>
-</DropdownMenu>
-
-        {currentUserId === creatorId && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="shrink-0 hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setDeleteChatDialogOpen(true)}
-            title="Elimina conversazione"
-          >
-            <Trash2 className="h-5 w-5" />
-          </Button>
-        )}
-
-        <Button variant="ghost" size="icon" className="shrink-0">
-          <MoreVertical className="h-5 w-5 text-muted-foreground" />
-        </Button>
+            {currentUserId === creatorId && (
+              <DropdownMenuItem
+                onClick={() => setDeleteChatDialogOpen(true)}
+                className="text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Elimina conversazione
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Messages Area - Scrollable */}
-      <div 
+      <div
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto bg-muted/20 p-3 md:p-4"
       >
@@ -274,10 +315,10 @@ export function ChatArea({
                   {format(new Date(dateStr), "d MMMM yyyy", { locale: it })}
                 </span>
               </div>
-              
+
               {msgs.map((msg) => {
                 const isMe = msg.mittente_id === currentUserId;
-                
+
                 return (
                   <div
                     key={msg.id}
@@ -286,12 +327,13 @@ export function ChatArea({
                     {!isMe && (
                       <Avatar className="h-7 w-7 md:h-8 md:w-8 mr-2 shrink-0">
                         <AvatarFallback className="text-xs">
-                          {msg.mittente?.nome?.[0]}{msg.mittente?.cognome?.[0]}
+                          {msg.mittente?.nome?.[0]}
+                          {msg.mittente?.cognome?.[0]}
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    
-                    <div 
+
+                    <div
                       className={cn(
                         "max-w-[85%] md:max-w-[70%] rounded-lg p-2.5 md:p-3 relative group break-words",
                         isMe ? "bg-primary text-primary-foreground" : "bg-muted"
@@ -304,14 +346,14 @@ export function ChatArea({
                           {msg.mittente?.nome} {msg.mittente?.cognome}
                         </p>
                       )}
-                      
-                      <p className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
+
+                      <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                         {msg.testo}
                       </p>
-                      
+
                       {msg.allegati && msg.allegati.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          {msg.allegati.map((att: any) => (
+                          {msg.allegati.map((att) => (
                             <a
                               key={att.id}
                               href={att.url}
@@ -325,12 +367,15 @@ export function ChatArea({
                           ))}
                         </div>
                       )}
-                      
-                      <p className={cn(
-                        "text-[10px] mt-1",
-                        isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                      )}>
-                        {msg.created_at && format(new Date(msg.created_at), "HH:mm", { locale: it })}
+
+                      <p
+                        className={cn(
+                          "text-[10px] mt-1",
+                          isMe ? "text-primary-foreground/70" : "text-muted-foreground"
+                        )}
+                      >
+                        {msg.created_at &&
+                          format(new Date(msg.created_at), "HH:mm", { locale: it })}
                       </p>
 
                       {isMe && hoveredMessageId === msg.id && (
@@ -349,11 +394,11 @@ export function ChatArea({
               })}
             </div>
           ))}
+
           <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* File Preview - Fixed */}
       {selectedFiles.length > 0 && (
         <div className="px-3 md:px-4 py-2 border-t bg-muted/50 overflow-x-auto flex-shrink-0">
           <div className="flex gap-2 min-w-min">
@@ -365,7 +410,9 @@ export function ChatArea({
                 <File className="h-4 w-4 flex-shrink-0 text-primary" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium truncate">{file.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{formatFileSize(file.size)}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {formatFileSize(file.size)}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -382,7 +429,6 @@ export function ChatArea({
         </div>
       )}
 
-      {/* Input Area - Fixed */}
       <div className="p-3 md:p-4 border-t bg-background flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2 max-w-3xl mx-auto">
           <input
@@ -393,7 +439,7 @@ export function ChatArea({
             onChange={handleFileSelect}
             accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip"
           />
-          
+
           <Button
             type="button"
             variant="ghost"
@@ -404,7 +450,7 @@ export function ChatArea({
           >
             <Paperclip className="h-5 w-5 text-muted-foreground" />
           </Button>
-          
+
           <Input
             ref={inputRef}
             placeholder="Scrivi un messaggio..."
@@ -413,7 +459,7 @@ export function ChatArea({
             className="flex-1 h-10 text-sm md:text-base"
             disabled={sending}
           />
-          
+
           <Button
             type="submit"
             size="icon"
@@ -450,8 +496,9 @@ export function ChatArea({
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare l'intera conversazione con <strong>{partnerName}</strong>? 
-              Tutti i messaggi e gli allegati verranno eliminati permanentemente. Questa azione è irreversibile.
+              Sei sicuro di voler eliminare l'intera conversazione con{" "}
+              <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
+              eliminati permanentemente. Questa azione è irreversibile.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
