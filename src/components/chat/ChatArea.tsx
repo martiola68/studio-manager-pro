@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, ArrowLeft, MoreVertical, Paperclip, File, X, Trash2 } from "lucide-react";
+import { Send, ArrowLeft, MoreVertical, Paperclip, File, X, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
