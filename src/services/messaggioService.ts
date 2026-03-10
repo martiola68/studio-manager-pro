@@ -6,6 +6,7 @@ type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
 export const messaggioService = {
+
   async getConversazioni(userId: string, studioId?: string | null) {
     let query = supabase
       .from("tbconversazioni")
@@ -26,6 +27,52 @@ export const messaggioService = {
     const { data, error } = await query;
 
     if (error) throw error;
+
+    return data || [];
+  },
+
+  async aggiornaConversazioneGruppo(
+    conversazioneId: string,
+    titolo: string,
+    membriIds: string[],
+    userId: string
+  ) {
+    // aggiorna titolo conversazione
+    const { error: updateError } = await supabase
+      .from("tbconversazioni")
+      .update({
+        titolo: titolo,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", conversazioneId);
+
+    if (updateError) throw updateError;
+
+    // elimina partecipanti esistenti
+    const { error: deleteError } = await supabase
+      .from("tbconversazioni_utenti")
+      .delete()
+      .eq("conversazione_id", conversazioneId);
+
+    if (deleteError) throw deleteError;
+
+    // reinserisce membri aggiornati
+    const partecipanti = membriIds.map((utenteId) => ({
+      conversazione_id: conversazioneId,
+      utente_id: utenteId,
+      ultimo_letto_at: null
+    }));
+
+    const { error: insertError } = await supabase
+      .from("tbconversazioni_utenti")
+      .insert(partecipanti);
+
+    if (insertError) throw insertError;
+
+    return true;
+  }
+
+};
 
     // Filtra SOLO le conversazioni dove l'utente è partecipante
     const conversazioniUtente = (data || []).filter((conv) => {
