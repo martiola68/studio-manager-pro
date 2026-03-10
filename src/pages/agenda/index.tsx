@@ -1160,7 +1160,7 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
   <div className="border rounded-lg bg-white overflow-x-auto flex flex-col h-[calc(100vh-250px)]">
 
     <div className="border-b bg-gray-50 pr-[15px] min-w-[1200px]">
-      <div className="grid grid-cols-[80px_repeat(7,160px)]">
+      <div className="grid grid-cols-[64px_repeat(7,160px)]">
 
         <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">
           Ora
