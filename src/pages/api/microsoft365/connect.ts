@@ -119,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       response_type: "code",
       redirect_uri: redirectUri,
       response_mode: "query",
-      scope: "openid profile offline_access User.Read",
+      scope: "openid profile offline_access User.Read Calendars.ReadWrite Mail.Send",
       prompt: "select_account",
       state,
     });
