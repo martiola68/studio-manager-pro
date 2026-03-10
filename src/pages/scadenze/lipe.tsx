@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/router";
@@ -13,10 +18,13 @@ import type { Database } from "@/integrations/supabase/types";
 type LipeRow = Database["public"]["Tables"]["tbscadlipe"]["Row"];
 type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 
+type TipoLiqValue = "Mensile" | "Trimestrale" | "Esterna";
+
 type LipeRecord = LipeRow & {
   nominativo: string;
   utente_professionista_id?: string | null;
   utente_operatore_id?: string | null;
+  TipoLiq?: string | null;
   gen?: boolean | null;
   feb?: boolean | null;
   mar?: boolean | null;
@@ -43,6 +51,26 @@ type LipeRecord = LipeRow & {
   operatore?: string;
 };
 
+type CampoMese =
+  | "gen"
+  | "feb"
+  | "mar"
+  | "apr"
+  | "mag"
+  | "giu"
+  | "lug"
+  | "ago"
+  | "set"
+  | "ott"
+  | "nov"
+  | "dic";
+
+const mesiDisabilitatiPerTipo: Record<TipoLiqValue, CampoMese[]> = {
+  Mensile: [],
+  Trimestrale: ["gen", "feb", "apr", "mag", "lug", "ago", "ott", "nov"],
+  Esterna: ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
+};
+
 export default function ScadenzeLipePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -60,10 +88,7 @@ export default function ScadenzeLipePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [scadenzeData, utentiData] = await Promise.all([
-        loadScadenze(),
-        loadUtenti()
-      ]);
+      const [scadenzeData, utentiData] = await Promise.all([loadScadenze(), loadUtenti()]);
       setScadenze(scadenzeData);
       setUtenti(utentiData);
     } catch (error) {
@@ -71,7 +96,7 @@ export default function ScadenzeLipePage() {
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -89,15 +114,15 @@ export default function ScadenzeLipePage() {
       .order("nominativo", { ascending: true });
 
     if (error) throw error;
-    
-    return (data || []).map(record => ({
+
+    return (data || []).map((record) => ({
       ...record,
-      professionista: record.professionista 
+      professionista: record.professionista
         ? `${record.professionista.nome} ${record.professionista.cognome}`
         : "-",
       operatore: record.operatore
         ? `${record.operatore.nome} ${record.operatore.cognome}`
-        : "-"
+        : "-",
     })) as LipeRecord[];
   };
 
@@ -106,9 +131,20 @@ export default function ScadenzeLipePage() {
       .from("tbutenti")
       .select("*")
       .order("cognome", { ascending: true });
-    
+
     if (error) throw error;
     return data || [];
+  };
+
+  const getTipoLiq = (record: LipeRecord): TipoLiqValue => {
+    const value = record.TipoLiq;
+    if (value === "Trimestrale" || value === "Esterna") return value;
+    return "Mensile";
+  };
+
+  const isMonthDisabled = (record: LipeRecord, month: CampoMese) => {
+    const tipo = getTipoLiq(record);
+    return mesiDisabilitatiPerTipo[tipo].includes(month);
   };
 
   const handleToggleField = async (
@@ -117,7 +153,20 @@ export default function ScadenzeLipePage() {
     currentValue: boolean | null
   ) => {
     try {
+      const record = scadenze.find((r) => r.id === recordId);
+
+      if (
+        record &&
+        ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"].includes(
+          field as string
+        ) &&
+        isMonthDisabled(record, field as CampoMese)
+      ) {
+        return;
+      }
+
       const newValue = !currentValue;
+
       const { error } = await supabase
         .from("tbscadlipe")
         .update({ [field]: newValue })
@@ -157,7 +206,7 @@ export default function ScadenzeLipePage() {
       if (error) throw error;
 
       setScadenze((prev) =>
-        prev.map((r) => (r.id === recordId ? { ...r, [field]: value } : r))
+        prev.map((r) => (r.id === recordId ? { ...r, [field]: value || null } : r))
       );
 
       toast({
@@ -174,10 +223,12 @@ export default function ScadenzeLipePage() {
     }
   };
 
-  const filteredScadenze = scadenze.filter(s => {
+  const filteredScadenze = scadenze.filter((s) => {
     const matchSearch = (s.nominativo || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchOperatore = filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
-    const matchProfessionista = filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
+    const matchOperatore =
+      filterOperatore === "__all__" || s.utente_operatore_id === filterOperatore;
+    const matchProfessionista =
+      filterProfessionista === "__all__" || s.utente_professionista_id === filterProfessionista;
     return matchSearch && matchOperatore && matchProfessionista;
   });
 
@@ -216,7 +267,7 @@ export default function ScadenzeLipePage() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Utente Operatore</label>
               <Select value={filterOperatore} onValueChange={setFilterOperatore}>
@@ -225,7 +276,7 @@ export default function ScadenzeLipePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti gli operatori</SelectItem>
-                  {utenti.map(u => (
+                  {utenti.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.nome} {u.cognome}
                     </SelectItem>
@@ -233,7 +284,7 @@ export default function ScadenzeLipePage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Utente Professionista</label>
               <Select value={filterProfessionista} onValueChange={setFilterProfessionista}>
@@ -242,7 +293,7 @@ export default function ScadenzeLipePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Tutti i professionisti</SelectItem>
-                  {utenti.map(u => (
+                  {utenti.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.nome} {u.cognome}
                     </SelectItem>
@@ -263,55 +314,123 @@ export default function ScadenzeLipePage() {
                   <th className="sticky-col-header h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[200px]">
                     Nominativo
                   </th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Professionista</th>
-                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">Operatore</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Gen</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Feb</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Mar</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 1T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 1T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Apr</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Mag</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Giu</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 2T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 2T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Lug</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Ago</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Set</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 3T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 3T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Ott</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Nov</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">Dic</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">Acconto</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">Acconto Com</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">LIPE 4T</th>
-                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">Data Invio 4T</th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                    Professionista
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[180px]">
+                    Operatore
+                  </th>
+                  <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground min-w-[170px]">
+                    TipoLiq
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Gen
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Feb
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Mar
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    LIPE 1T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                    Data Invio 1T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Apr
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Mag
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Giu
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    LIPE 2T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                    Data Invio 2T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Lug
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Ago
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Set
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    LIPE 3T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                    Data Invio 3T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Ott
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Nov
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[60px]">
+                    Dic
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[120px]">
+                    Acconto
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[100px]">
+                    Acconto Com
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[80px]">
+                    LIPE 4T
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[140px]">
+                    Data Invio 4T
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50">
-                    <td colSpan={20} className="p-4 text-center text-gray-500">
+                    <td colSpan={26} className="p-4 text-center text-gray-500">
                       Nessun record trovato
                     </td>
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr
-                      key={scadenza.id}
-                      className="border-b transition-colors hover:bg-green-50"
-                    >
+                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50">
                       <td className="sticky-col-cell p-2 align-middle font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
                       <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
                       <td className="p-2 align-middle min-w-[180px]">{scadenza.operatore}</td>
-                      
+
+                      <td className="p-2 align-middle min-w-[170px]">
+                        <Select
+                          value={getTipoLiq(scadenza)}
+                          onValueChange={(value: TipoLiqValue) =>
+                            handleUpdateValue(scadenza.id, "TipoLiq", value)
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Seleziona tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Mensile">Mensile</SelectItem>
+                            <SelectItem value="Trimestrale">Trimestrale</SelectItem>
+                            <SelectItem value="Esterna">Esterna</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+
                       {/* Mesi Trimestre 1 */}
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.gen || false}
+                          disabled={isMonthDisabled(scadenza, "gen")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "gen", scadenza.gen || false)
                           }
@@ -320,6 +439,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.feb || false}
+                          disabled={isMonthDisabled(scadenza, "feb")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "feb", scadenza.feb || false)
                           }
@@ -328,13 +448,13 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.mar || false}
+                          disabled={isMonthDisabled(scadenza, "mar")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "mar", scadenza.mar || false)
                           }
                         />
                       </td>
-                      
-                      {/* LIPE 1T */}
+
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
                           checked={scadenza.lipe1t || false}
@@ -358,6 +478,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.apr || false}
+                          disabled={isMonthDisabled(scadenza, "apr")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "apr", scadenza.apr || false)
                           }
@@ -366,6 +487,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.mag || false}
+                          disabled={isMonthDisabled(scadenza, "mag")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "mag", scadenza.mag || false)
                           }
@@ -374,13 +496,13 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.giu || false}
+                          disabled={isMonthDisabled(scadenza, "giu")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "giu", scadenza.giu || false)
                           }
                         />
                       </td>
 
-                      {/* LIPE 2T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
                           checked={scadenza.lipe2t || false}
@@ -404,6 +526,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.lug || false}
+                          disabled={isMonthDisabled(scadenza, "lug")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "lug", scadenza.lug || false)
                           }
@@ -412,6 +535,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.ago || false}
+                          disabled={isMonthDisabled(scadenza, "ago")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "ago", scadenza.ago || false)
                           }
@@ -420,13 +544,13 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.set || false}
+                          disabled={isMonthDisabled(scadenza, "set")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "set", scadenza.set || false)
                           }
                         />
                       </td>
 
-                      {/* LIPE 3T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
                           checked={scadenza.lipe3t || false}
@@ -450,6 +574,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.ott || false}
+                          disabled={isMonthDisabled(scadenza, "ott")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "ott", scadenza.ott || false)
                           }
@@ -458,6 +583,7 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.nov || false}
+                          disabled={isMonthDisabled(scadenza, "nov")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "nov", scadenza.nov || false)
                           }
@@ -466,13 +592,13 @@ export default function ScadenzeLipePage() {
                       <td className="p-2 align-middle text-center min-w-[60px]">
                         <Checkbox
                           checked={scadenza.dic || false}
+                          disabled={isMonthDisabled(scadenza, "dic")}
                           onCheckedChange={() =>
                             handleToggleField(scadenza.id, "dic", scadenza.dic || false)
                           }
                         />
                       </td>
 
-                      {/* Acconto */}
                       <td className="p-2 align-middle min-w-[120px]">
                         <Input
                           type="text"
@@ -497,7 +623,6 @@ export default function ScadenzeLipePage() {
                         />
                       </td>
 
-                      {/* LIPE 4T */}
                       <td className="p-2 align-middle text-center min-w-[80px]">
                         <Checkbox
                           checked={scadenza.lipe4t || false}
