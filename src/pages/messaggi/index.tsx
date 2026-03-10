@@ -138,7 +138,7 @@ export default function MessaggiPage() {
     .eq("id", payload.new.mittente_id)
     .single();
 
-  const newMessage = { ...payload.new, mittente: sender };
+  const newMessage: any = { ...payload.new, mittente: sender };
 
   setMessaggi((prev) => {
     const esiste = prev.some((m) => m.id === newMessage.id);
