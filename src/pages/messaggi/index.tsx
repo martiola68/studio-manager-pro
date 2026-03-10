@@ -58,7 +58,7 @@ export default function MessaggiPage() {
   const [editSelectedMembers, setEditSelectedMembers] = useState<string[]>([]);
 
   const subscriptionRef = useRef<any>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -182,61 +182,54 @@ export default function MessaggiPage() {
     await loadConversazioni(authUserId);
   };
 
-  const subscribeToChat = (convId: string) => {
-    if (!authUserId) return;
+ const subscribeToChat = (convId: string) => {
+  if (!authUserId) return;
 
-    const currentUserId = authUserId;
+  const currentUserId = authUserId;
 
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
-    }
+  if (subscriptionRef.current) {
+    supabase.removeChannel(subscriptionRef.current);
+    subscriptionRef.current = null;
+  }
 
-    subscriptionRef.current = supabase
-      .channel(`chat:${convId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "tbmessaggi",
-          filter: `conversazione_id=eq.${convId}`,
-        },
-        async (payload) => {
-          const { data: sender } = await supabase
-            .from("tbutenti")
-            .select("id, nome, cognome, email")
-            .eq("id", payload.new.mittente_id)
-            .single();
+  subscriptionRef.current = supabase
+    .channel(`chat:${convId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "tbmessaggi",
+        filter: `conversazione_id=eq.${convId}`,
+      },
+      async (payload) => {
+        const { data: sender } = await supabase
+          .from("tbutenti")
+          .select("id, nome, cognome, email")
+          .eq("id", payload.new.mittente_id)
+          .single();
 
-          const newMessage: any = {
-            ...payload.new,
-            mittente: sender,
-          };
+        const newMessage = {
+          ...payload.new,
+          mittente: sender,
+        };
 
-          setMessaggi((prev) => {
-            const exists = prev.some((m) => m.id === newMessage.id);
-            if (exists) return prev;
+        setMessaggi((prev) => {
+          const exists = prev.some((msg) => msg.id === newMessage.id);
+          if (exists) return prev;
+          return [...prev, newMessage];
+        });
 
-            if (payload.new.mittente_id !== currentUserId) {
-              playIncomingSound();
-            }
-
-            return [...prev, newMessage];
-          });
-
-          if (
-            payload.new.mittente_id !== currentUserId &&
-            document.visibilityState === "visible"
-          ) {
-            await messaggioService.segnaComeLetto(convId, currentUserId);
-          }
-
-          await loadConversazioni(currentUserId);
+        if (newMessage.mittente_id !== currentUserId && audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(() => {});
         }
-      )
-      .subscribe();
-  };
+
+        window.dispatchEvent(new Event("messaggi-updated"));
+      }
+    )
+    .subscribe();
+};
 
   const handleSendMessage = async (testo: string, files?: File[]) => {
     if (!authUserId || !selectedConvId) return;
