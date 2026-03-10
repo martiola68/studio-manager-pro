@@ -1151,142 +1151,165 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     );
   };
 
-  const renderWeekView = () => {
-    const weekStart = startOfWeek(currentDate, { locale: it });
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    const hours = Array.from({ length: 15 }, (_, i) => i + 7);
+const renderWeekView = () => {
+  const weekStart = startOfWeek(currentDate, { locale: it });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
 
- return (
-  <div className="border rounded-lg bg-white overflow-x-auto flex flex-col h-[calc(100vh-250px)]">
+  // stessa larghezza per header e body
+  const weekGridCols = "grid-cols-[64px_repeat(7,minmax(140px,1fr))]";
 
-    <div className="border-b bg-gray-50 pr-[15px] min-w-[1200px]">
-      <div className="grid grid-cols-[64px_repeat(7,160px)]">
-
-        <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r">
-          Ora
-        </div>
-
-        {weekDays.map((day) => (
-          <div
-            key={day.toISOString()}
-            className={`p-2 text-center border-r ${
-              isSameDay(day, new Date()) ? "bg-blue-50 text-blue-700" : ""
-            }`}
-          >
-            <div className="text-xs font-medium uppercase">
-              {format(day, "EEE", { locale: it })}
-            </div>
-
-            <div className="text-lg font-bold">
-              {format(day, "d")}
-            </div>
+  return (
+    <div className="border rounded-lg bg-white overflow-hidden flex flex-col h-[calc(100vh-250px)] min-w-[1044px]">
+      {/* HEADER */}
+      <div className="border-b bg-gray-50 shrink-0">
+        <div className={`grid ${weekGridCols}`}>
+          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200">
+            Ora
           </div>
-        ))}
 
-      </div>
-    </div>
-        <div className="overflow-y-scroll flex-1">
-          {hours.map((hour) => (
-            <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b min-h-[100px]">
-              <div className="p-2 text-xs text-gray-400 text-right border-r font-mono">
-                {String(hour).padStart(2, "0")}:00
+          {weekDays.map((day, index) => {
+            const isWeekend = index === 5 || index === 6;
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={`p-2 text-center border-r border-gray-200 ${
+                  isSameDay(day, new Date())
+                    ? "bg-blue-50 text-blue-700"
+                    : isWeekend
+                    ? "bg-gray-100"
+                    : ""
+                }`}
+              >
+                <div className="text-xs font-medium uppercase">
+                  {format(day, "EEE", { locale: it })}
+                </div>
+
+                <div className="text-lg font-bold">
+                  {format(day, "d")}
+                </div>
               </div>
+            );
+          })}
+        </div>
+      </div>
 
-              {weekDays.map((day) => {
-                const cellEvents = filteredEvents.filter((e) => {
-                  const eventDate = safeParseISO(e.data_inizio as any);
+      {/* BODY */}
+      <div className="overflow-y-auto flex-1">
+        {hours.map((hour) => (
+          <div
+            key={hour}
+            className={`grid ${weekGridCols} min-h-[100px] border-b border-gray-200`}
+          >
+            <div className="p-2 text-xs text-gray-400 text-right border-r border-gray-200 font-mono bg-gray-50">
+              {String(hour).padStart(2, "0")}:00
+            </div>
 
-                  if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
+            {weekDays.map((day, index) => {
+              const isWeekend = index === 5 || index === 6;
 
-                  if (!e.ora_inizio) return false;
-                  const eventHour = parseInt(String(e.ora_inizio).substring(0, 2));
-                  return isSameDay(eventDate, day) && eventHour === hour;
-                });
+              const cellEvents = filteredEvents.filter((e) => {
+                const eventDate = safeParseISO(e.data_inizio as any);
 
-                return (
-                  <div
-                    key={`${day.toISOString()}-${hour}`}
-                    className="border-r p-1 hover:bg-gray-50 transition-colors cursor-pointer relative"
-                    onClick={() => handleNuovoEvento(day, hour)}
-                  >
-                    {cellEvents.length > 0 && (
-                      <div className="space-y-1">
-                        {cellEvents.map((evento) => (
-                          <TooltipProvider key={String(evento.id)}>
-                            <Tooltip delayDuration={300}>
-                              <TooltipTrigger asChild>
+                if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
+
+                if (!e.ora_inizio) return false;
+                const eventHour = parseInt(String(e.ora_inizio).substring(0, 2));
+                return isSameDay(eventDate, day) && eventHour === hour;
+              });
+
+              return (
+                <div
+                  key={`${day.toISOString()}-${hour}`}
+                  className={`border-r border-gray-200 p-1 transition-colors cursor-pointer relative ${
+                    isWeekend ? "bg-gray-50" : "bg-white"
+                  } hover:bg-gray-100`}
+                  onClick={() => handleNuovoEvento(day, hour)}
+                >
+                  {cellEvents.length > 0 && (
+                    <div className="space-y-1">
+                      {cellEvents.map((evento) => (
+                        <TooltipProvider key={String(evento.id)}>
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`p-2 rounded border-l-2 ${
+                                  (evento as any).evento_generico
+                                    ? "bg-blue-50 border-blue-500"
+                                    : evento.in_sede
+                                    ? "bg-green-50 border-green-500"
+                                    : "bg-red-50 border-red-500"
+                                } cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+                              >
                                 <div
-                                  className={`p-2 rounded border-l-2 ${
-                                    (evento as any).evento_generico
-                                      ? "bg-blue-50 border-blue-500"
-                                      : evento.in_sede
-                                      ? "bg-green-50 border-green-500"
-                                      : "bg-red-50 border-red-500"
-                                  } cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditEvento(evento);
+                                  }}
+                                  className="pr-6"
                                 >
-                                  <div
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditEvento(evento);
-                                    }}
-                                    className="pr-6"
-                                  >
-                                   <div className="font-semibold text-gray-900 truncate">
-                                  {evento.titolo || "(senza titolo)"}
+                                  <div className="font-semibold text-gray-900 truncate">
+                                    {evento.titolo || "(senza titolo)"}
                                   </div>
 
                                   {evento.utente && (
-                                  <div className="text-gray-600 truncate">
-                                  👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
+                                    <div className="text-gray-600 truncate">
+                                      👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
                                     </div>
-                                      )}
+                                  )}
 
-                                    {evento.cliente?.ragione_sociale && (
-                                      <div className="text-gray-600 truncate">
-                                    🏢 {evento.cliente.ragione_sociale}
-                                      </div>
-                                      )}
-
-                                    {evento.in_sede && evento.sala && (
-                                      <div className="text-green-700 font-medium mt-1">📍 SALA {String(evento.sala)}</div>
-                                    )}
-                                    {!evento.in_sede && evento.luogo && (
-                                      <div className="text-red-700 font-medium mt-1 truncate">📍 {String(evento.luogo)}</div>
-                                    )}
-
-                                    <div className="text-gray-500 mt-1">
-                                      ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0,5) : ""}
-                                          {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0,5)}` : ""}
+                                  {evento.cliente?.ragione_sociale && (
+                                    <div className="text-gray-600 truncate">
+                                      🏢 {evento.cliente.ragione_sociale}
                                     </div>
+                                  )}
+
+                                  {evento.in_sede && evento.sala && (
+                                    <div className="text-green-700 font-medium mt-1">
+                                      📍 SALA {String(evento.sala)}
+                                    </div>
+                                  )}
+
+                                  {!evento.in_sede && evento.luogo && (
+                                    <div className="text-red-700 font-medium mt-1 truncate">
+                                      📍 {String(evento.luogo)}
+                                    </div>
+                                  )}
+
+                                  <div className="text-gray-500 mt-1">
+                                    ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
+                                    {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
                                   </div>
-
-                                  <button
-                                    className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                                    onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
-                                    title="Elimina evento"
-                                  >
-                                    ×
-                                  </button>
                                 </div>
-                              </TooltipTrigger>
 
-                              <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-                                {getEventoSummary(evento)}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                                <button
+                                  className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                                  onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
+                                  title="Elimina evento"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
+                              {getEventoSummary(evento)}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderListView = () => {
     const now = new Date();
