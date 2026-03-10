@@ -132,23 +132,29 @@ export default function MessaggiPage() {
           filter: `conversazione_id=eq.${convId}`,
         },
         async (payload) => {
-          if (payload.new.mittente_id !== currentUserId) {
-            const { data: sender } = await supabase
-              .from("tbutenti")
-              .select("id, nome, cognome, email")
-              .eq("id", payload.new.mittente_id)
-              .single();
+  const { data: sender } = await supabase
+    .from("tbutenti")
+    .select("id, nome, cognome, email")
+    .eq("id", payload.new.mittente_id)
+    .single();
 
-            const newMessage = { ...payload.new, mittente: sender };
-            setMessaggi((prev) => [...prev, newMessage]);
-            
-            if (document.visibilityState === "visible") {
-              await messaggioService.segnaComeLetto(convId, currentUserId);
-            }
-          }
-          
-          loadConversazioni(currentUserId);
-        }
+  const newMessage = { ...payload.new, mittente: sender };
+
+  setMessaggi((prev) => {
+    const esiste = prev.some((m) => m.id === newMessage.id);
+    if (esiste) return prev;
+    return [...prev, newMessage];
+  });
+
+  if (
+    payload.new.mittente_id !== currentUserId &&
+    document.visibilityState === "visible"
+  ) {
+    await messaggioService.segnaComeLetto(convId, currentUserId);
+  }
+
+  loadConversazioni(currentUserId);
+}
       )
       .subscribe();
   };
