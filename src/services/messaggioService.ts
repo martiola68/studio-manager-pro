@@ -7,29 +7,63 @@ type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
 export const messaggioService = {
 
-  async getConversazioni(userId: string, studioId?: string | null) {
-    let query = supabase
-      .from("tbconversazioni")
-      .select(`
-        *,
-        partecipanti:tbconversazioni_utenti(
-          utente_id,
-          ultimo_letto_at,
-          tbutenti(id, nome, cognome, email)
-        )
-      `)
-      .order("updated_at", { ascending: false });
+ async getConversazioni(userId: string, studioId?: string | null) {
+  let query = supabase
+    .from("tbconversazioni")
+    .select(`
+      *,
+      partecipanti:tbconversazioni_utenti(
+        utente_id,
+        ultimo_letto_at,
+        tbutenti(id, nome, cognome, email)
+      )
+    `)
+    .order("updated_at", { ascending: false });
 
-    if (studioId) {
-      query = query.eq("studio_id", studioId);
-    }
+  if (studioId) {
+    query = query.eq("studio_id", studioId);
+  }
 
-    const { data, error } = await query;
+  const { data, error } = await query;
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return data || [];
-  },
+  const conversazioniUtente = (data || []).filter((conv: any) => {
+    const isPartecipante = conv.partecipanti?.some((p: any) => p.utente_id === userId);
+    return isPartecipante;
+  });
+
+  const conversazioniConDettagli = await Promise.all(
+    conversazioniUtente.map(async (conv: any) => {
+      const { data: ultimoMessaggio } = await supabase
+        .from("tbmessaggi")
+        .select("*")
+        .eq("conversazione_id", conv.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
+      const ultimoLetto = partecipante?.ultimo_letto_at;
+
+      const { count } = await supabase
+        .from("tbmessaggi")
+        .select("*", { count: "exact", head: true })
+        .eq("conversazione_id", conv.id)
+        .neq("mittente_id", userId)
+        .gt("created_at", ultimoLetto || "1970-01-01");
+
+      return {
+        ...conv,
+        ultimo_messaggio: ultimoMessaggio || null,
+        non_letti: count || 0,
+      };
+    })
+  );
+
+  return conversazioniConDettagli;
+},
 
   async aggiornaConversazioneGruppo(
     conversazioneId: string,
@@ -37,18 +71,16 @@ export const messaggioService = {
     membriIds: string[],
     userId: string
   ) {
-    // aggiorna titolo conversazione
     const { error: updateError } = await supabase
       .from("tbconversazioni")
       .update({
-        titolo: titolo,
-        updated_at: new Date().toISOString()
+        titolo,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", conversazioneId);
 
     if (updateError) throw updateError;
 
-    // elimina partecipanti esistenti
     const { error: deleteError } = await supabase
       .from("tbconversazioni_utenti")
       .delete()
@@ -56,11 +88,10 @@ export const messaggioService = {
 
     if (deleteError) throw deleteError;
 
-    // reinserisce membri aggiornati
     const partecipanti = membriIds.map((utenteId) => ({
       conversazione_id: conversazioneId,
       utente_id: utenteId,
-      ultimo_letto_at: null
+      ultimo_letto_at: null,
     }));
 
     const { error: insertError } = await supabase
@@ -70,51 +101,9 @@ export const messaggioService = {
     if (insertError) throw insertError;
 
     return true;
-  }
-
-};
-
-    // Filtra SOLO le conversazioni dove l'utente è partecipante
-    const conversazioniUtente = (data || []).filter((conv) => {
-      const isPartecipante = conv.partecipanti?.some((p: any) => p.utente_id === userId);
-      return isPartecipante;
-    });
-
-    // Per ogni conversazione, ottieni l'ULTIMO messaggio e conta i non letti
-    const conversazioniConDettagli = await Promise.all(
-      conversazioniUtente.map(async (conv) => {
-        // Ottieni l'ULTIMO messaggio (ORDER BY created_at DESC + LIMIT 1)
-        const { data: ultimoMessaggio } = await supabase
-          .from("tbmessaggi")
-          .select("*")
-          .eq("conversazione_id", conv.id)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
-        const ultimoLetto = partecipante?.ultimo_letto_at;
-
-        const { count } = await supabase
-          .from("tbmessaggi")
-          .select("*", { count: "exact", head: true })
-          .eq("conversazione_id", conv.id)
-          .neq("mittente_id", userId)
-          .gt("created_at", ultimoLetto || "1970-01-01");
-
-        return {
-          ...conv,
-          ultimo_messaggio: ultimoMessaggio || null,
-          non_letti: count || 0,
-        };
-      })
-    );
-
-    return conversazioniConDettagli;
   },
 
-  async getMessaggi(conversazioneId: string) {
+   async getMessaggi(conversazioneId: string) {
     const { data, error } = await supabase
       .from("tbmessaggi")
       .select(`
@@ -152,23 +141,22 @@ export const messaggioService = {
     return data;
   },
 
-async segnaComeLetto(conversazioneId: string, utenteId: string) {
-  const { error } = await supabase
-    .from("tbconversazioni_utenti")
-    .update({ ultimo_letto_at: new Date().toISOString() })
-    .eq("conversazione_id", conversazioneId)
-    .eq("utente_id", utenteId);
+ async segnaComeLetto(conversazioneId: string, utenteId: string) {
+    const { error } = await supabase
+      .from("tbconversazioni_utenti")
+      .update({ ultimo_letto_at: new Date().toISOString() })
+      .eq("conversazione_id", conversazioneId)
+      .eq("utente_id", utenteId);
 
-  if (error) {
-    console.error("Errore aggiornamento lettura:", error);
-    return;
-  }
+    if (error) {
+      console.error("Errore aggiornamento lettura:", error);
+      return;
+    }
 
-  // 🔔 AVVISA IL BADGE MESSAGGI
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("messaggi-updated"));
-  }
-},
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("messaggi-updated"));
+    }
+  },
 
 
   async getOrCreateConversazioneDiretta(
