@@ -39,7 +39,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+
 import {
   Tooltip,
   TooltipContent,
@@ -272,6 +272,11 @@ export default function AgendaPage() {
     durata_giorni: 180,
   });
 
+    // stato popup eventi multipli
+    const [moreEventsOpen, setMoreEventsOpen] = useState(false);
+    const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
+    const [moreEventsList, setMoreEventsList] = useState<EventoWithRelations[]>([]);
+  
   // --------------------
   // LOAD DATA
   // --------------------
@@ -945,12 +950,18 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     }
 
     return summary;
-  };
+      };
 
   const filteredEvents = useMemo(() => {
     return eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
-  }, [eventi, filtroUtenti]);
+      }, [eventi, filtroUtenti]);
 
+  const handleOpenMoreEvents = (date: Date, events: EventoWithRelations[]) => {
+  setMoreEventsDate(date);
+  setMoreEventsList(events);
+  setMoreEventsOpen(true);
+    };
+  
   // --------------------
   // RENDERERS
   // --------------------
@@ -1140,9 +1151,17 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 </TooltipProvider>
                 ))}
 
-                {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-500 font-medium">+{dayEvents.length - 3} altri</div>
-                )}
+     {dayEvents.length > 3 && (
+    <div
+    className="text-xs text-blue-600 font-medium cursor-pointer hover:underline"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleOpenMoreEvents(dayItem, dayEvents);
+    }}
+  >
+    +{dayEvents.length - 3} altri
+  </div>
+)}
               </div>
             </div>
           );
@@ -1936,6 +1955,74 @@ return (
         </DialogContent>
       </Dialog>
 
+      <Dialog open={moreEventsOpen} onOpenChange={setMoreEventsOpen}>
+  <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
+    <DialogHeader>
+      <DialogTitle>
+        Eventi del{" "}
+        {moreEventsDate ? format(moreEventsDate, "dd MMMM yyyy", { locale: it }) : ""}
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
+      {moreEventsList.length === 0 ? (
+        <div className="text-sm text-muted-foreground">Nessun evento trovato</div>
+      ) : (
+        moreEventsList
+          .slice()
+          .sort((a, b) => {
+            const aTime = String(a.ora_inizio || "00:00");
+            const bTime = String(b.ora_inizio || "00:00");
+            return aTime.localeCompare(bTime);
+          })
+          .map((evento) => (
+            <div
+              key={String(evento.id)}
+              className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
+              onClick={() => {
+                setMoreEventsOpen(false);
+                handleEditEvento(evento);
+              }}
+            >
+              <div className="font-semibold text-sm">
+                {evento.titolo || "(senza titolo)"}
+              </div>
+
+              <div className="text-xs text-gray-600 mt-1">
+                ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
+                {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+              </div>
+
+              {evento.utente && (
+                <div className="text-xs text-gray-700 mt-1">
+                  👤 {evento.utente.nome} {evento.utente.cognome}
+                </div>
+              )}
+
+              {evento.cliente?.ragione_sociale && (
+                <div className="text-xs text-gray-700 mt-1">
+                  🏢 {evento.cliente.ragione_sociale}
+                </div>
+              )}
+
+              {evento.in_sede && evento.sala && (
+                <div className="text-xs text-green-700 mt-1">
+                  📍 Sala {String(evento.sala)}
+                </div>
+              )}
+
+              {!evento.in_sede && evento.luogo && (
+                <div className="text-xs text-red-700 mt-1">
+                  📍 {String(evento.luogo)}
+                </div>
+              )}
+            </div>
+          ))
+      )}
+    </div>
+  </DialogContent>
+</Dialog>
+    
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
