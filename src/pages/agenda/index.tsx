@@ -1330,6 +1330,7 @@ const renderWeekView = () => {
     </div>
   </div>
 );
+};  
   const renderListView = () => {
     const now = new Date();
     const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio as any) < now);
