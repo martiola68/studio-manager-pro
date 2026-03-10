@@ -73,20 +73,18 @@ export default function MessaggiPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedConvId && authUserId) {
-      loadMessaggi(selectedConvId);
-      subscribeToChat(selectedConvId);
-      startPolling(selectedConvId);
-    }
+  if (selectedConvId && authUserId) {
+    loadMessaggi(selectedConvId);
+    subscribeToChat(selectedConvId);
+  }
 
-    return () => {
-      if (subscriptionRef.current) {
-        supabase.removeChannel(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-      stopPolling();
-    };
-  }, [selectedConvId, authUserId]);
+  return () => {
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+  };
+}, [selectedConvId, authUserId]);
 
   const checkAuth = async () => {
     try {
@@ -182,21 +180,6 @@ export default function MessaggiPage() {
     }
 
     await loadConversazioni(authUserId);
-  };
-
-  const startPolling = (convId: string) => {
-    stopPolling();
-
-    pollIntervalRef.current = setInterval(() => {
-      loadMessaggiSilent(convId);
-    }, 2000);
-  };
-
-  const stopPolling = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
   };
 
   const subscribeToChat = (convId: string) => {
