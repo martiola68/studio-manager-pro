@@ -1443,118 +1443,124 @@ return (
       </div>
     </div>
     
-      {/* MOBILE */}
-      <div className="md:hidden space-y-3 px-1">
-      <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setCurrentDate((prev) => (view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)))
-            }
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+     {/* MOBILE */}
+<div className="md:hidden space-y-3 px-1">
+  <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
+    <div className="flex items-center justify-between">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() =>
+          setCurrentDate((prev) =>
+            view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)
+          )
+        }
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </Button>
 
-          <div className="text-center">
-            <div className="text-sm text-muted-foreground">Agenda</div>
-            <div className="font-bold">
-              {format(currentDate, "EEEE d MMMM yyyy", { locale: it })}
-            </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setCurrentDate((prev) => (view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)))
-            }
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
-          <Plus className="h-4 w-4" /> Nuovo Evento
-        </Button>
-
-              <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant={view === "week" ? "default" : "outline"}
-            size="sm"
-            className="h-9 text-xs px-2"
-            onClick={() => setView("week")}
-          >
-            Settimana
-          </Button>
-
-          <Button
-            variant={view === "month" ? "default" : "outline"}
-            size="sm"
-            className="h-9 text-xs px-2"
-            onClick={() => setView("month")}
-          >
-            Mese
-          </Button>
-
-          <Button
-            variant={view === "list" ? "default" : "outline"}
-            size="sm"
-            className="h-9 text-xs px-2"
-            onClick={() => setView("list")}
-          >
-            Scaduti
-          </Button>
-
-          <Button
-            variant={view === "ricorrenti" ? "default" : "outline"}
-            size="sm"
-            className="h-9 text-xs px-2"
-            onClick={() => setView("ricorrenti")}
-          >
-            Ricorrenti
-          </Button>
+      <div className="text-center">
+        <div className="text-sm text-muted-foreground">Agenda</div>
+        <div className="font-bold">
+          {format(currentDate, "EEEE d MMMM yyyy", { locale: it })}
         </div>
       </div>
 
-         <div className="bg-white rounded-lg shadow-sm p-3">
-        {view === "ricorrenti" && renderRicorrentiView()}
-        {view === "list" && renderListView()}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() =>
+          setCurrentDate((prev) =>
+            view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)
+          )
+        }
+      >
+        <ChevronRight className="h-5 w-5" />
+      </Button>
+    </div>
 
-        {view === "month" && (
-          <div className="overflow-x-auto">
-            <div className="min-w-[700px]">
-              {renderMonthView()}
-            </div>
-          </div>
-        )}
+    <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
+      <Plus className="h-4 w-4" /> Nuovo Evento
+    </Button>
 
-       {view === "week" && (
-  <div className="overflow-x-auto">
-    <div className="min-w-[900px]">
-      {renderWeekView()}
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        variant={view === "week" ? "default" : "outline"}
+        size="sm"
+        className="h-9 text-xs px-2"
+        onClick={() => setView("week")}
+      >
+        Settimana
+      </Button>
+
+      <Button
+        variant={view === "month" ? "default" : "outline"}
+        size="sm"
+        className="h-9 text-xs px-2"
+        onClick={() => setView("month")}
+      >
+        Mese
+      </Button>
+
+      <Button
+        variant={view === "list" ? "default" : "outline"}
+        size="sm"
+        className="h-9 text-xs px-2"
+        onClick={() => setView("list")}
+      >
+        Scaduti
+      </Button>
+
+      <Button
+        variant={view === "ricorrenti" ? "default" : "outline"}
+        size="sm"
+        className="h-9 text-xs px-2"
+        onClick={() => setView("ricorrenti")}
+      >
+        Ricorrenti
+      </Button>
     </div>
   </div>
-)}
-            {filteredEvents
-              .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
-              .sort((a, b) => {
-                const aTime = String(a.ora_inizio || "00:00");
-                const bTime = String(b.ora_inizio || "00:00");
-                return aTime.localeCompare(bTime);
-              })
-              .map((e) => renderEventCard(e, false))}
 
-            {filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate)).length === 0 && (
-              <div className="text-center py-10 text-gray-500">
-                Nessun evento per questo giorno
-              </div>
-            )}
+  <div className="bg-white rounded-lg shadow-sm p-3">
+    {view === "ricorrenti" && renderRicorrentiView()}
+    {view === "list" && renderListView()}
+
+    {view === "month" && (
+      <div className="overflow-x-auto">
+        <div className="min-w-[700px]">{renderMonthView()}</div>
+      </div>
+    )}
+
+    {view === "week" && (
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px]">{renderWeekView()}</div>
+      </div>
+    )}
+
+    {view === "day" && (
+      <>
+        {filteredEvents
+          .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
+          .sort((a, b) => {
+            const aTime = String(a.ora_inizio || "00:00");
+            const bTime = String(b.ora_inizio || "00:00");
+            return aTime.localeCompare(bTime);
+          })
+          .map((e) => renderEventCard(e, false))}
+
+        {filteredEvents.filter((e) =>
+          isSameDay(safeParseISO(e.data_inizio as any), currentDate)
+        ).length === 0 && (
+          <div className="text-center py-10 text-gray-500">
+            Nessun evento per questo giorno
           </div>
         )}
-      </div>
-    </div>
+      </>
+    )}
+  </div>
+</div>
+    
       <div className="bg-white rounded-lg shadow-sm">
         {view === "ricorrenti" && renderRicorrentiView()}
         {view === "list" && renderListView()}
