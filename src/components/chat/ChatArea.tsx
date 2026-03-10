@@ -351,22 +351,36 @@ export function ChatArea({
                         {msg.testo}
                       </p>
 
-                      {msg.allegati && msg.allegati.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {msg.allegati.map((att) => (
-                            <a
-                              key={att.id}
-                              href={att.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 text-xs underline hover:no-underline break-all"
-                            >
-                              <Paperclip className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{att.nome_file}</span>
-                            </a>
-                          ))}
-                        </div>
-                      )}
+                     {msg.allegati && msg.allegati.length > 0 && (
+  <div className="mt-2 space-y-1">
+    {msg.allegati.map((att) => {
+      if (!att.url) {
+        return (
+          <div
+            key={att.id}
+            className="flex items-center gap-2 text-xs opacity-70 break-all"
+          >
+            <Paperclip className="h-3 w-3 shrink-0" />
+            <span className="truncate">{att.nome_file}</span>
+          </div>
+        );
+      }
+
+      return (
+        <a
+          key={att.id}
+          href={att.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-xs underline hover:no-underline break-all"
+        >
+          <Paperclip className="h-3 w-3 shrink-0" />
+          <span className="truncate">{att.nome_file}</span>
+        </a>
+      );
+    })}
+  </div>
+)}
 
                       <p
                         className={cn(
