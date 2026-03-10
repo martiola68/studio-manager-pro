@@ -1538,26 +1538,26 @@ return (
       </div>
     )}
 
-    {view === "day" && (
-      <>
-        {filteredEvents
-          .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
-          .sort((a, b) => {
-            const aTime = String(a.ora_inizio || "00:00");
-            const bTime = String(b.ora_inizio || "00:00");
-            return aTime.localeCompare(bTime);
-          })
-          .map((e) => renderEventCard(e, false))}
+   {view === "week" && (
+  <>
+    {filteredEvents
+      .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
+      .sort((a, b) => {
+        const aTime = String(a.ora_inizio || "00:00");
+        const bTime = String(b.ora_inizio || "00:00");
+        return aTime.localeCompare(bTime);
+      })
+      .map((e) => renderEventCard(e, false))}
 
-        {filteredEvents.filter((e) =>
-          isSameDay(safeParseISO(e.data_inizio as any), currentDate)
-        ).length === 0 && (
-          <div className="text-center py-10 text-gray-500">
-            Nessun evento per questo giorno
-          </div>
-        )}
-      </>
+    {filteredEvents.filter((e) =>
+      isSameDay(safeParseISO(e.data_inizio as any), currentDate)
+    ).length === 0 && (
+      <div className="text-center py-10 text-gray-500">
+        Nessun evento per questo giorno
+      </div>
     )}
+  </>
+)}
   </div>
 </div>
       
