@@ -73,8 +73,8 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
     "vercel": "^50.31.3",
-    "xlsx": "^0.19.3"
-    "zod": "^3.24.1"
+    "xlsx": "^0.19.3",
+    "zod": "^3.24.1",
   },
   "devDependencies": {
     "@softgenai/element-tagger": "^0.0.2",
