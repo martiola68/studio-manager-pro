@@ -111,35 +111,63 @@ serve(async (req) => {
           continue;
         }
 
-        const payload = {
-          promemoriaId: promemoria.id,
-          destinatarioEmail: destinatario.email,
-          destinatarioNome: `${destinatario.nome || ""} ${destinatario.cognome || ""}`.trim(),
-          promemoriaTitolo: promemoria.titolo,
-          promemoriaDescrizione: promemoria.descrizione || "",
-          dataScadenza: promemoria.data_scadenza,
-          priorita: promemoria.priorita || "Media",
-          giorniRimanenti,
-          tipoAlert: check.tipoAlert,
-        };
+       const subject =
+  check.tipoAlert === "7_giorni"
+    ? `Promemoria in scadenza tra 7 giorni: ${promemoria.titolo}`
+    : `Promemoria in scadenza tra 2 giorni: ${promemoria.titolo}`;
 
-        const fnUrl = `${supabaseUrl}/functions/v1/send-promemoria-alert`;
+const html = `
+  <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
+    <h2>Promemoria in scadenza</h2>
+    <p>Ciao ${destinatario.nome || ""} ${destinatario.cognome || ""},</p>
+    <p>
+      Ti ricordiamo che il promemoria <strong>${promemoria.titolo}</strong>
+      scadrà il <strong>${promemoria.data_scadenza}</strong>.
+    </p>
+    <p><strong>Giorni rimanenti:</strong> ${giorniRimanenti}</p>
+    <p><strong>Priorità:</strong> ${promemoria.priorita || "Media"}</p>
+    ${
+      promemoria.descrizione
+        ? `<p><strong>Descrizione:</strong><br>${promemoria.descrizione}</p>`
+        : ""
+    }
+    <p>Questo è un messaggio automatico di Studio Manager Pro.</p>
+  </div>
+`;
 
-        const response = await fetch(fnUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify(payload),
-        });
+const payload = {
+  email: destinatario.email,
+  subject,
+  html,
+};
 
-        const result = await response.json();
+const fnUrl = `${supabaseUrl}/functions/v1/send-promemoria-alert`;
 
-        if (!response.ok || !result?.success) {
-          log.push(`Errore invio ${check.tipoAlert} per ${promemoria.titolo}`);
-          continue;
-        }
+const response = await fetch(fnUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${supabaseServiceKey}`,
+    apikey: supabaseServiceKey,
+  },
+  body: JSON.stringify(payload),
+});
+
+        const raw = await response.text();
+
+let result: any = null;
+try {
+  result = JSON.parse(raw);
+} catch {
+  result = null;
+}
+
+if (!response.ok || !result?.success) {
+  log.push(
+    `Errore invio ${check.tipoAlert} per ${promemoria.titolo} - status ${response.status} - body ${raw}`
+  );
+  continue;
+}
 
         const { error: insertError } = await supabase
           .from("tbpromemoria_alert")
