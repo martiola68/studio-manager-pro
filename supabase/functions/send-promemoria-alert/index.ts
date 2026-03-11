@@ -11,77 +11,32 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      destinatarioEmail,
-      destinatarioNome,
-      promemoriaTitolo,
-      promemoriaDescrizione,
-      dataScadenza,
-      priorita,
-      giorniRimanenti,
-      tipoAlert,
-    } = await req.json();
+    const body = await req.json();
 
-    if (!destinatarioEmail || !promemoriaTitolo || !dataScadenza) {
-      throw new Error("Dati mancanti per invio email promemoria");
-    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
 
-    const subject =
-      tipoAlert === "7_giorni"
-        ? `Promemoria in scadenza tra 7 giorni: ${promemoriaTitolo}`
-        : `Promemoria in scadenza tra 2 giorni: ${promemoriaTitolo}`;
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/send-email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: req.headers.get("Authorization") || "",
+        },
+        body: JSON.stringify({
+          to: body.email,
+          subject: body.subject,
+          html: body.html,
+        }),
+      }
+    );
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
-        <h2>Promemoria in scadenza</h2>
-        <p>Ciao ${destinatarioNome || ""},</p>
-        <p>
-          Ti ricordiamo che il promemoria <strong>${promemoriaTitolo}</strong>
-          scadrà il <strong>${dataScadenza}</strong>.
-        </p>
-        <p><strong>Giorni rimanenti:</strong> ${giorniRimanenti}</p>
-        <p><strong>Priorità:</strong> ${priorita || "-"}</p>
-        ${
-          promemoriaDescrizione
-            ? `<p><strong>Descrizione:</strong><br>${promemoriaDescrizione}</p>`
-            : ""
-        }
-        <p>Questo è un messaggio automatico di Studio Manager Pro.</p>
-      </div>
-    `;
-
-    // QUI sostituisci con il provider che usate già adesso
-    // Esempio generico via webhook/provider esterno
-    const emailApiUrl = Deno.env.get("EMAIL_API_URL");
-    const emailApiKey = Deno.env.get("EMAIL_API_KEY");
-
-    if (!emailApiUrl || !emailApiKey) {
-      throw new Error("Configurazione email mancante");
-    }
-
-    const emailResponse = await fetch(emailApiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${emailApiKey}`,
-      },
-      body: JSON.stringify({
-        to: destinatarioEmail,
-        subject,
-        html,
-      }),
-    });
-
-    const emailResult = await emailResponse.text();
-
-    if (!emailResponse.ok) {
-      throw new Error(`Errore provider email: ${emailResult}`);
-    }
+    const result = await response.json();
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Email promemoria inviata",
+        result,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -91,7 +46,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: error.message,
       }),
       {
         status: 500,
