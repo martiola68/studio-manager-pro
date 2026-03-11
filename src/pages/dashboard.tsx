@@ -33,12 +33,15 @@ import { AlertScadenze } from "@/components/AlertScadenze";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/lib/supabase/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import PromemoriaImminentiCard from "@/components/dashboard/PromemoriaImminentiCard";
+import { useRouter } from "next/router";
 
 type EventoAgenda = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 export default function DashboardPage() {
   const { toast } = useToast();
-
+const router = useRouter();
+  
   // ✅ auth guard: redirects live ONLY inside useRequireAuth
   const { ready, session } = useRequireAuth();
 
