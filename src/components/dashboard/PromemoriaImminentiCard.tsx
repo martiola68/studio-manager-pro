@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, CalendarClock, Clock3 } from "lucide-react";
 import { format, differenceInCalendarDays, startOfDay } from "date-fns";
 import { it } from "date-fns/locale";
+import { useRouter } from "next/router";
 
 type PromemoriaItem = {
   id: string;
