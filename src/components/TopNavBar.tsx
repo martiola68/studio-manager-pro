@@ -273,7 +273,7 @@ export function TopNavBar() {
         { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
         { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
         { label: "Elenco antiriciclaggio", href: "/antiriciclaggio/elenco", icon: null },
-        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: <Settings className="h-4 w-4" /> },
+        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
       ],
     },
     { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
