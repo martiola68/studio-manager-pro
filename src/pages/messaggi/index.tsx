@@ -216,7 +216,9 @@ useEffect(() => {
           .eq("id", payload.new.mittente_id)
           .single();
 
-    const newMessage = {
+const incomingMessageId = payload.new.id;
+
+const newMessage = {
   ...payload.new,
   mittente: sender,
 };
@@ -224,11 +226,11 @@ useEffect(() => {
 let isNewMessage = false;
 
 setMessaggi((prev) => {
-  const exists = prev.some((msg) => msg.id === newMessage.id);
+  const exists = prev.some((msg) => msg.id === incomingMessageId);
   if (exists) return prev;
 
   isNewMessage = true;
-  return [...prev, newMessage];
+  return [...prev, newMessage as any];
 });
 
 if (
