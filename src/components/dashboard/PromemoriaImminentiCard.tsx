@@ -9,13 +9,14 @@ import { it } from "date-fns/locale";
 
 type PromemoriaItem = {
   id: string;
-  titolo: string;
+  titolo: string | null;
   descrizione: string | null;
   data_scadenza: string;
   priorita: string | null;
   working_progress: string | null;
   settore: string | null;
   destinatario_id: string | null;
+  studio_id?: string | null;
 };
 
 type UtenteLite = {
@@ -177,7 +178,7 @@ export default function PromemoriaImminentiCard({ onOpenPromemoriaPage }: Props)
                       ) : (
                         <Clock3 className="h-4 w-4 text-gray-500" />
                       )}
-                      <p className="truncate font-medium">{item.titolo}</p>
+                     <p className="truncate font-medium">{item.titolo || "Senza titolo"}</p>
                     </div>
                     {item.descrizione && (
                       <p className="mt-1 line-clamp-2 text-sm text-gray-600">{item.descrizione}</p>
