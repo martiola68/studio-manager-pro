@@ -383,90 +383,94 @@ const router = useRouter();
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Stato Scadenze</CardTitle>
-            <CardDescription>Scadenze confermate per tipologia</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium">CCGG</span>
-                </div>
-                <span className="text-sm font-bold">{stats.scadenzeCCGGConfermate}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium">CU</span>
-                </div>
-                <span className="text-sm font-bold">{stats.scadenzeCUConfermate}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium">Bilanci</span>
-                </div>
-                <span className="text-sm font-medium">{stats.scadenzeBilanciConfermate}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium">770</span>
-                </div>
-                <span className="text-sm font-bold">{stats.scadenze770Confermate}</span>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <Card>
+    <CardHeader>
+      <CardTitle>Stato Scadenze</CardTitle>
+      <CardDescription>Scadenze confermate per tipologia</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium">CCGG</span>
+          </div>
+          <span className="text-sm font-bold">{stats.scadenzeCCGGConfermate}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium">CU</span>
+          </div>
+          <span className="text-sm font-bold">{stats.scadenzeCUConfermate}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium">Bilanci</span>
+          </div>
+          <span className="text-sm font-medium">{stats.scadenzeBilanciConfermate}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium">770</span>
+          </div>
+          <span className="text-sm font-bold">{stats.scadenze770Confermate}</span>
+        </div>
+      </div>
+      <Link href="/scadenze/iva">
+        <Button variant="outline" className="w-full mt-6">
+          Visualizza tutte le scadenze
+        </Button>
+      </Link>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader>
+      <CardTitle>Prossimi Appuntamenti</CardTitle>
+      <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
+    </CardHeader>
+    <CardContent>
+      {prossimiAppuntamenti.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+          <p>Nessun appuntamento programmato</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {prossimiAppuntamenti.map((app) => (
+            <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div
+                className={`w-2 h-2 rounded-full mt-2 ${
+                  app.in_sede ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
+                <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
+                {app.sala && (
+                  <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>
+                )}
               </div>
             </div>
-            <Link href="/scadenze/iva">
-              <Button variant="outline" className="w-full mt-6">
-                Visualizza tutte le scadenze
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
+      )}
+      <Link href="/agenda">
+        <Button variant="outline" className="w-full mt-4">
+          Apri agenda completa
+        </Button>
+      </Link>
+    </CardContent>
+  </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Prossimi Appuntamenti</CardTitle>
-            <CardDescription>Agenda dei prossimi 7 giorni</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {prossimiAppuntamenti.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Clock className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p>Nessun appuntamento programmato</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {prossimiAppuntamenti.map((app) => (
-                  <div key={app.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div
-                      className={`w-2 h-2 rounded-full mt-2 ${
-                        app.in_sede ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-900 truncate">{app.titolo}</p>
-                      <p className="text-xs text-gray-500">{formatDateTime(app.data_inizio)}</p>
-                      {app.sala && (
-                        <p className="text-xs text-gray-400 mt-1">Sala: {app.sala}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Link href="/agenda">
-              <Button variant="outline" className="w-full mt-4">
-                Apri agenda completa
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+  <PromemoriaImminentiCard
+    onOpenPromemoriaPage={() => router.push("/promemoria")}
+  />
+</div>
 
       <Card>
         <CardHeader>
