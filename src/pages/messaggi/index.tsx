@@ -63,6 +63,8 @@ export default function MessaggiPage() {
 
   const isChatReadyRef = useRef(false);
 
+  const suppressSoundUntilRef = useRef(0);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -74,19 +76,16 @@ export default function MessaggiPage() {
     }
   }, []);
 
- useEffect(() => {
-  isChatReadyRef.current = false;
+useEffect(() => {
+  suppressSoundUntilRef.current = Date.now() + 1500;
 
   if (selectedConvId && authUserId) {
     loadMessaggi(selectedConvId).then(() => {
       subscribeToChat(selectedConvId);
-      isChatReadyRef.current = true;
     });
   }
 
   return () => {
-    isChatReadyRef.current = false;
-
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
@@ -217,23 +216,32 @@ export default function MessaggiPage() {
           .eq("id", payload.new.mittente_id)
           .single();
 
-        const newMessage = {
-        ...(payload.new as { id: string; mittente_id: string; [key: string]: any }),
-          mittente: sender,
-          };
+    const newMessage = {
+  ...payload.new,
+  mittente: sender,
+};
 
-        setMessaggi((prev) => {
-          const exists = prev.some((msg) => msg.id === newMessage.id);
-          if (exists) return prev;
-          return [...prev, newMessage];
-        });
+let isNewMessage = false;
 
-        if (newMessage.mittente_id !== currentUserId && audioRef.current) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(() => {});
-        }
+setMessaggi((prev) => {
+  const exists = prev.some((msg) => msg.id === newMessage.id);
+  if (exists) return prev;
 
-        window.dispatchEvent(new Event("messaggi-updated"));
+  isNewMessage = true;
+  return [...prev, newMessage];
+});
+
+if (
+  isNewMessage &&
+  newMessage.mittente_id !== currentUserId &&
+  audioRef.current &&
+  Date.now() > suppressSoundUntilRef.current
+) {
+  audioRef.current.currentTime = 0;
+  audioRef.current.play().catch(() => {});
+}
+
+window.dispatchEvent(new Event("messaggi-updated"));
       }
     )
     .subscribe();
