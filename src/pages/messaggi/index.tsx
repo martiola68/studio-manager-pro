@@ -235,7 +235,7 @@ setMessaggi((prev) => {
 
 if (
   isNewMessage &&
-  newMessage.mittente_id !== currentUserId &&
+  payload.new.mittente_id !== currentUserId &&
   audioRef.current &&
   Date.now() > suppressSoundUntilRef.current
 ) {
