@@ -190,6 +190,27 @@ export default function ImpostazioniPage() {
           </Card>
         </Link>
 
+        <Link href="/impostazioni/elenco-prestazioni-ar">
+  <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-indigo-600">
+    <CardHeader>
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-indigo-100 rounded-lg">
+          <FileText className="h-6 w-6 text-indigo-600" />
+        </div>
+        <div>
+          <CardTitle>Prestazioni AR</CardTitle>
+          <CardDescription>Elenco prestazioni antiriciclaggio</CardDescription>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <p className="text-sm text-gray-600">
+        Gestione elenco prestazioni AR con rischio e punteggio
+      </p>
+    </CardContent>
+  </Card>
+</Link>
+        
         <Link href="/impostazioni/microsoft365">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
             <CardHeader>
