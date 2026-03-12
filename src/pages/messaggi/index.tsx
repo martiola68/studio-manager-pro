@@ -61,6 +61,8 @@ export default function MessaggiPage() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const isChatReadyRef = useRef(false);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -72,20 +74,26 @@ export default function MessaggiPage() {
     }
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
+  isChatReadyRef.current = false;
+
   if (selectedConvId && authUserId) {
-    loadMessaggi(selectedConvId);
-    subscribeToChat(selectedConvId);
+    loadMessaggi(selectedConvId).then(() => {
+      subscribeToChat(selectedConvId);
+      isChatReadyRef.current = true;
+    });
   }
 
   return () => {
+    isChatReadyRef.current = false;
+
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
     }
   };
 }, [selectedConvId, authUserId]);
-
+  
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
