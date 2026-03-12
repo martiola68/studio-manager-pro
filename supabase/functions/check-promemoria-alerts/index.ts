@@ -111,27 +111,64 @@ serve(async (req) => {
           continue;
         }
 
-       const subject =
-  check.tipoAlert === "7_giorni"
-    ? `Promemoria in scadenza tra 7 giorni: ${promemoria.titolo}`
-    : `Promemoria in scadenza tra 2 giorni: ${promemoria.titolo}`;
+       const subject = `🔔 Alert Promemoria: ${promemoria.titolo || "Promemoria"}`;
+
+
+ const titoloPromemoria = promemoria.titolo || "Promemoria";
+const dataScadenzaFormatted = new Date(promemoria.data_scadenza).toLocaleDateString("it-IT", {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+});
+
+const coloreAlert = giorniRimanenti <= 2 ? "#dc2626" : "#ef4444";
+const etichettaAlert =
+  giorniRimanenti <= 2 ? "⏰ Scade tra 2 giorni" : "⏰ Scade tra 7 giorni";
 
 const html = `
-  <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #222;">
-    <h2>Promemoria in scadenza</h2>
-    <p>Ciao ${destinatario.nome || ""} ${destinatario.cognome || ""},</p>
-    <p>
-      Ti ricordiamo che il promemoria <strong>${promemoria.titolo}</strong>
-      scadrà il <strong>${promemoria.data_scadenza}</strong>.
-    </p>
-    <p><strong>Giorni rimanenti:</strong> ${giorniRimanenti}</p>
-    <p><strong>Priorità:</strong> ${promemoria.priorita || "Media"}</p>
-    ${
-      promemoria.descrizione
-        ? `<p><strong>Descrizione:</strong><br>${promemoria.descrizione}</p>`
-        : ""
-    }
-    <p>Questo è un messaggio automatico di Studio Manager Pro.</p>
+  <div style="margin:0; padding:0; background-color:#f8fafc; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+    <div style="max-width:700px; margin:0 auto; background:#ffffff;">
+      
+      <div style="padding:24px 28px 8px 28px; font-size:30px; line-height:1.2; color:#111827; font-weight:700;">
+        🔔
+      </div>
+
+      <div style="padding:8px 28px 0 28px;">
+        <div style="border-left:4px solid ${coloreAlert}; padding-left:16px; margin-bottom:24px;">
+          <div style="font-size:18px; font-weight:700; color:${coloreAlert}; margin-bottom:18px;">
+            ${etichettaAlert}
+          </div>
+
+          <div style="font-size:16px; line-height:1.8; color:#374151;">
+            <div><strong>Promemoria:</strong> ${titoloPromemoria}</div>
+            <div><strong>Data scadenza:</strong> ${dataScadenzaFormatted}</div>
+            <div><strong>Priorità:</strong> ${promemoria.priorita || "Media"}</div>
+            ${
+              promemoria.descrizione
+                ? `<div><strong>Descrizione:</strong> ${promemoria.descrizione}</div>`
+                : ""
+            }
+          </div>
+        </div>
+
+        <div style="background:#f3f4f6; padding:14px 16px; margin:0 0 18px 0; color:#374151; font-size:15px;">
+          Questo alert è stato inviato da <strong>Studio Manager Pro</strong> per ricordarti una scadenza importante.
+        </div>
+
+        <div style="font-size:15px; color:#374151; margin-bottom:28px;">
+          Accedi a Studio Manager Pro per visualizzare tutti i dettagli e gestire il promemoria.
+        </div>
+      </div>
+
+      <div style="text-align:center; color:#9ca3af; font-size:13px; padding:24px 16px 8px 16px;">
+        © 2026 Studio Manager Pro - Sistema di gestione studio
+      </div>
+
+      <div style="text-align:center; color:#9ca3af; font-size:12px; padding:0 16px 28px 16px;">
+        Questa è una email automatica, non rispondere a questo messaggio.
+      </div>
+    </div>
   </div>
 `;
 
