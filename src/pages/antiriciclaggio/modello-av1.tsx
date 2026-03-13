@@ -29,6 +29,79 @@ type FormDataType = {
   ScadenzaVerifica: string;
 };
 
+export const av1Labels = {
+  A1: {
+    a1a: "Non congruità della natura giuridica prescelta in relazione all’attività svolta e alle sue dimensioni",
+    a1b: "Articolazione giuridica, complessità e opacità della struttura volte ad ostacolare l’identificazione del titolare effettivo o l’attività concretamente svolta",
+    a1c: "Partecipazione di persone politicamente esposte (cliente, esecutore, titolare effettivo)",
+    a1d: "Incarichi in società, associazioni, fondazioni, organizzazioni non lucrative, organizzazioni non governative soprattutto se aventi sede in paesi ad alto rischio o non collaborativi",
+    a1e: "Processi penali o indagini in corso per circostanze attinenti al terrorismo, al riciclaggio o all’autoriciclaggio – Misure di prevenzione o provvedimenti di sequestro - Familiarità/stretti legami con soggetti sottoposti a indagini o a procedimenti penali o provvedimenti di sequestro o censiti nelle liste delle persone o degli enti attivi nel finanziamento del terrorismo",
+    a1f: "Altro",
+  },
+
+  A2: {
+    a2a: "Attività esposte al rischio di infiltrazioni criminali e terroristiche secondo le periodiche pubblicazioni delle Autorità in materia, sia a livello sovranazionale (Relazione UE sulla valutazione del rischio sovranazionale), sia a livello nazionale",
+    a2b: "Struttura organizzativa e dimensionale non coerente con l’attività svolta",
+    a2c: "Non conformità dell’attività svolta rispetto a quella indicata nell’atto costitutivo",
+    a2d: "Altro",
+  },
+
+  A3: {
+    a3a: "Cliente non presente fisicamente",
+    a3b: "Presenza di soggetti terzi con ruolo non definito",
+    a3c: "Comportamento non trasparente e collaborativo",
+    a3d: "Difficoltà nell’individuazione del titolare effettivo",
+    a3e: "Altro",
+  },
+
+  A4: {
+    a4a: "Residenza/localizzazione in: comune italiano a rischio a causa dell’utilizzo eccessivo di contante – Residenza in Paesi terzi ad alto rischio individuati dalle Autorità – Paesi terzi non dotati di efficaci sistemi di prevenzione del riciclaggio e del finanziamento del terrorismo coerenti con le raccomandazioni del GAFI – Paesi terzi caratterizzati da un elevato livello di corruzione o di permeabilità ad altre attività criminose – Aree di conflitto in cui sono presenti organizzazioni terroristiche o in zone limitrofe o di transito – Paese soggetto a sanzioni o embarghi o misure analoghe stabilite dall’O.N.U. o altri organismi internazionali - (vedasi le pubblicazioni periodiche delle Autorità in materia, sia a livello sovranazionale, sia a livello nazionale)",
+    a4b: "Lontananza della residenza del cliente rispetto alla sede del professionista",
+    a4c: "Altro",
+  },
+
+  B1: {
+    b1a: "Operazione ordinaria/straordinaria rispetto al profilo soggettivo del cliente",
+    b1b: "Operazione che prevede schemi negoziali che possono agevolare l’opacità delle relazioni economiche e finanziarie intercorrenti tra il cliente e la controparte",
+    b1c: "Articolazione contrattuale ingiustificata",
+    b1d: "Altro",
+  },
+
+  B2: {
+    b2a: "Utilizzo di mezzi di pagamento non tracciati - Utilizzo di valute virtuali",
+    b2b: "Utilizzo di conti non propri per trasferire/ricevere fondi",
+    b2c: "Ricorso reiterato a procure",
+    b2d: "Ricorso a domiciliazioni di comodo",
+    b2e: "Altro",
+  },
+
+  B3: {
+    b3a: "Incoerenza dell’ammontare rispetto al profilo economico e finanziario del cliente",
+    b3b: "Presenza di frazionamenti artificiosi",
+    b3c: "Altro",
+  },
+
+  B4: {
+    b4a: "Non congruità della frequenza dell’operazione rispetto all’attività esercitata – Operatività improvvisa e poco giustificata rispetto all’ordinaria attività – Operazioni di ammontare consistente, concentrate in un ristretto arco temporale",
+    b4b: "Rapporto professionale continuativo o occasionale",
+    b4c: "Altro",
+  },
+
+  B5: {
+    b5a: "Irragionevolezza dell’operazione rispetto all’attività svolta dal cliente",
+    b5b: "Irragionevolezza dell’operazione rispetto all’entità delle risorse economiche nella disponibilità del cliente",
+    b5c: "Non congruità dell’operazione rispetto alle finalità dichiarate",
+    b5d: "Altro",
+  },
+
+  B6: {
+    b6a: "Destinazione in: comune italiano a rischio a causa dell’utilizzo eccessivo di contante – Paesi terzi ad alto rischio individuati dalle Autorità – Paesi terzi non dotati di efficaci sistemi di prevenzione del riciclaggio e del finanziamento del terrorismo coerenti con le raccomandazioni del GAFI – Paesi terzi caratterizzati da un elevato livello di corruzione o di permeabilità ad altre attività criminose - Aree di conflitto in cui sono presenti organizzazioni terroristiche o in zone limitrofe o di transito - Paese soggetto a sanzioni o embarghi o misure analoghe stabilite dall'O.N.U. o altri organismi internazionali - (vedasi pubblicazioni periodiche delle Autorità in materia, sia a livello sovranazionale, sia a livello nazionale)",
+    b6b: "Inesistenza di riferimenti tradizionali nell’area geografica di destinazione (ad es. assenza di organismi equivalenti alle Camere di Commercio che detengono registri pubblici)",
+    b6c: "Irragionevolezza e non congruità della ricerca di interazione con altre aree geografiche (ad es. vendita di determinati prodotti in aree geografiche nelle quali notoriamente gli stessi non risultano utilizzati)",
+    b6d: "Altro",
+  },
+} as const;
+
 const initialFormData: FormDataType = {
   studio_id: "",
   cliente_id: "",
