@@ -648,17 +648,6 @@ const handleNuovo = () => {
   />
 </div>
 
-    <div>
-  <label className="block text-sm font-medium mb-1">
-    Adeguata verifica
-  </label>
-  <input
-    type="text"
-    className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischioEffettivo)}`}
-    value={AdeguataVerifica}
-    readOnly
-  />
-
   <div className="flex justify-end gap-3 pt-3">
     <Button onClick={handleSave} disabled={saving}>
       {saving ? "Salvataggio..." : "Salva AV1"}
