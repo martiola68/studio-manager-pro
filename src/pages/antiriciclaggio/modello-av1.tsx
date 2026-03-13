@@ -210,9 +210,6 @@ export default function ModelloAV1Page() {
 
   const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
 
-alert("Record AV1 salvato correttamente.");
-setSaving(false);
-
 const handleDataVerificaChange = (dataVerifica: string) => {
   setFormData((prev) => ({
     ...prev,
@@ -272,13 +269,7 @@ const handleNuovo = () => {
     }
 
     alert("Record AV1 salvato correttamente.");
-
-    setFormData((prev) => ({
-      ...initialFormData,
-      studio_id: prev.studio_id,
-    }));
-
-    setSaving(false);
+      setSaving(false);
   };
 
   return (
