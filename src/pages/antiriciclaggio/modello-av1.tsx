@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { authService } from "@/services/authService";
 
 type Cliente = {
   id: string;
@@ -50,7 +51,7 @@ function addMonths(dateString: string, months: number) {
   return `${year}-${month}-${day}`;
 }
 
-function calcolaScadenza(dataVerifica: string, livelloRischio: string) {
+function calcolaScadenzaFinale(dataVerifica: string, livelloRischio: string) {
   if (!dataVerifica || !livelloRischio) return "";
 
   if (livelloRischio === "Non significativo") return addMonths(dataVerifica, 36);
@@ -59,6 +60,23 @@ function calcolaScadenza(dataVerifica: string, livelloRischio: string) {
   if (livelloRischio === "Molto significativo") return addMonths(dataVerifica, 6);
 
   return "";
+}
+
+function calcolaLivelloRischio(mediaPunteggio: number) {
+
+  if (mediaPunteggio <= 1.5) {
+    return "Non significativo";
+  }
+
+  if (mediaPunteggio <= 2.5) {
+    return "Poco significativo";
+  }
+
+  if (mediaPunteggio <= 3.5) {
+    return "Abbastanza significativo";
+  }
+
+  return "Molto significativo";
 }
 
 export default function ModelloAV1Page() {
@@ -82,9 +100,16 @@ export default function ModelloAV1Page() {
       .select('id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR')
       .order("TipoPrestazioneAR", { ascending: true });
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const authUser = await authService.getCurrentUser();
+const profile = authUser?.id
+  ? await authService.getUserProfile(authUser.id)
+  : null;
+
+const resolvedStudioId =
+  profile?.studio_id ||
+  profile?.id_studio ||
+  profile?.studio?.id ||
+  "";
 
     if (clientiError) {
       setError(clientiError.message);
@@ -97,12 +122,14 @@ export default function ModelloAV1Page() {
     setClienti((clientiData || []) as Cliente[]);
     setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
 
-    if (user?.id) {
-      setFormData((prev) => ({
-        ...prev,
-        studio_id: user.id,
-      }));
-    }
+   if (resolvedStudioId) {
+  setFormData((prev) => ({
+    ...prev,
+    studio_id: resolvedStudioId,
+  }));
+} else {
+  setError("studio_id non trovato nel profilo utente.");
+}
 
     setLoading(false);
   };
@@ -122,31 +149,36 @@ export default function ModelloAV1Page() {
   };
 
   const handlePrestazioneChange = (prestazioneValue: string) => {
-    const prestazioneSelezionata = prestazioni.find(
-      (p) => p.TipoPrestazioneAR === prestazioneValue
-    );
+  const prestazioneSelezionata = prestazioni.find(
+    (p) => p.TipoPrestazioneAR === prestazioneValue
+  );
 
-    const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
-    const scadenza = calcolaScadenza(formData.DataVerifica, livello);
+  const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
 
-    setFormData((prev) => ({
-      ...prev,
-      Prestazione: prestazioneValue,
-      ValRischioIner: livello,
-      ScadenzaVerifica: scadenza,
-    }));
-  };
+  setFormData((prev) => ({
+    ...prev,
+    Prestazione: prestazioneValue,
+    ValRischioIner: livello,
+    ScadenzaVerifica: "",
+  }));
+};
 
-  const handleDataVerificaChange = (dataVerifica: string) => {
-    const scadenza = calcolaScadenza(dataVerifica, formData.ValRischioIner);
+const handleDataVerificaChange = (dataVerifica: string) => {
+  setFormData((prev) => ({
+    ...prev,
+    DataVerifica: dataVerifica,
+    ScadenzaVerifica: "",
+  }));
+};
 
-    setFormData((prev) => ({
-      ...prev,
-      DataVerifica: dataVerifica,
-      ScadenzaVerifica: scadenza,
-    }));
-  };
-
+const handleNuovo = () => {
+  setFormData((prev) => ({
+    ...initialFormData,
+    studio_id: prev.studio_id,
+  }));
+  setError(null);
+};
+  
   const handleSave = async () => {
     if (!formData.studio_id) {
       alert("Studio non disponibile.");
@@ -298,11 +330,15 @@ export default function ModelloAV1Page() {
                 </div>
               )}
 
-              <div className="md:col-span-2 flex gap-3 pt-2">
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? "Salvataggio..." : "Salva AV1"}
-                </Button>
-              </div>
+             <div className="md:col-span-2 flex gap-3 pt-2">
+  <Button type="button" variant="outline" onClick={handleNuovo}>
+    Nuovo
+  </Button>
+
+  <Button onClick={handleSave} disabled={saving}>
+    {saving ? "Salvataggio..." : "Salva AV1"}
+  </Button>
+</div>
             </div>
           )}
         </CardContent>
