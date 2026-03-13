@@ -41,6 +41,21 @@ export const studioService = {
 
     return data ?? null;
   },
+
+  async updateStudio(studioId: string, payload: Record<string, any>): Promise<any> {
+    const { data, error } = await (supabase as any)
+      .from("tbstudio")
+      .update(payload)
+      .eq("id", studioId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message || "Errore aggiornamento studio.");
+    }
+
+    return data;
+  },
 };
 
 export async function getStudioId(): Promise<string> {
