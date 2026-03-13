@@ -152,6 +152,11 @@ function calcolaLivelloRischio(mediaPunteggio: number) {
   return "Molto significativo";
 }
 
+function toNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export default function ModelloAV1Page() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
@@ -160,6 +165,43 @@ export default function ModelloAV1Page() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const punteggioPrestazione =
+    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)
+      ?.PunteggioPrestAR || 0;
+
+  const TotA =
+    toNumber((formData as any).A1) +
+    toNumber((formData as any).A2) +
+    toNumber((formData as any).A3) +
+    toNumber((formData as any).A4);
+
+  const TotB =
+    toNumber((formData as any).B1) +
+    toNumber((formData as any).B2) +
+    toNumber((formData as any).B3) +
+    toNumber((formData as any).B4) +
+    toNumber((formData as any).B5) +
+    toNumber((formData as any).B6);
+
+  const MediaPunteggio = Number(((TotA + TotB) / 10).toFixed(2));
+
+  const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
+
+  const RisInerentePonderato = Number((punteggioPrestazione * 0.3).toFixed(2));
+
+  const RisSpecificoPonderato = Number((MediaPunteggio * 0.7).toFixed(2));
+
+  const RischioEffettivo = Number(
+    (RisInerentePonderato + RisSpecificoPonderato).toFixed(2)
+  );
+
+  const AdeguataVerifica = calcolaLivelloRischio(RischioEffettivo);
+
+  const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(
+    formData.DataVerifica,
+    AdeguataVerifica
+  );
+  
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -454,6 +496,115 @@ const handleNuovo = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+            <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Calcoli finali</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">TotA</label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={TotA}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">TotB</label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={TotB}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Media punteggio</label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={MediaPunteggio}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Livello rischio</label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={LivelloRischio}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rischio inerente ponderato
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={RisInerentePonderato}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rischio specifico ponderato
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={RisSpecificoPonderato}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rischio effettivo
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={RischioEffettivo}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Adeguata verifica
+              </label>
+              <input
+                type="text"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={AdeguataVerifica}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Scadenza verifica calcolata
+              </label>
+              <input
+                type="date"
+                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                value={ScadenzaVerificaCalcolata}
+                readOnly
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
