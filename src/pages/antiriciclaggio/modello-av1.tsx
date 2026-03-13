@@ -175,6 +175,11 @@ export default function ModelloAV1Page() {
   
  const studioId = await getStudioId();
 
+    setFormData((prev) => ({
+  ...prev,
+  studio_id: studioId || "",
+}));
+
     if (clientiError) {
       setError(clientiError.message);
     }
@@ -203,13 +208,20 @@ export default function ModelloAV1Page() {
     );
   };
 
-  const handlePrestazioneChange = (prestazioneValue: string) => {
+ const handlePrestazioneChange = (prestazioneValue: string) => {
   const prestazioneSelezionata = prestazioni.find(
     (p) => p.TipoPrestazioneAR === prestazioneValue
   );
 
   const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
 
+  setFormData((prev) => ({
+    ...prev,
+    Prestazione: prestazioneValue,
+    ValRischioIner: livello,
+    ScadenzaVerifica: "",
+  }));
+};
 const handleDataVerificaChange = (dataVerifica: string) => {
   setFormData((prev) => ({
     ...prev,
@@ -221,7 +233,7 @@ const handleDataVerificaChange = (dataVerifica: string) => {
 const handleNuovo = () => {
   setFormData((prev) => ({
     ...initialFormData,
-    studio_id: prev.studio_id
+    studio_id: prev.studio_id,
   }));
 };
   
