@@ -107,14 +107,12 @@ setFormData((prev) => ({
   studio_id: studioId,
 }));
     
-    if (resolvedStudioId) {
-  setFormData((prev) => ({
-    ...prev,
-    studio_id: resolvedStudioId
-  }));
-} else {
-  setError("Studio non trovato per l'utente loggato.");
-}
+ const studioId = await getStudioId();
+
+setFormData((prev) => ({
+  ...prev,
+  studio_id: studioId,
+}));
 
     if (clientiError) {
       setError(clientiError.message);
@@ -126,15 +124,6 @@ setFormData((prev) => ({
 
     setClienti((clientiData || []) as Cliente[]);
     setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
-
-   if (resolvedStudioId) {
-  setFormData((prev) => ({
-    ...prev,
-    studio_id: resolvedStudioId,
-  }));
-} else {
-  setError("studio_id non trovato nel profilo utente.");
-}
 
     setLoading(false);
   };
