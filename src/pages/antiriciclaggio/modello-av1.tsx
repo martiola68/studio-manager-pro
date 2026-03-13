@@ -469,12 +469,11 @@ const handleNuovo = () => {
                   Scadenza verifica
                 </label>
                 <input
-                  type="date"
-                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                  value={formData.ScadenzaVerifica}
-                  readOnly
-                />
-              </div>
+  type="date"
+  className="w-full border rounded-md px-3 py-2 bg-gray-100"
+  value={ScadenzaVerificaCalcolata}
+  readOnly
+/>
 
               {error && (
                 <div className="md:col-span-2">
@@ -640,29 +639,17 @@ const handleNuovo = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Adeguata verifica
-              </label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={AdeguataVerifica}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Scadenza verifica calcolata
-              </label>
-              <input
-                type="date"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={ScadenzaVerificaCalcolata}
-                readOnly
-              />
-            </div>
+         <div>
+  <label className="block text-sm font-medium mb-1">
+    Adeguata verifica
+  </label>
+  <input
+    type="text"
+    className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischioEffettivo)}`}
+    value={AdeguataVerifica}
+    readOnly
+  />
+</div>
           </div>
         </CardContent>
       </Card>
