@@ -1,50 +1,26 @@
 import { supabase } from "@/lib/supabase/client";
-import { Database } from "@/lib/supabase/types";
+import { authService } from "@/services/authService";
 
-type Studio = Database["public"]["Tables"]["tbstudio"]["Row"];
-type StudioInsert = Database["public"]["Tables"]["tbstudio"]["Insert"];
-type StudioUpdate = Database["public"]["Tables"]["tbstudio"]["Update"];
+export async function getStudioId(): Promise<string> {
+  const authUser = await authService.getCurrentUser();
 
-export const studioService = {
-  async getStudio(): Promise<Studio | null> {
-    const { data, error } = await supabase
-      .from("tbstudio")
-      .select("*")
-      .single();
-
-    if (error) {
-      console.error("Error fetching studio:", error);
-      return null;
-    }
-    return data;
-  },
-
-  async createStudio(studio: StudioInsert): Promise<Studio | null> {
-    const { data, error } = await supabase
-      .from("tbstudio")
-      .insert(studio)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating studio:", error);
-      throw error;
-    }
-    return data;
-  },
-
-  async updateStudio(id: string, updates: StudioUpdate): Promise<Studio | null> {
-    const { data, error } = await supabase
-      .from("tbstudio")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating studio:", error);
-      throw error;
-    }
-    return data;
+  if (!authUser?.email) {
+    throw new Error("Utente non autenticato.");
   }
-};
+
+  const { data, error } = await (supabase as any)
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("email", authUser.email)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Errore recupero studio_id.");
+  }
+
+  if (!data?.studio_id) {
+    throw new Error("studio_id non trovato per l'utente loggato.");
+  }
+
+  return data.studio_id;
+}
