@@ -175,10 +175,9 @@ export default function ModelloAV1Page() {
   
  const studioId = await getStudioId();
 
-setFormData((prev) => ({
-  ...prev,
-  studio_id: studioId,
-}));
+alert("Record AV1 salvato correttamente.");
+
+setSaving(false);
 
     if (clientiError) {
       setError(clientiError.message);
@@ -400,6 +399,41 @@ const handleNuovo = () => {
 </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+            <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Sezioni A1 - B6</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="space-y-6">
+            {Object.entries(av1Labels).map(([sectionKey, fields]) => (
+              <div key={sectionKey} className="border rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3">{sectionKey}</h3>
+
+                <div className="space-y-3">
+                  {Object.entries(fields).map(([fieldKey, label]) => (
+                    <label key={fieldKey} className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={Boolean((formData as any)[fieldKey])}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            [fieldKey]: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span className="text-sm text-gray-800">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
