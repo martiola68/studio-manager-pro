@@ -100,25 +100,12 @@ export default function ModelloAV1Page() {
       .select('id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR')
       .order("TipoPrestazioneAR", { ascending: true });
 
-    const authUser = await authService.getCurrentUser();
-const profile = authUser?.id
-  ? await authService.getUserProfile(authUser.id)
-  : null;
+   const studioId = await getStudioId();
 
-const resolvedStudioId =
-  profile?.studio_id ||
-  profile?.id_studio ||
-  profile?.studio?.id ||
-  "";
-
-if (resolvedStudioId) {
-  setFormData((prev) => ({
-    ...prev,
-    studio_id: resolvedStudioId
-  }));
-} else {
-  setError("Studio non trovato per l'utente loggato.");
-}
+setFormData((prev) => ({
+  ...prev,
+  studio_id: studioId,
+}));
     
     if (resolvedStudioId) {
   setFormData((prev) => ({
