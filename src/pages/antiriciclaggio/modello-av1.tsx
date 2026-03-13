@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { authService } from "@/services/authService";
+import { getStudioId } from "@/services/studioService";
 
 type Cliente = {
   id: string;
