@@ -99,14 +99,7 @@ export default function ModelloAV1Page() {
       .from("tbElencoPrestAR")
       .select('id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR')
       .order("TipoPrestazioneAR", { ascending: true });
-
-   const studioId = await getStudioId();
-
-setFormData((prev) => ({
-  ...prev,
-  studio_id: studioId,
-}));
-    
+  
  const studioId = await getStudioId();
 
 setFormData((prev) => ({
