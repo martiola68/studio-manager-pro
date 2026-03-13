@@ -669,6 +669,7 @@ const handleNuovo = () => {
     </Button>
   </div>
 </div>
+            </div>
         </CardContent>
       </Card>
             <Card className="mt-6">
