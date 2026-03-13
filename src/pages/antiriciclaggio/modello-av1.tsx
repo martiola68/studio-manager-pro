@@ -111,6 +111,24 @@ const resolvedStudioId =
   profile?.studio?.id ||
   "";
 
+if (resolvedStudioId) {
+  setFormData((prev) => ({
+    ...prev,
+    studio_id: resolvedStudioId
+  }));
+} else {
+  setError("Studio non trovato per l'utente loggato.");
+}
+    
+    if (resolvedStudioId) {
+  setFormData((prev) => ({
+    ...prev,
+    studio_id: resolvedStudioId
+  }));
+} else {
+  setError("Studio non trovato per l'utente loggato.");
+}
+
     if (clientiError) {
       setError(clientiError.message);
     }
@@ -174,9 +192,8 @@ const handleDataVerificaChange = (dataVerifica: string) => {
 const handleNuovo = () => {
   setFormData((prev) => ({
     ...initialFormData,
-    studio_id: prev.studio_id,
+    studio_id: prev.studio_id
   }));
-  setError(null);
 };
   
   const handleSave = async () => {
