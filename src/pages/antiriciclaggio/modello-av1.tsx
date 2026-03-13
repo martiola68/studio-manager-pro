@@ -393,7 +393,7 @@ const handleNuovo = () => {
         </p>
       </div>
 
-      <Card>
+           <Card>
         <CardHeader>
           <CardTitle>Dati principali</CardTitle>
         </CardHeader>
@@ -446,7 +446,7 @@ const handleNuovo = () => {
                 </label>
                 <input
                   type="text"
-                  className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischioEffettivo)}`}
+                  className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(formData.ValRischioIner)}`}
                   value={formData.ValRischioIner}
                   readOnly
                 />
@@ -469,11 +469,12 @@ const handleNuovo = () => {
                   Scadenza verifica
                 </label>
                 <input
-  type="date"
-  className="w-full border rounded-md px-3 py-2 bg-gray-100"
-  value={ScadenzaVerificaCalcolata}
-  readOnly
-/>
+                  type="date"
+                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                  value={ScadenzaVerificaCalcolata}
+                  readOnly
+                />
+              </div>
 
               {error && (
                 <div className="md:col-span-2">
@@ -481,20 +482,19 @@ const handleNuovo = () => {
                 </div>
               )}
 
-             <div className="md:col-span-2 flex gap-3 pt-2">
-  <Button type="button" variant="outline" onClick={handleNuovo}>
-    Nuovo
-  </Button>
+              <div className="md:col-span-2 flex gap-3 pt-2">
+                <Button type="button" variant="outline" onClick={handleNuovo}>
+                  Nuovo
+                </Button>
 
-  <Button onClick={handleSave} disabled={saving}>
-    {saving ? "Salvataggio..." : "Salva AV1"}
-  </Button>
-</div>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Salvataggio..." : "Salva AV1"}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
-
        <Card className="mt-6">
         <CardHeader>
           <CardTitle>Sezioni A1 - B6</CardTitle>
