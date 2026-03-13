@@ -141,20 +141,66 @@ function calcolaLivelloRischio(mediaPunteggio: number) {
     return "Non significativo";
   }
 
-  if (mediaPunteggio <= 2.5) {
+  if (mediaPunteggio >= 1.6 && mediaPunteggio <= 2.5) {
     return "Poco significativo";
   }
 
-  if (mediaPunteggio <= 3.5) {
+  if (mediaPunteggio >= 2.6 && mediaPunteggio <= 3.5) {
     return "Abbastanza significativo";
   }
 
-  return "Molto significativo";
+  if (mediaPunteggio >= 3.6) {
+    return "Molto significativo";
+  }
+
+  return "";
 }
 
 function toNumber(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function calcolaAdeguataVerifica(rischioEffettivo: number) {
+  if (rischioEffettivo <= 2.4) {
+    return "SEMPLIFICATE";
+  }
+
+  if (rischioEffettivo > 2.4 && rischioEffettivo < 3.4) {
+    return "ORDINARIE";
+  }
+
+  if (rischioEffettivo >= 3.4) {
+    return "RAFFORZATE";
+  }
+
+  return "";
+}
+
+function getLivelloRischioBgClass(livello: string) {
+  switch (livello) {
+    case "Non significativo":
+      return "bg-green-200";
+
+    case "Poco significativo":
+      return "bg-yellow-200";
+
+    case "Abbastanza significativo":
+      return "bg-orange-300";
+
+    case "Molto significativo":
+      return "bg-red-400";
+
+    default:
+      return "bg-gray-100";
+  }
+}
+
+function getCategoriaRischio(value: number) {
+  if (value <= 1.5) return "non";
+  if (value <= 2.5) return "poco";
+  if (value <= 3.5) return "abbastanza";
+  return "molto";
 }
 
 export default function ModelloAV1Page() {
@@ -187,20 +233,32 @@ export default function ModelloAV1Page() {
 
   const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
 
-  const RisInerentePonderato = Number((punteggioPrestazione * 0.3).toFixed(2));
+  const RisInerentePonderato = Number((punteggioPrestazione * 0.4).toFixed(2));
 
-  const RisSpecificoPonderato = Number((MediaPunteggio * 0.7).toFixed(2));
+  const RisSpecificoPonderato = Number((MediaPunteggio * 0.6).toFixed(2));
 
   const RischioEffettivo = Number(
     (RisInerentePonderato + RisSpecificoPonderato).toFixed(2)
   );
 
-  const AdeguataVerifica = calcolaLivelloRischio(RischioEffettivo);
+  const LivelloRischioEffettivo = calcolaLivelloRischio(RischioEffettivo);
+
+  const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
 
   const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(
     formData.DataVerifica,
     AdeguataVerifica
   );
+
+ const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
+  const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
+
+   const isActiveCell = (row: string, col: string) => {
+    if (categoriaInerente === row && categoriaVulnerabilita === col) {
+      return "ring-4 ring-blue-700";
+    }
+    return "";
+  };
   
   const loadData = async () => {
     setLoading(true);
@@ -388,7 +446,7 @@ const handleNuovo = () => {
                 </label>
                 <input
                   type="text"
-                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                  className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischioEffettivo)}`}
                   value={formData.ValRischioIner}
                   readOnly
                 />
@@ -455,7 +513,7 @@ const handleNuovo = () => {
                       Valore {sectionKey}
                     </label>
                     <select
-                      className="border rounded-md px-3 py-2 w-24"
+                      className="border rounded-md px-3 py-2 w-24 bg-sky-100"
                       value={(formData as any)[sectionKey] ?? ""}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -508,12 +566,12 @@ const handleNuovo = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">TotA</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={TotA}
-                readOnly
-              />
+             <input
+  type="text"
+  className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischio)}`}
+  value={LivelloRischio}
+  readOnly
+/>
             </div>
 
             <div>
@@ -604,6 +662,100 @@ const handleNuovo = () => {
                 value={ScadenzaVerificaCalcolata}
                 readOnly
               />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+            <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Matrice del rischio</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]">
+              <div className="grid grid-cols-5 gap-0 border border-gray-400">
+                <div className="border border-gray-400 p-4 flex items-center justify-center font-bold text-center bg-white">
+                  RISCHIO INERENTE 40%
+                </div>
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
+                  Non significativo
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativo
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativo
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativo
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativo
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("molto", "non")}`} />
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("molto", "poco")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("molto", "abbastanza")}`} />
+                <div className={`border border-gray-400 h-24 bg-red-400 ${isActiveCell("molto", "molto")}`} />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativo
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("abbastanza", "non")}`} />
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("abbastanza", "poco")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("abbastanza", "abbastanza")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("abbastanza", "molto")}`} />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativo
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div className={`border border-gray-400 h-24 bg-green-300 ${isActiveCell("poco", "non")}`} />
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("poco", "poco")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("poco", "abbastanza")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("poco", "molto")}`} />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-300">
+                  Non significativo
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div className={`border border-gray-400 h-24 bg-green-300 ${isActiveCell("non", "non")}`} />
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("non", "poco")}`} />
+                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("non", "abbastanza")}`} />
+                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("non", "molto")}`} />
+              </div>
+
+              <div className="grid grid-cols-5 gap-0 border-l border-r border-b border-gray-400">
+                <div className="border border-gray-400 p-4 bg-white" />
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
+                  Non significativa
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativa
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativa
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativa
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+
+                <div className="col-span-5 border border-gray-400 p-4 text-center text-xl font-bold bg-white">
+                  VULNERABILITÀ 60%
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
