@@ -24,3 +24,26 @@ export async function getStudioId(): Promise<string> {
 
   return data.studio_id;
 }
+export async function getStudioId(): Promise<string> {
+  const authUser = await authService.getCurrentUser();
+
+  if (!authUser?.email) {
+    throw new Error("Utente non autenticato.");
+  }
+
+  const { data, error } = await (supabase as any)
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("email", authUser.email)
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Errore recupero studio_id.");
+  }
+
+  if (!data?.studio_id) {
+    throw new Error("studio_id non trovato per l'utente loggato.");
+  }
+
+  return data.studio_id;
+}
