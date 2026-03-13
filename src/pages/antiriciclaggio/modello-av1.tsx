@@ -195,7 +195,7 @@ const handleNuovo = () => {
       Prestazione: formData.Prestazione,
       ValRischioIner: formData.ValRischioIner,
       DataVerifica: formData.DataVerifica,
-      ScadenzaVerifica: formData.ScadenzaVerifica,
+      ScadenzaVerifica: null,
     };
 
     const { error } = await (supabase as any)
