@@ -1,6 +1,14 @@
 import { supabase } from "@/lib/supabase/client";
 import { authService } from "@/services/authService";
 
+export type Studio = {
+  id: string;
+  ragione_sociale?: string | null;
+  denominazione?: string | null;
+  nome?: string | null;
+  [key: string]: any;
+};
+
 export const studioService = {
   async getStudioId(): Promise<string> {
     const authUser = await authService.getCurrentUser();
@@ -24,6 +32,22 @@ export const studioService = {
     }
 
     return data.studio_id;
+  },
+
+  async getStudio(): Promise<Studio | null> {
+    const studioId = await this.getStudioId();
+
+    const { data, error } = await (supabase as any)
+      .from("tbstudio")
+      .select("*")
+      .eq("id", studioId)
+      .single();
+
+    if (error) {
+      throw new Error(error.message || "Errore recupero studio.");
+    }
+
+    return (data as Studio) || null;
   },
 };
 
