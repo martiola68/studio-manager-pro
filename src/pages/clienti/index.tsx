@@ -497,6 +497,7 @@ const [searchTerm, setSearchTerm] = useState("");
       cap: clienteData.cap || "",
       citta: clienteData.citta || "",
       provincia: clienteData.provincia || "",
+      rapp_legale_id: clienteData.rapp_legale_id || "",
       email: clienteData.email || "",
       attivo: clienteData.attivo ?? true,
       cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
