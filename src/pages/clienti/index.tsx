@@ -1730,8 +1730,8 @@ const [searchTerm, setSearchTerm] = useState("");
                   />
                 </div>
 
- <div className="grid grid-cols-12 gap-4">
-  <div className="col-span-7">
+<div className="md:col-span-2 grid grid-cols-12 gap-4">
+  <div className="col-span-12 md:col-span-7">
     <Label htmlFor="citta">Città</Label>
     <Input
       id="citta"
@@ -1743,7 +1743,7 @@ const [searchTerm, setSearchTerm] = useState("");
     />
   </div>
 
-  <div className="col-span-2">
+  <div className="col-span-6 md:col-span-2">
     <Label htmlFor="provincia">Provincia</Label>
     <Input
       id="provincia"
@@ -1756,7 +1756,7 @@ const [searchTerm, setSearchTerm] = useState("");
     />
   </div>
 
-  <div className="col-span-3">
+  <div className="col-span-6 md:col-span-3">
     <Label htmlFor="cap">CAP</Label>
     <Input
       id="cap"
@@ -1767,24 +1767,30 @@ const [searchTerm, setSearchTerm] = useState("");
   </div>
 </div>
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+<div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
   <div>
     <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-    <select
-      id="rapp_legale_id"
-      className="w-full border rounded-md px-3 py-2"
-      value={formData.rapp_legale_id || ""}
-      onChange={(e) =>
-        setFormData({ ...formData, rapp_legale_id: e.target.value })
+    <Select
+      value={formData.rapp_legale_id || "none"}
+      onValueChange={(value) =>
+        setFormData({
+          ...formData,
+          rapp_legale_id: value === "none" ? "" : value,
+        })
       }
     >
-      <option value="">Seleziona rappresentante legale</option>
-      {rappLegali.map((r) => (
-        <option key={r.id} value={r.id}>
-          {r.nome_cognome}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger id="rapp_legale_id">
+        <SelectValue placeholder="Seleziona rappresentante legale" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
+        {rappLegali.map((r) => (
+          <SelectItem key={r.id} value={r.id}>
+            {r.nome_cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   </div>
 
   <div>
