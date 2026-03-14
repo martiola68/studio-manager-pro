@@ -1329,8 +1329,8 @@ const [searchTerm, setSearchTerm] = useState("");
                             cliente.id.substring(0, 8).toUpperCase()}
                         </TableCell>
 
-                       <TableCell
-                        className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4"
+                            <TableCell
+                            className="sticky left-[120px] bg-background z-20 font-medium w-[150px] truncate border-r pr-2"
                           title={cliente.ragione_sociale || ""}
                                 >
                           {cliente.ragione_sociale}
