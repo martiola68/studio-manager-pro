@@ -1292,7 +1292,7 @@ const [searchTerm, setSearchTerm] = useState("");
                         Cod. Cliente
                       </TableHead>
 
-                      <TableHead className="sticky left-[120px] bg-background z-20 w-[250px] border-r pr-4">
+                      <TableHead className="sticky left-[120px] bg-background z-20 w-[200px] border-r pr-4">
                         Ragione Sociale
                       </TableHead>
 
@@ -1421,7 +1421,7 @@ const [searchTerm, setSearchTerm] = useState("");
                   <TableBody>
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
-                        <TableCell className="sticky left-0 bg-background z-10 font-medium w-[350px] truncate">
+                        <TableCell className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4">
                           {cliente.ragione_sociale}
                         </TableCell>
 
