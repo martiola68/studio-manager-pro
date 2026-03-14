@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+  import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -1292,19 +1292,21 @@ const [searchTerm, setSearchTerm] = useState("");
                         Cod. Cliente
                       </TableHead>
 
-                      <TableHead className="sticky left-[120px] bg-background z-20 w-[200px] border-r pr-4">
+                      <TableHead className="sticky left-[120px] bg-background z-20 w-[170px] border-r pr-2">
                         Ragione Sociale
                       </TableHead>
 
-                      <TableHead className="min-w-[220px] pl-8 pr-3 text-left">
+                      <TableHead className="min-w-[150px] pl-2 pr-2 text-left">
                         Utente Fiscale
                       </TableHead>
 
-                      <TableHead className="min-w-[200px] px-3 text-left">
+                      <TableHead className="min-w-[140px] px-2 text-left">
                         Utente Payroll
                       </TableHead>
 
-                      <TableHead className="min-w-[100px]">Stato</TableHead>
+                      <TableHead className="min-w-[80px] text-left">
+                        Stato
+                      </TableHead>
 
                       <TableHead className="min-w-[90px] text-center">
                         Scadenzari
@@ -1334,17 +1336,17 @@ const [searchTerm, setSearchTerm] = useState("");
                           {cliente.ragione_sociale}
                         </TableCell>
 
-                        <TableCell className="min-w-[220px] pl-8 pr-3 text-left align-middle relative z-0">
+                        <TableCell className="min-w-[150px] pl-2 pr-2 text-left align-middle">
                           <div className="w-full whitespace-nowrap text-left">
                             {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
                           </div>
                         </TableCell>
 
-                        <TableCell className="min-w-[200px] px-3 text-left align-middle">
+                        <TableCell className="min-w-[140px] px-2 text-left align-middle">
                           {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
                         </TableCell>
 
-                        <TableCell className="min-w-[100px]">
+                        <TableCell className="min-w-[80px]">
                           {cliente.attivo ? (
                             <Badge variant="default" className="bg-green-600">
                               Attivo
@@ -1421,9 +1423,10 @@ const [searchTerm, setSearchTerm] = useState("");
                   <TableBody>
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
-                        <TableCell className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4">
-                          {cliente.ragione_sociale}
-                        </TableCell>
+                       <TableCell
+                          className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4"
+                            title={cliente.ragione_sociale || ""}
+                            >
 
                         <TableCell className="min-w-[220px] text-left">
                           {getUtenteNome(cliente.utente_operatore_id)}
