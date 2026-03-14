@@ -2,7 +2,40 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Cardimport type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
+  }
+
+  try {
+    const payload = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from("rapp_legali")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+
+    return res.status(200).json({ ok: true, data });
+  } catch (e: any) {
+    return res.status(500).json({
+      ok: false,
+      error: e?.message || "Errore salvataggio rappresentante legale",
+    });
+  }
+} CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -385,8 +418,7 @@ export default function RappresentantiPage() {
             : null,
       };
 
-      const { error } = await supabase.from("rapp_legali").insert(payload);
-      if (error) throw error;
+    const { error } = await supabase.from
 
       setOkMsg("✅ Rappresentante salvato correttamente.");
       resetForm();
