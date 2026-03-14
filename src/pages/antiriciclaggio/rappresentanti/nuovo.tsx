@@ -14,48 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
-  }
-
-  try {
-    const payload = req.body;
-
-    const { data, error } = await supabaseAdmin
-      .from("rapp_legali")
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) {
-      return res.status(400).json({ ok: false, error: error.message });
-    }
-
-    return res.status(200).json({ ok: true, data });
-  } catch (e: any) {
-    return res.status(500).json({
-      ok: false,
-      error: e?.message || "Errore salvataggio rappresentante legale",
-    });
-  }
-} CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 /* =========================================================
    CONFIG
    ========================================================= */
@@ -204,76 +162,92 @@ type FormState = {
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string;
-  allegato_doc: string; // public URL del documento su Supabase Storage
+  allegato_doc: string;
 };
 
-export default function RappresentantiPage() {
+type SaveResponse =
+  | { ok: true; data: any }
+  | { ok: false; error: string };
+
+const initialFormState: FormState = {
+  nome_cognome: "",
+  codice_fiscale: "",
+  luogo_nascita: "",
+  data_nascita: "",
+  citta_residenza: "",
+  indirizzo_residenza: "",
+  nazionalita: "",
+  tipo_doc: "",
+  scadenza_doc: "",
+  allegato_doc: "",
+};
+
+export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [studioId, setStudioId] = useState<string>("");
-
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormState>({
-    nome_cognome: "",
-    codice_fiscale: "",
-    luogo_nascita: "",
-    data_nascita: "",
-    citta_residenza: "",
-    indirizzo_residenza: "",
-    nazionalita: "",
-    tipo_doc: "",
-    scadenza_doc: "",
-    allegato_doc: "",
-  });
+  const [form, setForm] = useState<FormState>(initialFormState);
 
   /* =========================================================
-     STUDIO_ID: localStorage -> tbutenti (via email)
+     STUDIO_ID
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
       const supabase = getSupabaseClient() as any;
       setErrMsg(null);
 
-      if (typeof window !== "undefined") {
-        const cached = localStorage.getItem("studio_id");
-        if (cached) {
-          setStudioId(cached);
+      try {
+        if (typeof window !== "undefined") {
+          const cached = localStorage.getItem("studio_id");
+          if (cached) {
+            setStudioId(cached);
+            return;
+          }
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+          setErrMsg(`Errore autenticazione: ${authError.message}`);
           return;
         }
-      }
 
-      const { data: auth } = await supabase.auth.getUser();
-      const email = auth?.user?.email;
-      if (!email) {
-        setErrMsg("Utente non loggato: impossibile recuperare studio_id.");
-        return;
-      }
+        const email = authData?.user?.email;
+        if (!email) {
+          setErrMsg("Utente non loggato: impossibile recuperare studio_id.");
+          return;
+        }
 
-      const { data, error } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("email", email)
-        .single();
+        const { data, error } = await supabase
+          .from("tbutenti")
+          .select("studio_id")
+          .eq("email", email)
+          .single();
 
-      if (error) {
-        setErrMsg(`Errore lettura tbutenti: ${error.message}`);
-        return;
-      }
+        if (error) {
+          setErrMsg(`Errore lettura tbutenti: ${error.message}`);
+          return;
+        }
 
-      const sid = data?.studio_id ? String((data as any).studio_id) : "";
-      if (!sid) {
-        setErrMsg("studio_id non presente in tbutenti per questo utente.");
-        return;
-      }
+        const sid = data?.studio_id ? String(data.studio_id) : "";
+        if (!sid) {
+          setErrMsg("studio_id non presente in tbutenti per questo utente.");
+          return;
+        }
 
-      setStudioId(sid);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("studio_id", sid);
+        setStudioId(sid);
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("studio_id", sid);
+        }
+      } catch (error: any) {
+        setErrMsg(error?.message || "Errore recupero studio_id.");
       }
     };
 
@@ -288,18 +262,7 @@ export default function RappresentantiPage() {
   }, [studioId, form.nome_cognome, cfOk]);
 
   const resetForm = () => {
-    setForm({
-      nome_cognome: "",
-      codice_fiscale: "",
-      luogo_nascita: "",
-      data_nascita: "",
-      citta_residenza: "",
-      indirizzo_residenza: "",
-      nazionalita: "",
-      tipo_doc: "",
-      scadenza_doc: "",
-      allegato_doc: "",
-    });
+    setForm(initialFormState);
     setOkMsg(null);
     setErrMsg(null);
   };
@@ -352,47 +315,47 @@ export default function RappresentantiPage() {
           contentType: file.type || "application/octet-stream",
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
       const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-
       const publicUrl = data?.publicUrl || "";
+
       if (!publicUrl) {
         throw new Error("Impossibile ottenere la URL pubblica del documento.");
       }
 
-      setForm((p) => ({
-        ...p,
+      setForm((prev) => ({
+        ...prev,
         allegato_doc: publicUrl,
       }));
 
       setOkMsg("✅ Documento allegato.");
-    } catch (e: any) {
-      setErrMsg(e?.message ?? "Errore upload documento");
+    } catch (error: any) {
+      setErrMsg(error?.message || "Errore upload documento.");
     } finally {
       setUploading(false);
     }
   }
 
-  /* =========================================================
-     APERTURA DOCUMENTO
-     ========================================================= */
   function handleOpenDoc() {
     if (!form.allegato_doc) return;
     window.open(form.allegato_doc, "_blank", "noopener,noreferrer");
   }
 
   function handleRemoveDoc() {
-    setForm((p) => ({ ...p, allegato_doc: "" }));
+    setForm((prev) => ({ ...prev, allegato_doc: "" }));
+    setOkMsg(null);
+    setErrMsg(null);
   }
 
   /* =========================================================
      SUBMIT
      ========================================================= */
-  async function handleSubmit(e: React.FormEvent) {
-    const supabase = getSupabaseClient() as any;
-
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     setOkMsg(null);
     setErrMsg(null);
 
@@ -409,6 +372,7 @@ export default function RappresentantiPage() {
     }
 
     setLoading(true);
+
     try {
       const payload = {
         studio_id: studioId,
@@ -427,12 +391,28 @@ export default function RappresentantiPage() {
             : null,
       };
 
-    const { error } = await supabase.from
+      const response = await fetch("/api/rapp-legali/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result: SaveResponse = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(
+          result && "error" in result
+            ? result.error
+            : "Errore salvataggio rappresentante legale."
+        );
+      }
 
       setOkMsg("✅ Rappresentante salvato correttamente.");
       resetForm();
-    } catch (e: any) {
-      setErrMsg(e?.message ?? "Errore inserimento rappresentante legale");
+    } catch (error: any) {
+      setErrMsg(error?.message || "Errore inserimento rappresentante legale.");
     } finally {
       setLoading(false);
     }
@@ -442,7 +422,7 @@ export default function RappresentantiPage() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
+          <CardTitle>Antiriciclaggio • Rappresentanti</CardTitle>
 
           <div className="flex gap-2">
             <Button
@@ -464,7 +444,7 @@ export default function RappresentantiPage() {
                   id="nome_cognome"
                   value={form.nome_cognome}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, nome_cognome: e.target.value }))
+                    setForm((prev) => ({ ...prev, nome_cognome: e.target.value }))
                   }
                   placeholder="Mario Rossi"
                 />
@@ -476,7 +456,10 @@ export default function RappresentantiPage() {
                   id="codice_fiscale"
                   value={form.codice_fiscale}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, codice_fiscale: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      codice_fiscale: e.target.value.toUpperCase(),
+                    }))
                   }
                   placeholder="RSSMRA80A01H501U"
                   maxLength={16}
@@ -494,7 +477,7 @@ export default function RappresentantiPage() {
                   id="nazionalita"
                   value={form.nazionalita}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, nazionalita: e.target.value }))
+                    setForm((prev) => ({ ...prev, nazionalita: e.target.value }))
                   }
                   placeholder="Italiana"
                 />
@@ -506,7 +489,7 @@ export default function RappresentantiPage() {
                   id="luogo_nascita"
                   value={form.luogo_nascita}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, luogo_nascita: e.target.value }))
+                    setForm((prev) => ({ ...prev, luogo_nascita: e.target.value }))
                   }
                   placeholder="Roma"
                 />
@@ -519,7 +502,7 @@ export default function RappresentantiPage() {
                   type="date"
                   value={form.data_nascita}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, data_nascita: e.target.value }))
+                    setForm((prev) => ({ ...prev, data_nascita: e.target.value }))
                   }
                 />
               </div>
@@ -530,7 +513,10 @@ export default function RappresentantiPage() {
                   id="citta_residenza"
                   value={form.citta_residenza}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, citta_residenza: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      citta_residenza: e.target.value,
+                    }))
                   }
                   placeholder="Milano"
                 />
@@ -542,8 +528,8 @@ export default function RappresentantiPage() {
                   id="indirizzo_residenza"
                   value={form.indirizzo_residenza}
                   onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
+                    setForm((prev) => ({
+                      ...prev,
                       indirizzo_residenza: e.target.value,
                     }))
                   }
@@ -555,8 +541,11 @@ export default function RappresentantiPage() {
                 <Label htmlFor="tipo_doc">Tipo documento</Label>
                 <Select
                   value={form.tipo_doc || undefined}
-                  onValueChange={(v) =>
-                    setForm((p) => ({ ...p, tipo_doc: v as FormState["tipo_doc"] }))
+                  onValueChange={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      tipo_doc: value as FormState["tipo_doc"],
+                    }))
                   }
                 >
                   <SelectTrigger id="tipo_doc">
@@ -578,7 +567,7 @@ export default function RappresentantiPage() {
                   type="date"
                   value={form.scadenza_doc}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, scadenza_doc: e.target.value }))
+                    setForm((prev) => ({ ...prev, scadenza_doc: e.target.value }))
                   }
                 />
               </div>
@@ -592,8 +581,10 @@ export default function RappresentantiPage() {
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="hidden"
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void handleUploadDoc(f);
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      void handleUploadDoc(file);
+                    }
                     e.currentTarget.value = "";
                   }}
                 />
