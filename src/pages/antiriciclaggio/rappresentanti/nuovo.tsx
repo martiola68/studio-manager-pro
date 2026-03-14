@@ -95,7 +95,7 @@ function isValidCF(cfRaw: string) {
    TYPES
    ========================================================= */
 type FormState = {
-  nome_cognom: string;
+  nome_cognome: string;
   codice_fiscale: string;
   luogo_nascita: string;
   data_nascita: string;
@@ -119,7 +119,7 @@ export default function RappresentantiPage() {
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
   const [form, setForm] = useState<FormState>({
-    nome_cognom: "",
+    nome_cognome: "",
     codice_fiscale: "",
     luogo_nascita: "",
     data_nascita: "",
@@ -187,12 +187,12 @@ export default function RappresentantiPage() {
   const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
 
   const canSave = useMemo(() => {
-    return !!studioId && form.nome_cognom.trim().length > 0 && cfOk;
-  }, [studioId, form.nome_cognom, cfOk]);
+    return !!studioId && form.nome_cognome.trim().length > 0 && cfOk;
+  }, [studioId, form.nome_cognome, cfOk]);
 
   const resetForm = () => {
     setForm({
-      nome_cognom: "",
+      nome_cognome: "",
       codice_fiscale: "",
       luogo_nascita: "",
       data_nascita: "",
@@ -337,7 +337,7 @@ export default function RappresentantiPage() {
     try {
       const payload = {
         studio_id: studioId,
-        nome_cognom: form.nome_cognom.trim(),
+        nome_cognome: form.nome_cognome.trim(),
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
         data_nascita: form.data_nascita || null,
@@ -383,12 +383,12 @@ export default function RappresentantiPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <Label htmlFor="nome_cognom">Nome e Cognome *</Label>
+                <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
                 <Input
-                  id="nome_cognom"
+                  id="nome_cognome"
                   value={form.nome_cognom}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, nome_cognom: e.target.value }))
+                    setForm((p) => ({ ...p, nome_cognome: e.target.value }))
                   }
                   placeholder="Mario Rossi"
                 />
