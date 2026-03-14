@@ -53,23 +53,81 @@ function cfToDigitsForChecksum(cf: string) {
 }
 
 const ODD_MAP: Record<string, number> = {
-  "0": 1, "1": 0, "2": 5, "3": 7, "4": 9,
-  "5": 13, "6": 15, "7": 17, "8": 19, "9": 21,
-  A: 1, B: 0, C: 5, D: 7, E: 9,
-  F: 13, G: 15, H: 17, I: 19, J: 21,
-  K: 2, L: 4, M: 18, N: 20, O: 11,
-  P: 3, Q: 6, R: 8, S: 12, T: 14,
-  U: 16, V: 10, W: 22, X: 25, Y: 24, Z: 23,
+  "0": 1,
+  "1": 0,
+  "2": 5,
+  "3": 7,
+  "4": 9,
+  "5": 13,
+  "6": 15,
+  "7": 17,
+  "8": 19,
+  "9": 21,
+  A: 1,
+  B: 0,
+  C: 5,
+  D: 7,
+  E: 9,
+  F: 13,
+  G: 15,
+  H: 17,
+  I: 19,
+  J: 21,
+  K: 2,
+  L: 4,
+  M: 18,
+  N: 20,
+  O: 11,
+  P: 3,
+  Q: 6,
+  R: 8,
+  S: 12,
+  T: 14,
+  U: 16,
+  V: 10,
+  W: 22,
+  X: 25,
+  Y: 24,
+  Z: 23,
 };
 
 const EVEN_MAP: Record<string, number> = {
-  "0": 0, "1": 1, "2": 2, "3": 3, "4": 4,
-  "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
-  A: 0, B: 1, C: 2, D: 3, E: 4,
-  F: 5, G: 6, H: 7, I: 8, J: 9,
-  K: 10, L: 11, M: 12, N: 13, O: 14,
-  P: 15, Q: 16, R: 17, S: 18, T: 19,
-  U: 20, V: 21, W: 22, X: 23, Y: 24, Z: 25,
+  "0": 0,
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  A: 0,
+  B: 1,
+  C: 2,
+  D: 3,
+  E: 4,
+  F: 5,
+  G: 6,
+  H: 7,
+  I: 8,
+  J: 9,
+  K: 10,
+  L: 11,
+  M: 12,
+  N: 13,
+  O: 14,
+  P: 15,
+  Q: 16,
+  R: 17,
+  S: 18,
+  T: 19,
+  U: 20,
+  V: 21,
+  W: 22,
+  X: 23,
+  Y: 24,
+  Z: 25,
 };
 
 function computeCFCheckChar(cf15: string) {
@@ -104,7 +162,7 @@ type FormState = {
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string;
-  allegato_doc: string; // path stabile nel bucket
+  allegato_doc: string; // public URL del documento su Supabase Storage
 };
 
 export default function RappresentantiPage() {
@@ -180,10 +238,7 @@ export default function RappresentantiPage() {
     void loadStudioId();
   }, []);
 
-  const cf = useMemo(
-    () => normalizeCF(form.codice_fiscale),
-    [form.codice_fiscale]
-  );
+  const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
   const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
 
   const canSave = useMemo(() => {
@@ -210,31 +265,28 @@ export default function RappresentantiPage() {
   /* =========================================================
      STORAGE HELPERS
      ========================================================= */
-  async function getOpenableUrl(path: string) {
-    const supabase = getSupabaseClient() as any;
+  function getSafeFileName(file: File) {
+    const originalName = file.name || "documento";
+    const ext = originalName.includes(".")
+      ? originalName.split(".").pop()?.toLowerCase() || "bin"
+      : "bin";
 
-    const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-    const publicUrl = pub?.publicUrl;
+    const cleanBase = originalName
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_")
+      .slice(0, 50);
 
-    if (publicUrl) {
-      try {
-        await fetch(publicUrl, { method: "HEAD" });
-        return publicUrl;
-      } catch {
-        // ignore -> fallback signed
-      }
-    }
+    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return `${cleanBase || "documento"}_${unique}.${ext}`;
+  }
 
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .createSignedUrl(path, 60 * 10);
-
-    if (error) throw error;
-    return data.signedUrl;
+  function getFilePath(file: File, sid: string) {
+    const safeName = getSafeFileName(file);
+    return `rapp-legali/${sid}/${safeName}`;
   }
 
   /* =========================================================
-     UPLOAD DOCUMENTO (via API server)
+     UPLOAD DOCUMENTO SU SUPABASE STORAGE
      ========================================================= */
   async function handleUploadDoc(file: File) {
     if (!studioId) {
@@ -242,37 +294,34 @@ export default function RappresentantiPage() {
       return;
     }
 
+    const supabase = getSupabaseClient() as any;
+
     setUploading(true);
     setErrMsg(null);
     setOkMsg(null);
 
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("Impossibile leggere il file"));
-        reader.readAsDataURL(file);
-      });
+      const filePath = getFilePath(file, studioId);
 
-      const resp = await fetch("/api/rapp-doc/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studioId,
-          fileName: file.name,
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, file, {
+          upsert: true,
           contentType: file.type || "application/octet-stream",
-          base64,
-        }),
-      });
+        });
 
-      const json = await resp.json();
-      if (!resp.ok || !json?.ok) {
-        throw new Error(json?.error ?? "Upload fallito");
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+
+      const publicUrl = data?.publicUrl || "";
+      if (!publicUrl) {
+        throw new Error("Impossibile ottenere la URL pubblica del documento.");
       }
 
       setForm((p) => ({
         ...p,
-        allegato_doc: String(json.path),
+        allegato_doc: publicUrl,
       }));
 
       setOkMsg("✅ Documento allegato.");
@@ -286,25 +335,9 @@ export default function RappresentantiPage() {
   /* =========================================================
      APERTURA DOCUMENTO
      ========================================================= */
-  async function handleOpenDoc() {
+  function handleOpenDoc() {
     if (!form.allegato_doc) return;
-
-    try {
-      const resp = await fetch(
-        `/api/rapp-doc/url?path=${encodeURIComponent(form.allegato_doc)}`
-      );
-      const json = await resp.json();
-
-      if (!resp.ok || !json?.ok) {
-        const url = await getOpenableUrl(form.allegato_doc);
-        window.open(url, "_blank", "noopener,noreferrer");
-        return;
-      }
-
-      window.open(json.signedUrl, "_blank", "noopener,noreferrer");
-    } catch (e: any) {
-      setErrMsg(e?.message ?? "Errore apertura documento");
-    }
+    window.open(form.allegato_doc, "_blank", "noopener,noreferrer");
   }
 
   function handleRemoveDoc() {
@@ -346,7 +379,10 @@ export default function RappresentantiPage() {
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null,
+        allegato_doc:
+          form.allegato_doc && form.allegato_doc.startsWith("http")
+            ? form.allegato_doc
+            : null,
       };
 
       const { error } = await supabase.from("rapp_legali").insert(payload);
@@ -367,7 +403,6 @@ export default function RappresentantiPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
 
-          {/* ✅ SOLO 1 PULSANTE: Annulla inserimento -> elenco rappresentanti */}
           <div className="flex gap-2">
             <Button
               variant="secondary"
@@ -466,7 +501,10 @@ export default function RappresentantiPage() {
                   id="indirizzo_residenza"
                   value={form.indirizzo_residenza}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, indirizzo_residenza: e.target.value }))
+                    setForm((p) => ({
+                      ...p,
+                      indirizzo_residenza: e.target.value,
+                    }))
                   }
                   placeholder="Via Roma 10"
                 />
@@ -477,7 +515,7 @@ export default function RappresentantiPage() {
                 <Select
                   value={form.tipo_doc || undefined}
                   onValueChange={(v) =>
-                    setForm((p) => ({ ...p, tipo_doc: v as any }))
+                    setForm((p) => ({ ...p, tipo_doc: v as FormState["tipo_doc"] }))
                   }
                 >
                   <SelectTrigger id="tipo_doc">
@@ -504,7 +542,6 @@ export default function RappresentantiPage() {
                 />
               </div>
 
-              {/* Allegato */}
               <div className="md:col-span-2">
                 <Label htmlFor="allegato_doc">Allegato documento</Label>
 
@@ -544,7 +581,7 @@ export default function RappresentantiPage() {
                       type="button"
                       variant="outline"
                       disabled={!form.allegato_doc}
-                      onClick={() => void handleOpenDoc()}
+                      onClick={handleOpenDoc}
                     >
                       Apri
                     </Button>
@@ -565,7 +602,6 @@ export default function RappresentantiPage() {
             {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
             {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
 
-            {/* Debug (rimuovi quando ok) */}
             <p className="text-xs text-muted-foreground">
               Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME}
             </p>
