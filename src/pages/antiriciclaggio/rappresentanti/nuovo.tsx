@@ -386,7 +386,7 @@ export default function RappresentantiPage() {
                 <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
                 <Input
                   id="nome_cognome"
-                  value={form.nome_cognom}
+                  value={form.nome_cognome}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, nome_cognome: e.target.value }))
                   }
