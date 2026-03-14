@@ -29,6 +29,19 @@ type FormDataType = {
   ScadenzaVerifica: string;
 };
 
+const sectionTitles: Record<string, string> = {
+  A1: "A.1 - Natura giuridica",
+  A2: "A.2 - Prevalente attività svolta",
+  A3: "A.3 - Comportamento tenuto al momento del conferimento dell’incarico",
+  A4: "A.4 - Area geografica di residenza del cliente",
+  B1: "B.1 - Tipologia",
+  B2: "B.2 - Modalità di svolgimento",
+  B3: "B.3 - Ammontare dell’operazione",
+  B4: "B.4 - Frequenza e volume delle operazioni/durata della prestazione professionale",
+  B5: "B.5 - Ragionevolezza",
+  B6: "B.6 - Area geografica di destinazione",
+};
+
 export const av1Labels = {
   A1: {
     a1a: "Non congruità della natura giuridica prescelta in relazione all’attività svolta e alle sue dimensioni",
@@ -124,35 +137,21 @@ function addMonths(dateString: string, months: number) {
   return `${year}-${month}-${day}`;
 }
 
-function calcolaScadenzaFinale(dataVerifica: string, livelloRischio: string) {
-  if (!dataVerifica || !livelloRischio) return "";
+function calcolaScadenzaFinale(dataVerifica: string, adeguataVerifica: string) {
+  if (!dataVerifica || !adeguataVerifica) return "";
 
-  if (livelloRischio === "Non significativo") return addMonths(dataVerifica, 36);
-  if (livelloRischio === "Poco significativo") return addMonths(dataVerifica, 24);
-  if (livelloRischio === "Abbastanza significativo") return addMonths(dataVerifica, 12);
-  if (livelloRischio === "Molto significativo") return addMonths(dataVerifica, 6);
+  if (adeguataVerifica === "SEMPLIFICATE") return addMonths(dataVerifica, 36);
+  if (adeguataVerifica === "ORDINARIE") return addMonths(dataVerifica, 24);
+  if (adeguataVerifica === "RAFFORZATE") return addMonths(dataVerifica, 12);
 
   return "";
 }
 
 function calcolaLivelloRischio(mediaPunteggio: number) {
-
-  if (mediaPunteggio <= 1.5) {
-    return "Non significativo";
-  }
-
-  if (mediaPunteggio >= 1.6 && mediaPunteggio <= 2.5) {
-    return "Poco significativo";
-  }
-
-  if (mediaPunteggio >= 2.6 && mediaPunteggio <= 3.5) {
-    return "Abbastanza significativo";
-  }
-
-  if (mediaPunteggio >= 3.6) {
-    return "Molto significativo";
-  }
-
+  if (mediaPunteggio <= 1.5) return "Non significativo";
+  if (mediaPunteggio >= 1.6 && mediaPunteggio <= 2.5) return "Poco significativo";
+  if (mediaPunteggio >= 2.6 && mediaPunteggio <= 3.5) return "Abbastanza significativo";
+  if (mediaPunteggio >= 3.6) return "Molto significativo";
   return "";
 }
 
@@ -162,18 +161,9 @@ function toNumber(value: unknown) {
 }
 
 function calcolaAdeguataVerifica(rischioEffettivo: number) {
-  if (rischioEffettivo <= 2.4) {
-    return "SEMPLIFICATE";
-  }
-
-  if (rischioEffettivo > 2.4 && rischioEffettivo < 3.4) {
-    return "ORDINARIE";
-  }
-
-  if (rischioEffettivo >= 3.4) {
-    return "RAFFORZATE";
-  }
-
+  if (rischioEffettivo <= 2.4) return "SEMPLIFICATE";
+  if (rischioEffettivo > 2.4 && rischioEffettivo < 3.4) return "ORDINARIE";
+  if (rischioEffettivo >= 3.4) return "RAFFORZATE";
   return "";
 }
 
@@ -181,16 +171,25 @@ function getLivelloRischioBgClass(livello: string) {
   switch (livello) {
     case "Non significativo":
       return "bg-green-200";
-
     case "Poco significativo":
       return "bg-yellow-200";
-
     case "Abbastanza significativo":
       return "bg-orange-300";
-
     case "Molto significativo":
-      return "bg-red-400";
+      return "bg-red-400 text-white";
+    default:
+      return "bg-gray-100";
+  }
+}
 
+function getAdeguataVerificaBgClass(value: string) {
+  switch (value) {
+    case "SEMPLIFICATE":
+      return "bg-green-200";
+    case "ORDINARIE":
+      return "bg-yellow-200";
+    case "RAFFORZATE":
+      return "bg-red-400 text-white";
     default:
       return "bg-gray-100";
   }
@@ -206,60 +205,59 @@ function getCategoriaRischio(value: number) {
 export default function ModelloAV1Page() {
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
-  const [formData, setFormData] = useState<FormDataType>(initialFormData);
+  const [formData, setFormData] = useState<FormDataType & Record<string, any>>({
+    ...initialFormData,
+    A1: 1,
+    A2: 1,
+    A3: 1,
+    A4: 1,
+    B1: 1,
+    B2: 1,
+    B3: 1,
+    B4: 1,
+    B5: 1,
+    B6: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const punteggioPrestazione =
-    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)
-      ?.PunteggioPrestAR || 0;
+    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.PunteggioPrestAR || 0;
 
   const TotA =
-    toNumber((formData as any).A1) +
-    toNumber((formData as any).A2) +
-    toNumber((formData as any).A3) +
-    toNumber((formData as any).A4);
+    toNumber(formData.A1) +
+    toNumber(formData.A2) +
+    toNumber(formData.A3) +
+    toNumber(formData.A4);
 
   const TotB =
-    toNumber((formData as any).B1) +
-    toNumber((formData as any).B2) +
-    toNumber((formData as any).B3) +
-    toNumber((formData as any).B4) +
-    toNumber((formData as any).B5) +
-    toNumber((formData as any).B6);
+    toNumber(formData.B1) +
+    toNumber(formData.B2) +
+    toNumber(formData.B3) +
+    toNumber(formData.B4) +
+    toNumber(formData.B5) +
+    toNumber(formData.B6);
 
   const MediaPunteggio = Number(((TotA + TotB) / 10).toFixed(2));
-
   const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
-
   const RisInerentePonderato = Number((punteggioPrestazione * 0.4).toFixed(2));
-
   const RisSpecificoPonderato = Number((MediaPunteggio * 0.6).toFixed(2));
-
-  const RischioEffettivo = Number(
-    (RisInerentePonderato + RisSpecificoPonderato).toFixed(2)
-  );
-
+  const RischioEffettivo = Number((RisInerentePonderato + RisSpecificoPonderato).toFixed(2));
   const LivelloRischioEffettivo = calcolaLivelloRischio(RischioEffettivo);
-
   const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
+  const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(formData.DataVerifica, AdeguataVerifica);
 
-  const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(
-    formData.DataVerifica,
-    AdeguataVerifica
-  );
-
- const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
+  const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
   const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
 
-   const isActiveCell = (row: string, col: string) => {
+  const isActiveCell = (row: string, col: string) => {
     if (categoriaInerente === row && categoriaVulnerabilita === col) {
       return "ring-4 ring-blue-700";
     }
     return "";
   };
-  
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -270,27 +268,21 @@ export default function ModelloAV1Page() {
 
     const { data: prestazioniData, error: prestazioniError } = await (supabase as any)
       .from("tbElencoPrestAR")
-      .select('id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR')
+      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
       .order("TipoPrestazioneAR", { ascending: true });
-  
- const studioId = await getStudioId();
+
+    const studioId = await getStudioId();
 
     setFormData((prev) => ({
-  ...prev,
-  studio_id: studioId || "",
-}));
+      ...prev,
+      studio_id: studioId || "",
+    }));
 
-    if (clientiError) {
-      setError(clientiError.message);
-    }
-
-    if (prestazioniError) {
-      setError(prestazioniError.message);
-    }
+    if (clientiError) setError(clientiError.message);
+    if (prestazioniError) setError(prestazioniError.message);
 
     setClienti((clientiData || []) as Cliente[]);
     setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
-
     setLoading(false);
   };
 
@@ -308,35 +300,44 @@ export default function ModelloAV1Page() {
     );
   };
 
- const handlePrestazioneChange = (prestazioneValue: string) => {
-  const prestazioneSelezionata = prestazioni.find(
-    (p) => p.TipoPrestazioneAR === prestazioneValue
-  );
+  const handlePrestazioneChange = (prestazioneValue: string) => {
+    const prestazioneSelezionata = prestazioni.find(
+      (p) => p.TipoPrestazioneAR === prestazioneValue
+    );
 
-  const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
+    const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
 
-  setFormData((prev) => ({
-    ...prev,
-    Prestazione: prestazioneValue,
-    ValRischioIner: livello,
-    ScadenzaVerifica: "",
-  }));
-};
-const handleDataVerificaChange = (dataVerifica: string) => {
-  setFormData((prev) => ({
-    ...prev,
-    DataVerifica: dataVerifica,
-    ScadenzaVerifica: "",
-  }));
-};
+    setFormData((prev) => ({
+      ...prev,
+      Prestazione: prestazioneValue,
+      ValRischioIner: livello,
+    }));
+  };
 
-const handleNuovo = () => {
-  setFormData((prev) => ({
-    ...initialFormData,
-    studio_id: prev.studio_id,
-  }));
-};
-  
+  const handleDataVerificaChange = (dataVerifica: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      DataVerifica: dataVerifica,
+    }));
+  };
+
+  const handleNuovo = () => {
+    setFormData((prev) => ({
+      ...initialFormData,
+      studio_id: prev.studio_id,
+      A1: 1,
+      A2: 1,
+      A3: 1,
+      A4: 1,
+      B1: 1,
+      B2: 1,
+      B3: 1,
+      B4: 1,
+      B5: 1,
+      B6: 1,
+    }));
+  };
+
   const handleSave = async () => {
     if (!formData.studio_id) {
       alert("Studio non disponibile.");
@@ -367,12 +368,28 @@ const handleNuovo = () => {
       Prestazione: formData.Prestazione,
       ValRischioIner: formData.ValRischioIner,
       DataVerifica: formData.DataVerifica,
-      ScadenzaVerifica: null,
+      ScadenzaVerifica: ScadenzaVerificaCalcolata,
+      A1: formData.A1,
+      A2: formData.A2,
+      A3: formData.A3,
+      A4: formData.A4,
+      B1: formData.B1,
+      B2: formData.B2,
+      B3: formData.B3,
+      B4: formData.B4,
+      B5: formData.B5,
+      B6: formData.B6,
+      TotA,
+      TotB,
+      MediaPunteggio,
+      LivelloRischio,
+      RisInerentePonderato,
+      RisSpecificoPonderato,
+      RischioEffettivo,
+      AdeguataVerifica,
     };
 
-    const { error } = await (supabase as any)
-      .from("tbAV1")
-      .insert([payload]);
+    const { error } = await (supabase as any).from("tbAV1").insert([payload]);
 
     if (error) {
       setError(error.message);
@@ -381,26 +398,24 @@ const handleNuovo = () => {
     }
 
     alert("Record AV1 salvato correttamente.");
-      setSaving(false);
+    setSaving(false);
   };
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Modello AV1</h1>
-        <p className="text-gray-500 mt-1">
-          Inserimento verifica antiriciclaggio
-        </p>
+        <p className="text-gray-500 mt-1">Inserimento verifica antiriciclaggio</p>
       </div>
 
-           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Dati principali</CardTitle>
-
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Dati principali</CardTitle>
           <Button type="button" variant="outline" onClick={handleNuovo}>
-          Nuovo AV1
+            Nuovo AV1
           </Button>
         </CardHeader>
+
         <CardContent>
           {loading ? (
             <p>Caricamento...</p>
@@ -444,9 +459,7 @@ const handleNuovo = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Valore rischio inerente
-                </label>
+                <label className="block text-sm font-medium mb-1">Valore rischio inerente</label>
                 <input
                   type="text"
                   className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(formData.ValRischioIner)}`}
@@ -456,9 +469,7 @@ const handleNuovo = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Data verifica
-                </label>
+                <label className="block text-sm font-medium mb-1">Data verifica</label>
                 <input
                   type="date"
                   className="w-full border rounded-md px-3 py-2"
@@ -468,9 +479,7 @@ const handleNuovo = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Scadenza verifica
-                </label>
+                <label className="block text-sm font-medium mb-1">Scadenza verifica</label>
                 <input
                   type="date"
                   className="w-full border rounded-md px-3 py-2 bg-gray-100"
@@ -484,91 +493,101 @@ const handleNuovo = () => {
                   <p className="text-red-600 text-sm">Errore: {error}</p>
                 </div>
               )}
-
-              <div className="md:col-span-2 flex gap-3 pt-2">
-            
-              </div>
             </div>
           )}
         </CardContent>
       </Card>
-       <Card className="mt-6">
+
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Sezioni A1 - B6</CardTitle>
+          <CardTitle>A - Aspetti connessi al cliente</CardTitle>
         </CardHeader>
 
         <CardContent>
           <div className="space-y-6">
-            {Object.entries(av1Labels).map(([sectionKey, fields]) => (
-              <div key={sectionKey} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3 gap-4">
-                  <h3 className="text-lg font-semibold">{sectionKey}</h3>
+            {Object.entries(av1Labels).map(([sectionKey, fields]) => {
+              const isBStart = sectionKey === "B1";
 
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium whitespace-nowrap">
-                      Valore {sectionKey}
-                    </label>
-                    <select
-                      className="border rounded-md px-3 py-2 w-24 bg-sky-100"
-                      value={(formData as any)[sectionKey] ?? ""}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          [sectionKey]:
-                            e.target.value === "" ? "" : Number(e.target.value),
-                        }))
-                      }
-                    >
-                      <option value="">--</option>
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                    </select>
-                  </div>
-                </div>
+              return (
+                <div key={sectionKey}>
+                  {isBStart && (
+                    <div className="mb-6">
+                      <h3 className="text-xl font-semibold">
+                        B. Aspetti connessi all’operazione e/o prestazione professionale
+                      </h3>
+                    </div>
+                  )}
 
-                <div className="space-y-3">
-                  {Object.entries(fields as Record<string, string>).map(
-                    ([fieldKey, label]) => (
-                      <label key={fieldKey} className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={Boolean((formData as any)[fieldKey])}
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3 gap-4">
+                      <h3 className="text-lg font-semibold">
+                        {sectionTitles[sectionKey]}
+                      </h3>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium whitespace-nowrap">
+                          Valore {sectionKey}
+                        </label>
+                        <select
+                          className="border rounded-md px-3 py-2 w-24 bg-sky-100"
+                          value={formData[sectionKey] ?? 1}
                           onChange={(e) =>
                             setFormData((prev) => ({
                               ...prev,
-                              [fieldKey]: e.target.checked,
+                              [sectionKey]: Number(e.target.value),
                             }))
                           }
-                        />
-                        <span className="text-sm text-gray-800">{label}</span>
-                      </label>
-                    )
-                  )}
+                        >
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => (
+                        <label key={fieldKey} className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={Boolean(formData[fieldKey])}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                [fieldKey]: e.target.checked,
+                              }))
+                            }
+                          />
+                          <span className="text-sm text-gray-800">{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
-            <Card className="mt-6">
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>Calcoli finali</CardTitle>
         </CardHeader>
 
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-          <label className="block text-sm font-medium mb-1">TotA</label>
-            <input
-              type="text"
+            <div>
+              <label className="block text-sm font-medium mb-1">TotA</label>
+              <input
+                type="text"
                 className="w-full border rounded-md px-3 py-2 bg-gray-100"
-              value={TotA}
+                value={TotA}
                 readOnly
-                  />
-              </div>
+              />
+            </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">TotB</label>
@@ -594,16 +613,14 @@ const handleNuovo = () => {
               <label className="block text-sm font-medium mb-1">Livello rischio</label>
               <input
                 type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
+                className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischio)}`}
                 value={LivelloRischio}
                 readOnly
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Rischio inerente ponderato
-              </label>
+              <label className="block text-sm font-medium mb-1">Rischio inerente ponderato</label>
               <input
                 type="text"
                 className="w-full border rounded-md px-3 py-2 bg-gray-100"
@@ -613,9 +630,7 @@ const handleNuovo = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Rischio specifico ponderato
-              </label>
+              <label className="block text-sm font-medium mb-1">Rischio specifico ponderato</label>
               <input
                 type="text"
                 className="w-full border rounded-md px-3 py-2 bg-gray-100"
@@ -625,9 +640,7 @@ const handleNuovo = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Rischio effettivo
-              </label>
+              <label className="block text-sm font-medium mb-1">Rischio effettivo</label>
               <input
                 type="text"
                 className="w-full border rounded-md px-3 py-2 bg-gray-100"
@@ -636,32 +649,30 @@ const handleNuovo = () => {
               />
             </div>
 
-         <div>
-  <label className="block text-sm font-medium mb-1">
-    Adeguata verifica
-  </label>
-  <input
-    type="text"
-    className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischioEffettivo)}`}
-    value={AdeguataVerifica}
-    readOnly
-  />
-</div>
-
-  <div className="flex justify-end gap-3 pt-3">
-    <Button onClick={handleSave} disabled={saving}>
-      {saving ? "Salvataggio..." : "Salva AV1"}
-    </Button>
-
-    <Button type="button" variant="outline">
-      Nuovo AV4
-    </Button>
-  </div>
-</div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Adeguata verifica</label>
+              <input
+                type="text"
+                className={`w-full border rounded-md px-3 py-2 ${getAdeguataVerificaBgClass(AdeguataVerifica)}`}
+                value={AdeguataVerifica}
+                readOnly
+              />
             </div>
+
+            <div className="md:col-span-2 flex justify-end gap-3 pt-3">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Salvataggio..." : "Salva AV1"}
+              </Button>
+
+              <Button type="button" variant="outline">
+                Nuovo AV4
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
-            <Card className="mt-6">
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>Matrice del rischio</CardTitle>
         </CardHeader>
