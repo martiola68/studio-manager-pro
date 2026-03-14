@@ -99,7 +99,7 @@ type FormState = {
   codice_fiscale: string;
   luogo_nascita: string;
   data_nascita: string;
-  citta_residenz: string;
+  citta_residenza: string;
   indirizzo_resid: string;
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
@@ -123,7 +123,7 @@ export default function RappresentantiPage() {
     codice_fiscale: "",
     luogo_nascita: "",
     data_nascita: "",
-    citta_residenz: "",
+    citta_residenza: "",
     indirizzo_resid: "",
     nazionalita: "",
     tipo_doc: "",
@@ -196,7 +196,7 @@ export default function RappresentantiPage() {
       codice_fiscale: "",
       luogo_nascita: "",
       data_nascita: "",
-      citta_residenz: "",
+      citta_residenza: "",
       indirizzo_resid: "",
       nazionalita: "",
       tipo_doc: "",
@@ -341,7 +341,7 @@ export default function RappresentantiPage() {
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
         data_nascita: form.data_nascita || null,
-        citta_residenz: form.citta_residenz.trim() || null,
+        citta_residenza: form.citta_residenza.trim() || null,
         indirizzo_resid: form.indirizzo_resid.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
@@ -449,12 +449,12 @@ export default function RappresentantiPage() {
               </div>
 
               <div>
-                <Label htmlFor="citta_residenz">Città residenza</Label>
+                <Label htmlFor="citta_residenza">Città residenza</Label>
                 <Input
-                  id="citta_residenz"
-                  value={form.citta_residenz}
+                  id="citta_residenza"
+                  value={form.citta_residenza}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, citta_residenz: e.target.value }))
+                    setForm((p) => ({ ...p, citta_residenza: e.target.value }))
                   }
                   placeholder="Milano"
                 />
