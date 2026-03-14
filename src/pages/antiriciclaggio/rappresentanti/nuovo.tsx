@@ -100,7 +100,7 @@ type FormState = {
   luogo_nascita: string;
   data_nascita: string;
   citta_residenza: string;
-  indirizzo_resid: string;
+  indirizzo_residenza: string;
   nazionalita: string;
   tipo_doc: "" | "Carta di identità" | "Passaporto";
   scadenza_doc: string;
@@ -124,7 +124,7 @@ export default function RappresentantiPage() {
     luogo_nascita: "",
     data_nascita: "",
     citta_residenza: "",
-    indirizzo_resid: "",
+    indirizzo_residenza: "",
     nazionalita: "",
     tipo_doc: "",
     scadenza_doc: "",
@@ -197,7 +197,7 @@ export default function RappresentantiPage() {
       luogo_nascita: "",
       data_nascita: "",
       citta_residenza: "",
-      indirizzo_resid: "",
+      indirizzo_residenza: "",
       nazionalita: "",
       tipo_doc: "",
       scadenza_doc: "",
@@ -342,7 +342,7 @@ export default function RappresentantiPage() {
         luogo_nascita: form.luogo_nascita.trim() || null,
         data_nascita: form.data_nascita || null,
         citta_residenza: form.citta_residenza.trim() || null,
-        indirizzo_resid: form.indirizzo_resid.trim() || null,
+        indirizzo_residenza: form.indirizzo_residenza.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
@@ -461,12 +461,12 @@ export default function RappresentantiPage() {
               </div>
 
               <div>
-                <Label htmlFor="indirizzo_resid">Indirizzo residenza</Label>
+                <Label htmlFor="indirizzo_residenza">Indirizzo residenza</Label>
                 <Input
-                  id="indirizzo_resid"
-                  value={form.indirizzo_resid}
+                  id="indirizzo_residenza"
+                  value={form.indirizzo_residenza}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, indirizzo_resid: e.target.value }))
+                    setForm((p) => ({ ...p, indirizzo_residenza: e.target.value }))
                   }
                   placeholder="Via Roma 10"
                 />
