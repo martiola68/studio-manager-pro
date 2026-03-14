@@ -1729,7 +1729,7 @@ const [searchTerm, setSearchTerm] = useState("");
                   />
                 </div>
 
-              <div className="grid grid-cols-12 gap-4">
+ <div className="grid grid-cols-12 gap-4">
   <div className="col-span-7">
     <Label htmlFor="citta">Città</Label>
     <Input
@@ -1799,21 +1799,6 @@ const [searchTerm, setSearchTerm] = useState("");
     />
   </div>
 </div>
-
-                <div>
-                  <Label htmlFor="email">
-                    Email <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    placeholder="info@azienda.it"
-                  />
-                </div>
 
                 <div className="flex items-center space-x-2">
                   <Switch
