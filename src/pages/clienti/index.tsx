@@ -63,9 +63,17 @@ import {
 /** =========
  *  Supabase DB Types
  *  ========= */
-type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"];
-type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"];
-type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"];
+type ClienteRow = Database["public"]["Tables"]["tbclienti"]["Row"] & {
+  rapp_legale_id?: string | null;
+};
+
+type ClienteInsert = Database["public"]["Tables"]["tbclienti"]["Insert"] & {
+  rapp_legale_id?: string | null;
+};
+
+type ClienteUpdate = Database["public"]["Tables"]["tbclienti"]["Update"] & {
+  rapp_legale_id?: string | null;
+};
 
 type ContattoRow = Database["public"]["Tables"]["tbcontatti"]["Row"];
 type UtenteRow = Database["public"]["Tables"]["tbutenti"]["Row"];
@@ -497,7 +505,7 @@ const [searchTerm, setSearchTerm] = useState("");
       cap: clienteData.cap || "",
       citta: clienteData.citta || "",
       provincia: clienteData.provincia || "",
-      rapp_legale_id: (clienteData.rapp_legale_id as string | null) ?? "",
+      rapp_legale_id: clienteData.rapp_legale_id ?? "",
       email: clienteData.email || "",
       attivo: clienteData.attivo ?? true,
       cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
