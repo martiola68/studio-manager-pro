@@ -100,6 +100,7 @@ type ClienteFormData = {
   cap: string;
   citta: string;
   provincia: string;
+  rapp_legale_id: string;
   email: string;
   attivo: boolean;
   cassetto_fiscale_id: string;
@@ -142,6 +143,7 @@ const initialFormData: ClienteFormData = {
   cap: "",
   citta: "",
   provincia: "",
+  rapp_legale_id: "",
   email: "",
   attivo: true,
   cassetto_fiscale_id: "",
@@ -212,14 +214,18 @@ export default function ClientiPage() {
     []
   );
   const [prestazioni, setPrestazioni] = useState<PrestazioneRow[]>([]);
+const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] = useState(true);
+const [vistaClienti, setVistaClienti] = useState<
+  "clienti" | "elenco_generale"
+>("clienti");
 
-  const [vistaClienti, setVistaClienti] = useState<
-    "clienti" | "elenco_generale"
-  >("clienti");
+const [rappLegali, setRappLegali] = useState<
+  { id: string; nome_cognome: string }[]
+>([]);
 
-  const [searchTerm, setSearchTerm] = useState("");
+const [searchTerm, setSearchTerm] = useState("");
+  
   const [selectedLetter, setSelectedLetter] = useState<string>("Tutti");
   const [selectedUtenteFiscale, setSelectedUtenteFiscale] =
     useState<string>("all");
@@ -273,25 +279,29 @@ export default function ClientiPage() {
         utentiRes,
         cassettiRes,
         prestazioniRes,
+        rappLegaliRes,
       ] = await Promise.all([
         supabase.from("tbclienti").select("*").order("ragione_sociale"),
         supabase.from("tbcontatti").select("*").order("cognome"),
         supabase.from("tbutenti").select("*").order("cognome"),
         supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
         supabase.from("tbprestazioni").select("*").order("descrizione"),
+        supabase.from("rapp_legali").select("id, nome_cognome").order("nome_cognome"),
       ]);
-
+      
       if (clientiRes.error) throw clientiRes.error;
       if (contattiRes.error) throw contattiRes.error;
       if (utentiRes.error) throw utentiRes.error;
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
+      if (rappLegaliRes.error) throw rappLegaliRes.error;
 
       setClienti(clientiRes.data ?? []);
       setContatti(contattiRes.data ?? []);
       setUtenti(utentiRes.data ?? []);
       setCassettiFiscali(cassettiRes.data ?? []);
       setPrestazioni(prestazioniRes.data ?? []);
+      setRappLegali(rappLegaliRes.data || []);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
@@ -561,6 +571,7 @@ export default function ClientiPage() {
         cap: formData.cap || null,
         citta: formData.citta || null,
         provincia: formData.provincia || null,
+        rapp_legale_id: formData.rapp_legale_id || null,
         email: formData.email,
         attivo: formData.attivo,
 
@@ -1718,40 +1729,76 @@ export default function ClientiPage() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="cap">CAP</Label>
-                  <Input
-                    id="cap"
-                    value={formData.cap}
-                    onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                    placeholder="00100"
-                  />
-                </div>
+              <div className="grid grid-cols-12 gap-4">
+  <div className="col-span-7">
+    <Label htmlFor="citta">Città</Label>
+    <Input
+      id="citta"
+      value={formData.citta}
+      onChange={(e) =>
+        setFormData({ ...formData, citta: e.target.value })
+      }
+      placeholder="Roma"
+    />
+  </div>
 
-                <div>
-                  <Label htmlFor="citta">Città</Label>
-                  <Input
-                    id="citta"
-                    value={formData.citta}
-                    onChange={(e) =>
-                      setFormData({ ...formData, citta: e.target.value })
-                    }
-                    placeholder="Roma"
-                  />
-                </div>
+  <div className="col-span-2">
+    <Label htmlFor="provincia">Provincia</Label>
+    <Input
+      id="provincia"
+      value={formData.provincia}
+      onChange={(e) =>
+        setFormData({ ...formData, provincia: e.target.value.toUpperCase() })
+      }
+      placeholder="RM"
+      maxLength={2}
+    />
+  </div>
 
-                <div>
-                  <Label htmlFor="provincia">Provincia</Label>
-                  <Input
-                    id="provincia"
-                    value={formData.provincia}
-                    onChange={(e) =>
-                      setFormData({ ...formData, provincia: e.target.value })
-                    }
-                    placeholder="RM"
-                    maxLength={2}
-                  />
-                </div>
+  <div className="col-span-3">
+    <Label htmlFor="cap">CAP</Label>
+    <Input
+      id="cap"
+      value={formData.cap}
+      onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+      placeholder="00100"
+    />
+  </div>
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+  <div>
+    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+    <select
+      id="rapp_legale_id"
+      className="w-full border rounded-md px-3 py-2"
+      value={formData.rapp_legale_id || ""}
+      onChange={(e) =>
+        setFormData({ ...formData, rapp_legale_id: e.target.value })
+      }
+    >
+      <option value="">Seleziona rappresentante legale</option>
+      {rappLegali.map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.nome_cognome}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <Label htmlFor="email">Email *</Label>
+    <Input
+      id="email"
+      type="email"
+      value={formData.email}
+      onChange={(e) =>
+        setFormData({ ...formData, email: e.target.value })
+      }
+      placeholder="email@cliente.it"
+    />
+  </div>
+</div>
 
                 <div>
                   <Label htmlFor="email">
