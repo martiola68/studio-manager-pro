@@ -286,7 +286,7 @@ const [searchTerm, setSearchTerm] = useState("");
         supabase.from("tbutenti").select("*").order("cognome"),
         supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
         supabase.from("tbprestazioni").select("*").order("descrizione"),
-        supabase.from("rapp_legali").select("id, nome_cognome").order("nome_cognome"),
+        (supabase as any).from("rapp_legali").select("id, nome_cognome").order("nome_cognome"),
       ]);
       
       if (clientiRes.error) throw clientiRes.error;
