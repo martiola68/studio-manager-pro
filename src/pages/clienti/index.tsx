@@ -1288,11 +1288,11 @@ const [searchTerm, setSearchTerm] = useState("");
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-20 w-[120px] border-r">
-                        Cod. Cliente
-                      </TableHead>
+                      <TableHead className="sticky top-0 left-0 bg-background z-30 w-[120px] border-r">
+                          Cod. Cliente
+                        </TableHead>
 
-                      <TableHead className="sticky left-[120px] bg-background z-20 w-[170px] border-r pr-2">
+                     <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[150px] border-r pr-2">
                         Ragione Sociale
                       </TableHead>
 
@@ -1321,10 +1321,10 @@ const [searchTerm, setSearchTerm] = useState("");
                   <TableBody>
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
-                        <TableCell
-                          className="sticky left-0 bg-background z-30 font-mono text-sm w-[120px] truncate border-r"
+                       <TableCell
+                          className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate border-r"
                           title={cliente.cod_cliente || cliente.id}
-                        >
+                          >
                           {cliente.cod_cliente ||
                             cliente.id.substring(0, 8).toUpperCase()}
                         </TableCell>
