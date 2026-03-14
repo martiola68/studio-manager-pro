@@ -1329,12 +1329,12 @@ const [searchTerm, setSearchTerm] = useState("");
                             cliente.id.substring(0, 8).toUpperCase()}
                         </TableCell>
 
-                        <TableCell
-                          className="sticky left-[120px] bg-background z-20 font-medium w-[250px] truncate border-r pr-4"
+                       <TableCell
+                        className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4"
                           title={cliente.ragione_sociale || ""}
-                        >
+                                >
                           {cliente.ragione_sociale}
-                        </TableCell>
+                            </TableCell>
 
                         <TableCell className="min-w-[150px] pl-2 pr-2 text-left align-middle">
                           <div className="w-full whitespace-nowrap text-left">
@@ -1424,10 +1424,12 @@ const [searchTerm, setSearchTerm] = useState("");
                     {filteredClienti.map((cliente) => (
                       <TableRow key={cliente.id}>
                        <TableCell
-                          className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4"
-                            title={cliente.ragione_sociale || ""}
+                        className="sticky left-[120px] bg-background z-20 font-medium w-[200px] truncate border-r pr-4"
+                          title={cliente.ragione_sociale || ""}
                             >
-
+                      {cliente.ragione_sociale}
+                          </TableCell>
+                        
                         <TableCell className="min-w-[220px] text-left">
                           {getUtenteNome(cliente.utente_operatore_id)}
                         </TableCell>
