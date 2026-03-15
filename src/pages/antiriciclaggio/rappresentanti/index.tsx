@@ -21,6 +21,12 @@ export default function RappresentantiIndexPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
 
+  useEffect(() => {
+  if (router.query.saved === "1") {
+    alert("Salvataggio eseguito con successo");
+  }
+}, [router.query]);
+
   // 1) studio_id (stessa logica del form)
   useEffect(() => {
     const run = async () => {
