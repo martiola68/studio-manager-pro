@@ -184,6 +184,7 @@ function buildClienteLabel(row: any): string {
 export default function ModelloAV4() {
 
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
+  const [clienteLabel, setClienteLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingClienti, setLoadingClienti] = useState(false);
   const [loadingRappresentante, setLoadingRappresentante] = useState(false);
@@ -221,6 +222,41 @@ export default function ModelloAV4() {
       dichiarante_nazionalita: "",
     }));
   }
+
+  async function loadClienteCorrente(clienteId: string) {
+  if (!clienteId) {
+    setClienteLabel("");
+    clearRappresentanteFields();
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+  setLoadingClienti(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .eq("id", clienteId)
+      .single();
+
+    if (error) {
+      console.error("Errore caricamento cliente:", error);
+      setClienteLabel("");
+      clearRappresentanteFields();
+      return;
+    }
+
+    setClienteLabel(buildClienteLabel(data));
+
+  } catch (err) {
+    console.error("Errore imprevisto caricamento cliente:", err);
+    setClienteLabel("");
+    clearRappresentanteFields();
+  } finally {
+    setLoadingClienti(false);
+  }
+}
 
 async function loadClienti() {
   const supabase = getSupabaseClient() as any;
@@ -350,15 +386,17 @@ async function loadClienti() {
     }
   }, [queryParams.clienteId]);
 
-  useEffect(() => {
-    if (!form.cliente_id) {
-      clearRappresentanteFields();
-      return;
-    }
+useEffect(() => {
+  if (!form.cliente_id) {
+    setClienteLabel("");
+    clearRappresentanteFields();
+    return;
+  }
 
-    void loadRappresentanteDaCliente(form.cliente_id);
-  }, [form.cliente_id]);
-
+  void loadClienteCorrente(form.cliente_id);
+  void loadRappresentanteDaCliente(form.cliente_id);
+}, [form.cliente_id]);
+  
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
@@ -570,22 +608,15 @@ async function loadClienti() {
       <div className="mb-4">
         <label className="block font-medium mb-1">Cliente</label>
 
-        <select
-          name="cliente_id"
-          value={form.cliente_id}
-          onChange={handleClienteChange}
-          className="border p-2 w-full rounded"
-        >
-          <option value="">
-            {loadingClienti ? "Caricamento clienti..." : "Seleziona cliente"}
-          </option>
-
-          {clienti.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+   <input
+  value={
+    loadingClienti
+      ? "Caricamento cliente..."
+      : clienteLabel || "Cliente non valorizzato da AV1"
+  }
+  className="border p-2 w-full rounded bg-gray-50"
+  readOnly
+/>
       </div>
 
       <div className="mb-4">
