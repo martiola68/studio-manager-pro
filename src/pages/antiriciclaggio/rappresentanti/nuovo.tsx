@@ -298,10 +298,31 @@ export default function NuovoRappresentantePage() {
     }
   }
 
-  function handleOpenDoc() {
-    if (!form.allegato_doc) return;
-    window.open(form.allegato_doc, "_blank", "noopener,noreferrer");
+ async function handleOpenDoc() {
+  if (!form.allegato_doc) return;
+
+  setErrMsg(null);
+
+  try {
+    const response = await fetch("/api/rapp-legali/open-doc", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ path: form.allegato_doc }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Errore apertura documento");
+    }
+
+    window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+  } catch (error: any) {
+    setErrMsg(error?.message || "Errore apertura documento");
   }
+}
 
   function handleRemoveDoc() {
     setForm((prev) => ({ ...prev, allegato_doc: "" }));
