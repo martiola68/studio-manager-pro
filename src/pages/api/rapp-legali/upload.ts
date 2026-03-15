@@ -1,19 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
-type ApiResponse =
-  | { ok: true; data: any }
-  | { ok: false; error: string };
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({
       ok: false,
@@ -22,6 +10,8 @@ export default async function handler(
   }
 
   try {
+    const supabase = getSupabaseClient() as any;
+
     const {
       id,
       nome_cognome,
@@ -39,34 +29,18 @@ export default async function handler(
     if (!id) {
       return res.status(400).json({
         ok: false,
-        error: "ID record mancante",
-      });
-    }
-
-    if (!nome_cognome || !String(nome_cognome).trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "Nome e Cognome obbligatorio",
-      });
-    }
-
-    if (!codice_fiscale || !String(codice_fiscale).trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "Codice fiscale obbligatorio",
+        error: "ID rappresentante mancante",
       });
     }
 
     const payload = {
-      nome_cognome: String(nome_cognome).trim(),
-      codice_fiscale: String(codice_fiscale).trim().toUpperCase(),
-      luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
+      nome_cognome: nome_cognome || null,
+      codice_fiscale: codice_fiscale || null,
+      luogo_nascita: luogo_nascita || null,
       data_nascita: data_nascita || null,
-      citta_residenza: citta_residenza ? String(citta_residenza).trim() : null,
-      indirizzo_residenza: indirizzo_residenza
-        ? String(indirizzo_residenza).trim()
-        : null,
-      nazionalita: nazionalita ? String(nazionalita).trim() : null,
+      citta_residenza: citta_residenza || null,
+      indirizzo_residenza: indirizzo_residenza || null,
+      nazionalita: nazionalita || null,
       tipo_doc: tipo_doc || null,
       scadenza_doc: scadenza_doc || null,
       allegato_doc: allegato_doc || null,
@@ -82,7 +56,7 @@ export default async function handler(
     if (error) {
       return res.status(500).json({
         ok: false,
-        error: error.message || "Errore aggiornamento rappresentante",
+        error: error.message,
       });
     }
 
