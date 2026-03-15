@@ -191,6 +191,7 @@ export default function ModelloAV4() {
   const [av4Id, setAv4Id] = useState<string | null>(null);
 
   const queryParams = useMemo(() => {
+    console.log("AV4 queryParams:", queryParams);
     if (typeof window === "undefined") {
       return { studioId: "", av1Id: "", clienteId: "" };
     }
@@ -288,8 +289,9 @@ async function loadClienti() {
     setLoadingClienti(false);
   }
 }
-
+  
  async function loadRappresentanteDaCliente(clienteId: string) {
+   console.log("rappLegaleId trovato:", rappLegaleId);
   if (!clienteId) {
     clearRappresentanteFields();
     return;
@@ -305,6 +307,9 @@ async function loadClienti() {
       .eq("id", clienteId)
       .single();
 
+     console.log("tbclienti row:", clienteRow);
+    console.log("tbclienti error:", clienteError);
+
     if (clienteError) {
       console.error("Errore caricamento cliente:", clienteError);
       clearRappresentanteFields();
@@ -314,6 +319,8 @@ async function loadClienti() {
     const rappLegaleId = clienteRow?.rapp_legale_id
       ? String(clienteRow.rapp_legale_id)
       : "";
+
+      console.log("rappLegaleId trovato:", rappLegaleId);
 
     if (!rappLegaleId) {
       clearRappresentanteFields();
@@ -336,6 +343,9 @@ async function loadClienti() {
       .eq("id", rappLegaleId)
       .single();
 
+    console.log("rapp_legali row:", rappRow);
+    console.log("rapp_legali error:", rappError);
+
     if (rappError) {
       console.error("Errore caricamento rappresentante:", rappError);
       clearRappresentanteFields();
@@ -356,6 +366,7 @@ async function loadClienti() {
       dichiarante_cap_residenza: row.cap_residenza ?? "",
       dichiarante_nazionalita: row.nazionalita ?? "",
     }));
+    
   } catch (error) {
     console.error("Errore imprevisto caricamento rappresentante:", error);
     clearRappresentanteFields();
@@ -365,6 +376,7 @@ async function loadClienti() {
 }
 
   useEffect(() => {
+    console.log("AV4 set form from query:", queryParams);
     setForm((prev) => ({
       ...prev,
       studio_id: queryParams.studioId,
@@ -581,31 +593,7 @@ useEffect(() => {
         civile, amministrativa e penale per dichiarazioni non veritiere.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block font-medium mb-1">Studio ID</label>
-          <input
-            name="studio_id"
-            value={form.studio_id}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">AV1 ID</label>
-          <input
-            name="av1_id"
-            value={form.av1_id}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
-      </div>
-
-      <div className="mb-4">
+       <div className="mb-4">
         <label className="block font-medium mb-1">Cliente</label>
 
    <input
