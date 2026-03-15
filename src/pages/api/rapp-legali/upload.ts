@@ -1,5 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import formidable from "formidable";
+import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -10,48 +23,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = getSupabaseClient() as any;
+    const form = formidable();
 
-    const {
-      id,
-      nome_cognome,
-      codice_fiscale,
-      luogo_nascita,
-      data_nascita,
-      citta_residenza,
-      indirizzo_residenza,
-      nazionalita,
-      tipo_doc,
-      scadenza_doc,
-      allegato_doc,
-    } = req.body || {};
+    const [fields, files] = await form.parse(req);
 
-    if (!id) {
+    const file = files.file?.[0];
+    const studioId = fields.studio_id?.[0];
+
+    if (!file || !studioId) {
       return res.status(400).json({
         ok: false,
-        error: "ID rappresentante mancante",
+        error: "File o studio_id mancanti",
       });
     }
 
-    const payload = {
-      nome_cognome: nome_cognome || null,
-      codice_fiscale: codice_fiscale || null,
-      luogo_nascita: luogo_nascita || null,
-      data_nascita: data_nascita || null,
-      citta_residenza: citta_residenza || null,
-      indirizzo_residenza: indirizzo_residenza || null,
-      nazionalita: nazionalita || null,
-      tipo_doc: tipo_doc || null,
-      scadenza_doc: scadenza_doc || null,
-      allegato_doc: allegato_doc || null,
-    };
+    const buffer = fs.readFileSync(file.filepath);
 
-    const { data, error } = await supabase
-      .from("rapp_legali")
-      .update(payload)
-      .eq("id", id)
-      .select()
-      .single();
+    const fileName = `${Date.now()}_${file.originalFilename}`;
+    const path = `${studioId}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("allegati")
+      .upload(path, buffer, {
+        contentType: file.mimetype || "application/octet-stream",
+      });
 
     if (error) {
       return res.status(500).json({
@@ -62,12 +57,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       ok: true,
-      data,
+      path,
     });
   } catch (error: any) {
     return res.status(500).json({
       ok: false,
-      error: error?.message || "Errore interno server",
+      error: error?.message || "Errore upload file",
     });
   }
 }
