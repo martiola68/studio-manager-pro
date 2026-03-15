@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+  import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -180,6 +180,8 @@ const initialFormState: FormState = {
 
 export default function NuovoRappresentantePage() {
   const router = useRouter();
+  const isEditMode = typeof router.query.id === "string" && !!router.query.id;
+  const recordId = typeof router.query.id === "string" ? router.query.id : "";
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [studioId, setStudioId] = useState<string>("");
@@ -194,6 +196,42 @@ export default function NuovoRappresentantePage() {
     const loadStudioId = async () => {
       const supabase = getSupabaseClient() as any;
       setErrMsg(null);
+
+      useEffect(() => {
+  if (!router.isReady || !isEditMode || !recordId) return;
+
+  const loadRecord = async () => {
+    setErrMsg(null);
+
+    try {
+      const response = await fetch(`/api/rapp-legali/get-by-id?id=${recordId}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Errore caricamento rappresentante");
+      }
+
+      const data = result.data;
+
+      setForm({
+        nome_cognome: data.nome_cognome || "",
+        codice_fiscale: data.codice_fiscale || "",
+        luogo_nascita: data.luogo_nascita || "",
+        data_nascita: data.data_nascita || "",
+        citta_residenza: data.citta_residenza || "",
+        indirizzo_residenza: data.indirizzo_residenza || "",
+        nazionalita: data.nazionalita || "",
+        tipo_doc: data.tipo_doc || "",
+        scadenza_doc: data.scadenza_doc || "",
+        allegato_doc: data.allegato_doc || "",
+      });
+    } catch (error: any) {
+      setErrMsg(error?.message || "Errore caricamento rappresentante");
+    }
+  };
+
+  void loadRecord();
+}, [router.isReady, isEditMode, recordId]);
 
       try {
         if (typeof window !== "undefined") {
@@ -352,7 +390,7 @@ export default function NuovoRappresentantePage() {
 
     try {
       const payload = {
-        studio_id: studioId,
+          ...(isEditMode ? { id: recordId } : { studio_id: studioId }),
         nome_cognome: form.nome_cognome.trim(),
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
@@ -365,13 +403,16 @@ export default function NuovoRappresentantePage() {
         allegato_doc: form.allegato_doc || null,
       };
 
-      const response = await fetch("/api/rapp-legali/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+  isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  }
+);
 
       const result = await response.json();
 
@@ -391,7 +432,11 @@ export default function NuovoRappresentantePage() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Antiriciclaggio • Rappresentanti</CardTitle>
+          <CardTitle>
+            {isEditMode
+                ? "Antiriciclaggio • Modifica rappresentante"
+                : "Antiriciclaggio • Rappresentanti"}
+              </CardTitle>
 
           <div className="flex gap-2">
             <Button
