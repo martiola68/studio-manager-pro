@@ -14,7 +14,7 @@ export default function TitolariEffettiviForm({
   studio_id,
   cliente_id
 }: Props) {
-   const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient() as any;
   const [rappresentanti, setRappresentanti] = useState<any[]>([]);
   const [righe, setRighe] = useState<any[]>([]);
 
@@ -23,10 +23,10 @@ export default function TitolariEffettiviForm({
   }, []);
 
   async function loadRappresentanti() {
-    const { data, error } = await supabase
-      .from("rapp_legali")
-      .select("*")
-      .order("nome_cognome");
+    const { data, error } = await (supabase as any)
+  .from("rapp_legali")
+  .select("*")
+  .order("nome_cognome");
 
     if (error) {
       console.error("Errore caricamento rappresentanti:", error);
