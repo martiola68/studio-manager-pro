@@ -197,33 +197,38 @@ export default function NuovoRappresentantePage() {
       const supabase = getSupabaseClient() as any;
       setErrMsg(null);
 
-      useEffect(() => {
+useEffect(() => {
   if (!router.isReady || !isEditMode || !recordId) return;
 
   const loadRecord = async () => {
     setErrMsg(null);
 
     try {
-      const response = await fetch(`/api/rapp-legali/get-by-id?id=${recordId}`);
-      const result = await response.json();
+      const supabase = getSupabaseClient() as any;
 
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || "Errore caricamento rappresentante");
+      const { data, error } = await supabase
+        .from("rapp_legali")
+        .select(
+          "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, nazionalita, tipo_doc, scadenza_doc, allegato_doc"
+        )
+        .eq("id", recordId)
+        .single();
+
+      if (error) {
+        throw error;
       }
 
-      const data = result.data;
-
       setForm({
-        nome_cognome: data.nome_cognome || "",
-        codice_fiscale: data.codice_fiscale || "",
-        luogo_nascita: data.luogo_nascita || "",
-        data_nascita: data.data_nascita || "",
-        citta_residenza: data.citta_residenza || "",
-        indirizzo_residenza: data.indirizzo_residenza || "",
-        nazionalita: data.nazionalita || "",
-        tipo_doc: data.tipo_doc || "",
-        scadenza_doc: data.scadenza_doc || "",
-        allegato_doc: data.allegato_doc || "",
+        nome_cognome: data?.nome_cognome || "",
+        codice_fiscale: data?.codice_fiscale || "",
+        luogo_nascita: data?.luogo_nascita || "",
+        data_nascita: data?.data_nascita || "",
+        citta_residenza: data?.citta_residenza || "",
+        indirizzo_residenza: data?.indirizzo_residenza || "",
+        nazionalita: data?.nazionalita || "",
+        tipo_doc: data?.tipo_doc || "",
+        scadenza_doc: data?.scadenza_doc || "",
+        allegato_doc: data?.allegato_doc || "",
       });
     } catch (error: any) {
       setErrMsg(error?.message || "Errore caricamento rappresentante");
@@ -232,7 +237,7 @@ export default function NuovoRappresentantePage() {
 
   void loadRecord();
 }, [router.isReady, isEditMode, recordId]);
-
+      
       try {
         if (typeof window !== "undefined") {
           const cached = localStorage.getItem("studio_id");
