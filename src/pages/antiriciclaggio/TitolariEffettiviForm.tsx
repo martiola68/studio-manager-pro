@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import supabase from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type Props = {
   sezione: "domanda7" | "domanda8" | "domanda9";
@@ -14,6 +14,7 @@ export default function TitolariEffettiviForm({
   studio_id,
   cliente_id
 }: Props) {
+   const supabase = getSupabaseClient();
   const [rappresentanti, setRappresentanti] = useState<any[]>([]);
   const [righe, setRighe] = useState<any[]>([]);
 
