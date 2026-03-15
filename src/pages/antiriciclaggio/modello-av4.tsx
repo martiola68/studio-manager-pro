@@ -182,7 +182,6 @@ function buildClienteLabel(row: any): string {
 }
 
 export default function ModelloAV4() {
-  const supabase = getSupabaseClient() as any;
 
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -223,111 +222,111 @@ export default function ModelloAV4() {
     }));
   }
 
-  async function loadClienti() {
-    setLoadingClienti(true);
+async function loadClienti() {
+  const supabase = getSupabaseClient() as any;
+  setLoadingClienti(true);
 
-    try {
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .order("id", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("tbclienti")
+      .select("*")
+      .order("id", { ascending: true });
 
-      if (error) {
-        console.error("Errore caricamento clienti:", error);
-        return;
-      }
-
-      const rows = Array.isArray(data) ? data : [];
-
-      const mapped: ClienteOption[] = rows.map((row: any) => ({
-        id: String(row.id),
-        rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : null,
-        label: buildClienteLabel(row),
-      }));
-
-      setClienti(mapped);
-    } catch (error) {
-      console.error("Errore imprevisto caricamento clienti:", error);
-    } finally {
-      setLoadingClienti(false);
+    if (error) {
+      console.error("Errore caricamento clienti:", error);
+      return;
     }
+
+    const rows = Array.isArray(data) ? data : [];
+
+    const mapped: ClienteOption[] = rows.map((row: any) => ({
+      id: String(row.id),
+      rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : null,
+      label: buildClienteLabel(row),
+    }));
+
+    setClienti(mapped);
+  } catch (error) {
+    console.error("Errore imprevisto caricamento clienti:", error);
+  } finally {
+    setLoadingClienti(false);
+  }
+}
+
+ async function loadRappresentanteDaCliente(clienteId: string) {
+  if (!clienteId) {
+    clearRappresentanteFields();
+    return;
   }
 
-  async function loadRappresentanteDaCliente(clienteId: string) {
-    if (!clienteId) {
+  const supabase = getSupabaseClient() as any;
+  setLoadingRappresentante(true);
+
+  try {
+    const { data: clienteRow, error: clienteError } = await supabase
+      .from("tbclienti")
+      .select("id, rapp_legale_id")
+      .eq("id", clienteId)
+      .single();
+
+    if (clienteError) {
+      console.error("Errore caricamento cliente:", clienteError);
       clearRappresentanteFields();
       return;
     }
 
-    setLoadingRappresentante(true);
+    const rappLegaleId = clienteRow?.rapp_legale_id
+      ? String(clienteRow.rapp_legale_id)
+      : "";
 
-    try {
-      const { data: clienteRow, error: clienteError } = await supabase
-        .from("tbclienti")
-        .select("id, rapp_legale_id")
-        .eq("id", clienteId)
-        .single();
-
-      if (clienteError) {
-        console.error("Errore caricamento cliente:", clienteError);
-        clearRappresentanteFields();
-        return;
-      }
-
-      const rappLegaleId = clienteRow?.rapp_legale_id
-        ? String(clienteRow.rapp_legale_id)
-        : "";
-
-      if (!rappLegaleId) {
-        clearRappresentanteFields();
-        return;
-      }
-
-      const { data: rappRow, error: rappError } = await (supabase as any)
-        .from("rapp_legali")
-        .select(
-          `
-            id,
-            nome_cognome,
-            codice_fiscale,
-            luogo_nascita,
-            data_nascita,
-            indirizzo_residenza,
-            citta_residenza,
-            cap_residenza,
-            nazionalita
-          `
-        )
-        .eq("id", rappLegaleId)
-        .single();
-
-      if (rappError) {
-        console.error("Errore caricamento rappresentante:", rappError);
-        clearRappresentanteFields();
-        return;
-      }
-
-      const row = (rappRow || {}) as RappresentanteRow;
-
-      setForm((prev) => ({
-        ...prev,
-        rapp_legale_id: rappLegaleId,
-        dichiarante_nome_cognome: row.nome_cognome ?? "",
-        dichiarante_codice_fiscale: row.codice_fiscale ?? "",
-        dichiarante_luogo_nascita: row.luogo_nascita ?? "",
-        dichiarante_data_nascita: normalizeDateForInput(row.data_nascita),
-        dichiarante_indirizzo_residenza: row.indirizzo_residenza ?? "",
-        dichiarante_citta_residenza: row.citta_residenza ?? "",
-        dichiarante_cap_residenza: row.cap_residenza ?? "",
-        dichiarante_nazionalita: row.nazionalita ?? "",
-      }));
-    } catch (error) {
-      console.error("Errore imprevisto caricamento rappresentante:", error);
+    if (!rappLegaleId) {
       clearRappresentanteFields();
-    } finally {
-      setLoadingRappresentante(false);
+      return;
     }
+
+    const { data: rappRow, error: rappError } = await (supabase as any)
+      .from("rapp_legali")
+      .select(`
+        id,
+        nome_cognome,
+        codice_fiscale,
+        luogo_nascita,
+        data_nascita,
+        indirizzo_residenza,
+        citta_residenza,
+        cap_residenza,
+        nazionalita
+      `)
+      .eq("id", rappLegaleId)
+      .single();
+
+    if (rappError) {
+      console.error("Errore caricamento rappresentante:", rappError);
+      clearRappresentanteFields();
+      return;
+    }
+
+    const row = (rappRow || {}) as RappresentanteRow;
+
+    setForm((prev) => ({
+      ...prev,
+      rapp_legale_id: rappLegaleId,
+      dichiarante_nome_cognome: row.nome_cognome ?? "",
+      dichiarante_codice_fiscale: row.codice_fiscale ?? "",
+      dichiarante_luogo_nascita: row.luogo_nascita ?? "",
+      dichiarante_data_nascita: normalizeDateForInput(row.data_nascita),
+      dichiarante_indirizzo_residenza: row.indirizzo_residenza ?? "",
+      dichiarante_citta_residenza: row.citta_residenza ?? "",
+      dichiarante_cap_residenza: row.cap_residenza ?? "",
+      dichiarante_nazionalita: row.nazionalita ?? "",
+    }));
+  } catch (error) {
+    console.error("Errore imprevisto caricamento rappresentante:", error);
+    clearRappresentanteFields();
+  } finally {
+    setLoadingRappresentante(false);
   }
+}
 
   useEffect(() => {
     setForm((prev) => ({
@@ -436,100 +435,100 @@ export default function ModelloAV4() {
     return true;
   }
 
-  async function salvaAV4() {
-    if (!validateBeforeSave()) return;
+ async function salvaAV4() {
+  if (!validateBeforeSave()) return;
 
-    try {
-      setLoading(true);
+  const supabase = getSupabaseClient() as any;
 
-      const payload = {
-        studio_id: form.studio_id,
-        cliente_id: form.cliente_id,
-        av1_id: Number(form.av1_id),
-        rapp_legale_id: form.rapp_legale_id || null,
+  try {
+    setLoading(true);
 
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
-        dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza:
-          form.dichiarante_indirizzo_residenza || null,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
-        dichiarante_nazionalita: form.dichiarante_nazionalita || null,
+    const payload = {
+      studio_id: form.studio_id,
+      cliente_id: form.cliente_id,
+      av1_id: Number(form.av1_id),
+      rapp_legale_id: form.rapp_legale_id || null,
 
-        natura_prestazione: form.natura_prestazione || null,
+      dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
+      dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
+      dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
+      dichiarante_data_nascita: form.dichiarante_data_nascita || null,
+      dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza || null,
+      dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
+      dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
+      dichiarante_nazionalita: form.dichiarante_nazionalita || null,
 
-        domanda1: form.domanda1,
-        domanda2: form.domanda2,
+      natura_prestazione: form.natura_prestazione || null,
 
-        domanda3: form.domanda3,
-        domanda4: form.domanda4,
-        domanda5: form.domanda5,
-        spec_domanda5: form.spec_domanda5 || null,
+      domanda1: form.domanda1,
+      domanda2: form.domanda2,
+      domanda3: form.domanda3,
+      domanda4: form.domanda4,
+      domanda5: form.domanda5,
+      spec_domanda5: form.spec_domanda5 || null,
 
-        domanda6: form.domanda6,
-        domanda7: form.domanda7,
-        domanda8: form.domanda8,
-        domanda9: form.domanda9,
+      domanda6: form.domanda6,
+      domanda7: form.domanda7,
+      domanda8: form.domanda8,
+      domanda9: form.domanda9,
 
-        nome_soc: form.nome_soc || null,
-        sede_legale: form.sede_legale || null,
-        indirizzo_sede: form.indirizzo_sede || null,
-        reg_imprese: form.reg_imprese || null,
-        num_reg_imprese: form.num_reg_imprese || null,
-        cod_fiscale_soc: form.cod_fiscale_soc || null,
+      nome_soc: form.nome_soc || null,
+      sede_legale: form.sede_legale || null,
+      indirizzo_sede: form.indirizzo_sede || null,
+      reg_imprese: form.reg_imprese || null,
+      num_reg_imprese: form.num_reg_imprese || null,
+      cod_fiscale_soc: form.cod_fiscale_soc || null,
 
-        nome_soc_bis: form.nome_soc_bis || null,
-        sede_legale_bis: form.sede_legale_bis || null,
-        indirizzo_sede_bis: form.indirizzo_sede_bis || null,
-        reg_imprese_bis: form.reg_imprese_bis || null,
-        num_reg_imprese_bis: form.num_reg_imprese_bis || null,
-        cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
-        nome_soc_ter: form.nome_soc_ter || null,
+      nome_soc_bis: form.nome_soc_bis || null,
+      sede_legale_bis: form.sede_legale_bis || null,
+      indirizzo_sede_bis: form.indirizzo_sede_bis || null,
+      reg_imprese_bis: form.reg_imprese_bis || null,
+      num_reg_imprese_bis: form.num_reg_imprese_bis || null,
+      cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
+      nome_soc_ter: form.nome_soc_ter || null,
 
-        domanda10: form.domanda10,
-        domanda11: form.domanda11,
-        specifica12: form.specifica12 || null,
+      domanda10: form.domanda10,
+      domanda11: form.domanda11,
+      specifica12: form.specifica12 || null,
 
-        specifica10b: form.specifica10b || null,
-        specifica10c: form.specifica10c || null,
-        specifica11c: form.specifica11c || null,
+      specifica10b: form.specifica10b || null,
+      specifica10c: form.specifica10c || null,
+      specifica11c: form.specifica11c || null,
 
-        specifica10d: form.specifica10d || null,
-        specifica10e: form.specifica10e || null,
-        specifica10f: form.specifica10f || null,
+      specifica10d: form.specifica10d || null,
+      specifica10e: form.specifica10e || null,
+      specifica10f: form.specifica10f || null,
 
-        luogo_firma: form.luogo_firma || null,
-        data_firma: form.data_firma || null,
-        luogo_firma_bis: form.luogo_firma_bis || null,
-        data_firma_bis: form.data_firma_bis || null,
+      luogo_firma: form.luogo_firma || null,
+      data_firma: form.data_firma || null,
+      luogo_firma_bis: form.luogo_firma_bis || null,
+      data_firma_bis: form.data_firma_bis || null,
 
-        stato: form.stato,
-        versione: form.versione,
-      };
+      stato: form.stato,
+      versione: form.versione,
+    };
 
-      const { data, error } = await supabase
-        .from("tbAV4")
-        .insert([payload])
-        .select("id")
-        .single();
+    const { data, error } = await supabase
+      .from("tbAV4")
+      .insert([payload])
+      .select("id")
+      .single();
 
-      if (error) {
-        console.error("Errore salvataggio AV4:", error);
-        alert("Errore durante il salvataggio");
-        return;
-      }
-
-      setAv4Id(String(data.id));
-      alert("AV4 salvato correttamente");
-    } catch (error) {
-      console.error("Errore imprevisto salvataggio AV4:", error);
+    if (error) {
+      console.error("Errore salvataggio AV4:", error);
       alert("Errore durante il salvataggio");
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    setAv4Id(String(data.id));
+    alert("AV4 salvato correttamente");
+  } catch (error) {
+    console.error("Errore imprevisto salvataggio AV4:", error);
+    alert("Errore durante il salvataggio");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <div className="p-6 max-w-5xl">
