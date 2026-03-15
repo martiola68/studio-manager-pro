@@ -17,8 +17,19 @@ const [form, setForm] = useState({
   domanda3: false,
   domanda4: false,
   domanda5: false,
+  spec_domanda5: "",
 
-  spec_domanda5: ""
+  domanda6: false,
+  domanda7: false,
+  domanda8: false,
+  domanda9: false,
+
+  nome_soc: "",
+  sede_legale: "",
+  indirizzo_sede: "",
+  reg_imprese: "",
+  num_reg_imprese: "",
+  cod_fiscale_soc: ""
 });
 
   useEffect(() => {
