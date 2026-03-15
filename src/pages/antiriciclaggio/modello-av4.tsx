@@ -6,13 +6,20 @@ export default function ModelloAV4() {
   const [clienti, setClienti] = useState<any[]>([]);
   const [rappresentanti, setRappresentanti] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
-    cliente_id: "",
-    rapp_legale_id: "",
-    natura_prestazione: "",
-    domanda1: false,
-    domanda2: false
-  });
+const [form, setForm] = useState({
+  cliente_id: "",
+  rapp_legale_id: "",
+  natura_prestazione: "",
+
+  domanda1: false,
+  domanda2: false,
+
+  domanda3: false,
+  domanda4: false,
+  domanda5: false,
+
+  spec_domanda5: ""
+});
 
   useEffect(() => {
     loadClienti();
@@ -205,6 +212,83 @@ export default function ModelloAV4() {
 
       </div>
 
+{/* PPE CLIENTE */}
+
+<div className="mt-6 font-semibold">
+  Persona politicamente esposta
+</div>
+
+<div className="mb-3">
+
+  <label className="flex items-center gap-2">
+
+    <input
+      type="checkbox"
+      name="domanda3"
+      checked={form.domanda3}
+      onChange={handleChange}
+    />
+
+    di non costituire persona politicamente esposta
+
+  </label>
+
+</div>
+
+<div className="mb-3">
+
+  <label className="flex items-center gap-2">
+
+    <input
+      type="checkbox"
+      name="domanda4"
+      checked={form.domanda4}
+      onChange={handleChange}
+    />
+
+    di non rivestire lo status di PPE da più di un anno
+
+  </label>
+
+</div>
+
+<div className="mb-3">
+
+  <label className="flex items-center gap-2">
+
+    <input
+      type="checkbox"
+      name="domanda5"
+      checked={form.domanda5}
+      onChange={handleChange}
+    />
+
+    di costituire persona politicamente esposta
+
+  </label>
+
+</div>
+
+      {form.domanda5 && (
+
+  <div className="mb-4">
+
+    <label className="block font-medium mb-1">
+      Specificare carica pubblica / relazione
+    </label>
+
+    <textarea
+      name="spec_domanda5"
+      value={form.spec_domanda5}
+      onChange={handleChange}
+      className="border p-2 w-full rounded"
+      rows={3}
+    />
+
+  </div>
+
+)}
+      
       {/* SALVA */}
 
       <button
