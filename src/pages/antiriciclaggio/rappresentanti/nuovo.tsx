@@ -287,8 +287,8 @@ export default function NuovoRappresentantePage() {
 
       setForm((prev) => ({
         ...prev,
-        allegato_doc: result.publicUrl,
-      }));
+      allegato_doc: result.path,
+        }));
 
       setOkMsg("✅ Documento allegato.");
     } catch (error: any) {
@@ -342,9 +342,7 @@ export default function NuovoRappresentantePage() {
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc:
-          form.allegato_doc && form.allegato_doc.startsWith("http")
-            ? form.allegato_doc
-            : null,
+        allegato_doc: form.allegato_doc || null,
       };
 
       const response = await fetch("/api/rapp-legali/save", {
