@@ -1,26 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-type ResponseData =
+type ApiResponse =
   | { ok: true; data: any }
   | { ok: false; error: string };
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
+  res: NextApiResponse<ApiResponse>
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    return res.status(405).json({ ok: false, error: "Metodo non consentito" });
   }
 
   try {
@@ -36,10 +31,10 @@ export default async function handler(
       tipo_doc,
       scadenza_doc,
       allegato_doc,
-    } = req.body ?? {};
+    } = req.body || {};
 
     if (!id) {
-      return res.status(400).json({ ok: false, error: "ID obbligatorio" });
+      return res.status(400).json({ ok: false, error: "ID record mancante" });
     }
 
     const payload = {
@@ -54,12 +49,12 @@ export default async function handler(
         ? String(indirizzo_residenza).trim()
         : null,
       nazionalita: nazionalita ? String(nazionalita).trim() : null,
-      tipo_doc: tipo_doc ? String(tipo_doc).trim() : null,
+      tipo_doc: tipo_doc || null,
       scadenza_doc: scadenza_doc || null,
-      allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
+      allegato_doc: allegato_doc || null,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("rapp_legali")
       .update(payload)
       .eq("id", id)
@@ -67,14 +62,20 @@ export default async function handler(
       .single();
 
     if (error) {
-      return res.status(400).json({ ok: false, error: error.message });
+      return res.status(500).json({
+        ok: false,
+        error: error.message || "Errore aggiornamento rappresentante",
+      });
     }
 
-    return res.status(200).json({ ok: true, data });
-  } catch (e: any) {
+    return res.status(200).json({
+      ok: true,
+      data,
+    });
+  } catch (error: any) {
     return res.status(500).json({
       ok: false,
-      error: e?.message || "Errore aggiornamento rappresentante",
+      error: error?.message || "Errore interno server",
     });
   }
 }
