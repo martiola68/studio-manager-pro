@@ -233,8 +233,7 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const supabase = getSupabaseClient() as any;
-
+  
   const isEditMode = router.isReady && typeof router.query.id === "string" && !!router.query.id;
   const recordId = router.isReady && typeof router.query.id === "string" ? router.query.id : "";
 
@@ -254,7 +253,8 @@ export default function NuovoRappresentantePage() {
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-            setErrMsg(null);
+  const supabase = getSupabaseClient() as any;
+  setErrMsg(null);
 
       try {
         if (typeof window !== "undefined") {
@@ -312,11 +312,12 @@ export default function NuovoRappresentantePage() {
 
     let cancelled = false;
 
-    const loadRecord = async () => {
-      setPageLoading(true);
-      setErrMsg(null);
-      setOkMsg(null);
-
+   const loadRecord = async () => {
+  const supabase = getSupabaseClient() as any;
+  setPageLoading(true);
+  setErrMsg(null);
+  setOkMsg(null);
+     
       try {
         let row: RappLegaleRow | null = null;
 
