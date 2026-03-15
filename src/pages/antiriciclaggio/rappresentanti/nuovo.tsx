@@ -523,22 +523,31 @@ export default function NuovoRappresentantePage() {
         allegato_doc: form.allegato_doc || null,
       };
 
-      const response = await fetch(
-        isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
 
-      const result = await response.json();
+const response = await fetch(url, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(payload),
+});
 
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Errore salvataggio rappresentante legale");
-      }
+const contentType = response.headers.get("content-type") || "";
+let result: any = null;
+
+if (contentType.includes("application/json")) {
+  result = await response.json();
+} else {
+  const text = await response.text();
+  throw new Error(
+    `Endpoint ${url} non restituisce JSON. Risposta ricevuta: ${text.slice(0, 200)}`
+  );
+}
+
+if (!response.ok || !result?.ok) {
+  throw new Error(result?.error || "Errore salvataggio rappresentante legale");
+}
 
       await router.push("/antiriciclaggio/rappresentanti?saved=1");
     } catch (error: any) {
