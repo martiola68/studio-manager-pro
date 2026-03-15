@@ -1,4 +1,4 @@
-  import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -152,6 +152,8 @@ function isValidCF(cfRaw: string) {
 /* =========================================================
    TYPES
    ========================================================= */
+type TipoDocumento = "" | "Carta di identità" | "Passaporto";
+
 type FormState = {
   nome_cognome: string;
   codice_fiscale: string;
@@ -160,9 +162,24 @@ type FormState = {
   citta_residenza: string;
   indirizzo_residenza: string;
   nazionalita: string;
-  tipo_doc: "" | "Carta di identità" | "Passaporto";
+  tipo_doc: TipoDocumento;
   scadenza_doc: string;
   allegato_doc: string;
+};
+
+type RappLegaleRow = {
+  id?: string;
+  studio_id?: string;
+  nome_cognome?: string | null;
+  codice_fiscale?: string | null;
+  luogo_nascita?: string | null;
+  data_nascita?: string | null;
+  citta_residenza?: string | null;
+  indirizzo_residenza?: string | null;
+  nazionalita?: string | null;
+  tipo_doc?: string | null;
+  scadenza_doc?: string | null;
+  allegato_doc?: string | null;
 };
 
 const initialFormState: FormState = {
@@ -178,66 +195,67 @@ const initialFormState: FormState = {
   allegato_doc: "",
 };
 
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function normalizeDateForInput(value?: string | null): string {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function mapRowToForm(row?: RappLegaleRow | null): FormState {
+  const tipo = row?.tipo_doc ?? "";
+  const safeTipo: TipoDocumento =
+    tipo === "Carta di identità" || tipo === "Passaporto" ? tipo : "";
+
+  return {
+    nome_cognome: row?.nome_cognome ?? "",
+    codice_fiscale: row?.codice_fiscale ?? "",
+    luogo_nascita: row?.luogo_nascita ?? "",
+    data_nascita: normalizeDateForInput(row?.data_nascita),
+    citta_residenza: row?.citta_residenza ?? "",
+    indirizzo_residenza: row?.indirizzo_residenza ?? "",
+    nazionalita: row?.nazionalita ?? "",
+    tipo_doc: safeTipo,
+    scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
+    allegato_doc: row?.allegato_doc ?? "",
+  };
+}
+
 export default function NuovoRappresentantePage() {
   const router = useRouter();
-  const isEditMode = typeof router.query.id === "string" && !!router.query.id;
-  const recordId = typeof router.query.id === "string" ? router.query.id : "";
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const isEditMode = router.isReady && typeof router.query.id === "string" && !!router.query.id;
+  const recordId = router.isReady && typeof router.query.id === "string" ? router.query.id : "";
+
   const [studioId, setStudioId] = useState<string>("");
+  const [form, setForm] = useState<FormState>(initialFormState);
+  const [initialLoadedForm, setInitialLoadedForm] = useState<FormState>(initialFormState);
+
+  const [pageLoading, setPageLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormState>(initialFormState);
-
+  /* =========================================================
+     LOAD STUDIO ID
+     ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
       const supabase = getSupabaseClient() as any;
       setErrMsg(null);
 
-useEffect(() => {
-  if (!router.isReady || !isEditMode || !recordId) return;
-
-  const loadRecord = async () => {
-    setErrMsg(null);
-
-    try {
-      const supabase = getSupabaseClient() as any;
-
-      const { data, error } = await supabase
-        .from("rapp_legali")
-        .select(
-          "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, nazionalita, tipo_doc, scadenza_doc, allegato_doc"
-        )
-        .eq("id", recordId)
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      setForm({
-        nome_cognome: data?.nome_cognome || "",
-        codice_fiscale: data?.codice_fiscale || "",
-        luogo_nascita: data?.luogo_nascita || "",
-        data_nascita: data?.data_nascita || "",
-        citta_residenza: data?.citta_residenza || "",
-        indirizzo_residenza: data?.indirizzo_residenza || "",
-        nazionalita: data?.nazionalita || "",
-        tipo_doc: data?.tipo_doc || "",
-        scadenza_doc: data?.scadenza_doc || "",
-        allegato_doc: data?.allegato_doc || "",
-      });
-    } catch (error: any) {
-      setErrMsg(error?.message || "Errore caricamento rappresentante");
-    }
-  };
-
-  void loadRecord();
-}, [router.isReady, isEditMode, recordId]);
-      
       try {
         if (typeof window !== "undefined") {
           const cached = localStorage.getItem("studio_id");
@@ -250,14 +268,12 @@ useEffect(() => {
         const { data: authData, error: authError } = await supabase.auth.getUser();
 
         if (authError) {
-          setErrMsg(`Errore autenticazione: ${authError.message}`);
-          return;
+          throw new Error(`Errore autenticazione: ${authError.message}`);
         }
 
         const email = authData?.user?.email;
         if (!email) {
-          setErrMsg("Utente non loggato: impossibile recuperare studio_id.");
-          return;
+          throw new Error("Utente non loggato: impossibile recuperare studio_id.");
         }
 
         const { data, error } = await supabase
@@ -267,17 +283,16 @@ useEffect(() => {
           .single();
 
         if (error) {
-          setErrMsg(`Errore lettura tbutenti: ${error.message}`);
-          return;
+          throw new Error(`Errore lettura tbutenti: ${error.message}`);
         }
 
         const sid = data?.studio_id ? String(data.studio_id) : "";
         if (!sid) {
-          setErrMsg("studio_id non presente in tbutenti per questo utente.");
-          return;
+          throw new Error("studio_id non presente in tbutenti per questo utente.");
         }
 
         setStudioId(sid);
+
         if (typeof window !== "undefined") {
           localStorage.setItem("studio_id", sid);
         }
@@ -289,18 +304,116 @@ useEffect(() => {
     void loadStudioId();
   }, []);
 
+  /* =========================================================
+     LOAD RECORD IN EDIT MODE
+     ========================================================= */
+  useEffect(() => {
+    if (!router.isReady || !isEditMode || !recordId) return;
+
+    let cancelled = false;
+
+    const loadRecord = async () => {
+      setPageLoading(true);
+      setErrMsg(null);
+      setOkMsg(null);
+
+      try {
+        let row: RappLegaleRow | null = null;
+
+        // 1) Tentativo via API
+        try {
+          const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
+          const result = await response.json();
+
+          if (response.ok && result?.ok && result?.data) {
+            row = result.data as RappLegaleRow;
+          }
+        } catch {
+          // fallback sotto
+        }
+
+        // 2) Fallback diretto Supabase
+        if (!row) {
+          const supabase = getSupabaseClient() as any;
+
+          const { data, error } = await supabase
+            .from("rapp_legali")
+            .select(
+              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, nazionalita, tipo_doc, scadenza_doc, allegato_doc"
+            )
+            .eq("id", recordId)
+            .single();
+
+          if (error) {
+            throw new Error(error.message || "Errore caricamento rappresentante");
+          }
+
+          row = data as RappLegaleRow;
+        }
+
+        if (!row) {
+          throw new Error("Record non trovato.");
+        }
+
+        if (cancelled) return;
+
+        const mapped = mapRowToForm(row);
+
+        setForm(mapped);
+        setInitialLoadedForm(mapped);
+
+        if (row.studio_id) {
+          const sid = String(row.studio_id);
+          setStudioId((prev) => prev || sid);
+
+          if (typeof window !== "undefined" && sid) {
+            localStorage.setItem("studio_id", sid);
+          }
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          setErrMsg(error?.message || "Errore caricamento rappresentante");
+        }
+      } finally {
+        if (!cancelled) {
+          setPageLoading(false);
+        }
+      }
+    };
+
+    void loadRecord();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, isEditMode, recordId]);
+
+  /* =========================================================
+     MEMO
+     ========================================================= */
   const cf = useMemo(() => normalizeCF(form.codice_fiscale), [form.codice_fiscale]);
-  const cfOk = useMemo(() => (cf.length === 16 ? isValidCF(cf) : false), [cf]);
+
+  const cfOk = useMemo(() => {
+    return cf.length === 16 ? isValidCF(cf) : false;
+  }, [cf]);
 
   const canSave = useMemo(() => {
     return !!studioId && form.nome_cognome.trim().length > 0 && cfOk;
   }, [studioId, form.nome_cognome, cfOk]);
 
-  const resetForm = () => {
-    setForm(initialFormState);
+  /* =========================================================
+     ACTIONS
+     ========================================================= */
+  function resetForm() {
     setOkMsg(null);
     setErrMsg(null);
-  };
+
+    if (isEditMode) {
+      setForm(initialLoadedForm);
+    } else {
+      setForm(initialFormState);
+    }
+  }
 
   async function handleUploadDoc(file: File) {
     if (!studioId) {
@@ -324,14 +437,14 @@ useEffect(() => {
 
       const result = await response.json();
 
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || "Errore upload documento");
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Errore upload documento");
       }
 
       setForm((prev) => ({
         ...prev,
-      allegato_doc: result.path,
-        }));
+        allegato_doc: result.path || "",
+      }));
 
       setOkMsg("✅ Documento allegato.");
     } catch (error: any) {
@@ -341,31 +454,35 @@ useEffect(() => {
     }
   }
 
- async function handleOpenDoc() {
-  if (!form.allegato_doc) return;
+  async function handleOpenDoc() {
+    if (!form.allegato_doc) return;
 
-  setErrMsg(null);
+    setErrMsg(null);
 
-  try {
-    const response = await fetch("/api/rapp-legali/open-doc", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ path: form.allegato_doc }),
-    });
+    try {
+      const response = await fetch("/api/rapp-legali/open-doc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ path: form.allegato_doc }),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (!response.ok || !result.ok) {
-      throw new Error(result.error || "Errore apertura documento");
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Errore apertura documento");
+      }
+
+      if (!result?.signedUrl) {
+        throw new Error("URL documento non disponibile.");
+      }
+
+      window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (error: any) {
+      setErrMsg(error?.message || "Errore apertura documento");
     }
-
-    window.open(result.signedUrl, "_blank", "noopener,noreferrer");
-  } catch (error: any) {
-    setErrMsg(error?.message || "Errore apertura documento");
   }
-}
 
   function handleRemoveDoc() {
     setForm((prev) => ({ ...prev, allegato_doc: "" }));
@@ -385,9 +502,7 @@ useEffect(() => {
     }
 
     if (!canSave) {
-      setErrMsg(
-        "Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri)."
-      );
+      setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
       return;
     }
 
@@ -395,7 +510,7 @@ useEffect(() => {
 
     try {
       const payload = {
-          ...(isEditMode ? { id: recordId } : { studio_id: studioId }),
+        ...(isEditMode ? { id: recordId } : { studio_id: studioId }),
         nome_cognome: form.nome_cognome.trim(),
         codice_fiscale: cf,
         luogo_nascita: form.luogo_nascita.trim() || null,
@@ -409,39 +524,42 @@ useEffect(() => {
       };
 
       const response = await fetch(
-  isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  }
-);
+        isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const result = await response.json();
 
-      if (!response.ok || !result.ok) {
-        throw new Error(result.error || "Errore salvataggio rappresentante legale");
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Errore salvataggio rappresentante legale");
       }
 
       await router.push("/antiriciclaggio/rappresentanti?saved=1");
     } catch (error: any) {
-      setErrMsg(error?.message || "Errore inserimento rappresentante legale");
+      setErrMsg(error?.message || "Errore salvataggio rappresentante legale");
     } finally {
       setLoading(false);
     }
   }
 
+  /* =========================================================
+     RENDER
+     ========================================================= */
   return (
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
             {isEditMode
-                ? "Antiriciclaggio • Modifica rappresentante"
-                : "Antiriciclaggio • Rappresentanti"}
-              </CardTitle>
+              ? "Antiriciclaggio • Modifica rappresentante"
+              : "Antiriciclaggio • Nuovo rappresentante"}
+          </CardTitle>
 
           <div className="flex gap-2">
             <Button
@@ -455,218 +573,221 @@ useEffect(() => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
-                <Input
-                  id="nome_cognome"
-                  value={form.nome_cognome}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, nome_cognome: e.target.value }))
-                  }
-                  placeholder="Mario Rossi"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                <Input
-                  id="codice_fiscale"
-                  value={form.codice_fiscale}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      codice_fiscale: e.target.value.toUpperCase(),
-                    }))
-                  }
-                  placeholder="RSSMRA80A01H501U"
-                  maxLength={16}
-                />
-                {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-                  <p className="text-sm text-red-500 mt-1">
-                    Codice fiscale non valido
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="nazionalita">Nazionalità</Label>
-                <Input
-                  id="nazionalita"
-                  value={form.nazionalita}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, nazionalita: e.target.value }))
-                  }
-                  placeholder="Italiana"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="luogo_nascita">Luogo nascita</Label>
-                <Input
-                  id="luogo_nascita"
-                  value={form.luogo_nascita}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, luogo_nascita: e.target.value }))
-                  }
-                  placeholder="Roma"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="data_nascita">Data nascita</Label>
-                <Input
-                  id="data_nascita"
-                  type="date"
-                  value={form.data_nascita}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, data_nascita: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="citta_residenza">Città residenza</Label>
-                <Input
-                  id="citta_residenza"
-                  value={form.citta_residenza}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      citta_residenza: e.target.value,
-                    }))
-                  }
-                  placeholder="Milano"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="indirizzo_residenza">Indirizzo residenza</Label>
-                <Input
-                  id="indirizzo_residenza"
-                  value={form.indirizzo_residenza}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      indirizzo_residenza: e.target.value,
-                    }))
-                  }
-                  placeholder="Via Roma 10"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="tipo_doc">Tipo documento</Label>
-                <Select
-                  value={form.tipo_doc || undefined}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      tipo_doc: value as FormState["tipo_doc"],
-                    }))
-                  }
-                >
-                  <SelectTrigger id="tipo_doc">
-                    <SelectValue placeholder="Seleziona..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Carta di identità">
-                      Carta di identità
-                    </SelectItem>
-                    <SelectItem value="Passaporto">Passaporto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="scadenza_doc">Scadenza documento</Label>
-                <Input
-                  id="scadenza_doc"
-                  type="date"
-                  value={form.scadenza_doc}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, scadenza_doc: e.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <Label htmlFor="allegato_doc">Allegato documento</Label>
-
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      void handleUploadDoc(file);
-                    }
-                    e.currentTarget.value = "";
-                  }}
-                />
-
-                <div className="flex flex-col md:flex-row gap-3 md:items-center">
+          {pageLoading ? (
+            <div className="py-8 text-sm text-muted-foreground">
+              Caricamento dati rappresentante...
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
                   <Input
-                    id="allegato_doc"
-                    type="text"
-                    value={form.allegato_doc ? "Documento allegato" : ""}
-                    readOnly
-                    placeholder="Nessun documento allegato"
-                    className="cursor-default"
+                    id="nome_cognome"
+                    value={form.nome_cognome}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, nome_cognome: e.target.value }))
+                    }
+                    placeholder="Mario Rossi"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+                  <Input
+                    id="codice_fiscale"
+                    value={form.codice_fiscale}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        codice_fiscale: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="RSSMRA80A01H501U"
+                    maxLength={16}
+                  />
+                  {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
+                    <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="nazionalita">Nazionalità</Label>
+                  <Input
+                    id="nazionalita"
+                    value={form.nazionalita}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, nazionalita: e.target.value }))
+                    }
+                    placeholder="Italiana"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="luogo_nascita">Luogo nascita</Label>
+                  <Input
+                    id="luogo_nascita"
+                    value={form.luogo_nascita}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, luogo_nascita: e.target.value }))
+                    }
+                    placeholder="Roma"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="data_nascita">Data nascita</Label>
+                  <Input
+                    id="data_nascita"
+                    type="date"
+                    value={form.data_nascita}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, data_nascita: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="citta_residenza">Città residenza</Label>
+                  <Input
+                    id="citta_residenza"
+                    value={form.citta_residenza}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        citta_residenza: e.target.value,
+                      }))
+                    }
+                    placeholder="Milano"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="indirizzo_residenza">Indirizzo residenza</Label>
+                  <Input
+                    id="indirizzo_residenza"
+                    value={form.indirizzo_residenza}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        indirizzo_residenza: e.target.value,
+                      }))
+                    }
+                    placeholder="Via Roma 10"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tipo_doc">Tipo documento</Label>
+                  <Select
+                    value={form.tipo_doc}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        tipo_doc: value as TipoDocumento,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="tipo_doc">
+                      <SelectValue placeholder="Seleziona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+                      <SelectItem value="Passaporto">Passaporto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+                  <Input
+                    id="scadenza_doc"
+                    type="date"
+                    value={form.scadenza_doc}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, scadenza_doc: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="allegato_doc">Allegato documento</Label>
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleUploadDoc(file);
+                      }
+                      e.currentTarget.value = "";
+                    }}
                   />
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={uploading}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      {uploading ? "Caricamento..." : "Allega documento"}
-                    </Button>
+                  <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                    <Input
+                      id="allegato_doc"
+                      type="text"
+                      value={form.allegato_doc ? "Documento allegato" : ""}
+                      readOnly
+                      placeholder="Nessun documento allegato"
+                      className="cursor-default"
+                    />
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!form.allegato_doc}
-                      onClick={handleOpenDoc}
-                    >
-                      Apri
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={uploading}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        {uploading ? "Caricamento..." : "Allega documento"}
+                      </Button>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      disabled={!form.allegato_doc || uploading}
-                      onClick={handleRemoveDoc}
-                    >
-                      Rimuovi
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!form.allegato_doc}
+                        onClick={handleOpenDoc}
+                      >
+                        Apri
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={!form.allegato_doc || uploading}
+                        onClick={handleRemoveDoc}
+                      >
+                        Rimuovi
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
-            {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+              {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
+              {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
 
-            <p className="text-xs text-muted-foreground">
-              Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME}
-            </p>
+              <p className="text-xs text-muted-foreground">
+                Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME} | Mode:{" "}
+                {isEditMode ? `edit (${recordId})` : "create"}
+              </p>
 
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading || !canSave}>
-                {loading ? "Salvataggio..." : "Salva dati"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={loading || !canSave}>
+                  {loading ? "Salvataggio..." : "Salva dati"}
+                </Button>
 
-              <Button type="button" variant="secondary" onClick={resetForm}>
-                Pulisci
-              </Button>
-            </div>
-          </form>
+                <Button type="button" variant="secondary" onClick={resetForm}>
+                  {isEditMode ? "Ripristina dati" : "Pulisci"}
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>
