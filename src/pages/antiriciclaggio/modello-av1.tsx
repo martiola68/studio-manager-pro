@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+            import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getStudioId } from "@/services/getStudioId";
+import { useRouter } from "next/router";
 
 type Cliente = {
   id: string;
@@ -203,6 +204,7 @@ function getCategoriaRischio(value: number) {
 }
 
 export default function ModelloAV1Page() {
+  const router = useRouter();
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
   const [formData, setFormData] = useState<FormDataType & Record<string, any>>({
@@ -664,9 +666,17 @@ export default function ModelloAV1Page() {
                 {saving ? "Salvataggio..." : "Salva AV1"}
               </Button>
 
-              <Button type="button" variant="outline">
-                Nuovo AV4
-              </Button>
+             <Button
+              type="button"
+                  variant="outline"
+                    onClick={() =>
+                      router.push(
+                        `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id}&av1_id=${router.query.id ?? ""}&cliente_id=${formData.Cliente ?? ""}`
+                    )
+                    }
+                    >
+                Crea AV4
+                </Button>
             </div>
           </div>
         </CardContent>
