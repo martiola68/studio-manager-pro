@@ -291,7 +291,7 @@ async function loadClienti() {
 }
   
  async function loadRappresentanteDaCliente(clienteId: string) {
-   console.log("rappLegaleId trovato:", rappLegaleId);
+ 
   if (!clienteId) {
     clearRappresentanteFields();
     return;
@@ -320,7 +320,7 @@ async function loadClienti() {
       ? String(clienteRow.rapp_legale_id)
       : "";
 
-      console.log("rappLegaleId trovato:", rappLegaleId);
+     console.log("rappLegaleId trovato:", rappLegaleId);
 
     if (!rappLegaleId) {
       clearRappresentanteFields();
