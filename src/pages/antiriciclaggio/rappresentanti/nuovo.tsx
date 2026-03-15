@@ -165,10 +165,6 @@ type FormState = {
   allegato_doc: string;
 };
 
-type SaveResponse =
-  | { ok: true; data: any }
-  | { ok: false; error: string };
-
 const initialFormState: FormState = {
   nome_cognome: "",
   codice_fiscale: "",
@@ -194,9 +190,6 @@ export default function NuovoRappresentantePage() {
 
   const [form, setForm] = useState<FormState>(initialFormState);
 
-  /* =========================================================
-     STUDIO_ID
-     ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
       const supabase = getSupabaseClient() as any;
@@ -242,7 +235,6 @@ export default function NuovoRappresentantePage() {
         }
 
         setStudioId(sid);
-
         if (typeof window !== "undefined") {
           localStorage.setItem("studio_id", sid);
         }
@@ -267,73 +259,40 @@ export default function NuovoRappresentantePage() {
     setErrMsg(null);
   };
 
-  /* =========================================================
-     STORAGE HELPERS
-     ========================================================= */
-  function getSafeFileName(file: File) {
-    const originalName = file.name || "documento";
-    const ext = originalName.includes(".")
-      ? originalName.split(".").pop()?.toLowerCase() || "bin"
-      : "bin";
-
-    const cleanBase = originalName
-      .replace(/\.[^/.]+$/, "")
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .slice(0, 50);
-
-    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    return `${cleanBase || "documento"}_${unique}.${ext}`;
-  }
-
-  function getFilePath(file: File, sid: string) {
-    const safeName = getSafeFileName(file);
-    return `rapp-legali/${sid}/${safeName}`;
-  }
-
-  /* =========================================================
-     UPLOAD DOCUMENTO SU SUPABASE STORAGE
-     ========================================================= */
   async function handleUploadDoc(file: File) {
     if (!studioId) {
       setErrMsg("studio_id non disponibile: impossibile caricare il documento.");
       return;
     }
 
-    const supabase = getSupabaseClient() as any;
-
     setUploading(true);
     setErrMsg(null);
     setOkMsg(null);
 
     try {
-      const filePath = getFilePath(file, studioId);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("studio_id", studioId);
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type || "application/octet-stream",
-        });
+      const response = await fetch("/api/rapp-legali/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      const result = await response.json();
 
-      const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      const publicUrl = data?.publicUrl || "";
-
-      if (!publicUrl) {
-        throw new Error("Impossibile ottenere la URL pubblica del documento.");
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Errore upload documento");
       }
 
       setForm((prev) => ({
         ...prev,
-        allegato_doc: publicUrl,
+        allegato_doc: result.publicUrl,
       }));
 
       setOkMsg("✅ Documento allegato.");
     } catch (error: any) {
-      setErrMsg(error?.message || "Errore upload documento.");
+      setErrMsg(error?.message || "Errore upload documento");
     } finally {
       setUploading(false);
     }
@@ -350,9 +309,6 @@ export default function NuovoRappresentantePage() {
     setErrMsg(null);
   }
 
-  /* =========================================================
-     SUBMIT
-     ========================================================= */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -399,20 +355,16 @@ export default function NuovoRappresentantePage() {
         body: JSON.stringify(payload),
       });
 
-      const result: SaveResponse = await response.json();
+      const result = await response.json();
 
       if (!response.ok || !result.ok) {
-        throw new Error(
-          result && "error" in result
-            ? result.error
-            : "Errore salvataggio rappresentante legale."
-        );
+        throw new Error(result.error || "Errore salvataggio rappresentante legale");
       }
 
       setOkMsg("✅ Rappresentante salvato correttamente.");
       resetForm();
     } catch (error: any) {
-      setErrMsg(error?.message || "Errore inserimento rappresentante legale.");
+      setErrMsg(error?.message || "Errore inserimento rappresentante legale");
     } finally {
       setLoading(false);
     }
