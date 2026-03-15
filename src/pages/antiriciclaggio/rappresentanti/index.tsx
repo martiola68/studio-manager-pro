@@ -256,7 +256,7 @@ export default function RappresentantiIndexPage() {
                         size="icon"
                         title="Modifica"
                         onClick={() =>
-                          router.push(`/antiriciclaggio/rappresentanti/${r.id}`)
+                          router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
                         }
                       >
                         <Pencil className="h-4 w-4" />
