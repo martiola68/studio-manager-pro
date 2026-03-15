@@ -27,8 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const [fields, files] = await form.parse(req);
 
-    const file = files.file?.[0];
-    const studioId = fields.studio_id?.[0];
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+    const studioId = Array.isArray(fields.studio_id) ? fields.studio_id[0] : fields.studio_id;
 
     if (!file || !studioId) {
       return res.status(400).json({
@@ -38,14 +38,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const buffer = fs.readFileSync(file.filepath);
-
-    const fileName = `${Date.now()}_${file.originalFilename}`;
+    const safeName = file.originalFilename || `file_${Date.now()}`;
+    const fileName = `${Date.now()}_${safeName}`;
     const path = `${studioId}/${fileName}`;
 
     const { error } = await supabase.storage
       .from("allegati")
       .upload(path, buffer, {
         contentType: file.mimetype || "application/octet-stream",
+        upsert: false,
       });
 
     if (error) {
