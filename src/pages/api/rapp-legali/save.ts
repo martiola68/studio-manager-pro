@@ -1,35 +1,41 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
-}
-
-if (!serviceRoleKey) {
-  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
-}
-
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-
 type ResponseData =
   | { ok: true; data: any }
   | { ok: false; error: string };
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({
-      ok: false,
-      error: "Method not allowed",
-    });
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
   try {
+    if (!supabaseUrl) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "NEXT_PUBLIC_SUPABASE_URL mancante" });
+    }
+
+    if (!serviceRoleKey) {
+      return res
+        .status(500)
+        .json({ ok: false, error: "SUPABASE_SERVICE_ROLE_KEY mancante" });
+    }
+
     const {
       studio_id,
       nome_cognome,
@@ -45,24 +51,19 @@ export default async function handler(
     } = req.body ?? {};
 
     if (!studio_id) {
-      return res.status(400).json({
-        ok: false,
-        error: "studio_id obbligatorio",
-      });
+      return res.status(400).json({ ok: false, error: "studio_id obbligatorio" });
     }
 
     if (!nome_cognome || !String(nome_cognome).trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "nome_cognome obbligatorio",
-      });
+      return res
+        .status(400)
+        .json({ ok: false, error: "nome_cognome obbligatorio" });
     }
 
     if (!codice_fiscale || !String(codice_fiscale).trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "codice_fiscale obbligatorio",
-      });
+      return res
+        .status(400)
+        .json({ ok: false, error: "codice_fiscale obbligatorio" });
     }
 
     const payload = {
@@ -88,20 +89,14 @@ export default async function handler(
       .single();
 
     if (error) {
-      return res.status(400).json({
-        ok: false,
-        error: error.message,
-      });
+      return res.status(400).json({ ok: false, error: error.message });
     }
 
-    return res.status(200).json({
-      ok: true,
-      data,
-    });
-  } catch (error: any) {
+    return res.status(200).json({ ok: true, data });
+  } catch (e: any) {
     return res.status(500).json({
       ok: false,
-      error: error?.message || "Errore salvataggio rappresentante legale",
+      error: e?.message || "Errore salvataggio rappresentante legale",
     });
   }
 }
