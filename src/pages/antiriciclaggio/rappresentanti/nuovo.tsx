@@ -362,7 +362,7 @@ export default function NuovoRappresentantePage() {
         nazionalita: form.nazionalita.trim() || null,
         tipo_doc: form.tipo_doc || null,
         scadenza_doc: form.scadenza_doc || null,
-        allegato_doc:
+        allegato_doc: form.allegato_doc || null,
       };
 
       const response = await fetch("/api/rapp-legali/save", {
