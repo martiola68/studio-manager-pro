@@ -290,8 +290,7 @@ async function loadClienti() {
   }
 }
   
- async function loadRappresentanteDaCliente(clienteId: string) {
- 
+async function loadRappresentanteDaCliente(clienteId: string) {
   if (!clienteId) {
     clearRappresentanteFields();
     return;
@@ -307,8 +306,8 @@ async function loadClienti() {
       .eq("id", clienteId)
       .single();
 
-     console.log("tbclienti row:", clienteRow);
-    console.log("tbclienti error:", clienteError);
+    console.log("AV4 tbclienti row:", clienteRow);
+    console.log("AV4 tbclienti error:", clienteError);
 
     if (clienteError) {
       console.error("Errore caricamento cliente:", clienteError);
@@ -316,11 +315,12 @@ async function loadClienti() {
       return;
     }
 
-    const rappLegaleId = clienteRow?.rapp_legale_id
-      ? String(clienteRow.rapp_legale_id)
-      : "";
+    const rappLegaleId =
+      clienteRow?.rapp_legale_id != null
+        ? String(clienteRow.rapp_legale_id)
+        : "";
 
-     console.log("rappLegaleId trovato:", rappLegaleId);
+    console.log("AV4 rappLegaleId:", rappLegaleId);
 
     if (!rappLegaleId) {
       clearRappresentanteFields();
@@ -343,8 +343,8 @@ async function loadClienti() {
       .eq("id", rappLegaleId)
       .single();
 
-    console.log("rapp_legali row:", rappRow);
-    console.log("rapp_legali error:", rappError);
+    console.log("AV4 rapp_legali row:", rappRow);
+    console.log("AV4 rapp_legali error:", rappError);
 
     if (rappError) {
       console.error("Errore caricamento rappresentante:", rappError);
@@ -352,21 +352,18 @@ async function loadClienti() {
       return;
     }
 
-    const row = (rappRow || {}) as RappresentanteRow;
-
     setForm((prev) => ({
       ...prev,
       rapp_legale_id: rappLegaleId,
-      dichiarante_nome_cognome: row.nome_cognome ?? "",
-      dichiarante_codice_fiscale: row.codice_fiscale ?? "",
-      dichiarante_luogo_nascita: row.luogo_nascita ?? "",
-      dichiarante_data_nascita: normalizeDateForInput(row.data_nascita),
-      dichiarante_indirizzo_residenza: row.indirizzo_residenza ?? "",
-      dichiarante_citta_residenza: row.citta_residenza ?? "",
-      dichiarante_cap_residenza: row.cap_residenza ?? "",
-      dichiarante_nazionalita: row.nazionalita ?? "",
+      dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
+      dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
+      dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
+      dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
+      dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
+      dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
+      dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
+      dichiarante_nazionalita: rappRow?.nazionalita ?? "",
     }));
-    
   } catch (error) {
     console.error("Errore imprevisto caricamento rappresentante:", error);
     clearRappresentanteFields();
