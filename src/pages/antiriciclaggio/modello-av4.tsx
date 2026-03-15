@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import TitolariEffettiviForm from "@/pages/antiriciclaggio/TitolariEffettiviForm";
+import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
 type ClienteOption = {
   id: string;
