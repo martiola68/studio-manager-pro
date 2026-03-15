@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -233,6 +233,7 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const supabase = getSupabaseClient() as any;
 
   const isEditMode = router.isReady && typeof router.query.id === "string" && !!router.query.id;
   const recordId = router.isReady && typeof router.query.id === "string" ? router.query.id : "";
@@ -253,8 +254,7 @@ export default function NuovoRappresentantePage() {
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-      const supabase = getSupabaseClient() as any;
-      setErrMsg(null);
+            setErrMsg(null);
 
       try {
         if (typeof window !== "undefined") {
@@ -322,19 +322,25 @@ export default function NuovoRappresentantePage() {
 
         // 1) Tentativo via API
         try {
-          const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
-          const result = await response.json();
+         const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
+const contentType = response.headers.get("content-type") || "";
 
-          if (response.ok && result?.ok && result?.data) {
-            row = result.data as RappLegaleRow;
-          }
+let result: any = null;
+
+if (contentType.includes("application/json")) {
+  result = await response.json();
+}
+
+if (response.ok && result?.ok && result?.data) {
+  row = result.data as RappLegaleRow;
+}
+          
         } catch {
           // fallback sotto
         }
 
         // 2) Fallback diretto Supabase
         if (!row) {
-          const supabase = getSupabaseClient() as any;
 
           const { data, error } = await supabase
             .from("rapp_legali")
@@ -358,6 +364,10 @@ export default function NuovoRappresentantePage() {
         if (cancelled) return;
 
         const mapped = mapRowToForm(row);
+
+        console.log("RAPP_LEGALE LOAD row:", row);
+console.log("RAPP_LEGALE LOAD mapped:", mapped);
+console.log("RAPP_LEGALE LOAD recordId:", recordId);
 
         setForm(mapped);
         setInitialLoadedForm(mapped);
