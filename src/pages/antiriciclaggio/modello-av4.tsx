@@ -4,19 +4,20 @@ import TitolariEffettiviForm from "@/pages/antiriciclaggio/TitolariEffettiviForm
 
 type ClienteOption = {
   id: string;
-  cognome_nome: string;
+  rapp_legale_id: string | null;
+  label: string;
 };
 
-type RappresentanteOption = {
-  id: string;
-  nome_cognome?: string;
-  codice_fiscale?: string;
-  luogo_nascita?: string;
-  data_nascita?: string;
-  indirizzo_residenza?: string;
-  citta_residenza?: string;
-  cap_residenza?: string;
-  nazionalita?: string;
+type RappresentanteRow = {
+  id?: string;
+  nome_cognome?: string | null;
+  codice_fiscale?: string | null;
+  luogo_nascita?: string | null;
+  data_nascita?: string | null;
+  indirizzo_residenza?: string | null;
+  citta_residenza?: string | null;
+  cap_residenza?: string | null;
+  nazionalita?: string | null;
 };
 
 type FormState = {
@@ -148,26 +149,58 @@ const initialFormState = (studioId = "", av1Id = ""): FormState => ({
   data_firma_bis: "",
 
   stato: "bozza",
-  versione: 1
+  versione: 1,
 });
 
+function normalizeDateForInput(value?: string | null): string {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildClienteLabel(row: any): string {
+  const parts = [
+    row?.cognome_nome,
+    row?.denominazione,
+    row?.ragione_sociale,
+    [row?.cognome, row?.nome].filter(Boolean).join(" ").trim(),
+    row?.nome_cognome,
+    row?.codice_fiscale,
+    row?.email,
+  ]
+    .map((v) => (typeof v === "string" ? v.trim() : ""))
+    .filter(Boolean);
+
+  return parts[0] || `Cliente ${row?.id ?? ""}`;
+}
+
 export default function ModelloAV4() {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient() as any;
+
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
-  const [rappresentanti, setRappresentanti] = useState<RappresentanteOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingClienti, setLoadingClienti] = useState(false);
+  const [loadingRappresentante, setLoadingRappresentante] = useState(false);
   const [av4Id, setAv4Id] = useState<string | null>(null);
 
   const queryParams = useMemo(() => {
     if (typeof window === "undefined") {
-      return { studioId: "", av1Id: "" };
+      return { studioId: "", av1Id: "", clienteId: "" };
     }
 
     const params = new URLSearchParams(window.location.search);
 
     return {
       studioId: params.get("studio_id") || "",
-      av1Id: params.get("av1_id") || ""
+      av1Id: params.get("av1_id") || "",
+      clienteId: params.get("cliente_id") || "",
     };
   }, []);
 
@@ -175,46 +208,157 @@ export default function ModelloAV4() {
     initialFormState(queryParams.studioId, queryParams.av1Id)
   );
 
+  function clearRappresentanteFields() {
+    setForm((prev) => ({
+      ...prev,
+      rapp_legale_id: "",
+      dichiarante_nome_cognome: "",
+      dichiarante_codice_fiscale: "",
+      dichiarante_luogo_nascita: "",
+      dichiarante_data_nascita: "",
+      dichiarante_indirizzo_residenza: "",
+      dichiarante_citta_residenza: "",
+      dichiarante_cap_residenza: "",
+      dichiarante_nazionalita: "",
+    }));
+  }
+
+  async function loadClienti() {
+    setLoadingClienti(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("tbclienti")
+        .select("*")
+        .order("id", { ascending: true });
+
+      if (error) {
+        console.error("Errore caricamento clienti:", error);
+        return;
+      }
+
+      const rows = Array.isArray(data) ? data : [];
+
+      const mapped: ClienteOption[] = rows.map((row: any) => ({
+        id: String(row.id),
+        rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : null,
+        label: buildClienteLabel(row),
+      }));
+
+      setClienti(mapped);
+    } catch (error) {
+      console.error("Errore imprevisto caricamento clienti:", error);
+    } finally {
+      setLoadingClienti(false);
+    }
+  }
+
+  async function loadRappresentanteDaCliente(clienteId: string) {
+    if (!clienteId) {
+      clearRappresentanteFields();
+      return;
+    }
+
+    setLoadingRappresentante(true);
+
+    try {
+      const { data: clienteRow, error: clienteError } = await supabase
+        .from("tbclienti")
+        .select("id, rapp_legale_id")
+        .eq("id", clienteId)
+        .single();
+
+      if (clienteError) {
+        console.error("Errore caricamento cliente:", clienteError);
+        clearRappresentanteFields();
+        return;
+      }
+
+      const rappLegaleId = clienteRow?.rapp_legale_id
+        ? String(clienteRow.rapp_legale_id)
+        : "";
+
+      if (!rappLegaleId) {
+        clearRappresentanteFields();
+        return;
+      }
+
+      const { data: rappRow, error: rappError } = await (supabase as any)
+        .from("rapp_legali")
+        .select(
+          `
+            id,
+            nome_cognome,
+            codice_fiscale,
+            luogo_nascita,
+            data_nascita,
+            indirizzo_residenza,
+            citta_residenza,
+            cap_residenza,
+            nazionalita
+          `
+        )
+        .eq("id", rappLegaleId)
+        .single();
+
+      if (rappError) {
+        console.error("Errore caricamento rappresentante:", rappError);
+        clearRappresentanteFields();
+        return;
+      }
+
+      const row = (rappRow || {}) as RappresentanteRow;
+
+      setForm((prev) => ({
+        ...prev,
+        rapp_legale_id: rappLegaleId,
+        dichiarante_nome_cognome: row.nome_cognome ?? "",
+        dichiarante_codice_fiscale: row.codice_fiscale ?? "",
+        dichiarante_luogo_nascita: row.luogo_nascita ?? "",
+        dichiarante_data_nascita: normalizeDateForInput(row.data_nascita),
+        dichiarante_indirizzo_residenza: row.indirizzo_residenza ?? "",
+        dichiarante_citta_residenza: row.citta_residenza ?? "",
+        dichiarante_cap_residenza: row.cap_residenza ?? "",
+        dichiarante_nazionalita: row.nazionalita ?? "",
+      }));
+    } catch (error) {
+      console.error("Errore imprevisto caricamento rappresentante:", error);
+      clearRappresentanteFields();
+    } finally {
+      setLoadingRappresentante(false);
+    }
+  }
+
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
       studio_id: queryParams.studioId,
-      av1_id: queryParams.av1Id
+      av1_id: queryParams.av1Id,
+      cliente_id: queryParams.clienteId || prev.cliente_id,
     }));
-  }, [queryParams.studioId, queryParams.av1Id]);
+  }, [queryParams.studioId, queryParams.av1Id, queryParams.clienteId]);
 
   useEffect(() => {
-    loadClienti();
-    loadRappresentanti();
+    void loadClienti();
   }, []);
 
-  async function loadClienti() {
-    const { data, error } = await supabase
-      .from("tbclienti")
-      .select("id, cognome_nome")
-      .order("cognome_nome");
+  useEffect(() => {
+    if (queryParams.clienteId) {
+      setForm((prev) => ({
+        ...prev,
+        cliente_id: queryParams.clienteId,
+      }));
+    }
+  }, [queryParams.clienteId]);
 
-    if (error) {
-      console.error("Errore caricamento clienti:", error);
+  useEffect(() => {
+    if (!form.cliente_id) {
+      clearRappresentanteFields();
       return;
     }
 
-    setClienti((data || []) as ClienteOption[]);
-  }
-
-  async function loadRappresentanti() {
-    const { data, error } = await supabase
-      .from("rapp_legali")
-      .select("*")
-      .order("nome_cognome");
-
-    if (error) {
-      console.error("Errore caricamento rappresentanti:", error);
-      return;
-    }
-
-    setRappresentanti((data || []) as RappresentanteOption[]);
-  }
+    void loadRappresentanteDaCliente(form.cliente_id);
+  }, [form.cliente_id]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -225,7 +369,7 @@ export default function ModelloAV4() {
     setForm((prev) => {
       const next = {
         ...prev,
-        [name]: type === "checkbox" ? checked : value
+        [name]: type === "checkbox" ? checked : value,
       };
 
       if (name === "domanda5" && type === "checkbox" && !checked) {
@@ -259,54 +403,12 @@ export default function ModelloAV4() {
     });
   }
 
-  async function handleRappresentanteChange(
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) {
+  function handleClienteChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const selectedId = e.target.value;
 
     setForm((prev) => ({
       ...prev,
-      rapp_legale_id: selectedId
-    }));
-
-    if (!selectedId) {
-      setForm((prev) => ({
-        ...prev,
-        rapp_legale_id: "",
-        dichiarante_nome_cognome: "",
-        dichiarante_codice_fiscale: "",
-        dichiarante_luogo_nascita: "",
-        dichiarante_data_nascita: "",
-        dichiarante_indirizzo_residenza: "",
-        dichiarante_citta_residenza: "",
-        dichiarante_cap_residenza: "",
-        dichiarante_nazionalita: ""
-      }));
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("rapp_legali")
-      .select("*")
-      .eq("id", selectedId)
-      .single();
-
-    if (error) {
-      console.error("Errore caricamento rappresentante selezionato:", error);
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      rapp_legale_id: selectedId,
-      dichiarante_nome_cognome: data?.nome_cognome || "",
-      dichiarante_codice_fiscale: data?.codice_fiscale || "",
-      dichiarante_luogo_nascita: data?.luogo_nascita || "",
-      dichiarante_data_nascita: data?.data_nascita || "",
-      dichiarante_indirizzo_residenza: data?.indirizzo_residenza || "",
-      dichiarante_citta_residenza: data?.citta_residenza || "",
-      dichiarante_cap_residenza: data?.cap_residenza || "",
-      dichiarante_nazionalita: data?.nazionalita || ""
+      cliente_id: selectedId,
     }));
   }
 
@@ -327,7 +429,7 @@ export default function ModelloAV4() {
     }
 
     if (!form.rapp_legale_id) {
-      alert("Seleziona il rappresentante.");
+      alert("Per il cliente selezionato non risulta un rappresentante collegato.");
       return false;
     }
 
@@ -346,16 +448,17 @@ export default function ModelloAV4() {
         av1_id: Number(form.av1_id),
         rapp_legale_id: form.rapp_legale_id || null,
 
-        dichiarante_nome_cognome: form.dichiarante_nome_cognome,
-        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale,
-        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita,
+        dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
+        dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
+        dichiarante_luogo_nascita: form.dichiarante_luogo_nascita || null,
         dichiarante_data_nascita: form.dichiarante_data_nascita || null,
-        dichiarante_indirizzo_residenza: form.dichiarante_indirizzo_residenza,
-        dichiarante_citta_residenza: form.dichiarante_citta_residenza,
-        dichiarante_cap_residenza: form.dichiarante_cap_residenza,
-        dichiarante_nazionalita: form.dichiarante_nazionalita,
+        dichiarante_indirizzo_residenza:
+          form.dichiarante_indirizzo_residenza || null,
+        dichiarante_citta_residenza: form.dichiarante_citta_residenza || null,
+        dichiarante_cap_residenza: form.dichiarante_cap_residenza || null,
+        dichiarante_nazionalita: form.dichiarante_nazionalita || null,
 
-        natura_prestazione: form.natura_prestazione,
+        natura_prestazione: form.natura_prestazione || null,
 
         domanda1: form.domanda1,
         domanda2: form.domanda2,
@@ -363,47 +466,47 @@ export default function ModelloAV4() {
         domanda3: form.domanda3,
         domanda4: form.domanda4,
         domanda5: form.domanda5,
-        spec_domanda5: form.spec_domanda5,
+        spec_domanda5: form.spec_domanda5 || null,
 
         domanda6: form.domanda6,
         domanda7: form.domanda7,
         domanda8: form.domanda8,
         domanda9: form.domanda9,
 
-        nome_soc: form.nome_soc,
-        sede_legale: form.sede_legale,
-        indirizzo_sede: form.indirizzo_sede,
-        reg_imprese: form.reg_imprese,
-        num_reg_imprese: form.num_reg_imprese,
-        cod_fiscale_soc: form.cod_fiscale_soc,
+        nome_soc: form.nome_soc || null,
+        sede_legale: form.sede_legale || null,
+        indirizzo_sede: form.indirizzo_sede || null,
+        reg_imprese: form.reg_imprese || null,
+        num_reg_imprese: form.num_reg_imprese || null,
+        cod_fiscale_soc: form.cod_fiscale_soc || null,
 
-        nome_soc_bis: form.nome_soc_bis,
-        sede_legale_bis: form.sede_legale_bis,
-        indirizzo_sede_bis: form.indirizzo_sede_bis,
-        reg_imprese_bis: form.reg_imprese_bis,
-        num_reg_imprese_bis: form.num_reg_imprese_bis,
-        cod_fiscale_soc_bis: form.cod_fiscale_soc_bis,
-        nome_soc_ter: form.nome_soc_ter,
+        nome_soc_bis: form.nome_soc_bis || null,
+        sede_legale_bis: form.sede_legale_bis || null,
+        indirizzo_sede_bis: form.indirizzo_sede_bis || null,
+        reg_imprese_bis: form.reg_imprese_bis || null,
+        num_reg_imprese_bis: form.num_reg_imprese_bis || null,
+        cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
+        nome_soc_ter: form.nome_soc_ter || null,
 
         domanda10: form.domanda10,
         domanda11: form.domanda11,
-        specifica12: form.specifica12,
+        specifica12: form.specifica12 || null,
 
-        specifica10b: form.specifica10b,
-        specifica10c: form.specifica10c,
-        specifica11c: form.specifica11c,
+        specifica10b: form.specifica10b || null,
+        specifica10c: form.specifica10c || null,
+        specifica11c: form.specifica11c || null,
 
-        specifica10d: form.specifica10d,
-        specifica10e: form.specifica10e,
-        specifica10f: form.specifica10f,
+        specifica10d: form.specifica10d || null,
+        specifica10e: form.specifica10e || null,
+        specifica10f: form.specifica10f || null,
 
-        luogo_firma: form.luogo_firma,
+        luogo_firma: form.luogo_firma || null,
         data_firma: form.data_firma || null,
-        luogo_firma_bis: form.luogo_firma_bis,
+        luogo_firma_bis: form.luogo_firma_bis || null,
         data_firma_bis: form.data_firma_bis || null,
 
         stato: form.stato,
-        versione: form.versione
+        versione: form.versione,
       };
 
       const { data, error } = await supabase
@@ -418,8 +521,11 @@ export default function ModelloAV4() {
         return;
       }
 
-      setAv4Id(data.id);
+      setAv4Id(String(data.id));
       alert("AV4 salvato correttamente");
+    } catch (error) {
+      console.error("Errore imprevisto salvataggio AV4:", error);
+      alert("Errore durante il salvataggio");
     } finally {
       setLoading(false);
     }
@@ -427,9 +533,7 @@ export default function ModelloAV4() {
 
   return (
     <div className="p-6 max-w-5xl">
-      <h1 className="text-xl font-bold mb-2">
-        AV.4 – Dichiarazione del Cliente
-      </h1>
+      <h1 className="text-xl font-bold mb-2">AV.4 – Dichiarazione del Cliente</h1>
 
       <p className="mb-6 text-sm leading-6">
         In ottemperanza alle disposizioni dell’art. 22 del D.Lgs. 231/2007
@@ -464,49 +568,50 @@ export default function ModelloAV4() {
         </div>
       </div>
 
-      {/* CLIENTE */}
       <div className="mb-4">
         <label className="block font-medium mb-1">Cliente</label>
 
         <select
           name="cliente_id"
           value={form.cliente_id}
-          onChange={handleChange}
+          onChange={handleClienteChange}
           className="border p-2 w-full rounded"
         >
-          <option value="">Seleziona cliente</option>
+          <option value="">
+            {loadingClienti ? "Caricamento clienti..." : "Seleziona cliente"}
+          </option>
 
           {clienti.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.cognome_nome}
+              {c.label}
             </option>
           ))}
         </select>
       </div>
 
-      {/* RAPPRESENTANTE */}
       <div className="mb-4">
         <label className="block font-medium mb-1">
-          Il sottoscritto / Rappresentante
+          Rappresentante collegato al cliente
         </label>
 
-        <select
-          name="rapp_legale_id"
-          value={form.rapp_legale_id}
-          onChange={handleRappresentanteChange}
-          className="border p-2 w-full rounded"
-        >
-          <option value="">Seleziona rappresentante</option>
+        <input
+          value={
+            loadingRappresentante
+              ? "Caricamento rappresentante..."
+              : form.dichiarante_nome_cognome || "Nessun rappresentante collegato"
+          }
+          className="border p-2 w-full rounded bg-gray-50"
+          readOnly
+        />
 
-          {rappresentanti.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.nome_cognome}
-            </option>
-          ))}
-        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          Il rappresentante viene recuperato automaticamente da
+          <strong> tbclienti.rapp_legale_id </strong>
+          e caricato dalla tabella
+          <strong> rapp_legali</strong>.
+        </p>
       </div>
 
-      {/* SNAPSHOT DICHIARANTE */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block font-medium mb-1">Cognome e nome</label>
@@ -514,7 +619,7 @@ export default function ModelloAV4() {
             name="dichiarante_nome_cognome"
             value={form.dichiarante_nome_cognome}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -525,7 +630,7 @@ export default function ModelloAV4() {
             name="dichiarante_codice_fiscale"
             value={form.dichiarante_codice_fiscale}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -536,7 +641,7 @@ export default function ModelloAV4() {
             name="dichiarante_luogo_nascita"
             value={form.dichiarante_luogo_nascita}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -547,7 +652,7 @@ export default function ModelloAV4() {
             name="dichiarante_data_nascita"
             value={form.dichiarante_data_nascita}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -558,7 +663,7 @@ export default function ModelloAV4() {
             name="dichiarante_indirizzo_residenza"
             value={form.dichiarante_indirizzo_residenza}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -569,7 +674,7 @@ export default function ModelloAV4() {
             name="dichiarante_citta_residenza"
             value={form.dichiarante_citta_residenza}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -580,7 +685,7 @@ export default function ModelloAV4() {
             name="dichiarante_cap_residenza"
             value={form.dichiarante_cap_residenza}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
@@ -591,13 +696,12 @@ export default function ModelloAV4() {
             name="dichiarante_nazionalita"
             value={form.dichiarante_nazionalita}
             onChange={handleChange}
-            className="border p-2 w-full rounded"
+            className="border p-2 w-full rounded bg-gray-50"
             readOnly
           />
         </div>
       </div>
 
-      {/* DOMANDA 1 */}
       <div className="mb-3">
         <label className="flex items-center gap-2">
           <input
@@ -610,7 +714,6 @@ export default function ModelloAV4() {
         </label>
       </div>
 
-      {/* DOMANDA 2 */}
       <div className="mb-6">
         <label className="flex items-center gap-2">
           <input
@@ -623,7 +726,6 @@ export default function ModelloAV4() {
         </label>
       </div>
 
-      {/* NATURA PRESTAZIONE */}
       <div className="mb-6">
         <label className="block font-medium mb-1">
           Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo
@@ -639,10 +741,7 @@ export default function ModelloAV4() {
         />
       </div>
 
-      {/* PPE CLIENTE */}
-      <div className="mt-6 font-semibold mb-3">
-        Persona politicamente esposta
-      </div>
+      <div className="mt-6 font-semibold mb-3">Persona politicamente esposta</div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
@@ -699,7 +798,6 @@ export default function ModelloAV4() {
         </div>
       )}
 
-      {/* TITOLARE EFFETTIVO */}
       <div className="mt-6 mb-3 text-sm leading-6">
         - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1,
         comma 2, lettera pp) e ai criteri per la determinazione della titolarità
@@ -961,10 +1059,7 @@ export default function ModelloAV4() {
         </div>
       )}
 
-      {/* PPE TITOLARI EFFETTIVI */}
-      <div className="mt-6 font-semibold mb-3">
-        PPE titolari effettivi
-      </div>
+      <div className="mt-6 font-semibold mb-3">PPE titolari effettivi</div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
@@ -1007,7 +1102,6 @@ export default function ModelloAV4() {
         </div>
       )}
 
-      {/* RELAZIONI / FONDI / MEZZI */}
       <div className="mt-6 mb-4">
         <label className="block font-medium mb-1">
           Che le relazioni intercorrenti tra il Cliente e il titolare effettivo
@@ -1055,10 +1149,7 @@ export default function ModelloAV4() {
         231/2007.
       </div>
 
-      {/* ATTIVITÀ CLIENTE */}
-      <div className="mt-6 font-semibold mb-3">
-        Professione / attività del cliente
-      </div>
+      <div className="mt-6 font-semibold mb-3">Professione / attività del cliente</div>
 
       <div className="mb-4">
         <label className="block font-medium mb-1">
@@ -1092,7 +1183,6 @@ export default function ModelloAV4() {
         />
       </div>
 
-      {/* FIRMA */}
       <div className="mt-6 font-semibold mb-3">Firma</div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -1139,7 +1229,6 @@ export default function ModelloAV4() {
         </div>
       </div>
 
-      {/* SALVA */}
       <button
         onClick={salvaAV4}
         disabled={loading}
