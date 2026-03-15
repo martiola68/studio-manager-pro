@@ -4,6 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 type Rapp = {
   id: string;
@@ -15,6 +16,13 @@ type Rapp = {
   allegato_doc: string | null;
   created_at?: string | null;
 };
+
+function formatDateEU(value: string | null | undefined) {
+  if (!value) return "-";
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
 
 export default function RappresentantiIndexPage() {
   const router = useRouter();
@@ -81,10 +89,7 @@ export default function RappresentantiIndexPage() {
           .eq("studio_id", studioId)
           .order("nome_cognome", { ascending: true });
 
-        if (error) {
-          throw error;
-        }
-
+        if (error) throw error;
         setRows((data || []) as Rapp[]);
       } finally {
         setLoading(false);
@@ -98,10 +103,11 @@ export default function RappresentantiIndexPage() {
     const s = q.trim().toLowerCase();
     if (!s) return rows;
 
-    return rows.filter((r) =>
-      (r.nome_cognome || "").toLowerCase().includes(s) ||
-      (r.codice_fiscale || "").toLowerCase().includes(s) ||
-      (r.tipo_doc || "").toLowerCase().includes(s)
+    return rows.filter(
+      (r) =>
+        (r.nome_cognome || "").toLowerCase().includes(s) ||
+        (r.codice_fiscale || "").toLowerCase().includes(s) ||
+        (r.tipo_doc || "").toLowerCase().includes(s)
     );
   }, [rows, q]);
 
@@ -172,7 +178,7 @@ export default function RappresentantiIndexPage() {
 
         <CardContent className="space-y-4">
           <Input
-            placeholder="Cerca per nome, CF, tipo documento..."
+            placeholder="Cerca per cognome e nome, CF, tipo documento..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -190,78 +196,84 @@ export default function RappresentantiIndexPage() {
               {filtered.map((r) => (
                 <div
                   key={r.id}
-                  className="border rounded-md p-4 space-y-4"
+                  className="border rounded-md p-4"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_1.4fr_1.2fr_1.2fr_1.2fr_auto] gap-4 items-center">
                     <div>
                       <div className="text-xs text-muted-foreground">
-                        nome_cognome
+                        Cognome e nome
                       </div>
                       <div className="font-medium">{r.nome_cognome || "-"}</div>
                     </div>
 
                     <div>
                       <div className="text-xs text-muted-foreground">
-                        codice_fiscale
+                        Codice fiscale
                       </div>
                       <div>{r.codice_fiscale || "-"}</div>
                     </div>
 
                     <div>
                       <div className="text-xs text-muted-foreground">
-                        tipo_doc
+                        Tipo documento
                       </div>
                       <div>{r.tipo_doc || "-"}</div>
                     </div>
 
                     <div>
                       <div className="text-xs text-muted-foreground">
-                        scadenza_doc
+                        Scadenza documento
                       </div>
-                      <div>{r.scadenza_doc || "-"}</div>
+                      <div>{formatDateEU(r.scadenza_doc)}</div>
                     </div>
 
                     <div>
                       <div className="text-xs text-muted-foreground">
-                        allegato_doc
+                        Documento allegato
                       </div>
-                      <div>{r.allegato_doc ? "Documento allegato" : "-"}</div>
+                      <div>{r.allegato_doc ? "Presente" : "-"}</div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!r.allegato_doc}
-                      onClick={() => {
-                        if (r.allegato_doc) {
-                          void handleOpenDoc(r.allegato_doc);
+                    <div className="flex items-center gap-2 md:justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Apri documento"
+                        disabled={!r.allegato_doc}
+                        onClick={() => {
+                          if (r.allegato_doc) {
+                            void handleOpenDoc(r.allegato_doc);
+                          }
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        title="Modifica"
+                        onClick={() =>
+                          router.push(`/antiriciclaggio/rappresentanti/${r.id}`)
                         }
-                      }}
-                    >
-                      Apri documento
-                    </Button>
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
 
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        router.push(`/antiriciclaggio/rappresentanti/${r.id}`)
-                      }
-                    >
-                      Modifica
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => {
-                        void handleDelete(r.id);
-                      }}
-                    >
-                      Elimina
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        title="Elimina"
+                        onClick={() => {
+                          void handleDelete(r.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
