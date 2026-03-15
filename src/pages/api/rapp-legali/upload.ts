@@ -15,7 +15,10 @@ export default async function handler(
   res: NextApiResponse<ApiResponse>
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Metodo non consentito" });
+    return res.status(405).json({
+      ok: false,
+      error: "Metodo non consentito",
+    });
   }
 
   try {
@@ -34,14 +37,29 @@ export default async function handler(
     } = req.body || {};
 
     if (!id) {
-      return res.status(400).json({ ok: false, error: "ID record mancante" });
+      return res.status(400).json({
+        ok: false,
+        error: "ID record mancante",
+      });
+    }
+
+    if (!nome_cognome || !String(nome_cognome).trim()) {
+      return res.status(400).json({
+        ok: false,
+        error: "Nome e Cognome obbligatorio",
+      });
+    }
+
+    if (!codice_fiscale || !String(codice_fiscale).trim()) {
+      return res.status(400).json({
+        ok: false,
+        error: "Codice fiscale obbligatorio",
+      });
     }
 
     const payload = {
-      nome_cognome: nome_cognome ? String(nome_cognome).trim() : null,
-      codice_fiscale: codice_fiscale
-        ? String(codice_fiscale).trim().toUpperCase()
-        : null,
+      nome_cognome: String(nome_cognome).trim(),
+      codice_fiscale: String(codice_fiscale).trim().toUpperCase(),
       luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
       data_nascita: data_nascita || null,
       citta_residenza: citta_residenza ? String(citta_residenza).trim() : null,
