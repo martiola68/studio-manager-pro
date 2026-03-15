@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
 type ClienteOption = {
@@ -152,6 +152,7 @@ const initialFormState = (studioId = "", av1Id = ""): FormState => ({
 });
 
 export default function ModelloAV4() {
+  const supabase = getSupabaseClient();
   const [clienti, setClienti] = useState<ClienteOption[]>([]);
   const [rappresentanti, setRappresentanti] = useState<RappresentanteOption[]>([]);
   const [loading, setLoading] = useState(false);
