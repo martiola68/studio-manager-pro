@@ -361,8 +361,7 @@ export default function NuovoRappresentantePage() {
         throw new Error(result.error || "Errore salvataggio rappresentante legale");
       }
 
-      setOkMsg("✅ Rappresentante salvato correttamente.");
-      resetForm();
+      await router.push("/antiriciclaggio/rappresentanti?saved=1");
     } catch (error: any) {
       setErrMsg(error?.message || "Errore inserimento rappresentante legale");
     } finally {
