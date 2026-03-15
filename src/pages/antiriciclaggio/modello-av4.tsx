@@ -191,7 +191,7 @@ export default function ModelloAV4() {
   const [av4Id, setAv4Id] = useState<string | null>(null);
 
   const queryParams = useMemo(() => {
-    console.log("AV4 queryParams:", queryParams);
+ 
     if (typeof window === "undefined") {
       return { studioId: "", av1Id: "", clienteId: "" };
     }
