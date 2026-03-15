@@ -1,5 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -10,8 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = getSupabaseClient() as any;
-
     const {
       id,
       nome_cognome,
