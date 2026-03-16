@@ -21,43 +21,49 @@ type AV1Row = {
 };
 
 export default function AntiriciclaggioPage() {
-  const supabase = getSupabaseClient();
-  const supabaseAny = supabase as any;
   const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadRows = async () => {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const { data, error } = await supabaseAny
-      .from("tbAV1")
-      .select(`
-        id,
-        studio_id,
-        cliente_id,
-        DataVerifica,
-        ScadenzaVerifica,
-        AV4Generato,
-        AV1Conferma,
-        tbclienti (
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
+      const { data, error } = await supabaseAny
+        .from("tbAV1")
+        .select(`
           id,
-          ragione_sociale,
-          cognome_nome,
-          codice_fiscale
-        )
-      `)
-      .order("DataVerifica", { ascending: false });
+          studio_id,
+          cliente_id,
+          DataVerifica,
+          ScadenzaVerifica,
+          AV4Generato,
+          AV1Conferma,
+          tbclienti (
+            id,
+            ragione_sociale,
+            cognome_nome,
+            codice_fiscale
+          )
+        `)
+        .order("DataVerifica", { ascending: false });
 
-    if (error) {
-      console.error("Errore caricamento tbAV1:", error);
+      if (error) {
+        console.error("Errore caricamento tbAV1:", error);
+        setRows([]);
+      } else {
+        setRows((data as AV1Row[]) || []);
+      }
+    } catch (err) {
+      console.error("Errore loadRows:", err);
       setRows([]);
-    } else {
-      setRows((data as AV1Row[]) || []);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -74,22 +80,30 @@ export default function AntiriciclaggioPage() {
   };
 
   const handleModificaAV4 = async (av1Id: string) => {
-    const { data, error } = await supabaseAny
-      .from("tbAV4")
-      .select("id")
-      .eq("av1_id", av1Id)
-      .maybeSingle();
+    try {
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
 
-    if (error) {
-      console.error("Errore ricerca AV4:", error);
-      alert("Errore durante la ricerca del modello AV4.");
-      return;
-    }
+      const { data, error } = await supabaseAny
+        .from("tbAV4")
+        .select("id")
+        .eq("av1_id", av1Id)
+        .maybeSingle();
 
-    if (data?.id) {
-      router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
-    } else {
-      router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+      if (error) {
+        console.error("Errore ricerca AV4:", error);
+        alert("Errore durante la ricerca del modello AV4.");
+        return;
+      }
+
+      if (data?.id) {
+        router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
+      } else {
+        router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+      }
+    } catch (err) {
+      console.error("Errore apertura AV4:", err);
+      alert("Errore durante l'apertura del modello AV4.");
     }
   };
 
@@ -100,6 +114,9 @@ export default function AntiriciclaggioPage() {
     if (!conferma) return;
 
     try {
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
       const { data: av4Rows, error: av4Error } = await supabaseAny
         .from("tbAV4")
         .select("id")
