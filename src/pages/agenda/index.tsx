@@ -235,7 +235,7 @@ export default function AgendaPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Stati UI
-  const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti">("week");
+  const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti" | "teams">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [filtroUtenti, setFiltroUtenti] = useState<string[]>([]);
@@ -910,6 +910,58 @@ setEventoToDelete(null);
     return "#EF4444";
   };
 
+  const getEventClasses = (evento: EventoWithRelations) => {
+  if ((evento as any).riunione_teams) {
+    return {
+      card: "border-l-violet-500",
+      box: "bg-violet-50 border-violet-500 text-gray-900",
+      badgeText: "text-violet-700",
+    };
+  }
+
+  if ((evento as any).evento_generico) {
+    return {
+      card: "border-l-blue-500",
+      box: "bg-blue-50 border-blue-500 text-gray-900",
+      badgeText: "text-blue-700",
+    };
+  }
+
+  if (evento.in_sede) {
+    return {
+      card: "border-l-green-500",
+      box: "bg-green-50 border-green-500 text-gray-900",
+      badgeText: "text-green-700",
+    };
+  }
+
+  return {
+    card: "border-l-red-500",
+    box: "bg-red-50 border-red-500 text-gray-900",
+    badgeText: "text-red-700",
+  };
+};
+
+const myActiveTeamsEvents = useMemo(() => {
+  if (!currentUserId) return [];
+
+  const now = new Date();
+
+  return eventi
+    .filter((e) => {
+      const isTeams = Boolean((e as any).riunione_teams);
+      const hasLink = typeof (e as any).link_teams === "string" && (e as any).link_teams.trim().length > 0;
+      const isMine = e.utente_id === currentUserId;
+      const notExpired = safeParseISO(e.data_fine as any) >= now;
+
+      return isTeams && hasLink && isMine && notExpired;
+    })
+    .sort(
+      (a, b) =>
+        safeParseISO(a.data_inizio as any).getTime() - safeParseISO(b.data_inizio as any).getTime()
+    );
+}, [eventi, currentUserId]);
+
   const getEventoSummary = (evento: EventoWithRelations): string => {
     const startDate = safeParseISO(evento.data_inizio as any);
 
@@ -969,11 +1021,8 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
   const renderEventCard = (evento: EventoWithRelations, compact = false) => {
     const utenteNome = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
-    const colorClass = (evento as any).evento_generico
-      ? "border-l-blue-500"
-      : evento.in_sede
-      ? "border-l-green-500"
-      : "border-l-red-500";
+    const styles = getEventClasses(evento);
+const colorClass = styles.card;
 
     return (
       <TooltipProvider key={String(evento.id)}>
@@ -1103,13 +1152,7 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
   <Tooltip delayDuration={300}>
     <TooltipTrigger asChild>
       <div
-  className={`p-2 rounded border-l-2 ${
-  (ev as any).evento_generico
-    ? "bg-blue-50 border-blue-500 text-gray-900"
-    : ev.in_sede
-    ? "bg-green-50 border-green-500 text-gray-900"
-    : "bg-red-50 border-red-500 text-gray-900"
-} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+  className={`p-2 rounded border-l-2 ${getEventClasses(ev).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
 >
       <div
   onClick={(e) => {
@@ -1254,13 +1297,7 @@ const renderWeekView = () => {
                           <Tooltip delayDuration={300}>
                             <TooltipTrigger asChild>
                               <div
-                                className={`p-2 rounded border-l-2 ${
-                                  (evento as any).evento_generico
-                                    ? "bg-blue-50 border-blue-500"
-                                    : evento.in_sede
-                                    ? "bg-green-50 border-green-500"
-                                    : "bg-red-50 border-red-500"
-                                } cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+                                className={`p-2 rounded border-l-2 ${getEventClasses(evento).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
                               >
                                 <div
                                   onClick={(e) => {
@@ -1354,6 +1391,82 @@ const renderWeekView = () => {
       const eventDate = safeParseISO(evento.data_inizio as any);
       return isRecurring && eventDate >= now;
     });
+
+    const renderTeamsView = () => {
+  if (!currentUserId) {
+    return (
+      <div className="text-center py-12">
+        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <p className="text-gray-500">Utente non identificato</p>
+      </div>
+    );
+  }
+
+  if (myActiveTeamsEvents.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <p className="text-gray-500">Nessuna riunione Teams attiva trovata</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-[600px] overflow-y-auto p-4">
+      <div className="overflow-x-auto">
+        <table className="w-full border rounded-lg overflow-hidden">
+          <thead className="bg-gray-50">
+            <tr className="border-b">
+              <th className="text-left p-3 text-sm font-semibold">Data</th>
+              <th className="text-left p-3 text-sm font-semibold">Descrizione</th>
+              <th className="text-left p-3 text-sm font-semibold">Riunione</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {myActiveTeamsEvents.map((evento) => {
+              const startDate = safeParseISO(evento.data_inizio as any);
+              const link = String((evento as any).link_teams || "").trim();
+
+              return (
+                <tr key={String(evento.id)} className="border-b last:border-b-0 hover:bg-violet-50/40">
+                  <td className="p-3 text-sm whitespace-nowrap">
+                    <div className="font-medium">
+                      {format(startDate, "dd/MM/yyyy", { locale: it })}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : format(startDate, "HH:mm")}
+                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                    </div>
+                  </td>
+
+                  <td className="p-3 text-sm">
+                    <div className="font-medium">{evento.titolo || "Riunione Teams"}</div>
+                    {evento.descrizione && (
+                      <div className="text-muted-foreground">{String(evento.descrizione)}</div>
+                    )}
+                  </td>
+
+                  <td className="p-3 text-sm">
+                    <Button asChild size="sm" className="bg-violet-600 hover:bg-violet-700">
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Partecipa a riunione
+                      </a>
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
     if (ricorrentiEvents.length === 0) {
       return (
@@ -1457,33 +1570,38 @@ return (
           </div>
 
           <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
-            <div className="flex gap-2">
-              <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}>
-                <List className="h-4 w-4 mr-2" /> Eventi ricorrenti
-              </Button>
+           <div className="flex gap-2">
+  <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}>
+    <List className="h-4 w-4 mr-2" /> Eventi ricorrenti
+  </Button>
 
-              <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
-                <List className="h-4 w-4 mr-2" /> Scaduti
-              </Button>
+  <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
+    <List className="h-4 w-4 mr-2" /> Scaduti
+  </Button>
 
-              <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
-                <CalendarIcon className="h-4 w-4 mr-2" /> Mese
-              </Button>
+  <Button variant={view === "teams" ? "default" : "outline"} size="sm" onClick={() => setView("teams")}>
+    <CalendarIcon className="h-4 w-4 mr-2" /> Riunioni Teams
+  </Button>
 
-              <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
-                <CalendarDays className="h-4 w-4 mr-2" /> Settimana
-              </Button>
-            </div>
+  <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
+    <CalendarIcon className="h-4 w-4 mr-2" /> Mese
+  </Button>
+
+  <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
+    <CalendarDays className="h-4 w-4 mr-2" /> Settimana
+  </Button>
+</div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm">
-        {view === "ricorrenti" && renderRicorrentiView()}
-        {view === "list" && renderListView()}
-        {view === "month" && renderMonthView()}
-        {view === "week" && renderWeekView()}
-      </div>
+    <div className="bg-white rounded-lg shadow-sm">
+  {view === "ricorrenti" && renderRicorrentiView()}
+  {view === "list" && renderListView()}
+  {view === "teams" && renderTeamsView()}
+  {view === "month" && renderMonthView()}
+  {view === "week" && renderWeekView()}
+</div>
     </div>
     
      {/* MOBILE */}
@@ -1525,49 +1643,58 @@ return (
     <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
       <Plus className="h-4 w-4" /> Nuovo Evento
     </Button>
+<div className="grid grid-cols-2 gap-2">
+  <Button
+    variant={view === "week" ? "default" : "outline"}
+    size="sm"
+    className="h-9 text-xs px-2"
+    onClick={() => setView("week")}
+  >
+    Settimana
+  </Button>
 
-    <div className="grid grid-cols-2 gap-2">
-      <Button
-        variant={view === "week" ? "default" : "outline"}
-        size="sm"
-        className="h-9 text-xs px-2"
-        onClick={() => setView("week")}
-      >
-        Settimana
-      </Button>
+  <Button
+    variant={view === "month" ? "default" : "outline"}
+    size="sm"
+    className="h-9 text-xs px-2"
+    onClick={() => setView("month")}
+  >
+    Mese
+  </Button>
 
-      <Button
-        variant={view === "month" ? "default" : "outline"}
-        size="sm"
-        className="h-9 text-xs px-2"
-        onClick={() => setView("month")}
-      >
-        Mese
-      </Button>
+  <Button
+    variant={view === "list" ? "default" : "outline"}
+    size="sm"
+    className="h-9 text-xs px-2"
+    onClick={() => setView("list")}
+  >
+    Scaduti
+  </Button>
 
-      <Button
-        variant={view === "list" ? "default" : "outline"}
-        size="sm"
-        className="h-9 text-xs px-2"
-        onClick={() => setView("list")}
-      >
-        Scaduti
-      </Button>
+  <Button
+    variant={view === "ricorrenti" ? "default" : "outline"}
+    size="sm"
+    className="h-9 text-xs px-2"
+    onClick={() => setView("ricorrenti")}
+  >
+    Ricorrenti
+  </Button>
 
-      <Button
-        variant={view === "ricorrenti" ? "default" : "outline"}
-        size="sm"
-        className="h-9 text-xs px-2"
-        onClick={() => setView("ricorrenti")}
-      >
-        Ricorrenti
-      </Button>
-    </div>
+  <Button
+    variant={view === "teams" ? "default" : "outline"}
+    size="sm"
+    className="h-9 text-xs px-2 col-span-2"
+    onClick={() => setView("teams")}
+  >
+    Riunioni Teams
+  </Button>
+</div>
   </div>
 
-  <div className="bg-white rounded-lg shadow-sm p-3">
-    {view === "ricorrenti" && renderRicorrentiView()}
-    {view === "list" && renderListView()}
+ <div className="bg-white rounded-lg shadow-sm p-3">
+  {view === "ricorrenti" && renderRicorrentiView()}
+  {view === "list" && renderListView()}
+  {view === "teams" && renderTeamsView()}
 
     {view === "month" && (
       <div className="overflow-x-auto">
