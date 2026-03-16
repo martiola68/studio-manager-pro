@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type Cliente = {
@@ -22,7 +22,7 @@ type AV1Row = {
 
 export default function AntiriciclaggioPage() {
   const supabase = getSupabaseClient();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ export default function AntiriciclaggioPage() {
   };
 
   const handleModificaAV1 = (id: string) => {
-    navigate(`/antiriciclaggio/modello-av1?id=${id}`);
+    router.push(`/antiriciclaggio/modello-av1?id=${id}`);
   };
 
   const handleModificaAV4 = async (av1Id: string) => {
@@ -85,11 +85,11 @@ export default function AntiriciclaggioPage() {
       return;
     }
 
-    if (data?.id) {
-      navigate(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
-    } else {
-      navigate(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
-    }
+  if (data?.id) {
+  router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
+} else {
+  router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+}
   };
 
   const handleEliminaCompleto = async (av1Id: string) => {
@@ -145,7 +145,7 @@ export default function AntiriciclaggioPage() {
 
         <button
           type="button"
-          onClick={() => navigate("/antiriciclaggio/modello-av1")}
+          onClick={() => router.push("/antiriciclaggio/modello-av1");
           className="px-4 py-2 rounded bg-blue-600 text-white"
         >
           Nuovo AV1
