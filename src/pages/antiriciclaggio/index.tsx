@@ -25,6 +25,7 @@ export default function AntiriciclaggioPage() {
 
   const [rows, setRows] = useState<AV1Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
 
   const loadRows = async () => {
     try {
@@ -50,16 +51,20 @@ export default function AntiriciclaggioPage() {
             codice_fiscale
           )
         `)
+        .eq("AV1Conferma", true)
         .order("DataVerifica", { ascending: false });
 
       if (error) {
         console.error("Errore caricamento tbAV1:", error);
+        alert(`Errore caricamento tbAV1: ${error.message}`);
         setRows([]);
-      } else {
-        setRows((data as AV1Row[]) || []);
+        return;
       }
-    } catch (err) {
+
+      setRows((data as AV1Row[]) || []);
+    } catch (err: any) {
       console.error("Errore loadRows:", err);
+      alert(`Errore loadRows: ${err?.message || "errore sconosciuto"}`);
       setRows([]);
     } finally {
       setLoading(false);
@@ -104,6 +109,43 @@ export default function AntiriciclaggioPage() {
     } catch (err) {
       console.error("Errore apertura AV4:", err);
       alert("Errore durante l'apertura del modello AV4.");
+    }
+  };
+
+  const handleGeneraAV4 = async (av1Id: string) => {
+    try {
+      setGeneratingId(av1Id);
+
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
+      const { error: updateError } = await supabaseAny
+        .from("tbAV1")
+        .update({ AV4Generato: true })
+        .eq("id", av1Id);
+
+      if (updateError) throw updateError;
+
+      const { data: av4, error: av4SearchError } = await supabaseAny
+        .from("tbAV4")
+        .select("id")
+        .eq("av1_id", av1Id)
+        .maybeSingle();
+
+      if (av4SearchError) throw av4SearchError;
+
+      await loadRows();
+
+      if (av4?.id) {
+        router.push(`/antiriciclaggio/modello-av4?id=${av4.id}&av1_id=${av1Id}`);
+      } else {
+        router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+      }
+    } catch (err: any) {
+      console.error("Errore generazione AV4:", err);
+      alert(`Errore durante la generazione di AV4: ${err?.message || "errore sconosciuto"}`);
+    } finally {
+      setGeneratingId(null);
     }
   };
 
@@ -191,7 +233,7 @@ export default function AntiriciclaggioPage() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-4 text-center">
-                    Nessun AV1 inserito
+                    Nessun AV1 confermato
                   </td>
                 </tr>
               ) : (
@@ -202,8 +244,13 @@ export default function AntiriciclaggioPage() {
                     cliente?.cognome_nome ||
                     "-";
 
+                  const av4Mancante = !row.AV4Generato;
+
                   return (
-                    <tr key={row.id} className="border-t">
+                    <tr
+                      key={row.id}
+                      className={`border-t ${av4Mancante ? "bg-red-50" : ""}`}
+                    >
                       <td className="p-3">{nomeCliente}</td>
                       <td className="p-3">{cliente?.codice_fiscale || "-"}</td>
                       <td className="p-3">{row.DataVerifica || "-"}</td>
@@ -211,7 +258,11 @@ export default function AntiriciclaggioPage() {
                       <td className="p-3 text-center">
                         {row.AV1Conferma ? "Sì" : "No"}
                       </td>
-                      <td className="p-3 text-center">
+                      <td
+                        className={`p-3 text-center font-semibold ${
+                          av4Mancante ? "text-red-600" : "text-green-600"
+                        }`}
+                      >
                         {row.AV4Generato ? "Sì" : "No"}
                       </td>
                       <td className="p-3">
@@ -224,23 +275,33 @@ export default function AntiriciclaggioPage() {
                             Modifica AV1
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleModificaAV4(row.id)}
-                            disabled={!row.AV1Conferma}
-                            className={`px-3 py-1 rounded text-white ${
-                              row.AV1Conferma
-                                ? "bg-green-600"
-                                : "bg-gray-400 cursor-not-allowed"
-                            }`}
-                          >
-                            Modifica AV4
-                          </button>
+                          {row.AV4Generato ? (
+                            <button
+                              type="button"
+                              onClick={() => handleModificaAV4(row.id)}
+                              className="px-3 py-1 rounded bg-green-600 text-white"
+                            >
+                              Modifica AV4
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleGeneraAV4(row.id)}
+                              disabled={generatingId === row.id}
+                              className={`px-3 py-1 rounded text-white ${
+                                generatingId === row.id
+                                  ? "bg-gray-400 cursor-not-allowed"
+                                  : "bg-red-600 hover:bg-red-700"
+                              }`}
+                            >
+                              {generatingId === row.id ? "Generazione..." : "Genera AV4"}
+                            </button>
+                          )}
 
                           <button
                             type="button"
                             onClick={() => handleEliminaCompleto(row.id)}
-                            className="px-3 py-1 rounded bg-red-600 text-white"
+                            className="px-3 py-1 rounded bg-red-700 text-white"
                           >
                             Elimina record completo
                           </button>
