@@ -911,13 +911,13 @@ setEventoToDelete(null);
   };
 
   const getEventClasses = (evento: EventoWithRelations) => {
-  if ((evento as any).riunione_teams) {
-    return {
-      card: "border-l-violet-500",
-      box: "bg-violet-50 border-violet-500 text-gray-900",
-      badgeText: "text-violet-700",
-    };
-  }
+ if ((evento as any).riunione_teams) {
+  return {
+    card: "border-l-violet-700",
+    box: "bg-violet-100 border-violet-700 text-gray-900",
+    badgeText: "text-violet-800",
+  };
+}
 
   if ((evento as any).evento_generico) {
     return {
@@ -1474,7 +1474,7 @@ const renderTeamsView = () => {
                   </td>
 
                   <td className="p-3 text-sm">
-                    <Button asChild size="sm" className="bg-violet-600 hover:bg-violet-700">
+                    <Button asChild size="sm" className="bg-violet-700 hover:bg-violet-800">
                       <a href={link} target="_blank" rel="noopener noreferrer">
                         Partecipa a riunione
                       </a>
