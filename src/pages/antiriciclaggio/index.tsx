@@ -27,42 +27,82 @@ export default function AntiriciclaggioPage() {
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
- const getScadenzaStatus = (dateString?: string | null) => {
-  if (!dateString) return "none";
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "-";
+    const [y, m, d] = dateString.split("-");
+    return `${d}/${m}/${y}`;
+  };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const getScadenzaStatus = (dateString?: string | null) => {
+    if (!dateString) return "none";
 
-  const scadenza = new Date(dateString);
-  scadenza.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil(
-    (scadenza.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
+    const scadenza = new Date(dateString);
+    scadenza.setHours(0, 0, 0, 0);
 
-  if (diffDays < 0) return "expired";
-  if (diffDays <= 90) return "warning";
-  return "ok";
-};
+    const diffDays = Math.ceil(
+      (scadenza.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
-const getRowClassName = (row: AV1Row) => {
-  const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+    if (diffDays < 0) return "expired";
+    if (diffDays <= 90) return "warning";
+    return "ok";
+  };
 
-  if (scadenzaStatus === "expired") return "bg-red-100";
-  if (scadenzaStatus === "warning") return "bg-orange-50";
-  if (!row.AV4Generato) return "bg-red-50";
+  const getRowClassName = (row: AV1Row) => {
+    const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
 
-  return "";
-};
+    if (scadenzaStatus === "expired") return "bg-red-100";
+    if (scadenzaStatus === "warning") return "bg-orange-50";
+    if (!row.AV4Generato) return "bg-red-50";
 
-const getScadenzaCellClassName = (dateString?: string | null) => {
-  const status = getScadenzaStatus(dateString);
+    return "";
+  };
 
-  if (status === "expired") return "text-red-700 font-bold";
-  if (status === "warning") return "text-orange-600 font-semibold";
+  const getScadenzaCellClassName = (dateString?: string | null) => {
+    const status = getScadenzaStatus(dateString);
 
-  return "";
-};
+    if (status === "expired") return "text-red-700 font-bold";
+    if (status === "warning") return "text-orange-600 font-semibold";
+
+    return "";
+  };
+
+  const getStatoInfo = (row: AV1Row) => {
+    const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+
+    if (scadenzaStatus === "expired") {
+      return {
+        icon: "🔴",
+        text: "Scaduta",
+        className: "text-red-700 font-bold",
+      };
+    }
+
+    if (scadenzaStatus === "warning") {
+      return {
+        icon: "🟠",
+        text: "In scadenza",
+        className: "text-orange-600 font-semibold",
+      };
+    }
+
+    if (!row.AV4Generato) {
+      return {
+        icon: "🟡",
+        text: "AV4 da generare",
+        className: "text-yellow-600 font-semibold",
+      };
+    }
+
+    return {
+      icon: "🟢",
+      text: "Completa",
+      className: "text-green-700 font-semibold",
+    };
+  };
 
   const loadRows = async () => {
     try {
@@ -82,11 +122,11 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
           AV4Generato,
           AV1Conferma,
           tbclienti (
-          id,
-          cod_cliente,
-          ragione_sociale,
-          codice_fiscale
-            )
+            id,
+            cod_cliente,
+            ragione_sociale,
+            codice_fiscale
+          )
         `)
         .eq("AV1Conferma", true)
         .order("DataVerifica", { ascending: false });
@@ -180,7 +220,11 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
       }
     } catch (err: any) {
       console.error("Errore generazione AV4:", err);
-      alert(`Errore durante la generazione di AV4: ${err?.message || "errore sconosciuto"}`);
+      alert(
+        `Errore durante la generazione di AV4: ${
+          err?.message || "errore sconosciuto"
+        }`
+      );
     } finally {
       setGeneratingId(null);
     }
@@ -256,6 +300,7 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
+                <th className="p-3 text-left">Stato</th>
                 <th className="p-3 text-left">Cliente</th>
                 <th className="p-3 text-left">Codice fiscale</th>
                 <th className="p-3 text-left">Data verifica</th>
@@ -269,7 +314,7 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-4 text-center">
+                  <td colSpan={8} className="p-4 text-center">
                     Nessun AV1 confermato
                   </td>
                 </tr>
@@ -277,20 +322,23 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
                 rows.map((row) => {
                   const cliente = getCliente(row);
                   const nomeCliente =
-                  cliente?.ragione_sociale ||
-                  cliente?.cod_cliente ||
-                    "-";
+                    cliente?.ragione_sociale || cliente?.cod_cliente || "-";
 
                   const av4Mancante = !row.AV4Generato;
+                  const statoInfo = getStatoInfo(row);
 
                   return (
-                    <tr
-                      key={row.id}
-                      className={`border-t ${getRowClassName(row)}`}
-                        >
+                    <tr key={row.id} className={`border-t ${getRowClassName(row)}`}>
+                      <td className={`p-3 ${statoInfo.className}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{statoInfo.icon}</span>
+                          <span>{statoInfo.text}</span>
+                        </div>
+                      </td>
+
                       <td className="p-3">{nomeCliente}</td>
                       <td className="p-3">{cliente?.codice_fiscale || "-"}</td>
-                     <td className="p-3">{formatDate(row.DataVerifica)}</td>
+                      <td className="p-3">{formatDate(row.DataVerifica)}</td>
                       <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>
                         {formatDate(row.ScadenzaVerifica)}
                       </td>
@@ -333,7 +381,9 @@ const getScadenzaCellClassName = (dateString?: string | null) => {
                                   : "bg-red-600 hover:bg-red-700"
                               }`}
                             >
-                              {generatingId === row.id ? "Generazione..." : "Genera AV4"}
+                              {generatingId === row.id
+                                ? "Generazione..."
+                                : "Genera AV4"}
                             </button>
                           )}
 
