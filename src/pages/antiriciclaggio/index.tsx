@@ -4,8 +4,8 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 
 type Cliente = {
   id: string;
+  cod_cliente?: string | null;
   ragione_sociale?: string | null;
-  cognome_nome?: string | null;
   codice_fiscale?: string | null;
 };
 
@@ -45,11 +45,11 @@ export default function AntiriciclaggioPage() {
           AV4Generato,
           AV1Conferma,
           tbclienti (
-            id,
-            ragione_sociale,
-            cognome_nome,
-            codice_fiscale
-          )
+          id,
+          cod_cliente,
+          ragione_sociale,
+          codice_fiscale
+            )
         `)
         .eq("AV1Conferma", true)
         .order("DataVerifica", { ascending: false });
@@ -240,8 +240,8 @@ export default function AntiriciclaggioPage() {
                 rows.map((row) => {
                   const cliente = getCliente(row);
                   const nomeCliente =
-                    cliente?.ragione_sociale ||
-                    cliente?.cognome_nome ||
+                  cliente?.ragione_sociale ||
+                  cliente?.cod_cliente ||
                     "-";
 
                   const av4Mancante = !row.AV4Generato;
