@@ -1384,15 +1384,31 @@ const renderWeekView = () => {
     return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
   };
 
-  const renderRicorrentiView = () => {
-    const now = new Date();
-    const ricorrentiEvents = filteredEvents.filter((evento) => {
-      const isRecurring = (evento as any).ricorrente === true;
-      const eventDate = safeParseISO(evento.data_inizio as any);
-      return isRecurring && eventDate >= now;
-    });
+ const renderRicorrentiView = () => {
+  const now = new Date();
+  const ricorrentiEvents = filteredEvents.filter((evento) => {
+    const isRecurring = (evento as any).ricorrente === true;
+    const eventDate = safeParseISO(evento.data_inizio as any);
+    return isRecurring && eventDate >= now;
+  });
 
-    const renderTeamsView = () => {
+  if (ricorrentiEvents.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+      {ricorrentiEvents.map((e) => renderEventCard(e, false))}
+    </div>
+  );
+};
+
+const renderTeamsView = () => {
   if (!currentUserId) {
     return (
       <div className="text-center py-12">
@@ -1422,7 +1438,6 @@ const renderWeekView = () => {
               <th className="text-left p-3 text-sm font-semibold">Riunione</th>
             </tr>
           </thead>
-
           <tbody>
             {myActiveTeamsEvents.map((evento) => {
               const startDate = safeParseISO(evento.data_inizio as any);
@@ -1449,11 +1464,7 @@ const renderWeekView = () => {
 
                   <td className="p-3 text-sm">
                     <Button asChild size="sm" className="bg-violet-600 hover:bg-violet-700">
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={link} target="_blank" rel="noopener noreferrer">
                         Partecipa a riunione
                       </a>
                     </Button>
