@@ -22,6 +22,7 @@ type AV1Row = {
 
 export default function AntiriciclaggioPage() {
   const supabase = getSupabaseClient();
+  const supabaseAny = supabase as any;
   const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
@@ -30,7 +31,7 @@ export default function AntiriciclaggioPage() {
   const loadRows = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAny
       .from("tbAV1")
       .select(`
         id,
@@ -73,7 +74,7 @@ export default function AntiriciclaggioPage() {
   };
 
   const handleModificaAV4 = async (av1Id: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAny
       .from("tbAV4")
       .select("id")
       .eq("av1_id", av1Id)
@@ -85,11 +86,11 @@ export default function AntiriciclaggioPage() {
       return;
     }
 
-  if (data?.id) {
-  router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
-} else {
-  router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
-}
+    if (data?.id) {
+      router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
+    } else {
+      router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+    }
   };
 
   const handleEliminaCompleto = async (av1Id: string) => {
@@ -99,24 +100,24 @@ export default function AntiriciclaggioPage() {
     if (!conferma) return;
 
     try {
-      const { data: av4Rows, error: av4Error } = await supabase
+      const { data: av4Rows, error: av4Error } = await supabaseAny
         .from("tbAV4")
         .select("id")
         .eq("av1_id", av1Id);
 
       if (av4Error) throw av4Error;
 
-      const av4Ids = (av4Rows || []).map((r) => r.id);
+      const av4Ids = (av4Rows || []).map((r: any) => r.id);
 
       if (av4Ids.length > 0) {
-        const { error: titolariError } = await supabase
+        const { error: titolariError } = await supabaseAny
           .from("tbAV4_titolari")
           .delete()
           .in("av4_id", av4Ids);
 
         if (titolariError) throw titolariError;
 
-        const { error: deleteAV4Error } = await supabase
+        const { error: deleteAV4Error } = await supabaseAny
           .from("tbAV4")
           .delete()
           .in("id", av4Ids);
@@ -124,7 +125,7 @@ export default function AntiriciclaggioPage() {
         if (deleteAV4Error) throw deleteAV4Error;
       }
 
-      const { error: deleteAV1Error } = await supabase
+      const { error: deleteAV1Error } = await supabaseAny
         .from("tbAV1")
         .delete()
         .eq("id", av1Id);
@@ -145,7 +146,7 @@ export default function AntiriciclaggioPage() {
 
         <button
           type="button"
-          onClick={() => router.push("/antiriciclaggio/modello-av1");
+          onClick={() => router.push("/antiriciclaggio/modello-av1")}
           className="px-4 py-2 rounded bg-blue-600 text-white"
         >
           Nuovo AV1
