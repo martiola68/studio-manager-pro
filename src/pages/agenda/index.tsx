@@ -1384,7 +1384,7 @@ const renderWeekView = () => {
     return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
   };
 
- const renderRicorrentiView = () => {
+const renderRicorrentiView = () => {
   const now = new Date();
   const ricorrentiEvents = filteredEvents.filter((evento) => {
     const isRecurring = (evento as any).ricorrente === true;
@@ -1444,21 +1444,32 @@ const renderTeamsView = () => {
               const link = String((evento as any).link_teams || "").trim();
 
               return (
-                <tr key={String(evento.id)} className="border-b last:border-b-0 hover:bg-violet-50/40">
+                <tr
+                  key={String(evento.id)}
+                  className="border-b last:border-b-0 hover:bg-violet-50/40"
+                >
                   <td className="p-3 text-sm whitespace-nowrap">
                     <div className="font-medium">
                       {format(startDate, "dd/MM/yyyy", { locale: it })}
                     </div>
                     <div className="text-muted-foreground">
-                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : format(startDate, "HH:mm")}
-                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                      {evento.ora_inizio
+                        ? String(evento.ora_inizio).substring(0, 5)
+                        : format(startDate, "HH:mm")}
+                      {evento.ora_fine
+                        ? ` - ${String(evento.ora_fine).substring(0, 5)}`
+                        : ""}
                     </div>
                   </td>
 
                   <td className="p-3 text-sm">
-                    <div className="font-medium">{evento.titolo || "Riunione Teams"}</div>
+                    <div className="font-medium">
+                      {evento.titolo || "Riunione Teams"}
+                    </div>
                     {evento.descrizione && (
-                      <div className="text-muted-foreground">{String(evento.descrizione)}</div>
+                      <div className="text-muted-foreground">
+                        {String(evento.descrizione)}
+                      </div>
                     )}
                   </td>
 
@@ -1478,22 +1489,6 @@ const renderTeamsView = () => {
     </div>
   );
 };
-
-    if (ricorrentiEvents.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-        {ricorrentiEvents.map((e) => renderEventCard(e, false))}
-      </div>
-    );
-  };
 
   // --------------------
   // RENDER
