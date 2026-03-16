@@ -27,6 +27,43 @@ export default function AntiriciclaggioPage() {
   const [loading, setLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
 
+ const getScadenzaStatus = (dateString?: string | null) => {
+  if (!dateString) return "none";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const scadenza = new Date(dateString);
+  scadenza.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.ceil(
+    (scadenza.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (diffDays < 0) return "expired";
+  if (diffDays <= 90) return "warning";
+  return "ok";
+};
+
+const getRowClassName = (row: AV1Row) => {
+  const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
+
+  if (scadenzaStatus === "expired") return "bg-red-100";
+  if (scadenzaStatus === "warning") return "bg-orange-50";
+  if (!row.AV4Generato) return "bg-red-50";
+
+  return "";
+};
+
+const getScadenzaCellClassName = (dateString?: string | null) => {
+  const status = getScadenzaStatus(dateString);
+
+  if (status === "expired") return "text-red-700 font-bold";
+  if (status === "warning") return "text-orange-600 font-semibold";
+
+  return "";
+};
+
   const loadRows = async () => {
     try {
       setLoading(true);
@@ -249,12 +286,14 @@ export default function AntiriciclaggioPage() {
                   return (
                     <tr
                       key={row.id}
-                      className={`border-t ${av4Mancante ? "bg-red-50" : ""}`}
-                    >
+                      className={`border-t ${getRowClassName(row)}`}
+                        >
                       <td className="p-3">{nomeCliente}</td>
                       <td className="p-3">{cliente?.codice_fiscale || "-"}</td>
-                      <td className="p-3">{row.DataVerifica || "-"}</td>
-                      <td className="p-3">{row.ScadenzaVerifica || "-"}</td>
+                     <td className="p-3">{formatDate(row.DataVerifica)}</td>
+                      <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>
+                        {formatDate(row.ScadenzaVerifica)}
+                      </td>
                       <td className="p-3 text-center">
                         {row.AV1Conferma ? "Sì" : "No"}
                       </td>
