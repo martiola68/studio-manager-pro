@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
-import TitolariDaRappLegaliForm from "@/components/antiriciclaggio/TitolariDaRappLegaliForm";
 
 type ClienteOption = {
   id: string;
@@ -1019,14 +1018,14 @@ export default function ModelloAV4() {
 
       {form.domanda7 && (
         <div className="mb-6 p-4 border rounded">
-          {av4Id ? (
-            <TitolariDaRappLegaliForm
-              sezione="domanda7"
-              av4_id={av4Id}
-              studio_id={form.studio_id}
-              cliente_id={form.cliente_id}
-            />
-          ) : (
+{av4Id ? (
+  <TitolariEffettiviForm
+    sezione="domanda7"
+    av4_id={av4Id}
+    studio_id={form.studio_id}
+    cliente_id={form.cliente_id}
+  />
+) : (
             <p className="text-sm text-gray-600">
               Salva prima l’AV4 per poter inserire i nominativi collegati alla
               sezione Domanda 7.
