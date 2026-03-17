@@ -1,4 +1,4 @@
-                        import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,25 +22,15 @@ type PrestazioneAR = {
 };
 
 type FormDataType = {
+  id?: string;
   studio_id: string;
   cliente_id: string;
   Prestazione: string;
   ValRischioIner: string;
   DataVerifica: string;
   ScadenzaVerifica: string;
-};
-
-const sectionTitles: Record<string, string> = {
-  A1: "A.1 - Natura giuridica",
-  A2: "A.2 - Prevalente attività svolta",
-  A3: "A.3 - Comportamento tenuto al momento del conferimento dell’incarico",
-  A4: "A.4 - Area geografica di residenza del cliente",
-  B1: "B.1 - Tipologia",
-  B2: "B.2 - Modalità di svolgimento",
-  B3: "B.3 - Ammontare dell’operazione",
-  B4: "B.4 - Frequenza e volume delle operazioni/durata della prestazione professionale",
-  B5: "B.5 - Ragionevolezza",
-  B6: "B.6 - Area geografica di destinazione",
+  AV1Conferma?: boolean;
+  AV4Generato?: boolean;
 };
 
 export const av1Labels = {
@@ -117,12 +107,15 @@ export const av1Labels = {
 } as const;
 
 const initialFormData: FormDataType = {
+  id: "",
   studio_id: "",
   cliente_id: "",
   Prestazione: "",
   ValRischioIner: "",
   DataVerifica: "",
   ScadenzaVerifica: "",
+  AV1Conferma: false,
+  AV4Generato: false,
 };
 
 function addMonths(dateString: string, months: number) {
@@ -341,57 +334,77 @@ export default function ModelloAV1Page() {
   };
 
   const handleSave = async () => {
-    if (!formData.studio_id) {
-      alert("Studio non disponibile.");
+  if (!formData.studio_id) {
+    alert("Studio non disponibile.");
+    return;
+  }
+
+  if (!formData.cliente_id) {
+    alert("Seleziona un cliente.");
+    return;
+  }
+
+  if (!formData.Prestazione) {
+    alert("Seleziona una prestazione.");
+    return;
+  }
+
+  if (!formData.DataVerifica) {
+    alert("Inserisci la data verifica.");
+    return;
+  }
+
+  setSaving(true);
+  setError(null);
+
+  const payload = {
+    studio_id: formData.studio_id,
+    cliente_id: formData.cliente_id,
+    Prestazione: formData.Prestazione,
+    ValRischioIner: formData.ValRischioIner,
+    DataVerifica: formData.DataVerifica,
+    ScadenzaVerifica: ScadenzaVerificaCalcolata,
+    A1: formData.A1,
+    A2: formData.A2,
+    A3: formData.A3,
+    A4: formData.A4,
+    B1: formData.B1,
+    B2: formData.B2,
+    B3: formData.B3,
+    B4: formData.B4,
+    B5: formData.B5,
+    B6: formData.B6,
+    TotA,
+    TotB,
+    MediaPunteggio,
+    LivelloRischio,
+    RisInerentePonderato,
+    RisSpecificoPonderato,
+    RischioEffettivo,
+    AdeguataVerifica,
+    AV1Conferma: true,
+    AV4Generato: formData.AV4Generato ?? false,
+  };
+
+  let savedId = formData.id || "";
+
+  if (formData.id) {
+    const { error } = await (supabase as any)
+      .from("tbAV1")
+      .update(payload)
+      .eq("id", Number(formData.id));
+
+    if (error) {
+      setError(error.message);
+      setSaving(false);
       return;
     }
-
-    if (!formData.cliente_id) {
-      alert("Seleziona un cliente.");
-      return;
-    }
-
-    if (!formData.Prestazione) {
-      alert("Seleziona una prestazione.");
-      return;
-    }
-
-    if (!formData.DataVerifica) {
-      alert("Inserisci la data verifica.");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
-    const payload = {
-      studio_id: formData.studio_id,
-      cliente_id: formData.cliente_id,
-      Prestazione: formData.Prestazione,
-      ValRischioIner: formData.ValRischioIner,
-      DataVerifica: formData.DataVerifica,
-      ScadenzaVerifica: ScadenzaVerificaCalcolata,
-      A1: formData.A1,
-      A2: formData.A2,
-      A3: formData.A3,
-      A4: formData.A4,
-      B1: formData.B1,
-      B2: formData.B2,
-      B3: formData.B3,
-      B4: formData.B4,
-      B5: formData.B5,
-      B6: formData.B6,
-      TotA,
-      TotB,
-      MediaPunteggio,
-      LivelloRischio,
-      RisInerentePonderato,
-      RisSpecificoPonderato,
-      RischioEffettivo,
-      AdeguataVerifica,
-    };
-
-    const { error } = await (supabase as any).from("tbAV1").insert([payload]);
+  } else {
+    const { data, error } = await (supabase as any)
+      .from("tbAV1")
+      .insert([payload])
+      .select("id")
+      .single();
 
     if (error) {
       setError(error.message);
@@ -399,9 +412,22 @@ export default function ModelloAV1Page() {
       return;
     }
 
-    alert("Record AV1 salvato correttamente.");
-    setSaving(false);
-  };
+    savedId = String(data.id);
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    id: savedId,
+    AV1Conferma: true,
+  }));
+
+  alert("Record AV1 salvato correttamente.");
+  setSaving(false);
+
+  if (savedId) {
+    router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+  }
+};
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
@@ -661,23 +687,44 @@ export default function ModelloAV1Page() {
               />
             </div>
 
-            <div className="md:col-span-2 flex justify-end gap-3 pt-3">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Salvataggio..." : "Salva AV1"}
-              </Button>
+           <div className="md:col-span-2 flex justify-end gap-3 pt-3 flex-wrap">
+  <Button onClick={handleSave} disabled={saving}>
+    {saving ? "Salvataggio..." : "Salva AV1"}
+  </Button>
 
-            <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() =>
-                            router.push(
-                              `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id ?? ""}&av1_id=${router.query.id ?? ""}&cliente_id=${formData.cliente_id ?? ""}`
-                               )
-                                }
-                               >
-                          Crea AV4
-                        </Button>
-            </div>
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => {
+      const av1Id = router.query.id || formData.id;
+      if (!av1Id) {
+        alert("Salva prima il record AV1.");
+        return;
+      }
+
+      router.push(
+        `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id ?? ""}&av1_id=${av1Id}&cliente_id=${formData.cliente_id ?? ""}`
+      );
+    }}
+  >
+    Crea AV4
+  </Button>
+
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => {
+      const av1Id = router.query.id || formData.id;
+      if (!av1Id) {
+        alert("Salva prima il record AV1, poi potrai stamparlo.");
+        return;
+      }
+      router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
+    }}
+  >
+    Stampa AV1
+  </Button>
+</div>
           </div>
         </CardContent>
       </Card>
