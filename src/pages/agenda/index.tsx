@@ -65,6 +65,10 @@ import {
   Mail,
   ExternalLink,
   Users,
+  Video,
+  RefreshCw,
+  Link2,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
@@ -86,9 +90,9 @@ import { it } from "date-fns/locale";
 
 import { calendarSyncService } from "@/services/calendarSyncService";
 
-// --------------------
+// ----------------------------------------------------
 // TIPI
-// --------------------
+// ----------------------------------------------------
 
 type ClienteAgenda = {
   id: string;
@@ -146,7 +150,6 @@ type AgendaRow = Database["public"]["Tables"]["tbagenda"]["Row"];
 type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   cliente_id: string | null;
   utente_id: string | null;
-
   gruppo_evento?: string | null;
   external_id?: string | null;
   provider?: string | null;
@@ -166,6 +169,12 @@ type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
 
   cliente: ClienteBase | null;
   utente: UtenteBase | null;
+};
+
+type EventoBadge = {
+  label: string;
+  className: string;
+  icon?: React.ReactNode;
 };
 
 type EventoGroup = {
@@ -228,9 +237,9 @@ type FormDataState = {
   durata_giorni: number;
 };
 
-// --------------------
-// HELPERS
-// --------------------
+// ----------------------------------------------------
+// HELPERS GENERALI
+// ----------------------------------------------------
 
 const toNotificationPayload = (e: Record<string, unknown>) => ({
   ...e,
@@ -299,9 +308,7 @@ const toArrayOfStrings = (value: unknown): string[] => {
   return [];
 };
 
-const groupKeyFromRow = (row: EventoWithRelations) => {
-  return String(row.gruppo_evento || row.id);
-};
+const groupKeyFromRow = (row: EventoWithRelations) => String(row.gruppo_evento || row.id);
 
 const sortUsersByName = (users: UtenteBase[]) => {
   return [...users].sort((a, b) => {
@@ -312,7 +319,126 @@ const sortUsersByName = (users: UtenteBase[]) => {
 };
 
 const uniqueStrings = (items: Array<string | null | undefined>) =>
-  [...new Set(items.filter((v): v is string => Boolean(v && String(v).trim())).map((v) => String(v).trim()))];
+  [
+    ...new Set(
+      items
+        .filter((v): v is string => Boolean(v && String(v).trim()))
+        .map((v) => String(v).trim())
+    ),
+  ];
+
+const getInitials = (nome?: string | null, cognome?: string | null) => {
+  const n = (nome || "").trim().charAt(0);
+  const c = (cognome || "").trim().charAt(0);
+  return `${n}${c}`.toUpperCase() || "?";
+};
+
+const normalizeSettore = (settore?: string | null) => {
+  const value = String(settore || "").trim().toLowerCase();
+  if (value === "fiscale") return "Fiscale";
+  if (value === "lavoro") return "Lavoro";
+  if (value === "consulenza") return "Consulenza";
+  return null;
+};
+
+const getSettoreBadgeClass = (settore?: string | null) => {
+  const normalized = normalizeSettore(settore);
+
+  if (normalized === "Fiscale") {
+    return "bg-green-100 text-green-800 border-green-200";
+  }
+
+  if (normalized === "Lavoro") {
+    return "bg-red-100 text-red-800 border-red-200";
+  }
+
+  if (normalized === "Consulenza") {
+    return "bg-blue-100 text-blue-800 border-blue-200";
+  }
+
+  return "bg-slate-100 text-slate-700 border-slate-200";
+};
+
+const getSettoreEventColor = (settore?: string | null) => {
+  const normalized = normalizeSettore(settore);
+
+  if (normalized === "Fiscale") {
+    return {
+      border: "border-l-green-600",
+      chip: "bg-green-50 border-green-200 text-green-900",
+      subtle: "bg-green-100 text-green-800",
+      dot: "bg-green-600",
+    };
+  }
+
+  if (normalized === "Lavoro") {
+    return {
+      border: "border-l-red-600",
+      chip: "bg-red-50 border-red-200 text-red-900",
+      subtle: "bg-red-100 text-red-800",
+      dot: "bg-red-600",
+    };
+  }
+
+  if (normalized === "Consulenza") {
+    return {
+      border: "border-l-blue-600",
+      chip: "bg-blue-50 border-blue-200 text-blue-900",
+      subtle: "bg-blue-100 text-blue-800",
+      dot: "bg-blue-600",
+    };
+  }
+
+  return {
+    border: "border-l-slate-500",
+    chip: "bg-slate-50 border-slate-200 text-slate-900",
+    subtle: "bg-slate-100 text-slate-800",
+    dot: "bg-slate-500",
+  };
+};
+
+const getEventoBadges = (evento: EventoGroup): EventoBadge[] => {
+  const badges: EventoBadge[] = [];
+
+  if (evento.riunione_teams) {
+    badges.push({
+      label: "Teams",
+      className: "bg-violet-100 text-violet-800 border-violet-200",
+      icon: <Video className="h-3 w-3" />,
+    });
+  }
+
+  if (evento.evento_generico) {
+    badges.push({
+      label: "Generico",
+      className: "bg-slate-100 text-slate-800 border-slate-200",
+    });
+  }
+
+  if (evento.in_sede) {
+    badges.push({
+      label: "In sede",
+      className: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    });
+  }
+
+  if (evento.ricorrente) {
+    badges.push({
+      label: "Ricorrente",
+      className: "bg-amber-100 text-amber-800 border-amber-200",
+      icon: <RefreshCw className="h-3 w-3" />,
+    });
+  }
+
+  if (evento.provider) {
+    badges.push({
+      label: String(evento.provider),
+      className: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    });
+  }
+
+  return badges;
+};
 
 const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
   const grouped = new Map<string, EventoWithRelations[]>();
@@ -333,8 +459,9 @@ const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
     });
 
     const master =
-      sortedRows.find((r) => r.utente_id && toArrayOfStrings(r.partecipanti).includes(String(r.utente_id))) ||
-      sortedRows[0];
+      sortedRows.find(
+        (r) => r.utente_id && toArrayOfStrings(r.partecipanti).includes(String(r.utente_id))
+      ) || sortedRows[0];
 
     const participantUsers = sortUsersByName(
       sortedRows
@@ -375,8 +502,12 @@ const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
       ora_inizio: master.ora_inizio ? normalizeTime(String(master.ora_inizio)) : null,
       ora_fine: master.ora_fine ? normalizeTime(String(master.ora_fine)) : null,
       ricorrente: Boolean((master as any).ricorrente),
-      frequenza_giorni: (master as any).frequenza_giorni ? Number((master as any).frequenza_giorni) : null,
-      durata_giorni: (master as any).durata_giorni ? Number((master as any).durata_giorni) : null,
+      frequenza_giorni: (master as any).frequenza_giorni
+        ? Number((master as any).frequenza_giorni)
+        : null,
+      durata_giorni: (master as any).durata_giorni
+        ? Number((master as any).durata_giorni)
+        : null,
       microsoft_event_id: master.microsoft_event_id ? String(master.microsoft_event_id) : null,
       outlook_synced: master.outlook_synced ?? null,
       external_id: master.external_id ? String(master.external_id) : null,
@@ -391,14 +522,14 @@ const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
   );
 };
 
-// --------------------
+// ----------------------------------------------------
 // COMPONENT
-// --------------------
+// ----------------------------------------------------
 
 export default function AgendaPage() {
   const { toast } = useToast();
 
-  // Stati principali
+  // stato dati
   const [eventiRows, setEventiRows] = useState<EventoWithRelations[]>([]);
   const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
   const [utenti, setUtenti] = useState<UtenteAgenda[]>([]);
@@ -407,32 +538,32 @@ export default function AgendaPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentStudioId, setCurrentStudioId] = useState<string | null>(null);
 
-  // Stati UI
+  // stato ui
   const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti" | "teams">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [filtroUtenti, setFiltroUtenti] = useState<string[]>([]);
 
-  // Stati dialog
+  // dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
   const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
   const [editingGruppoEvento, setEditingGruppoEvento] = useState<string | null>(null);
 
-  // Popup eventi multipli
+  // popup multipli
   const [moreEventsOpen, setMoreEventsOpen] = useState(false);
   const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
   const [moreEventsList, setMoreEventsList] = useState<EventoGroup[]>([]);
 
-  // Popup selezione contatti
+  // popup contatti
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [searchContatti, setSearchContatti] = useState("");
 
-  // Stato per ricerca partecipanti
+  // ricerca partecipanti
   const [searchPartecipanti, setSearchPartecipanti] = useState("");
 
-  // Stati form
+  // form
   const [formData, setFormData] = useState<FormDataState>({
     titolo: "",
     descrizione: "",
@@ -456,9 +587,9 @@ export default function AgendaPage() {
     durata_giorni: 180,
   });
 
-  // --------------------
+  // ----------------------------------------------------
   // LOAD DATA
-  // --------------------
+  // ----------------------------------------------------
 
   useEffect(() => {
     void loadData();
@@ -552,10 +683,10 @@ export default function AgendaPage() {
         setContactOptions([]);
       }
     } catch (error) {
-      console.error("Errore caricamento:", error);
+      console.error("Errore caricamento agenda:", error);
       toast({
         title: "Errore",
-        description: "Impossibile caricare i dati",
+        description: "Impossibile caricare i dati agenda",
         variant: "destructive",
       });
     } finally {
@@ -563,9 +694,9 @@ export default function AgendaPage() {
     }
   };
 
-  // --------------------
+  // ----------------------------------------------------
   // DATI AGGREGATI
-  // --------------------
+  // ----------------------------------------------------
 
   const groupedEvents = useMemo(() => aggregateEventGroups(eventiRows), [eventiRows]);
 
@@ -592,9 +723,9 @@ export default function AgendaPage() {
     });
   }, [contactOptions, searchContatti]);
 
-  // --------------------
-  // FORM
-  // --------------------
+  // ----------------------------------------------------
+  // FORM HELPERS
+  // ----------------------------------------------------
 
   const resetForm = () => {
     setEditingEventoId(null);
@@ -811,15 +942,10 @@ export default function AgendaPage() {
         const user = utenti.find((u) => u.id === pId);
 
         if (user?.email) {
-          const dmRes = await teamsService.sendDirectMessage(
-            studioId,
-            ownerUserId,
-            user.email,
-            {
-              content: `<strong>Nuova riunione Teams:</strong> ${title}<br><br>📅 ${date} alle ${time}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-              contentType: "html",
-            }
-          );
+          const dmRes = await teamsService.sendDirectMessage(studioId, ownerUserId, user.email, {
+            content: `<strong>Nuova riunione Teams:</strong> ${title}<br><br>📅 ${date} alle ${time}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+            contentType: "html",
+          });
 
           if (!dmRes?.success) {
             console.error("Errore invio DM Teams:", (dmRes as any)?.error);
@@ -831,6 +957,283 @@ export default function AgendaPage() {
     }
   };
 
+  // ----------------------------------------------------
+  // UTILITIES UI / TOOLTIP
+  // ----------------------------------------------------
+
+  const handleDeleteEventoDirect = (eventoId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEventoToDelete(eventoId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleOpenMoreEvents = (date: Date, events: EventoGroup[]) => {
+    setMoreEventsDate(date);
+    setMoreEventsList(events);
+    setMoreEventsOpen(true);
+  };
+
+  const getParticipantLabel = (evento: EventoGroup) => {
+    if (evento.participantUsers.length === 0) return "Nessun partecipante";
+    if (evento.participantUsers.length === 1) {
+      const u = evento.participantUsers[0];
+      return `${u.cognome} ${u.nome}`;
+    }
+    return `${evento.participantUsers.length} partecipanti`;
+  };
+
+  const getEventoSummary = (evento: EventoGroup): string => {
+    const startDate = safeParseISO(evento.data_inizio);
+
+    const ownerName = evento.utente
+      ? `${evento.utente.nome} ${evento.utente.cognome}${evento.utente.settore ? ` (${evento.utente.settore})` : ""}`
+      : "Non assegnato";
+
+    const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
+
+    const luogo = evento.in_sede
+      ? `Sala ${evento.sala ? String(evento.sala) : "??"}`
+      : evento.luogo
+      ? String(evento.luogo)
+      : "Fuori sede";
+
+    const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
+    const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
+
+    return [
+      `Titolo: ${evento.titolo || "Senza titolo"}`,
+      `Data: ${format(startDate, "dd MMMM yyyy", { locale: it })}`,
+      `Orario: ${oraInizio}${oraFine ? ` - ${oraFine}` : ""}`,
+      `Organizzatore: ${ownerName}`,
+      `Cliente: ${clienteNome}`,
+      `Luogo: ${luogo}`,
+      `Partecipanti interni: ${
+        evento.participantUsers.length > 0
+          ? evento.participantUsers.map((u) => `${u.cognome} ${u.nome}`).join(", ")
+          : "Nessuno"
+      }`,
+      evento.email_partecipanti_esterni.length > 0
+        ? `Partecipanti esterni: ${evento.email_partecipanti_esterni.join(", ")}`
+        : null,
+      evento.riunione_teams && evento.link_teams ? `Link Teams: ${evento.link_teams}` : null,
+      evento.descrizione ? `Note: ${evento.descrizione}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  const renderUserPill = (user: UtenteBase, isOrganizer = false) => {
+    return (
+      <div
+        key={user.id}
+        className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+          isOrganizer ? "bg-slate-50 border-slate-300 ring-1 ring-slate-200" : "bg-white"
+        }`}
+      >
+        <div className="h-8 w-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
+          {getInitials(user.nome, user.cognome)}
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-xs font-medium leading-none truncate">
+            {user.cognome} {user.nome}
+            {isOrganizer ? " • organizzatore" : ""}
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getSettoreBadgeClass(
+                user.settore
+              )}`}
+            >
+              {normalizeSettore(user.settore) || "Settore"}
+            </span>
+
+            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+              <CheckCircle2 className="h-3 w-3" />
+              Accettato
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAdvancedTooltip = (evento: EventoGroup) => {
+    const eventColors = getSettoreEventColor(evento.utente?.settore);
+    const badges = getEventoBadges(evento);
+    const ownerId = String(evento.utente_id || "");
+
+    return (
+      <TooltipContent side="right" className="w-[420px] p-0 rounded-xl overflow-hidden border shadow-xl">
+        <div className="bg-white">
+          <div className={`border-b px-4 py-3 ${eventColors.chip}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">{evento.titolo || "Senza titolo"}</div>
+                <div className="text-xs opacity-80 mt-1">
+                  {format(safeParseISO(evento.data_inizio), "dd MMMM yyyy", { locale: it })}
+                  {" • "}
+                  {evento.tutto_giorno
+                    ? "Tutto il giorno"
+                    : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}${
+                        evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""
+                      }`}
+                </div>
+              </div>
+
+              <div className={`h-3 w-3 rounded-full mt-1 ${eventColors.dot}`} />
+            </div>
+
+            {badges.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {badges.map((badge) => (
+                  <span
+                    key={`${evento.gruppo_evento}-${badge.label}`}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold ${badge.className}`}
+                  >
+                    {badge.icon}
+                    {badge.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-4 space-y-4 text-sm">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 mt-0.5 text-slate-500" />
+                <div>
+                  <div className="font-medium">Orario</div>
+                  <div className="text-muted-foreground">
+                    {evento.tutto_giorno
+                      ? "Tutto il giorno"
+                      : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}${
+                          evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""
+                        }`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Building2 className="h-4 w-4 mt-0.5 text-slate-500" />
+                <div>
+                  <div className="font-medium">Cliente</div>
+                  <div className="text-muted-foreground">
+                    {evento.cliente?.ragione_sociale || "Evento senza cliente"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 mt-0.5 text-slate-500" />
+                <div>
+                  <div className="font-medium">Luogo</div>
+                  <div className="text-muted-foreground">
+                    {evento.in_sede
+                      ? `In sede${evento.sala ? ` • ${evento.sala}` : ""}`
+                      : evento.luogo || "Fuori sede"}
+                  </div>
+                </div>
+              </div>
+
+              {evento.riunione_teams && evento.link_teams && (
+                <div className="flex items-start gap-2">
+                  <Link2 className="h-4 w-4 mt-0.5 text-violet-600" />
+                  <div className="min-w-0">
+                    <div className="font-medium">Link Teams</div>
+                    <a
+                      href={evento.link_teams}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-violet-700 hover:underline break-all"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {evento.link_teams}
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                Partecipanti interni
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {evento.participantUsers.length > 0 ? (
+                  evento.participantUsers.map((u) => renderUserPill(u, u.id === ownerId))
+                ) : (
+                  <div className="text-muted-foreground text-sm">Nessun partecipante interno</div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                Partecipanti esterni
+              </div>
+              {evento.email_partecipanti_esterni.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {evento.email_partecipanti_esterni.map((email) => (
+                    <span
+                      key={email}
+                      className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs bg-slate-50 text-slate-700"
+                    >
+                      {email}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted-foreground text-sm">Nessun partecipante esterno</div>
+              )}
+            </div>
+
+            {evento.descrizione && (
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                  Descrizione
+                </div>
+                <div className="text-sm text-slate-700 whitespace-pre-wrap">{evento.descrizione}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </TooltipContent>
+    );
+  };
+
+  const getEventClasses = (evento: EventoGroup) => {
+    const settoreColor = getSettoreEventColor(evento.utente?.settore);
+
+    return {
+      card: settoreColor.border,
+      box: `${settoreColor.chip} border`,
+      badgeText: settoreColor.subtle,
+      dot: settoreColor.dot,
+    };
+  };
+
+  // ----------------------------------------------------
+  // DA QUI NELLA PROSSIMA CHAT:
+  // - handleSaveEvento
+  // - handleDeleteEvento
+  // - renderEventCard
+  // - renderMonthView
+  // - renderWeekView
+  // - renderListView
+  // - renderRicorrentiView
+  // - renderTeamsView
+  // - return JSX finale con dialog
+  // ----------------------------------------------------
+
+  if (loading) {
+    return <div className="p-10 text-center">Caricamento in corso...</div>;
+  }
+
+  return (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
   const handleSaveEvento = async () => {
     const supabase = getSupabaseClient();
 
@@ -847,7 +1250,7 @@ export default function AgendaPage() {
       if (!formData.utente_id) {
         toast({
           title: "Errore",
-          description: "Seleziona un utente",
+          description: "Seleziona un utente organizzatore",
           variant: "destructive",
         });
         return;
@@ -891,6 +1294,7 @@ export default function AgendaPage() {
       if (formData.riunione_teams) {
         if (teamsLink.trim().length > 0) {
           const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
+
           if (!isUrl) {
             toast({
               title: "Errore",
@@ -1029,6 +1433,7 @@ export default function AgendaPage() {
         if (updateError) throw updateError;
 
         let insertedRows: any[] = [];
+
         if (userIdsToInsert.length > 0) {
           const payloads = userIdsToInsert.map((utenteId) =>
             buildBasePayload(
@@ -1182,7 +1587,7 @@ export default function AgendaPage() {
       resetForm();
       await loadData();
     } catch (error) {
-      console.error(error);
+      console.error("Errore salvataggio evento:", error);
       toast({
         title: "Errore",
         description: "Salvataggio fallito",
@@ -1197,7 +1602,9 @@ export default function AgendaPage() {
     if (!eventoToDelete) return;
 
     try {
-      const gruppo = filteredEvents.find((e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete);
+      const gruppo = filteredEvents.find(
+        (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
+      );
 
       if (!gruppo) {
         toast({
@@ -1252,16 +1659,6 @@ export default function AgendaPage() {
     }
   };
 
-  const handleDeleteEventoDirect = (eventoId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setEventoToDelete(eventoId);
-    setDeleteDialogOpen(true);
-  };
-
-  // --------------------
-  // UTILITIES
-  // --------------------
-
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter((u) => u.settore === settore).map((u) => u.id);
     const isSelected = ids.some((id) => formData.partecipanti.includes(id));
@@ -1303,132 +1700,31 @@ export default function AgendaPage() {
     }));
   };
 
-  const getEventClasses = (evento: EventoGroup) => {
-    if (evento.riunione_teams) {
-      return {
-        card: "border-l-violet-700",
-        box: "bg-violet-100 border-violet-700 text-gray-900",
-        badgeText: "text-violet-800",
-      };
-    }
-
-    if (evento.evento_generico) {
-      return {
-        card: "border-l-blue-500",
-        box: "bg-blue-50 border-blue-500 text-gray-900",
-        badgeText: "text-blue-700",
-      };
-    }
-
-    if (evento.in_sede) {
-      return {
-        card: "border-l-green-500",
-        box: "bg-green-50 border-green-500 text-gray-900",
-        badgeText: "text-green-700",
-      };
-    }
-
-    return {
-      card: "border-l-red-500",
-      box: "bg-red-50 border-red-500 text-gray-900",
-      badgeText: "text-red-700",
-    };
-  };
-
-  const getEventoSummary = (evento: EventoGroup): string => {
-    const startDate = safeParseISO(evento.data_inizio);
-
-    const ownerName = evento.utente
-      ? `${evento.utente.nome} ${evento.utente.cognome}${evento.utente.settore ? ` (${evento.utente.settore})` : ""}`
-      : "Non assegnato";
-
-    const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
-
-    const luogo = evento.in_sede
-      ? `Sala ${evento.sala ? String(evento.sala) : "??"} (In Sede)`
-      : evento.luogo
-      ? String(evento.luogo)
-      : "Fuori Sede";
-
-    const tipo = evento.evento_generico
-      ? "Evento Generico"
-      : evento.riunione_teams
-      ? "Riunione Teams"
-      : "Appuntamento";
-
-    const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
-    const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
-
-    const partecipantiInterni =
-      evento.participantUsers.length > 0
-        ? evento.participantUsers.map((u) => `${u.cognome} ${u.nome}`).join(", ")
-        : "Nessuno";
-
-    let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
-    summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
-    summary += `⏰ ${oraInizio} - ${oraFine}\n\n`;
-    summary += `👤 Referente: ${ownerName}\n\n`;
-    summary += `👥 Partecipanti interni: ${partecipantiInterni}\n\n`;
-    summary += `🏢 Cliente: ${clienteNome}\n\n`;
-    summary += `📍 Luogo: ${luogo}\n\n`;
-    summary += `🔵 Tipo: ${tipo}\n`;
-
-    if (evento.email_partecipanti_esterni.length > 0) {
-      summary += `📧 Esterni: ${evento.email_partecipanti_esterni.join(", ")}\n`;
-    }
-
-    if (evento.riunione_teams) {
-      summary += `💻 Riunione Teams: Sì\n`;
-      if (evento.link_teams) summary += `🔗 Link: ${evento.link_teams}\n`;
-    }
-
-    if (evento.descrizione) {
-      summary += `\n📝 Note:\n${String(evento.descrizione)}`;
-    }
-
-    return summary;
-  };
-
-  const handleOpenMoreEvents = (date: Date, events: EventoGroup[]) => {
-    setMoreEventsDate(date);
-    setMoreEventsList(events);
-    setMoreEventsOpen(true);
-  };
-
-  const getParticipantLabel = (evento: EventoGroup) => {
-    if (evento.participantUsers.length === 0) return "Nessun partecipante";
-    if (evento.participantUsers.length === 1) {
-      const u = evento.participantUsers[0];
-      return `${u.cognome} ${u.nome}`;
-    }
-    return `${evento.participantUsers.length} partecipanti`;
-  };
-
-  // --------------------
-  // RENDERERS
-  // --------------------
-
   const renderEventCard = (evento: EventoGroup, compact = false) => {
     const ownerName = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
     const styles = getEventClasses(evento);
     const colorClass = styles.card;
+    const badges = getEventoBadges(evento);
 
     return (
       <TooltipProvider key={evento.gruppo_evento}>
-        <Tooltip delayDuration={300}>
+        <Tooltip delayDuration={250}>
           <TooltipTrigger asChild>
             <Card
               className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${colorClass}`}
               onClick={() => handleEditEvento(evento)}
             >
               <CardContent className="p-3">
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
-                      {evento.ora_inizio && String(evento.ora_inizio).substring(0, 5)}
-                      {evento.ora_fine && ` - ${String(evento.ora_fine).substring(0, 5)}`}
+                      {evento.tutto_giorno
+                        ? "Tutto il giorno"
+                        : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}${
+                            evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""
+                          }`}
                     </span>
                   </div>
 
@@ -1458,9 +1754,34 @@ export default function AgendaPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <div className="font-semibold text-base truncate">{evento.titolo || "(senza titolo)"}</div>
+
+                  {badges.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {badges.map((badge) => (
+                        <span
+                          key={`${evento.gruppo_evento}-${badge.label}`}
+                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}
+                        >
+                          {badge.icon}
+                          {badge.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <span className="font-semibold text-base">{ownerName}</span>
+                    <User className="h-4 w-4 text-slate-600" />
+                    <span className="font-medium text-sm">{ownerName}</span>
+                    {evento.utente?.settore && (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getSettoreBadgeClass(
+                          evento.utente.settore
+                        )}`}
+                      >
+                        {normalizeSettore(evento.utente.settore)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1470,36 +1791,44 @@ export default function AgendaPage() {
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building2 className="h-4 w-4" />
-                    <span>{clienteNome}</span>
+                    <span className="truncate">{clienteNome}</span>
                   </div>
 
                   {evento.in_sede && evento.sala && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-green-600" />
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
-                        SALA {String(evento.sala)}
+                      <MapPin className="h-4 w-4 text-emerald-600" />
+                      <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-medium">
+                        {String(evento.sala)}
                       </span>
                     </div>
                   )}
 
                   {!evento.in_sede && evento.luogo && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-red-600" />
+                      <MapPin className="h-4 w-4 text-slate-600" />
                       <span className="text-xs text-gray-600 truncate max-w-[240px]">{String(evento.luogo)}</span>
                     </div>
                   )}
 
-                  {!compact && evento.titolo && (
+                  {!compact && evento.descrizione && (
                     <div className="flex items-center gap-2 text-sm mt-2">
                       <FileText className="h-4 w-4" />
-                      <span className="text-muted-foreground">{evento.titolo}</span>
+                      <span className="text-muted-foreground truncate">{evento.descrizione}</span>
                     </div>
                   )}
 
                   {!compact && evento.riunione_teams && evento.link_teams && (
                     <div className="flex items-center gap-2 text-sm mt-2 text-violet-700">
                       <ExternalLink className="h-4 w-4" />
-                      <span className="truncate">Link Teams disponibile</span>
+                      <a
+                        href={evento.link_teams}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Apri link Teams
+                      </a>
                     </div>
                   )}
                 </div>
@@ -1507,9 +1836,7 @@ export default function AgendaPage() {
             </Card>
           </TooltipTrigger>
 
-          <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-            {getEventoSummary(evento)}
-          </TooltipContent>
+          {renderAdvancedTooltip(evento)}
         </Tooltip>
       </TooltipProvider>
     );
@@ -1552,50 +1879,56 @@ export default function AgendaPage() {
               <div className="font-semibold text-sm mb-1">{format(dayItem, "d")}</div>
 
               <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((ev) => (
-                  <TooltipProvider key={ev.gruppo_evento}>
-                    <Tooltip delayDuration={300}>
-                      <TooltipTrigger asChild>
-                        <div
-                          className={`p-2 rounded border-l-2 ${getEventClasses(ev).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
-                        >
+                {dayEvents.slice(0, 3).map((ev) => {
+                  const styles = getEventClasses(ev);
+
+                  return (
+                    <TooltipProvider key={ev.gruppo_evento}>
+                      <Tooltip delayDuration={250}>
+                        <TooltipTrigger asChild>
                           <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditEvento(ev);
-                            }}
-                            className="pr-6"
+                            className={`p-2 rounded border-l-2 ${styles.box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
                           >
-                            <div className="truncate font-semibold text-gray-900">
-                              {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditEvento(ev);
+                              }}
+                              className="pr-6"
+                            >
+                              <div className="truncate font-semibold text-gray-900">
+                                {ev.titolo || "(senza titolo)"} {ev.sala ? `(${String(ev.sala)})` : ""}
+                              </div>
+
+                              <div className="truncate text-[11px] text-gray-700">
+                                👥 {getParticipantLabel(ev)}
+                              </div>
+
+                              <div className="truncate text-[11px] text-gray-600">
+                                ⏰{" "}
+                                {ev.tutto_giorno
+                                  ? "Tutto il giorno"
+                                  : `${ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}${
+                                      ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""
+                                    }`}
+                              </div>
                             </div>
 
-                            <div className="truncate text-[11px] text-gray-700">
-                              👥 {getParticipantLabel(ev)}
-                            </div>
-
-                            <div className="truncate text-[11px] text-gray-600">
-                              ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
-                              {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
-                            </div>
+                            <button
+                              className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                              onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
+                              title="Elimina"
+                            >
+                              ×
+                            </button>
                           </div>
+                        </TooltipTrigger>
 
-                          <button
-                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                            onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
-                            title="Elimina"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </TooltipTrigger>
-
-                      <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-                        {getEventoSummary(ev)}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ))}
+                        {renderAdvancedTooltip(ev)}
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                })}
 
                 {dayEvents.length > 3 && (
                   <div
@@ -1683,64 +2016,72 @@ export default function AgendaPage() {
                     >
                       {cellEvents.length > 0 && (
                         <div className="space-y-1">
-                          {cellEvents.map((evento) => (
-                            <TooltipProvider key={evento.gruppo_evento}>
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    className={`p-2 rounded border-l-2 ${getEventClasses(evento).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
-                                  >
+                          {cellEvents.map((evento) => {
+                            const styles = getEventClasses(evento);
+
+                            return (
+                              <TooltipProvider key={evento.gruppo_evento}>
+                                <Tooltip delayDuration={250}>
+                                  <TooltipTrigger asChild>
                                     <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditEvento(evento);
-                                      }}
-                                      className="pr-6"
+                                      className={`p-2 rounded border-l-2 ${styles.box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
                                     >
-                                      <div className="font-semibold text-gray-900 truncate">
-                                        {evento.titolo || "(senza titolo)"}
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditEvento(evento);
+                                        }}
+                                        className="pr-6"
+                                      >
+                                        <div className="font-semibold text-gray-900 truncate">
+                                          {evento.titolo || "(senza titolo)"}
+                                        </div>
+
+                                        <div className="text-gray-600 truncate">👥 {getParticipantLabel(evento)}</div>
+
+                                        {evento.cliente?.ragione_sociale && (
+                                          <div className="text-gray-600 truncate">
+                                            🏢 {evento.cliente.ragione_sociale}
+                                          </div>
+                                        )}
+
+                                        {evento.in_sede && evento.sala && (
+                                          <div className="text-emerald-700 font-medium mt-1">📍 {String(evento.sala)}</div>
+                                        )}
+
+                                        {!evento.in_sede && evento.luogo && (
+                                          <div className="text-slate-700 font-medium mt-1 truncate">
+                                            📍 {String(evento.luogo)}
+                                          </div>
+                                        )}
+
+                                        <div className="text-gray-500 mt-1">
+                                          ⏰{" "}
+                                          {evento.tutto_giorno
+                                            ? "Tutto il giorno"
+                                            : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}${
+                                                evento.ora_fine
+                                                  ? ` - ${String(evento.ora_fine).substring(0, 5)}`
+                                                  : ""
+                                              }`}
+                                        </div>
                                       </div>
 
-                                      <div className="text-gray-600 truncate">👥 {getParticipantLabel(evento)}</div>
-
-                                      {evento.cliente?.ragione_sociale && (
-                                        <div className="text-gray-600 truncate">🏢 {evento.cliente.ragione_sociale}</div>
-                                      )}
-
-                                      {evento.in_sede && evento.sala && (
-                                        <div className="text-green-700 font-medium mt-1">
-                                          📍 SALA {String(evento.sala)}
-                                        </div>
-                                      )}
-
-                                      {!evento.in_sede && evento.luogo && (
-                                        <div className="text-red-700 font-medium mt-1 truncate">
-                                          📍 {String(evento.luogo)}
-                                        </div>
-                                      )}
-
-                                      <div className="text-gray-500 mt-1">
-                                        ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
-                                        {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
-                                      </div>
+                                      <button
+                                        className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                                        onClick={(e) => handleDeleteEventoDirect(evento.id, e)}
+                                        title="Elimina evento"
+                                      >
+                                        ×
+                                      </button>
                                     </div>
+                                  </TooltipTrigger>
 
-                                    <button
-                                      className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                                      onClick={(e) => handleDeleteEventoDirect(evento.id, e)}
-                                      title="Elimina evento"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                </TooltipTrigger>
-
-                                <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-                                  {getEventoSummary(evento)}
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
+                                  {renderAdvancedTooltip(evento)}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1767,11 +2108,7 @@ export default function AgendaPage() {
       );
     }
 
-    return (
-      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-        {pastEvents.map((e) => renderEventCard(e, false))}
-      </div>
-    );
+    return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
   };
 
   const renderRicorrentiView = () => {
@@ -1834,8 +2171,11 @@ export default function AgendaPage() {
                     </td>
 
                     <td className="p-3 text-sm whitespace-nowrap">
-                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : format(startDate, "HH:mm")}
-                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                      {evento.tutto_giorno
+                        ? "Tutto il giorno"
+                        : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : format(startDate, "HH:mm")}${
+                            evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""
+                          }`}
                     </td>
 
                     <td className="p-3 text-sm">
@@ -1873,11 +2213,9 @@ export default function AgendaPage() {
     );
   };
 
-  // --------------------
-  // RENDER
-  // --------------------
-
-  if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
+  if (loading) {
+    return <div className="p-10 text-center">Caricamento in corso...</div>;
+  }
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-4">
@@ -1894,7 +2232,9 @@ export default function AgendaPage() {
               </Button>
 
               <span className="font-bold px-4 min-w-[150px] text-center">
-                {format(currentDate, view === "week" ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", { locale: it })}
+                {format(currentDate, view === "week" ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", {
+                  locale: it,
+                })}
               </span>
 
               <Button
@@ -2593,37 +2933,59 @@ export default function AgendaPage() {
                   const bTime = String(b.ora_inizio || "00:00");
                   return aTime.localeCompare(bTime);
                 })
-                .map((evento) => (
-                  <div
-                    key={evento.gruppo_evento}
-                    className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setMoreEventsOpen(false);
-                      handleEditEvento(evento);
-                    }}
-                  >
-                    <div className="font-semibold text-sm">{evento.titolo || "(senza titolo)"}</div>
+                .map((evento) => {
+                  const badges = getEventoBadges(evento);
 
-                    <div className="text-xs text-gray-600 mt-1">
-                      ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
-                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                  return (
+                    <div
+                      key={evento.gruppo_evento}
+                      className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setMoreEventsOpen(false);
+                        handleEditEvento(evento);
+                      }}
+                    >
+                      <div className="font-semibold text-sm">{evento.titolo || "(senza titolo)"}</div>
+
+                      {badges.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {badges.map((badge) => (
+                            <span
+                              key={`${evento.gruppo_evento}-${badge.label}`}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge.className}`}
+                            >
+                              {badge.icon}
+                              {badge.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="text-xs text-gray-600 mt-2">
+                        ⏰{" "}
+                        {evento.tutto_giorno
+                          ? "Tutto il giorno"
+                          : `${evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}${
+                              evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""
+                            }`}
+                      </div>
+
+                      <div className="text-xs text-gray-700 mt-1">👥 {getParticipantLabel(evento)}</div>
+
+                      {evento.cliente?.ragione_sociale && (
+                        <div className="text-xs text-gray-700 mt-1">🏢 {evento.cliente.ragione_sociale}</div>
+                      )}
+
+                      {evento.in_sede && evento.sala && (
+                        <div className="text-xs text-emerald-700 mt-1">📍 {String(evento.sala)}</div>
+                      )}
+
+                      {!evento.in_sede && evento.luogo && (
+                        <div className="text-xs text-slate-700 mt-1">📍 {String(evento.luogo)}</div>
+                      )}
                     </div>
-
-                    <div className="text-xs text-gray-700 mt-1">👥 {getParticipantLabel(evento)}</div>
-
-                    {evento.cliente?.ragione_sociale && (
-                      <div className="text-xs text-gray-700 mt-1">🏢 {evento.cliente.ragione_sociale}</div>
-                    )}
-
-                    {evento.in_sede && evento.sala && (
-                      <div className="text-xs text-green-700 mt-1">📍 Sala {String(evento.sala)}</div>
-                    )}
-
-                    {!evento.in_sede && evento.luogo && (
-                      <div className="text-xs text-red-700 mt-1">📍 {String(evento.luogo)}</div>
-                    )}
-                  </div>
-                ))
+                  );
+                })
             )}
           </div>
         </DialogContent>
@@ -2645,7 +3007,7 @@ export default function AgendaPage() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
+</AlertDialog>
+</div>
+);
 }
