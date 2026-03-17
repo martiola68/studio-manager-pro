@@ -39,7 +39,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
 import {
   Tooltip,
   TooltipContent,
@@ -63,6 +62,9 @@ import {
   Building2,
   FileText,
   Search,
+  Mail,
+  ExternalLink,
+  Users,
 } from "lucide-react";
 
 import {
@@ -131,7 +133,13 @@ type UtenteAgenda = {
   updated_at: string | null;
 };
 
-// Estendo la row agenda con le relazioni e campi ricorrenza usati nel file
+type ContactEmailOption = {
+  id: string;
+  nome: string;
+  cognome: string;
+  email: string;
+};
+
 type AgendaRow = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
@@ -141,13 +149,12 @@ type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   cliente: ClienteBase | null;
   utente: UtenteBase | null;
 
-  // campi usati nel file (se non sono presenti in Row, restano opzionali)
   ricorrente?: boolean | null;
   frequenza_giorni?: number | null;
   durata_giorni?: number | null;
 
-  // partecipanti potrebbe essere json/array: lo usiamo come array di string
   partecipanti?: unknown;
+  email_partecipanti_esterni?: unknown;
 };
 
 type FormDataState = {
@@ -167,6 +174,7 @@ type FormDataState = {
   riunione_teams: boolean;
   link_teams: string;
   partecipanti: string[];
+  email_partecipanti_esterni: string[];
   ricorrente: boolean;
   frequenza_giorni: number;
   durata_giorni: number;
@@ -182,7 +190,7 @@ const toNotificationPayload = (e: Record<string, unknown>) => ({
   evento_generico: (e as any)?.evento_generico ?? null,
   frequenza_giorni: (e as any)?.frequenza_giorni ?? null,
   link_teams: (e as any)?.link_teams ?? null,
-
+  email_partecipanti_esterni: (e as any)?.email_partecipanti_esterni ?? null,
   frequenza_settimane: (e as any)?.frequenza_settimane ?? null,
   frequenza_mesi: (e as any)?.frequenza_mesi ?? null,
   giorno_mese: (e as any)?.giorno_mese ?? null,
@@ -192,7 +200,6 @@ const toNotificationPayload = (e: Record<string, unknown>) => ({
   outlook_event_id: (e as any)?.outlook_event_id ?? null,
 });
 
-// Helper per orari: se arriva già "HH:mm" la restituisce; altrimenti formatta in Europe/Rome
 const formatTimeWithTimezone = (value: string): string => {
   if (/^\d{2}:\d{2}$/.test(value)) return value;
 
@@ -220,6 +227,46 @@ const safeParseISO = (value: string | null | undefined): Date => {
 
 const toBool = (c: CheckedState) => c === true;
 
+const normalizeTime = (time: string) => {
+  if (!time) return "00:00";
+  return time.length >= 5 ? time.substring(0, 5) : time;
+};
+
+const addOneHourToTime = (time: string) => {
+  const normalized = normalizeTime(time || "09:00");
+  const [hours, minutes] = normalized.split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return "10:00";
+
+  const totalMinutes = hours * 60 + minutes + 60;
+  const nextHours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const nextMinutes = totalMinutes % 60;
+
+  return `${String(nextHours).padStart(2, "0")}:${String(nextMinutes).padStart(2, "0")}`;
+};
+
+const toArrayOfStrings = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item)).filter(Boolean);
+      }
+    } catch {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 // --------------------
 // COMPONENT
 // --------------------
@@ -231,6 +278,7 @@ export default function AgendaPage() {
   const [eventi, setEventi] = useState<EventoWithRelations[]>([]);
   const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
   const [utenti, setUtenti] = useState<UtenteAgenda[]>([]);
+  const [contactOptions, setContactOptions] = useState<ContactEmailOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -245,6 +293,15 @@ export default function AgendaPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
   const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
+
+  // Popup eventi multipli
+  const [moreEventsOpen, setMoreEventsOpen] = useState(false);
+  const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
+  const [moreEventsList, setMoreEventsList] = useState<EventoWithRelations[]>([]);
+
+  // Popup selezione contatti
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [searchContatti, setSearchContatti] = useState("");
 
   // Stato per ricerca partecipanti
   const [searchPartecipanti, setSearchPartecipanti] = useState("");
@@ -267,16 +324,12 @@ export default function AgendaPage() {
     riunione_teams: false,
     link_teams: "",
     partecipanti: [],
+    email_partecipanti_esterni: [],
     ricorrente: false,
     frequenza_giorni: 7,
     durata_giorni: 180,
   });
 
-    // stato popup eventi multipli
-    const [moreEventsOpen, setMoreEventsOpen] = useState(false);
-    const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
-    const [moreEventsList, setMoreEventsList] = useState<EventoWithRelations[]>([]);
-  
   // --------------------
   // LOAD DATA
   // --------------------
@@ -292,7 +345,6 @@ export default function AgendaPage() {
     try {
       setLoading(true);
 
-      // Carica utente corrente
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -304,26 +356,23 @@ export default function AgendaPage() {
           .eq("email", session.user.email)
           .single();
 
-        if (!userErr && userData?.id) setCurrentUserId(userData.id);
+        if (!userErr && userData?.id) {
+          setCurrentUserId(userData.id);
+        }
       }
 
-      // Carica eventi (con relazioni)
       const { data: eventiData, error: eventiError } = await supabase
         .from("tbagenda")
-        .select(
-          `
+        .select(`
           *,
           cliente:cliente_id(id, ragione_sociale, codice_fiscale, partita_iva),
           utente:utente_id(id, nome, cognome, email, settore)
-        `
-        )
+        `)
         .order("data_inizio", { ascending: true });
 
       if (eventiError) throw eventiError;
-
       setEventi(((eventiData ?? []) as unknown) as EventoWithRelations[]);
 
-      // Carica clienti
       const { data: clientiData, error: clientiError } = await supabase
         .from("tbclienti")
         .select("*")
@@ -333,11 +382,9 @@ export default function AgendaPage() {
       if (clientiError) throw clientiError;
       setClienti(((clientiData ?? []) as unknown) as ClienteAgenda[]);
 
-      // Carica utenti
       const { data: utentiData, error: utentiError } = await supabase
         .from("tbutenti")
-        .select(
-          `
+        .select(`
           id,
           nome,
           cognome,
@@ -348,13 +395,36 @@ export default function AgendaPage() {
           attivo,
           created_at,
           updated_at
-        `
-        )
+        `)
         .eq("attivo", true)
         .order("cognome", { ascending: true });
 
       if (utentiError) throw utentiError;
       setUtenti(((utentiData ?? []) as unknown) as UtenteAgenda[]);
+
+      // Caricamento contatti per email esterne
+      // Assunzione: tabella "tbcontatti" con almeno id, nome, cognome, email, attivo
+      const { data: contattiData, error: contattiError } = await (supabase as any)
+        .from("tbcontatti")
+        .select("*")
+        .order("cognome", { ascending: true });
+
+      if (!contattiError) {
+        const mapped: ContactEmailOption[] = (contattiData ?? [])
+          .filter((c: any) => Boolean(c?.email))
+          .map((c: any) => ({
+            id: String(c.id),
+            nome: String(c.nome ?? c.first_name ?? ""),
+            cognome: String(c.cognome ?? c.last_name ?? ""),
+            email: String(c.email ?? "").trim(),
+          }))
+          .filter((c: ContactEmailOption) => Boolean(c.email));
+
+        setContactOptions(mapped);
+      } else {
+        console.warn("tbcontatti non caricata:", contattiError);
+        setContactOptions([]);
+      }
     } catch (error) {
       console.error("Errore caricamento:", error);
       toast({
@@ -374,7 +444,10 @@ export default function AgendaPage() {
   const resetForm = () => {
     setEditingEventoId(null);
     setSearchPartecipanti("");
+    setSearchContatti("");
+
     const today = format(new Date(), "yyyy-MM-dd");
+
     setFormData({
       titolo: "",
       descrizione: "",
@@ -392,6 +465,7 @@ export default function AgendaPage() {
       riunione_teams: false,
       link_teams: "",
       partecipanti: [],
+      email_partecipanti_esterni: [],
       ricorrente: false,
       frequenza_giorni: 7,
       durata_giorni: 180,
@@ -408,7 +482,7 @@ export default function AgendaPage() {
 
       if (hour !== undefined) {
         startHour = `${String(hour).padStart(2, "0")}:00`;
-        endHour = `${String(hour + 1).padStart(2, "0")}:00`;
+        endHour = addOneHourToTime(startHour);
       }
 
       setFormData((prev) => ({
@@ -427,21 +501,20 @@ export default function AgendaPage() {
     const startDate = safeParseISO(evento.data_inizio as any);
     const endDate = safeParseISO(evento.data_fine as any);
 
-    let partecipanti: string[] = [];
-    if (Array.isArray(evento.partecipanti)) {
-      partecipanti = evento.partecipanti.map((p) => String(p));
-    }
+    const partecipanti = toArrayOfStrings(evento.partecipanti);
+    const emailPartecipantiEsterni = toArrayOfStrings((evento as any).email_partecipanti_esterni);
 
     setEditingEventoId(String(evento.id));
     setSearchPartecipanti("");
+    setSearchContatti("");
 
     setFormData({
       titolo: evento.titolo ?? "",
       descrizione: (evento.descrizione as string) || "",
       data_inizio: format(startDate, "yyyy-MM-dd"),
-      ora_inizio: evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "09:00",
+      ora_inizio: evento.ora_inizio ? normalizeTime(String(evento.ora_inizio)) : "09:00",
       data_fine: format(endDate, "yyyy-MM-dd"),
-      ora_fine: evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "10:00",
+      ora_fine: evento.ora_fine ? normalizeTime(String(evento.ora_fine)) : "10:00",
       tutto_giorno: Boolean(evento.tutto_giorno),
       cliente_id: evento.cliente_id || "",
       utente_id: evento.utente_id,
@@ -452,6 +525,7 @@ export default function AgendaPage() {
       riunione_teams: Boolean((evento as any).riunione_teams),
       link_teams: ((evento as any).link_teams as string) || "",
       partecipanti,
+      email_partecipanti_esterni: emailPartecipantiEsterni,
       ricorrente: Boolean((evento as any).ricorrente),
       frequenza_giorni: Number((evento as any).frequenza_giorni ?? 7),
       durata_giorni: Number((evento as any).durata_giorni ?? 180),
@@ -460,23 +534,55 @@ export default function AgendaPage() {
     setDialogOpen(true);
   };
 
+  const handleDataInizioChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      data_inizio: value,
+      data_fine: value || prev.data_fine,
+    }));
+  };
+
+  const handleOraInizioChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      ora_inizio: value,
+      ora_fine: addOneHourToTime(value),
+    }));
+  };
+
+  const handleToggleExternalEmail = (email: string, checked: CheckedState) => {
+    const isChecked = toBool(checked);
+
+    setFormData((prev) => ({
+      ...prev,
+      email_partecipanti_esterni: isChecked
+        ? [...new Set([...prev.email_partecipanti_esterni, email])]
+        : prev.email_partecipanti_esterni.filter((e) => e !== email),
+    }));
+  };
+
   const handleSaveEvento = async () => {
     const supabase = getSupabaseClient();
 
     try {
-      // --------------------
-      // VALIDAZIONI BASE
-      // --------------------
       if (!formData.titolo.trim()) {
-        toast({ title: "Errore", description: "Titolo obbligatorio", variant: "destructive" });
-        return;
-      }
-      if (!formData.utente_id) {
-        toast({ title: "Errore", description: "Seleziona un utente", variant: "destructive" });
+        toast({
+          title: "Errore",
+          description: "Titolo obbligatorio",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Validazione eventi ricorrenti
+      if (!formData.utente_id) {
+        toast({
+          title: "Errore",
+          description: "Seleziona un utente",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (formData.ricorrente) {
         if (!formData.frequenza_giorni || formData.frequenza_giorni <= 0) {
           toast({
@@ -486,6 +592,7 @@ export default function AgendaPage() {
           });
           return;
         }
+
         if (!formData.durata_giorni || formData.durata_giorni <= 0) {
           toast({
             title: "Errore",
@@ -496,9 +603,6 @@ export default function AgendaPage() {
         }
       }
 
-      // ===============================
-      // DATE EVENTO (UNICA DEFINIZIONE)
-      // ===============================
       const startDateTimeISO = formData.tutto_giorno
         ? new Date(formData.data_inizio).toISOString()
         : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
@@ -507,174 +611,149 @@ export default function AgendaPage() {
         ? new Date(formData.data_fine || formData.data_inizio).toISOString()
         : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
-// =========================
-// TEAMS (UNICO BLOCCO) ✅  — senza currentStudioId
-// =========================
-let teamsLink = formData.link_teams || "";
-let teamsJoinUrl: string | null = null;
-let teamsMeetingId: string | null = null;
+      let teamsLink = formData.link_teams || "";
+      let teamsJoinUrl: string | null = null;
 
-if (formData.riunione_teams) {
-  // 1) Se l’utente ha incollato un link manuale, lo validiamo e basta
-  if (teamsLink.trim().length > 0) {
-    const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
-    if (!isUrl) {
-      toast({
-        title: "Errore",
-        description: "Il Link Teams deve essere un URL valido (es. https://...).",
-        variant: "destructive",
-      });
-      return;
-    }
-  } else {
-    // 2) Link vuoto -> creiamo meeting via M365 usando studioId + utente loggato (token owner)
+      if (formData.riunione_teams) {
+        if (teamsLink.trim().length > 0) {
+          const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
+          if (!isUrl) {
+            toast({
+              title: "Errore",
+              description: "Il Link Teams deve essere un URL valido (es. https://...).",
+              variant: "destructive",
+            });
+            return;
+          }
+        } else {
+          if (!currentUserId) {
+            toast({
+              title: "Errore autenticazione",
+              description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    if (!currentUserId) {
-      toast({
-        title: "⚠️ Errore Autenticazione",
-        description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
-    }
+          const { data: uRow, error: uErr } = await supabase
+            .from("tbutenti")
+            .select("studio_id")
+            .eq("id", currentUserId)
+            .maybeSingle();
 
-    const supabase = getSupabaseClient();
+          if (uErr || !uRow?.studio_id) {
+            toast({
+              title: "Errore",
+              description: "Impossibile determinare lo studio dell'utente loggato.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    // ✅ studioId ricavato dal DB (tbutenti) usando l'utente loggato
-    const { data: uRow, error: uErr } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", currentUserId)
-      .maybeSingle();
+          const studioId = uRow.studio_id as string;
 
-    if (uErr || !uRow?.studio_id) {
-      toast({
-        title: "Errore",
-        description: "Impossibile determinare lo studio dell'utente loggato.",
-        variant: "destructive",
-      });
-      return;
-    }
+          const {
+            data: { session: m365Session },
+          } = await supabase.auth.getSession();
 
-    const studioId = uRow.studio_id as string;
+          if (!m365Session?.access_token) {
+            toast({
+              title: "Microsoft 365 non connesso",
+              description: "Collega l'account M365 prima di creare un meeting Teams.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    // (opzionale) check session supabase per chiamare /api/microsoft365/status se il tuo endpoint lo richiede
-    const {
-      data: { session: m365Session },
-    } = await supabase.auth.getSession();
+          const statusResponse = await fetch("/api/microsoft365/status", {
+            method: "GET",
+            cache: "no-store",
+            headers: {
+              Authorization: `Bearer ${m365Session.access_token}`,
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          });
 
-    if (!m365Session?.access_token) {
-      toast({
-        title: "Microsoft 365 non connesso",
-        description: "Collega l'account M365 prima di creare un meeting Teams.",
-        variant: "destructive",
-      });
-      return;
-    }
+          const statusJson = await statusResponse.json().catch(() => null);
 
-    // status con Bearer token (il tuo endpoint lo richiede)
-    const statusResponse = await fetch("/api/microsoft365/status", {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${m365Session.access_token}`,
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
+          if (!statusResponse.ok || !statusJson?.connected) {
+            toast({
+              title: "Microsoft 365 non connesso",
+              description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    const statusJson = await statusResponse.json().catch(() => null);
+          const { teamsService } = await import("@/services/teamsService");
 
-    if (!statusResponse.ok || !statusJson?.connected) {
-      toast({
-        title: "Microsoft 365 non connesso",
-        description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
-        variant: "destructive",
-      });
-      return;
-    }
+          const meeting = await teamsService.createTeamsMeeting(
+            studioId,
+            currentUserId,
+            formData.titolo || "Riunione",
+            new Date(startDateTimeISO),
+            new Date(endDateTimeISO)
+          );
 
-    // date ISO usate per meeting
-    const startDateTimeISO = formData.tutto_giorno
-      ? new Date(formData.data_inizio).toISOString()
-      : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
+          if (!meeting?.success) {
+            toast({
+              title: "Errore Teams",
+              description: meeting?.error || "Impossibile creare il meeting Teams.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    const endDateTimeISO = formData.tutto_giorno
-      ? new Date(formData.data_fine || formData.data_inizio).toISOString()
-      : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
+          teamsJoinUrl = meeting.joinUrl ?? null;
 
-    const { teamsService } = await import("@/services/teamsService");
+          if (!teamsJoinUrl) {
+            toast({
+              title: "Errore",
+              description: "Meeting Teams creato ma link non disponibile.",
+              variant: "destructive",
+            });
+            return;
+          }
 
-    // ✅ createTeamsMeeting(studioId, userId, ...)
-    const meeting = await teamsService.createTeamsMeeting(
-      studioId,
-      currentUserId,
-      formData.titolo || "Riunione",
-      new Date(startDateTimeISO),
-      new Date(endDateTimeISO)
-    );
+          teamsLink = teamsJoinUrl;
+        }
+      }
 
-    if (!meeting?.success) {
-      toast({
-        title: "Errore Teams",
-        description: meeting?.error || "Impossibile creare il meeting Teams.",
-        variant: "destructive",
-      });
-      return;
-    }
+      const internalParticipantIds = [...new Set(formData.partecipanti.filter(Boolean))].filter(
+        (id) => id !== formData.utente_id
+      );
 
-    teamsJoinUrl = meeting.joinUrl ?? null;
-    teamsMeetingId = meeting.id ?? null;
+      const externalEmails = [...new Set(formData.email_partecipanti_esterni.filter(Boolean))];
 
-    if (!teamsJoinUrl) {
-      toast({
-        title: "Errore",
-        description: "Meeting Teams creato ma link non disponibile.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    teamsLink = teamsJoinUrl;
-  }
-}
-      // ===============================
-      // PAYLOAD BASE
-      // ===============================
-      const basePayload: Partial<AgendaRow> & Record<string, unknown> = {
+      const buildPayloadForUser = (utenteId: string): Partial<AgendaRow> & Record<string, unknown> => ({
         titolo: formData.titolo,
         descrizione: formData.descrizione || null,
-
         data_inizio: startDateTimeISO,
         data_fine: endDateTimeISO,
         ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
         ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
         tutto_giorno: formData.tutto_giorno as any,
-
         cliente_id: formData.cliente_id || null,
-        utente_id: formData.utente_id as any,
-
+        utente_id: utenteId as any,
         in_sede: formData.in_sede as any,
         sala: formData.in_sede ? formData.sala : null,
         luogo: !formData.in_sede ? formData.luogo : null,
-
         evento_generico: formData.evento_generico,
         riunione_teams: formData.riunione_teams,
         link_teams: teamsLink || null,
-
-        partecipanti: formData.partecipanti.length ? formData.partecipanti : null,
-
+        partecipanti: internalParticipantIds.length ? internalParticipantIds : null,
+        email_partecipanti_esterni: externalEmails.length ? externalEmails : null,
         ricorrente: formData.ricorrente,
         frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-       
-      };
+      });
 
       if (editingEventoId) {
-        // UPDATE
+        const updatePayload = buildPayloadForUser(formData.utente_id);
+
         const { data, error } = await supabase
           .from("tbagenda")
-          .update(basePayload as any)
+          .update(updatePayload as any)
           .eq("id", editingEventoId)
           .select()
           .single();
@@ -684,39 +763,43 @@ if (formData.riunione_teams) {
         const { eventoService } = await import("@/services/eventoService");
         await eventoService.sendEventNotification(toNotificationPayload(data as any) as any);
 
-        // Sync Outlook (non bloccare)
         try {
           await calendarSyncService.syncEventToOutlook(formData.utente_id, editingEventoId);
         } catch (syncError) {
           console.error("Errore sincronizzazione Outlook:", syncError);
         }
 
-        toast({ title: "Successo", description: "Evento aggiornato" });
+        toast({
+          title: "Successo",
+          description: "Evento aggiornato",
+        });
       } else {
-        // CREATE
         if (formData.ricorrente) {
           const startDate = new Date(formData.data_inizio);
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + formData.durata_giorni);
 
+          const allUserIds = [...new Set([formData.utente_id, ...internalParticipantIds])];
           const occurrences: Array<Record<string, unknown>> = [];
+
           let current = new Date(startDate);
 
           while (current <= endDate) {
-            const occurrenceStartDateTime = formData.tutto_giorno
-              ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
-              : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+            for (const utenteId of allUserIds) {
+              const occurrenceStartDateTime = formData.tutto_giorno
+                ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+                : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
 
-            const occurrenceEndDateTime = formData.tutto_giorno
-              ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
-              : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+              const occurrenceEndDateTime = formData.tutto_giorno
+                ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+                : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
-            occurrences.push({
-              ...basePayload,
-              data_inizio: occurrenceStartDateTime,
-              data_fine: occurrenceEndDateTime,
-
-            });
+              occurrences.push({
+                ...buildPayloadForUser(utenteId),
+                data_inizio: occurrenceStartDateTime,
+                data_fine: occurrenceEndDateTime,
+              });
+            }
 
             current = new Date(current);
             current.setDate(current.getDate() + formData.frequenza_giorni);
@@ -730,10 +813,12 @@ if (formData.riunione_teams) {
             await eventoService.sendEventNotification(toNotificationPayload(occurrence as any) as any);
           }
 
-          // Sync Outlook (non bloccare)
           try {
             for (const occurrence of data ?? []) {
-              await calendarSyncService.syncEventToOutlook(formData.utente_id, String((occurrence as any).id));
+              await calendarSyncService.syncEventToOutlook(
+                String((occurrence as any).utente_id),
+                String((occurrence as any).id)
+              );
             }
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook eventi ricorrenti:", syncError);
@@ -741,119 +826,155 @@ if (formData.riunione_teams) {
 
           toast({
             title: "Successo",
-            description: `${occurrences.length} eventi ricorrenti creati`,
+            description: `${occurrences.length} eventi creati e sincronizzati`,
           });
-
         } else {
-          const { data, error } = await supabase.from("tbagenda").insert([basePayload as any]).select().single();
+          const allUserIds = [...new Set([formData.utente_id, ...internalParticipantIds])];
+          const payloads = allUserIds.map((utenteId) => buildPayloadForUser(utenteId));
+
+          const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
           if (error) throw error;
 
           const { eventoService } = await import("@/services/eventoService");
-          await eventoService.sendEventNotification(toNotificationPayload(data as any) as any);
+          for (const insertedEvent of data ?? []) {
+            await eventoService.sendEventNotification(toNotificationPayload(insertedEvent as any) as any);
+          }
 
-          // Sync Outlook (non bloccare)
           try {
-            await calendarSyncService.syncEventToOutlook(formData.utente_id, String((data as any).id));
+            for (const insertedEvent of data ?? []) {
+              await calendarSyncService.syncEventToOutlook(
+                String((insertedEvent as any).utente_id),
+                String((insertedEvent as any).id)
+              );
+            }
           } catch (syncError) {
             console.error("Errore sincronizzazione Outlook:", syncError);
           }
 
-          // Notifica Teams ai partecipanti
-if (formData.riunione_teams && teamsLink) {
-  try {
-    const supabase = getSupabaseClient();
+          if (formData.riunione_teams && teamsLink) {
+            try {
+              if (!currentUserId) {
+                console.error("Errore invio notifiche Teams: currentUserId mancante.");
+              } else {
+                const { data: uRow, error: uErr } = await supabase
+                  .from("tbutenti")
+                  .select("studio_id")
+                  .eq("id", currentUserId)
+                  .maybeSingle();
 
-    // sender = utente loggato (token owner M365)
-    if (!currentUserId) {
-      console.error("Errore invio notifiche Teams: currentUserId mancante.");
-    } else {
-      // studioId dallo user loggato
-      const { data: uRow, error: uErr } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", currentUserId)
-        .maybeSingle();
+                if (uErr || !uRow?.studio_id) {
+                  console.error("Errore invio notifiche Teams: studioId non trovato.", uErr);
+                } else {
+                  const studioId = uRow.studio_id as string;
+                  const { teamsService } = await import("@/services/teamsService");
 
-      if (uErr || !uRow?.studio_id) {
-        console.error("Errore invio notifiche Teams: studioId non trovato.", uErr);
-      } else {
-        const studioId = uRow.studio_id as string;
+                  for (const pId of internalParticipantIds) {
+                    const user = utenti.find((u) => u.id === pId);
 
-        const { teamsService } = await import("@/services/teamsService");
-        for (const pId of formData.partecipanti) {
-          const user = utenti.find((u) => u.id === pId);
-          if (user?.email) {
-            const dmRes = await teamsService.sendDirectMessage(
-              studioId,
-              currentUserId,
-              user.email,
-              {
-                content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                contentType: "html",
+                    if (user?.email) {
+                      const dmRes = await teamsService.sendDirectMessage(
+                        studioId,
+                        currentUserId,
+                        user.email,
+                        {
+                          content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+                          contentType: "html",
+                        }
+                      );
+
+                      if (!dmRes?.success) {
+                        console.error("Errore invio DM Teams:", (dmRes as any)?.error);
+                      }
+                    }
+                  }
+                }
               }
-            );
-
-            if (!dmRes?.success) {
-              console.error("Errore invio DM Teams:", (dmRes as any)?.error);
+            } catch (err) {
+              console.error("Errore invio notifiche Teams:", err);
             }
           }
+
+          toast({
+            title: "Successo",
+            description: "Evento creato e sincronizzato",
+          });
         }
       }
+
+      setDialogOpen(false);
+      void loadData();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Errore",
+        description: "Salvataggio fallito",
+        variant: "destructive",
+      });
     }
-  } catch (err) {
-    console.error("Errore invio notifiche Teams:", err);
-  }
-}
+  };
 
-toast({ title: "Successo", description: "Evento creato" });
-}
-}
+  const handleDeleteEvento = async () => {
+    const supabase = getSupabaseClient();
 
-setDialogOpen(false);
-void loadData();
-} catch (error) {
-console.error(error);
-toast({ title: "Errore", description: "Salvataggio fallito", variant: "destructive" });
-}
-};
-const handleDeleteEvento = async () => {
-const supabase = getSupabaseClient();
-if (!eventoToDelete) return;
+    if (!eventoToDelete) return;
 
-try {
-// Cancella da Outlook prima del DB (non bloccare)
-if (currentUserId) {
-  try {
-    await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
-  } catch (syncError) {
-    console.error("Errore cancellazione Outlook:", syncError);
-  }
-}
+    try {
+      const eventoPrincipale = eventi.find((e) => String(e.id) === eventoToDelete);
 
-const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
-if (error) throw error;
+      if (currentUserId) {
+        try {
+          await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
+        } catch (syncError) {
+          console.error("Errore cancellazione Outlook:", syncError);
+        }
+      }
 
-setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
-setDeleteDialogOpen(false);
-setDialogOpen(false);
-setEventoToDelete(null);
-setEditingEventoId(null);
+      if (eventoPrincipale) {
+        const sameMeetingIds = eventi
+          .filter((e) => {
+            const sameTitle = (e.titolo || "") === (eventoPrincipale.titolo || "");
+            const sameStart = String(e.data_inizio || "") === String(eventoPrincipale.data_inizio || "");
+            const sameEnd = String(e.data_fine || "") === String(eventoPrincipale.data_fine || "");
+            const sameTeamsLink = String((e as any).link_teams || "") === String((eventoPrincipale as any).link_teams || "");
+            const sameTeamsFlag = Boolean((e as any).riunione_teams) === Boolean((eventoPrincipale as any).riunione_teams);
 
-toast({
-  title: "Evento eliminato",
-  description: "L'evento è stato eliminato con successo",
-});
-} catch (error) {
-console.error("Errore eliminazione evento:", error);
-toast({
-  title: "Errore",
-  description: "Impossibile eliminare l'evento",
-  variant: "destructive",
-});
-setDeleteDialogOpen(false);
-setEventoToDelete(null);
-}
-};
+            return sameTitle && sameStart && sameEnd && sameTeamsLink && sameTeamsFlag;
+          })
+          .map((e) => String(e.id));
+
+        const idsToDelete = sameMeetingIds.length > 0 ? sameMeetingIds : [eventoToDelete];
+
+        const { error } = await supabase.from("tbagenda").delete().in("id", idsToDelete);
+        if (error) throw error;
+
+        setEventi((prev) => prev.filter((e) => !idsToDelete.includes(String(e.id))));
+      } else {
+        const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
+        if (error) throw error;
+
+        setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
+      }
+
+      setDeleteDialogOpen(false);
+      setDialogOpen(false);
+      setEventoToDelete(null);
+      setEditingEventoId(null);
+
+      toast({
+        title: "Evento eliminato",
+        description: "L'evento è stato eliminato con successo",
+      });
+    } catch (error) {
+      console.error("Errore eliminazione evento:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare l'evento",
+        variant: "destructive",
+      });
+      setDeleteDialogOpen(false);
+      setEventoToDelete(null);
+    }
+  };
 
   const handleDeleteEventoDirect = (eventoId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -900,7 +1021,10 @@ setEventoToDelete(null);
   };
 
   const handleSelezioneTutti = () => {
-    setFormData((prev) => ({ ...prev, partecipanti: utenti.map((u) => u.id) }));
+    setFormData((prev) => ({
+      ...prev,
+      partecipanti: utenti.map((u) => u.id),
+    }));
   };
 
   const getEventColor = (evento: EventoWithRelations) => {
@@ -911,56 +1035,63 @@ setEventoToDelete(null);
   };
 
   const getEventClasses = (evento: EventoWithRelations) => {
- if ((evento as any).riunione_teams) {
-  return {
-    card: "border-l-violet-700",
-    box: "bg-violet-100 border-violet-700 text-gray-900",
-    badgeText: "text-violet-800",
-  };
-}
+    if ((evento as any).riunione_teams) {
+      return {
+        card: "border-l-violet-700",
+        box: "bg-violet-100 border-violet-700 text-gray-900",
+        badgeText: "text-violet-800",
+      };
+    }
 
-  if ((evento as any).evento_generico) {
+    if ((evento as any).evento_generico) {
+      return {
+        card: "border-l-blue-500",
+        box: "bg-blue-50 border-blue-500 text-gray-900",
+        badgeText: "text-blue-700",
+      };
+    }
+
+    if (evento.in_sede) {
+      return {
+        card: "border-l-green-500",
+        box: "bg-green-50 border-green-500 text-gray-900",
+        badgeText: "text-green-700",
+      };
+    }
+
     return {
-      card: "border-l-blue-500",
-      box: "bg-blue-50 border-blue-500 text-gray-900",
-      badgeText: "text-blue-700",
+      card: "border-l-red-500",
+      box: "bg-red-50 border-red-500 text-gray-900",
+      badgeText: "text-red-700",
     };
-  }
-
-  if (evento.in_sede) {
-    return {
-      card: "border-l-green-500",
-      box: "bg-green-50 border-green-500 text-gray-900",
-      badgeText: "text-green-700",
-    };
-  }
-
-  return {
-    card: "border-l-red-500",
-    box: "bg-red-50 border-red-500 text-gray-900",
-    badgeText: "text-red-700",
   };
-};
 
-const myActiveTeamsEvents = useMemo(() => {
-  if (!currentUserId) return [];
+  const filteredEvents = useMemo(() => {
+    return eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
+  }, [eventi, filtroUtenti]);
 
-  const now = new Date();
+  const teamsEvents = useMemo(() => {
+    return filteredEvents
+      .filter((e) => {
+        const isTeams = Boolean((e as any).riunione_teams);
+        const hasLink = typeof (e as any).link_teams === "string" && String((e as any).link_teams).trim().length > 0;
+        return isTeams && hasLink;
+      })
+      .sort((a, b) => {
+        return safeParseISO(a.data_inizio as any).getTime() - safeParseISO(b.data_inizio as any).getTime();
+      });
+  }, [filteredEvents]);
 
-  return eventi
-    .filter((e) => {
-      const isTeams = Boolean((e as any).riunione_teams);
-      const hasLink = typeof (e as any).link_teams === "string" && (e as any).link_teams.trim().length > 0;
-      const isMine = e.utente_id === currentUserId;
-      const notExpired = safeParseISO(e.data_fine as any) >= now;
+  const filteredContactOptions = useMemo(() => {
+    const search = searchContatti.trim().toLowerCase();
 
-      return isTeams && hasLink && isMine && notExpired;
-    })
-    .sort(
-      (a, b) =>
-        safeParseISO(a.data_inizio as any).getTime() - safeParseISO(b.data_inizio as any).getTime()
-    );
-}, [eventi, currentUserId]);
+    if (!search) return contactOptions;
+
+    return contactOptions.filter((c) => {
+      const fullName = `${c.cognome} ${c.nome}`.toLowerCase();
+      return fullName.includes(search) || c.email.toLowerCase().includes(search);
+    });
+  }, [contactOptions, searchContatti]);
 
   const getEventoSummary = (evento: EventoWithRelations): string => {
     const startDate = safeParseISO(evento.data_inizio as any);
@@ -973,7 +1104,9 @@ const myActiveTeamsEvents = useMemo(() => {
 
     const luogo = evento.in_sede
       ? `Sala ${evento.sala ? String(evento.sala) : "??"} (In Sede)`
-      : (evento.luogo ? String(evento.luogo) : "Fuori Sede");
+      : evento.luogo
+      ? String(evento.luogo)
+      : "Fuori Sede";
 
     const tipo = (evento as any).evento_generico
       ? "Evento Generico"
@@ -981,8 +1114,8 @@ const myActiveTeamsEvents = useMemo(() => {
       ? "Riunione Teams"
       : "Appuntamento";
 
-   const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
-const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
+    const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
+    const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
@@ -1002,18 +1135,14 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     }
 
     return summary;
-      };
-
-  const filteredEvents = useMemo(() => {
-    return eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
-      }, [eventi, filtroUtenti]);
+  };
 
   const handleOpenMoreEvents = (date: Date, events: EventoWithRelations[]) => {
-  setMoreEventsDate(date);
-  setMoreEventsList(events);
-  setMoreEventsOpen(true);
-    };
-  
+    setMoreEventsDate(date);
+    setMoreEventsList(events);
+    setMoreEventsOpen(true);
+  };
+
   // --------------------
   // RENDERERS
   // --------------------
@@ -1022,7 +1151,7 @@ const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
     const utenteNome = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
     const styles = getEventClasses(evento);
-const colorClass = styles.card;
+    const colorClass = styles.card;
 
     return (
       <TooltipProvider key={String(evento.id)}>
@@ -1037,10 +1166,11 @@ const colorClass = styles.card;
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
-                     {evento.ora_inizio && String(evento.ora_inizio).substring(0, 5)}
+                      {evento.ora_inizio && String(evento.ora_inizio).substring(0, 5)}
                       {evento.ora_fine && ` - ${String(evento.ora_fine).substring(0, 5)}`}
                     </span>
                   </div>
+
                   <div className="flex gap-1">
                     <Button
                       size="sm"
@@ -1052,6 +1182,7 @@ const colorClass = styles.card;
                     >
                       <Pencil className="h-4 w-4 text-blue-600" />
                     </Button>
+
                     <Button
                       size="sm"
                       variant="ghost"
@@ -1098,6 +1229,13 @@ const colorClass = styles.card;
                       <span className="text-muted-foreground">{evento.titolo}</span>
                     </div>
                   )}
+
+                  {!compact && (evento as any).riunione_teams && (evento as any).link_teams && (
+                    <div className="flex items-center gap-2 text-sm mt-2 text-violet-700">
+                      <ExternalLink className="h-4 w-4" />
+                      <span className="truncate">Link Teams disponibile</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1111,7 +1249,7 @@ const colorClass = styles.card;
     );
   };
 
-    const renderMonthView = () => {
+  const renderMonthView = () => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const startDate = startOfWeek(monthStart, { locale: it });
@@ -1119,6 +1257,7 @@ const colorClass = styles.card;
 
     const days: Date[] = [];
     let day = startDate;
+
     while (day <= endDate) {
       days.push(day);
       day = addDays(day, 1);
@@ -1149,62 +1288,62 @@ const colorClass = styles.card;
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((ev) => (
                   <TooltipProvider key={String(ev.id)}>
-  <Tooltip delayDuration={300}>
-    <TooltipTrigger asChild>
-      <div
-  className={`p-2 rounded border-l-2 ${getEventClasses(ev).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
->
-      <div
-  onClick={(e) => {
-    e.stopPropagation();
-    handleEditEvento(ev);
-  }}
-  className="pr-6"
->
-  <div className="truncate font-semibold text-gray-900">
-    {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
-  </div>
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`p-2 rounded border-l-2 ${getEventClasses(ev).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+                        >
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditEvento(ev);
+                            }}
+                            className="pr-6"
+                          >
+                            <div className="truncate font-semibold text-gray-900">
+                              {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
+                            </div>
 
-  {ev.utente && (
-    <div className="truncate text-[11px] text-gray-700">
-      👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
-    </div>
-  )}
+                            {ev.utente && (
+                              <div className="truncate text-[11px] text-gray-700">
+                                👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
+                              </div>
+                            )}
 
-  <div className="truncate text-[11px] text-gray-600">
-    ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
-    {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
-  </div>
-</div>
+                            <div className="truncate text-[11px] text-gray-600">
+                              ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
+                              {ev.ora_fine ? ` - ${String(ev.ora_fine).substring(0, 5)}` : ""}
+                            </div>
+                          </div>
 
-        <button
-          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-          onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
-          title="Elimina"
-        >
-          ×
-        </button>
-      </div>
-    </TooltipTrigger>
+                          <button
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                            onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
+                            title="Elimina"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </TooltipTrigger>
 
-    <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-      {getEventoSummary(ev)}
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
+                      <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
+                        {getEventoSummary(ev)}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ))}
 
-     {dayEvents.length > 3 && (
-    <div
-    className="text-xs text-blue-600 font-medium cursor-pointer hover:underline"
-    onClick={(e) => {
-      e.stopPropagation();
-      handleOpenMoreEvents(dayItem, dayEvents);
-    }}
-  >
-    +{dayEvents.length - 3} altri
-  </div>
-)}
+                {dayEvents.length > 3 && (
+                  <div
+                    className="text-xs text-blue-600 font-medium cursor-pointer hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenMoreEvents(dayItem, dayEvents);
+                    }}
+                  >
+                    +{dayEvents.length - 3} altri
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -1213,161 +1352,148 @@ const colorClass = styles.card;
     );
   };
 
-const renderWeekView = () => {
-  const weekStart = startOfWeek(currentDate, { locale: it });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
+  const renderWeekView = () => {
+    const weekStart = startOfWeek(currentDate, { locale: it });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    const hours = Array.from({ length: 15 }, (_, i) => i + 7);
+    const weekGridCols = "grid-cols-[64px_repeat(7,minmax(140px,1fr))]";
 
-  // stessa larghezza per header e body
-  const weekGridCols = "grid-cols-[64px_repeat(7,minmax(140px,1fr))]";
+    return (
+      <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-250px)] min-w-[1044px]">
+        <div className="overflow-y-auto h-full">
+          <div className="sticky top-0 z-20 border-b bg-gray-50">
+            <div className={`grid ${weekGridCols}`}>
+              <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200 bg-gray-50">
+                Ora
+              </div>
 
- return (
-  <div className="border rounded-lg bg-white overflow-hidden h-[calc(100vh-250px)] min-w-[1044px]">
-    <div className="overflow-y-auto h-full">
-      {/* HEADER */}
-      <div className="sticky top-0 z-20 border-b bg-gray-50">
-        <div className={`grid ${weekGridCols}`}>
-          <div className="p-3 text-xs font-semibold text-gray-500 text-center border-r border-gray-200 bg-gray-50">
-            Ora
+              {weekDays.map((day, index) => {
+                const isWeekend = index === 5 || index === 6;
+
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`p-2 text-center border-r border-gray-200 ${
+                      isSameDay(day, new Date())
+                        ? "bg-blue-50 text-blue-700"
+                        : isWeekend
+                        ? "bg-gray-100"
+                        : "bg-gray-50"
+                    }`}
+                  >
+                    <div className="text-xs font-medium uppercase">{format(day, "EEE", { locale: it })}</div>
+                    <div className="text-lg font-bold">{format(day, "d")}</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {weekDays.map((day, index) => {
-            const isWeekend = index === 5 || index === 6;
-
-            return (
-              <div
-                key={day.toISOString()}
-                className={`p-2 text-center border-r border-gray-200 ${
-                  isSameDay(day, new Date())
-                    ? "bg-blue-50 text-blue-700"
-                    : isWeekend
-                    ? "bg-gray-100"
-                    : "bg-gray-50"
-                }`}
-              >
-                <div className="text-xs font-medium uppercase">
-                  {format(day, "EEE", { locale: it })}
+          <div>
+            {hours.map((hour) => (
+              <div key={hour} className={`grid ${weekGridCols} min-h-[100px] border-b border-gray-200`}>
+                <div className="p-2 text-xs text-gray-400 text-right border-r border-gray-200 font-mono bg-gray-50">
+                  {String(hour).padStart(2, "0")}:00
                 </div>
 
-                <div className="text-lg font-bold">
-                  {format(day, "d")}
-                </div>
+                {weekDays.map((day, index) => {
+                  const isWeekend = index === 5 || index === 6;
+
+                  const cellEvents = filteredEvents.filter((e) => {
+                    const eventDate = safeParseISO(e.data_inizio as any);
+
+                    if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
+                    if (!e.ora_inizio) return false;
+
+                    const eventHour = parseInt(String(e.ora_inizio).substring(0, 2), 10);
+                    return isSameDay(eventDate, day) && eventHour === hour;
+                  });
+
+                  return (
+                    <div
+                      key={`${day.toISOString()}-${hour}`}
+                      className={`border-r border-gray-200 p-1 transition-colors cursor-pointer relative ${
+                        isWeekend ? "bg-gray-50" : "bg-white"
+                      } hover:bg-gray-100`}
+                      onClick={() => handleNuovoEvento(day, hour)}
+                    >
+                      {cellEvents.length > 0 && (
+                        <div className="space-y-1">
+                          {cellEvents.map((evento) => (
+                            <TooltipProvider key={String(evento.id)}>
+                              <Tooltip delayDuration={300}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`p-2 rounded border-l-2 ${getEventClasses(evento).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
+                                  >
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditEvento(evento);
+                                      }}
+                                      className="pr-6"
+                                    >
+                                      <div className="font-semibold text-gray-900 truncate">
+                                        {evento.titolo || "(senza titolo)"}
+                                      </div>
+
+                                      {evento.utente && (
+                                        <div className="text-gray-600 truncate">
+                                          👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
+                                        </div>
+                                      )}
+
+                                      {evento.cliente?.ragione_sociale && (
+                                        <div className="text-gray-600 truncate">🏢 {evento.cliente.ragione_sociale}</div>
+                                      )}
+
+                                      {evento.in_sede && evento.sala && (
+                                        <div className="text-green-700 font-medium mt-1">
+                                          📍 SALA {String(evento.sala)}
+                                        </div>
+                                      )}
+
+                                      {!evento.in_sede && evento.luogo && (
+                                        <div className="text-red-700 font-medium mt-1 truncate">
+                                          📍 {String(evento.luogo)}
+                                        </div>
+                                      )}
+
+                                      <div className="text-gray-500 mt-1">
+                                        ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
+                                        {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
+                                      onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
+                                      title="Elimina evento"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </TooltipTrigger>
+
+                                <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
+                                  {getEventoSummary(evento)}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
+    );
+  };
 
-      {/* BODY */}
-      <div>
-        {hours.map((hour) => (
-          <div
-            key={hour}
-            className={`grid ${weekGridCols} min-h-[100px] border-b border-gray-200`}
-          >
-            <div className="p-2 text-xs text-gray-400 text-right border-r border-gray-200 font-mono bg-gray-50">
-              {String(hour).padStart(2, "0")}:00
-            </div>
-
-            {weekDays.map((day, index) => {
-              const isWeekend = index === 5 || index === 6;
-
-              const cellEvents = filteredEvents.filter((e) => {
-                const eventDate = safeParseISO(e.data_inizio as any);
-
-                if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
-
-                if (!e.ora_inizio) return false;
-                const eventHour = parseInt(String(e.ora_inizio).substring(0, 2));
-                return isSameDay(eventDate, day) && eventHour === hour;
-              });
-
-              return (
-                <div
-                  key={`${day.toISOString()}-${hour}`}
-                  className={`border-r border-gray-200 p-1 transition-colors cursor-pointer relative ${
-                    isWeekend ? "bg-gray-50" : "bg-white"
-                  } hover:bg-gray-100`}
-                  onClick={() => handleNuovoEvento(day, hour)}
-                >
-                  {cellEvents.length > 0 && (
-                    <div className="space-y-1">
-                      {cellEvents.map((evento) => (
-                        <TooltipProvider key={String(evento.id)}>
-                          <Tooltip delayDuration={300}>
-                            <TooltipTrigger asChild>
-                              <div
-                                className={`p-2 rounded border-l-2 ${getEventClasses(evento).box} cursor-pointer hover:shadow-sm transition-shadow text-xs group relative`}
-                              >
-                                <div
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditEvento(evento);
-                                  }}
-                                  className="pr-6"
-                                >
-                                  <div className="font-semibold text-gray-900 truncate">
-                                    {evento.titolo || "(senza titolo)"}
-                                  </div>
-
-                                  {evento.utente && (
-                                    <div className="text-gray-600 truncate">
-                                      👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
-                                    </div>
-                                  )}
-
-                                  {evento.cliente?.ragione_sociale && (
-                                    <div className="text-gray-600 truncate">
-                                      🏢 {evento.cliente.ragione_sociale}
-                                    </div>
-                                  )}
-
-                                  {evento.in_sede && evento.sala && (
-                                    <div className="text-green-700 font-medium mt-1">
-                                      📍 SALA {String(evento.sala)}
-                                    </div>
-                                  )}
-
-                                  {!evento.in_sede && evento.luogo && (
-                                    <div className="text-red-700 font-medium mt-1 truncate">
-                                      📍 {String(evento.luogo)}
-                                    </div>
-                                  )}
-
-                                  <div className="text-gray-500 mt-1">
-                                    ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
-                                    {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
-                                  </div>
-                                </div>
-
-                                <button
-                                  className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                                  onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
-                                  title="Elimina evento"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            </TooltipTrigger>
-
-                            <TooltipContent side="right" className="max-w-sm p-4 text-sm whitespace-pre-line">
-                              {getEventoSummary(evento)}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-};  
   const renderListView = () => {
     const now = new Date();
     const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio as any) < now);
@@ -1384,111 +1510,100 @@ const renderWeekView = () => {
     return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
   };
 
-const renderRicorrentiView = () => {
-  const now = new Date();
-  const ricorrentiEvents = filteredEvents.filter((evento) => {
-    const isRecurring = (evento as any).ricorrente === true;
-    const eventDate = safeParseISO(evento.data_inizio as any);
-    return isRecurring && eventDate >= now;
-  });
+  const renderRicorrentiView = () => {
+    const now = new Date();
+    const ricorrentiEvents = filteredEvents.filter((evento) => {
+      const isRecurring = (evento as any).ricorrente === true;
+      const eventDate = safeParseISO(evento.data_inizio as any);
+      return isRecurring && eventDate >= now;
+    });
 
-  if (ricorrentiEvents.length === 0) {
+    if (ricorrentiEvents.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center py-12">
-        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">Nessun evento ricorrente in essere trovato</p>
+      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+        {ricorrentiEvents.map((e) => renderEventCard(e, false))}
       </div>
     );
-  }
+  };
 
-  return (
-    <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
-      {ricorrentiEvents.map((e) => renderEventCard(e, false))}
-    </div>
-  );
-};
+  const renderTeamsView = () => {
+    if (teamsEvents.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">Nessuna riunione Teams trovata</p>
+        </div>
+      );
+    }
 
-const renderTeamsView = () => {
-  if (!currentUserId) {
     return (
-      <div className="text-center py-12">
-        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">Utente non identificato</p>
-      </div>
-    );
-  }
+      <div className="max-h-[600px] overflow-y-auto p-4">
+        <div className="overflow-x-auto">
+          <table className="w-full border rounded-lg overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr className="border-b">
+                <th className="text-left p-3 text-sm font-semibold">Data</th>
+                <th className="text-left p-3 text-sm font-semibold">Orario</th>
+                <th className="text-left p-3 text-sm font-semibold">Nominativo</th>
+                <th className="text-left p-3 text-sm font-semibold">Descrizione</th>
+                <th className="text-left p-3 text-sm font-semibold">Link</th>
+              </tr>
+            </thead>
 
-  if (myActiveTeamsEvents.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <p className="text-gray-500">Nessuna riunione Teams attiva trovata</p>
-      </div>
-    );
-  }
+            <tbody>
+              {teamsEvents.map((evento) => {
+                const startDate = safeParseISO(evento.data_inizio as any);
+                const link = String((evento as any).link_teams || "").trim();
+                const nominativo = evento.utente
+                  ? `${evento.utente.cognome} ${evento.utente.nome}`
+                  : "Non assegnato";
 
-  return (
-    <div className="max-h-[600px] overflow-y-auto p-4">
-      <div className="overflow-x-auto">
-        <table className="w-full border rounded-lg overflow-hidden">
-          <thead className="bg-gray-50">
-            <tr className="border-b">
-              <th className="text-left p-3 text-sm font-semibold">Data</th>
-              <th className="text-left p-3 text-sm font-semibold">Descrizione</th>
-              <th className="text-left p-3 text-sm font-semibold">Riunione</th>
-            </tr>
-          </thead>
-          <tbody>
-            {myActiveTeamsEvents.map((evento) => {
-              const startDate = safeParseISO(evento.data_inizio as any);
-              const link = String((evento as any).link_teams || "").trim();
-
-              return (
-                <tr
-                  key={String(evento.id)}
-                  className="border-b last:border-b-0 hover:bg-violet-50/40"
-                >
-                  <td className="p-3 text-sm whitespace-nowrap">
-                    <div className="font-medium">
+                return (
+                  <tr key={String(evento.id)} className="border-b last:border-b-0 hover:bg-violet-50/40">
+                    <td className="p-3 text-sm whitespace-nowrap font-medium">
                       {format(startDate, "dd/MM/yyyy", { locale: it })}
-                    </div>
-                    <div className="text-muted-foreground">
-                      {evento.ora_inizio
-                        ? String(evento.ora_inizio).substring(0, 5)
-                        : format(startDate, "HH:mm")}
-                      {evento.ora_fine
-                        ? ` - ${String(evento.ora_fine).substring(0, 5)}`
-                        : ""}
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="p-3 text-sm">
-                    <div className="font-medium">
-                      {evento.titolo || "Riunione Teams"}
-                    </div>
-                    {evento.descrizione && (
-                      <div className="text-muted-foreground">
-                        {String(evento.descrizione)}
-                      </div>
-                    )}
-                  </td>
+                    <td className="p-3 text-sm whitespace-nowrap">
+                      {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : format(startDate, "HH:mm")}
+                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                    </td>
 
-                  <td className="p-3 text-sm">
-                    <Button asChild size="sm" className="bg-violet-700 hover:bg-violet-800">
-                      <a href={link} target="_blank" rel="noopener noreferrer">
-                        Partecipa a riunione
-                      </a>
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td className="p-3 text-sm">
+                      <div className="font-medium">{nominativo}</div>
+                    </td>
+
+                    <td className="p-3 text-sm">
+                      <div className="font-medium">{evento.titolo || "Riunione Teams"}</div>
+                      {evento.descrizione && (
+                        <div className="text-muted-foreground">{String(evento.descrizione)}</div>
+                      )}
+                    </td>
+
+                    <td className="p-3 text-sm">
+                      <Button asChild size="sm" className="bg-violet-700 hover:bg-violet-800">
+                        <a href={link} target="_blank" rel="noopener noreferrer">
+                          Apri link
+                        </a>
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // --------------------
   // RENDER
@@ -1496,247 +1611,242 @@ const renderTeamsView = () => {
 
   if (loading) return <div className="p-10 text-center">Caricamento in corso...</div>;
 
-return (
-  <div className="p-6 max-w-[1600px] mx-auto space-y-4">
-    <div className="hidden md:block">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+  return (
+    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
+      <div className="hidden md:block">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentDate((prev) => (view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)))}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+
+              <span className="font-bold px-4 min-w-[150px] text-center">
+                {format(currentDate, view === "week" ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", { locale: it })}
+              </span>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCurrentDate((prev) => (view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)))}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <Button onClick={() => handleNuovoEvento()} className="gap-2">
+              <Plus className="h-4 w-4" /> Nuovo Evento
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[200px] justify-between">
+                    {filtroUtenti.length === 0 ? "Tutti gli utenti" : `${filtroUtenti.length} selezionati`}
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-[260px] p-2">
+                  <div
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+                    onClick={() => setFiltroUtenti([])}
+                  >
+                    <Checkbox checked={filtroUtenti.length === 0} onCheckedChange={() => setFiltroUtenti([])} />
+                    <span>Tutti gli utenti</span>
+                  </div>
+
+                  <div className="my-2 border-t" />
+
+                  <div className="max-h-[260px] overflow-auto">
+                    {utenti.map((u) => {
+                      const checked = filtroUtenti.includes(u.id);
+
+                      return (
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
+                          onClick={() => {
+                            setFiltroUtenti((prev) =>
+                              prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                            );
+                          }}
+                        >
+                          <Checkbox checked={checked} />
+                          <span>
+                            {u.cognome} {u.nome}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
+              <div className="flex gap-2">
+                <Button
+                  variant={view === "ricorrenti" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setView("ricorrenti")}
+                >
+                  <List className="h-4 w-4 mr-2" /> Eventi ricorrenti
+                </Button>
+
+                <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
+                  <List className="h-4 w-4 mr-2" /> Scaduti
+                </Button>
+
+                <Button variant={view === "teams" ? "default" : "outline"} size="sm" onClick={() => setView("teams")}>
+                  <CalendarIcon className="h-4 w-4 mr-2" /> Riunioni Teams
+                </Button>
+
+                <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
+                  <CalendarIcon className="h-4 w-4 mr-2" /> Mese
+                </Button>
+
+                <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
+                  <CalendarDays className="h-4 w-4 mr-2" /> Settimana
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm">
+          {view === "ricorrenti" && renderRicorrentiView()}
+          {view === "list" && renderListView()}
+          {view === "teams" && renderTeamsView()}
+          {view === "month" && renderMonthView()}
+          {view === "week" && renderWeekView()}
+        </div>
+      </div>
+
+      {/* MOBILE */}
+      <div className="md:hidden space-y-3 px-1">
+        <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
+          <div className="flex items-center justify-between">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setCurrentDate((prev) => (view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)))}
+              onClick={() =>
+                setCurrentDate((prev) => (view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)))
+              }
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
 
-            <span className="font-bold px-4 min-w-[150px] text-center">
-              {format(currentDate, view === "week" ? "'Settimana' w - MMM yyyy" : "MMMM yyyy", { locale: it })}
-            </span>
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground">Agenda</div>
+              <div className="font-bold">{format(currentDate, "EEEE d MMMM yyyy", { locale: it })}</div>
+            </div>
 
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setCurrentDate((prev) => (view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)))}
+              onClick={() =>
+                setCurrentDate((prev) => (view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)))
+              }
             >
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
 
-          <Button onClick={() => handleNuovoEvento()} className="gap-2">
+          <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
             <Plus className="h-4 w-4" /> Nuovo Evento
           </Button>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[200px] justify-between">
-                  {filtroUtenti.length === 0 ? "Tutti gli utenti" : `${filtroUtenti.length} selezionati`}
-                </Button>
-              </PopoverTrigger>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant={view === "week" ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs px-2"
+              onClick={() => setView("week")}
+            >
+              Settimana
+            </Button>
 
-              <PopoverContent className="w-[260px] p-2">
-                <div
-                  className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
-                  onClick={() => setFiltroUtenti([])}
-                >
-                  <Checkbox checked={filtroUtenti.length === 0} onCheckedChange={() => setFiltroUtenti([])} />
-                  <span>Tutti gli utenti</span>
-                </div>
+            <Button
+              variant={view === "month" ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs px-2"
+              onClick={() => setView("month")}
+            >
+              Mese
+            </Button>
 
-                <div className="my-2 border-t" />
+            <Button
+              variant={view === "list" ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs px-2"
+              onClick={() => setView("list")}
+            >
+              Scaduti
+            </Button>
 
-                <div className="max-h-[260px] overflow-auto">
-                  {utenti.map((u) => {
-                    const checked = filtroUtenti.includes(u.id);
+            <Button
+              variant={view === "ricorrenti" ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs px-2"
+              onClick={() => setView("ricorrenti")}
+            >
+              Ricorrenti
+            </Button>
 
-                    return (
-                      <div
-                        key={u.id}
-                        className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
-                        onClick={() => {
-                          setFiltroUtenti((prev) =>
-                            prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
-                          );
-                        }}
-                      >
-                        <Checkbox checked={checked} />
-                        <span>
-                          {u.cognome} {u.nome}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="bg-gray-100 p-1 rounded-lg flex gap-1">
-           <div className="flex gap-2">
-  <Button variant={view === "ricorrenti" ? "default" : "outline"} size="sm" onClick={() => setView("ricorrenti")}>
-    <List className="h-4 w-4 mr-2" /> Eventi ricorrenti
-  </Button>
-
-  <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>
-    <List className="h-4 w-4 mr-2" /> Scaduti
-  </Button>
-
-  <Button variant={view === "teams" ? "default" : "outline"} size="sm" onClick={() => setView("teams")}>
-    <CalendarIcon className="h-4 w-4 mr-2" /> Riunioni Teams
-  </Button>
-
-  <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
-    <CalendarIcon className="h-4 w-4 mr-2" /> Mese
-  </Button>
-
-  <Button variant={view === "week" ? "default" : "outline"} size="sm" onClick={() => setView("week")}>
-    <CalendarDays className="h-4 w-4 mr-2" /> Settimana
-  </Button>
-</div>
+            <Button
+              variant={view === "teams" ? "default" : "outline"}
+              size="sm"
+              className="h-9 text-xs px-2 col-span-2"
+              onClick={() => setView("teams")}
+            >
+              Riunioni Teams
+            </Button>
           </div>
         </div>
-      </div>
 
-    <div className="bg-white rounded-lg shadow-sm">
-  {view === "ricorrenti" && renderRicorrentiView()}
-  {view === "list" && renderListView()}
-  {view === "teams" && renderTeamsView()}
-  {view === "month" && renderMonthView()}
-  {view === "week" && renderWeekView()}
-</div>
-    </div>
-    
-     {/* MOBILE */}
-<div className="md:hidden space-y-3 px-1">
-  <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
-    <div className="flex items-center justify-between">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          setCurrentDate((prev) =>
-            view === "week" ? subWeeks(prev, 1) : subMonths(prev, 1)
-          )
-        }
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
+        <div className="bg-white rounded-lg shadow-sm p-3">
+          {view === "ricorrenti" && renderRicorrentiView()}
+          {view === "list" && renderListView()}
+          {view === "teams" && renderTeamsView()}
 
-      <div className="text-center">
-        <div className="text-sm text-muted-foreground">Agenda</div>
-        <div className="font-bold">
-          {format(currentDate, "EEEE d MMMM yyyy", { locale: it })}
+          {view === "month" && (
+            <div className="overflow-x-auto">
+              <div className="min-w-[700px]">{renderMonthView()}</div>
+            </div>
+          )}
+
+          {view === "week" && (
+            <div className="overflow-x-auto">
+              <div className="min-w-[900px]">{renderWeekView()}</div>
+            </div>
+          )}
+
+          {view === "week" && (
+            <>
+              {filteredEvents
+                .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
+                .sort((a, b) => {
+                  const aTime = String(a.ora_inizio || "00:00");
+                  const bTime = String(b.ora_inizio || "00:00");
+                  return aTime.localeCompare(bTime);
+                })
+                .map((e) => renderEventCard(e, false))}
+
+              {filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate)).length === 0 && (
+                <div className="text-center py-10 text-gray-500">Nessun evento per questo giorno</div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          setCurrentDate((prev) =>
-            view === "week" ? addWeeks(prev, 1) : addMonths(prev, 1)
-          )
-        }
-      >
-        <ChevronRight className="h-5 w-5" />
-      </Button>
-    </div>
-
-    <Button onClick={() => handleNuovoEvento()} className="w-full gap-2">
-      <Plus className="h-4 w-4" /> Nuovo Evento
-    </Button>
-<div className="grid grid-cols-2 gap-2">
-  <Button
-    variant={view === "week" ? "default" : "outline"}
-    size="sm"
-    className="h-9 text-xs px-2"
-    onClick={() => setView("week")}
-  >
-    Settimana
-  </Button>
-
-  <Button
-    variant={view === "month" ? "default" : "outline"}
-    size="sm"
-    className="h-9 text-xs px-2"
-    onClick={() => setView("month")}
-  >
-    Mese
-  </Button>
-
-  <Button
-    variant={view === "list" ? "default" : "outline"}
-    size="sm"
-    className="h-9 text-xs px-2"
-    onClick={() => setView("list")}
-  >
-    Scaduti
-  </Button>
-
-  <Button
-    variant={view === "ricorrenti" ? "default" : "outline"}
-    size="sm"
-    className="h-9 text-xs px-2"
-    onClick={() => setView("ricorrenti")}
-  >
-    Ricorrenti
-  </Button>
-
-  <Button
-    variant={view === "teams" ? "default" : "outline"}
-    size="sm"
-    className="h-9 text-xs px-2 col-span-2"
-    onClick={() => setView("teams")}
-  >
-    Riunioni Teams
-  </Button>
-</div>
-  </div>
-
- <div className="bg-white rounded-lg shadow-sm p-3">
-  {view === "ricorrenti" && renderRicorrentiView()}
-  {view === "list" && renderListView()}
-  {view === "teams" && renderTeamsView()}
-
-    {view === "month" && (
-      <div className="overflow-x-auto">
-        <div className="min-w-[700px]">{renderMonthView()}</div>
-      </div>
-    )}
-
-    {view === "week" && (
-      <div className="overflow-x-auto">
-        <div className="min-w-[900px]">{renderWeekView()}</div>
-      </div>
-    )}
-
-   {view === "week" && (
-  <>
-    {filteredEvents
-      .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
-      .sort((a, b) => {
-        const aTime = String(a.ora_inizio || "00:00");
-        const bTime = String(b.ora_inizio || "00:00");
-        return aTime.localeCompare(bTime);
-      })
-      .map((e) => renderEventCard(e, false))}
-
-    {filteredEvents.filter((e) =>
-      isSameDay(safeParseISO(e.data_inizio as any), currentDate)
-    ).length === 0 && (
-      <div className="text-center py-10 text-gray-500">
-        Nessun evento per questo giorno
-      </div>
-    )}
-  </>
-)}
-  </div>
-</div>
-      
       {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1780,7 +1890,9 @@ return (
                       }
                       placeholder="Es. 7 per settimanale"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Numero di giorni tra un evento e il successivo</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Numero di giorni tra un evento e il successivo
+                    </p>
                   </div>
 
                   <div>
@@ -1806,11 +1918,7 @@ return (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Data Inizio</Label>
-                <Input
-                  type="date"
-                  value={formData.data_inizio}
-                  onChange={(e) => setFormData({ ...formData, data_inizio: e.target.value })}
-                />
+                <Input type="date" value={formData.data_inizio} onChange={(e) => handleDataInizioChange(e.target.value)} />
               </div>
 
               <div>
@@ -1819,7 +1927,7 @@ return (
                   type="time"
                   disabled={formData.tutto_giorno}
                   value={formData.ora_inizio}
-                  onChange={(e) => setFormData({ ...formData, ora_inizio: e.target.value })}
+                  onChange={(e) => handleOraInizioChange(e.target.value)}
                 />
               </div>
             </div>
@@ -1833,7 +1941,9 @@ return (
                   value={formData.data_fine}
                   onChange={(e) => setFormData({ ...formData, data_fine: e.target.value })}
                 />
-                {formData.ricorrente && <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente dalla durata</p>}
+                {formData.ricorrente && (
+                  <p className="text-xs text-muted-foreground mt-1">Calcolata automaticamente dalla durata</p>
+                )}
               </div>
 
               <div>
@@ -1959,6 +2069,7 @@ return (
                       ...formData,
                       riunione_teams: toBool(c),
                       link_teams: !toBool(c) ? "" : formData.link_teams,
+                      email_partecipanti_esterni: !toBool(c) ? [] : formData.email_partecipanti_esterni,
                     })
                   }
                 />
@@ -1966,19 +2077,60 @@ return (
               </div>
 
               {formData.riunione_teams && (
-                <div>
-                  <Label>Link Teams</Label>
-                  <Input
-                    value={formData.link_teams}
-                    onChange={(e) => setFormData({ ...formData, link_teams: e.target.value })}
-                    placeholder="https://teams.microsoft.com/..."
-                  />
+                <div className="space-y-3 border rounded-md p-3 bg-violet-50/40">
+                  <div>
+                    <Label>Link Teams</Label>
+                    <Input
+                      value={formData.link_teams}
+                      onChange={(e) => setFormData({ ...formData, link_teams: e.target.value })}
+                      placeholder="https://teams.microsoft.com/... (se vuoto viene generato automaticamente)"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <p className="text-sm font-medium">Email aggiuntive da contatti</p>
+                      <p className="text-xs text-muted-foreground">
+                        Seleziona contatti esterni da invitare via email/link
+                      </p>
+                    </div>
+
+                    <Button type="button" variant="outline" onClick={() => setContactDialogOpen(true)}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Seleziona da contatti
+                    </Button>
+                  </div>
+
+                  {formData.email_partecipanti_esterni.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.email_partecipanti_esterni.map((email) => (
+                        <div
+                          key={email}
+                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border text-sm"
+                        >
+                          <span>{email}</span>
+                          <button
+                            type="button"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                email_partecipanti_esterni: prev.email_partecipanti_esterni.filter((e) => e !== email),
+                              }))
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             <div>
-              <Label className="mb-2 block">Partecipanti</Label>
+              <Label className="mb-2 block">Partecipanti interni</Label>
 
               <div className="relative mb-2">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -2031,7 +2183,7 @@ return (
                             ? [...formData.partecipanti, u.id]
                             : formData.partecipanti.filter((id) => id !== u.id);
 
-                          setFormData({ ...formData, partecipanti: newPart });
+                          setFormData({ ...formData, partecipanti: [...new Set(newPart)] });
                         }}
                       />
                       <span className="text-sm">
@@ -2052,7 +2204,6 @@ return (
           </div>
 
           <DialogFooter className="flex justify-between items-center">
-            {/* Mostra elimina solo in MODIFICA: evita editingEventoId! */}
             {editingEventoId ? (
               <Button
                 type="button"
@@ -2090,74 +2241,119 @@ return (
         </DialogContent>
       </Dialog>
 
-      <Dialog open={moreEventsOpen} onOpenChange={setMoreEventsOpen}>
-  <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
-    <DialogHeader>
-      <DialogTitle>
-        Eventi del{" "}
-        {moreEventsDate ? format(moreEventsDate as Date, "dd MMMM yyyy", { locale: it }) : ""}
-      </DialogTitle>
-    </DialogHeader>
+      {/* Dialog selezione contatti esterni */}
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Seleziona email dai contatti</DialogTitle>
+          </DialogHeader>
 
-    <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
-      {moreEventsList.length === 0 ? (
-        <div className="text-sm text-muted-foreground">Nessun evento trovato</div>
-      ) : (
-        moreEventsList
-          .slice()
-          .sort((a, b) => {
-            const aTime = String(a.ora_inizio || "00:00");
-            const bTime = String(b.ora_inizio || "00:00");
-            return aTime.localeCompare(bTime);
-          })
-          .map((evento) => (
-            <div
-              key={String(evento.id)}
-              className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
-              onClick={() => {
-                setMoreEventsOpen(false);
-                handleEditEvento(evento);
-              }}
-            >
-              <div className="font-semibold text-sm">
-                {evento.titolo || "(senza titolo)"}
-              </div>
-
-              <div className="text-xs text-gray-600 mt-1">
-                ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
-                {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
-              </div>
-
-              {evento.utente && (
-                <div className="text-xs text-gray-700 mt-1">
-                  👤 {evento.utente.nome} {evento.utente.cognome}
-                </div>
-              )}
-
-              {evento.cliente?.ragione_sociale && (
-                <div className="text-xs text-gray-700 mt-1">
-                  🏢 {evento.cliente.ragione_sociale}
-                </div>
-              )}
-
-              {evento.in_sede && evento.sala && (
-                <div className="text-xs text-green-700 mt-1">
-                  📍 Sala {String(evento.sala)}
-                </div>
-              )}
-
-              {!evento.in_sede && evento.luogo && (
-                <div className="text-xs text-red-700 mt-1">
-                  📍 {String(evento.luogo)}
-                </div>
-              )}
+          <div className="space-y-3 py-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca nome o email..."
+                value={searchContatti}
+                onChange={(e) => setSearchContatti(e.target.value)}
+                className="pl-8"
+              />
             </div>
-          ))
-      )}
-    </div>
-  </DialogContent>
-</Dialog>
-    
+
+            <ScrollArea className="h-[320px] border rounded p-2">
+              {filteredContactOptions.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-2">Nessun contatto trovato</div>
+              ) : (
+                filteredContactOptions.map((contact) => {
+                  const checked = formData.email_partecipanti_esterni.includes(contact.email);
+
+                  return (
+                    <div key={contact.id} className="flex items-start gap-3 py-2 border-b last:border-b-0">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(c: CheckedState) => handleToggleExternalEmail(contact.email, c)}
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">
+                          {contact.cognome} {contact.nome}
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate">{contact.email}</div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </ScrollArea>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setContactDialogOpen(false)}>
+              Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog eventi multipli */}
+      <Dialog open={moreEventsOpen} onOpenChange={setMoreEventsOpen}>
+        <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>
+              Eventi del {moreEventsDate ? format(moreEventsDate as Date, "dd MMMM yyyy", { locale: it }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="max-h-[60vh] overflow-y-auto space-y-3 py-2">
+            {moreEventsList.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Nessun evento trovato</div>
+            ) : (
+              moreEventsList
+                .slice()
+                .sort((a, b) => {
+                  const aTime = String(a.ora_inizio || "00:00");
+                  const bTime = String(b.ora_inizio || "00:00");
+                  return aTime.localeCompare(bTime);
+                })
+                .map((evento) => (
+                  <div
+                    key={String(evento.id)}
+                    className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setMoreEventsOpen(false);
+                      handleEditEvento(evento);
+                    }}
+                  >
+                    <div className="font-semibold text-sm">{evento.titolo || "(senza titolo)"}</div>
+
+                    <div className="text-xs text-gray-600 mt-1">
+                      ⏰ {evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : ""}
+                      {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
+                    </div>
+
+                    {evento.utente && (
+                      <div className="text-xs text-gray-700 mt-1">
+                        👤 {evento.utente.nome} {evento.utente.cognome}
+                      </div>
+                    )}
+
+                    {evento.cliente?.ragione_sociale && (
+                      <div className="text-xs text-gray-700 mt-1">🏢 {evento.cliente.ragione_sociale}</div>
+                    )}
+
+                    {evento.in_sede && evento.sala && (
+                      <div className="text-xs text-green-700 mt-1">📍 Sala {String(evento.sala)}</div>
+                    )}
+
+                    {!evento.in_sede && evento.luogo && (
+                      <div className="text-xs text-red-700 mt-1">📍 {String(evento.luogo)}</div>
+                    )}
+                  </div>
+                ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
