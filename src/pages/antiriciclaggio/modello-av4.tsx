@@ -411,14 +411,11 @@ export default function ModelloAV4() {
     let naturaPrestazione = "";
 
     if (av1IdValue) {
-      const av1Numeric = toNumericOrNull(av1IdValue);
-
-      if (av1Numeric !== null) {
-        const { data: av1Row, error: av1Error } = await supabase
-          .from("tbAV1")
-          .select("*")
-          .eq("id", av1Numeric)
-          .single();
+  const { data: av1Row, error: av1Error } = await supabase
+    .from("tbAV1")
+    .select("*")
+    .eq("id", av1IdValue)
+    .single();
 
         if (av1Error) {
           console.error("Errore caricamento AV1:", av1Error);
@@ -496,20 +493,19 @@ export default function ModelloAV4() {
         if (!existingRow && av1IdFromQuery) {
           const av1Numeric = toNumericOrNull(av1IdFromQuery);
 
-          if (av1Numeric !== null) {
-            const { data, error } = await supabase
-              .from("tbAV4")
-              .select("*")
-              .eq("av1_id", av1Numeric)
-              .maybeSingle();
+       if (av1IdFromQuery) {
+  const { data, error } = await supabase
+    .from("tbAV4")
+    .select("*")
+    .eq("av1_id", av1IdFromQuery)
+    .maybeSingle();
 
-            if (error) {
-              console.error("Errore caricamento AV4 da av1_id:", error);
-            } else {
-              existingRow = data || null;
-            }
-          }
-        }
+  if (error) {
+    console.error("Errore caricamento AV4 da av1_id:", error);
+  } else {
+    existingRow = data || null;
+  }
+}
 
         if (existingRow) {
           console.log("AV4 CARICATO DA DB:", existingRow);
