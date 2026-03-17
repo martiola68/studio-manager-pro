@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type FormState = {
   studio_id: string;
@@ -596,6 +598,10 @@ export default function ModelloAV4() {
     return true;
   }
 
+  function handleChiudiModello() {
+    router.push("/antiriciclaggio");
+  }
+
   async function salvaAV4() {
     if (!validateBeforeSave()) return;
 
@@ -715,518 +721,547 @@ export default function ModelloAV4() {
   }
 
   return (
-    <div className="p-6 max-w-5xl">
-      <h1 className="text-xl font-bold mb-2">AV.4 – Dichiarazione del Cliente</h1>
-
-      <p className="mb-6 text-sm leading-6">
-        In ottemperanza alle disposizioni dell’art. 22 del D.Lgs. 231/2007
-        (obblighi del cliente in materia di prevenzione e contrasto al
-        riciclaggio/FDT come da Nota 1 e 2 dell’Allegato alla presente
-        Dichiarazione) e successive modifiche e integrazioni, fornisco le
-        sottostanti informazioni, assumendomi tutte le responsabilità di natura
-        civile, amministrativa e penale per dichiarazioni non veritiere.
-      </p>
-
-      <div className="mb-4">
-        <label className="block font-medium mb-1">Cliente</label>
-        <input
-          value={clienteLabel || "Cliente non valorizzato da AV1"}
-          className="border p-2 w-full rounded bg-gray-50"
-          readOnly
-        />
+    <div className="max-w-5xl mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Modello AV4</h1>
+        <p className="text-gray-500 mt-1">Dichiarazione del Cliente</p>
       </div>
 
-      <div className="mb-4">
-        <label className="block font-medium mb-1">
-          Rappresentante collegato al cliente
-        </label>
-        <input
-          value={
-            loadingRappresentante
-              ? "Caricamento rappresentante..."
-              : form.dichiarante_nome_cognome || "Nessun rappresentante collegato"
-          }
-          className="border p-2 w-full rounded bg-gray-50"
-          readOnly
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Il rappresentante viene recuperato automaticamente da
-          <strong> tbclienti.rapp_legale_id </strong>
-          e caricato dalla tabella
-          <strong> rapp_legali</strong>.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dati principali</CardTitle>
+        </CardHeader>
 
-      <div className="mt-3 mb-6">
-        <button
-          type="button"
-          onClick={importaAmministratoreDaCliente}
-          disabled={!form.cliente_id || loadingRappresentante}
-          className="border border-gray-300 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 px-4 py-2 rounded"
-        >
-          {loadingRappresentante
-            ? "Importazione amministratore..."
-            : "Importa amministratore da cliente"}
-        </button>
-      </div>
+        <CardContent>
+          <p className="mb-6 text-sm leading-6 text-gray-700">
+            In ottemperanza alle disposizioni dell’art. 22 del D.Lgs. 231/2007
+            (obblighi del cliente in materia di prevenzione e contrasto al
+            riciclaggio/FDT come da Nota 1 e 2 dell’Allegato alla presente
+            Dichiarazione) e successive modifiche e integrazioni, fornisco le
+            sottostanti informazioni, assumendomi tutte le responsabilità di natura
+            civile, amministrativa e penale per dichiarazioni non veritiere.
+          </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block font-medium mb-1">Cognome e nome</label>
-          <input
-            name="dichiarante_nome_cognome"
-            value={form.dichiarante_nome_cognome}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Cliente</label>
+              <input
+                value={clienteLabel || "Cliente non valorizzato da AV1"}
+                className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                readOnly
+              />
+            </div>
 
-        <div>
-          <label className="block font-medium mb-1">Codice fiscale</label>
-          <input
-            name="dichiarante_codice_fiscale"
-            value={form.dichiarante_codice_fiscale}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Rappresentante collegato al cliente
+              </label>
+              <input
+                value={
+                  loadingRappresentante
+                    ? "Caricamento rappresentante..."
+                    : form.dichiarante_nome_cognome || "Nessun rappresentante collegato"
+                }
+                className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                readOnly
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Il rappresentante viene recuperato automaticamente da
+                <strong> tbclienti.rapp_legale_id </strong>
+                e caricato dalla tabella
+                <strong> rapp_legali</strong>.
+              </p>
+            </div>
 
-        <div>
-          <label className="block font-medium mb-1">Luogo di nascita</label>
-          <input
-            name="dichiarante_luogo_nascita"
-            value={form.dichiarante_luogo_nascita}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={importaAmministratoreDaCliente}
+                disabled={!form.cliente_id || loadingRappresentante}
+              >
+                {loadingRappresentante
+                  ? "Importazione amministratore..."
+                  : "Importa amministratore da cliente"}
+              </Button>
+            </div>
 
-        <div>
-          <label className="block font-medium mb-1">Data di nascita</label>
-          <input
-            name="dichiarante_data_nascita"
-            value={form.dichiarante_data_nascita}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Cognome e nome</label>
+                <input
+                  name="dichiarante_nome_cognome"
+                  value={form.dichiarante_nome_cognome}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-        <div>
-          <label className="block font-medium mb-1">Indirizzo residenza</label>
-          <input
-            name="dichiarante_indirizzo_residenza"
-            value={form.dichiarante_indirizzo_residenza}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Codice fiscale</label>
+                <input
+                  name="dichiarante_codice_fiscale"
+                  value={form.dichiarante_codice_fiscale}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-        <div>
-          <label className="block font-medium mb-1">Città residenza</label>
-          <input
-            name="dichiarante_citta_residenza"
-            value={form.dichiarante_citta_residenza}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Luogo di nascita</label>
+                <input
+                  name="dichiarante_luogo_nascita"
+                  value={form.dichiarante_luogo_nascita}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-        <div>
-          <label className="block font-medium mb-1">CAP residenza</label>
-          <input
-            name="dichiarante_cap_residenza"
-            value={form.dichiarante_cap_residenza}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Data di nascita</label>
+                <input
+                  name="dichiarante_data_nascita"
+                  value={form.dichiarante_data_nascita}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-        <div>
-          <label className="block font-medium mb-1">Nazionalità</label>
-          <input
-            name="dichiarante_nazionalita"
-            value={form.dichiarante_nazionalita}
-            onChange={handleChange}
-            className="border p-2 w-full rounded bg-gray-50"
-            readOnly
-          />
-        </div>
-      </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Indirizzo residenza</label>
+                <input
+                  name="dichiarante_indirizzo_residenza"
+                  value={form.dichiarante_indirizzo_residenza}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda1" checked={form.domanda1} onChange={handleChange} />
-          Dati di nascita e residenza come da documento di identificazione allegato
-        </label>
-      </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Città residenza</label>
+                <input
+                  name="dichiarante_citta_residenza"
+                  value={form.dichiarante_citta_residenza}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-      <div className="mb-6">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda2" checked={form.domanda2} onChange={handleChange} />
-          Domicilio diverso rispetto al documento di identificazione allegato
-        </label>
-      </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">CAP residenza</label>
+                <input
+                  name="dichiarante_cap_residenza"
+                  value={form.dichiarante_cap_residenza}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
 
-      <div className="mb-6">
-        <label className="block font-medium mb-1">
-          Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo scopo e la natura
-          della prestazione professionale richiesta sono
-        </label>
-        <textarea
-          name="natura_prestazione"
-          value={form.natura_prestazione}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-          rows={4}
-        />
-      </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nazionalità</label>
+                <input
+                  name="dichiarante_nazionalita"
+                  value={form.dichiarante_nazionalita}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
+                  readOnly
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="mt-6 font-semibold mb-3">Persona politicamente esposta</div>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Dichiarazioni del cliente</CardTitle>
+        </CardHeader>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda3" checked={form.domanda3} onChange={handleChange} />
-          di non costituire persona politicamente esposta (estera o nazionale), ai sensi
-          dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007 oppure
-        </label>
-      </div>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda1" checked={form.domanda1} onChange={handleChange} />
+                Dati di nascita e residenza come da documento di identificazione allegato
+              </label>
+            </div>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda4" checked={form.domanda4} onChange={handleChange} />
-          di non rivestire lo status di PPE da più di un anno
-        </label>
-      </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda2" checked={form.domanda2} onChange={handleChange} />
+                Domicilio diverso rispetto al documento di identificazione allegato
+              </label>
+            </div>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda5" checked={form.domanda5} onChange={handleChange} />
-          di costituire persona politicamente esposta estera o nazionale, ai sensi
-          dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007
-        </label>
-      </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo scopo e la natura
+                della prestazione professionale richiesta sono
+              </label>
+              <textarea
+                name="natura_prestazione"
+                value={form.natura_prestazione}
+                onChange={handleChange}
+                className="w-full border rounded-md px-3 py-2"
+                rows={4}
+              />
+            </div>
 
-      {form.domanda5 && (
-        <div className="mb-6">
-          <label className="block font-medium mb-1">
-            Specificare carica pubblica, nome e legame con il titolare della carica pubblica
-          </label>
-          <textarea
-            name="spec_domanda5"
-            value={form.spec_domanda5}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-            rows={3}
-          />
-        </div>
-      )}
+            <div className="font-semibold">Persona politicamente esposta</div>
 
-      <div className="mt-6 mb-3 text-sm leading-6">
-        - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1, comma 2,
-        lettera pp) e ai criteri per la determinazione della titolarità effettiva di clienti
-        diversi dalle persone fisiche di cui all’art. 20 del D.Lgs. 231/2007, consapevole
-        delle sanzioni penali previste dall’art. 55 del D.Lgs. 231/2007 nel caso di falsa
-        indicazione delle generalità del soggetto per conto del quale eventualmente viene
-        eseguita l’operazione, dichiara:
-      </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda3" checked={form.domanda3} onChange={handleChange} />
+                di non costituire persona politicamente esposta (estera o nazionale), ai sensi
+                dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007 oppure
+              </label>
+            </div>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda6" checked={form.domanda6} onChange={handleChange} />
-          di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo così
-          come previsto e definito dal D.Lgs. 231/2007
-        </label>
-      </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda4" checked={form.domanda4} onChange={handleChange} />
+                di non rivestire lo status di PPE da più di un anno
+              </label>
+            </div>
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda7" checked={form.domanda7} onChange={handleChange} />
-          di agire per conto dei seguenti titolari effettivi
-        </label>
-      </div>
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda5" checked={form.domanda5} onChange={handleChange} />
+                di costituire persona politicamente esposta estera o nazionale, ai sensi
+                dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007
+              </label>
+            </div>
 
-      {form.domanda7 && (
-        <div className="mb-6 p-4 border rounded">
-          {av4Id ? (
-            <TitolariEffettiviForm
-              sezione="domanda7"
-              av4_id={av4Id}
-              studio_id={form.studio_id}
-              cliente_id={form.cliente_id}
-            />
-          ) : (
-            <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i nominativi collegati alla sezione Domanda 7.
+            {form.domanda5 && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Specificare carica pubblica, nome e legame con il titolare della carica pubblica
+                </label>
+                <textarea
+                  name="spec_domanda5"
+                  value={form.spec_domanda5}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            <div className="text-sm leading-6 text-gray-700">
+              - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1, comma 2,
+              lettera pp) e ai criteri per la determinazione della titolarità effettiva di clienti
+              diversi dalle persone fisiche di cui all’art. 20 del D.Lgs. 231/2007, consapevole
+              delle sanzioni penali previste dall’art. 55 del D.Lgs. 231/2007 nel caso di falsa
+              indicazione delle generalità del soggetto per conto del quale eventualmente viene
+              eseguita l’operazione, dichiara:
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda6" checked={form.domanda6} onChange={handleChange} />
+                di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo così
+                come previsto e definito dal D.Lgs. 231/2007
+              </label>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda7" checked={form.domanda7} onChange={handleChange} />
+                di agire per conto dei seguenti titolari effettivi
+              </label>
+            </div>
+
+            {form.domanda7 && (
+              <div className="border rounded-lg p-4">
+                {av4Id ? (
+                  <TitolariEffettiviForm
+                    sezione="domanda7"
+                    av4_id={av4Id}
+                    studio_id={form.studio_id}
+                    cliente_id={form.cliente_id}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Salva prima l’AV4 per poter inserire i nominativi collegati alla sezione Domanda 7.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda8" checked={form.domanda8} onChange={handleChange} />
+                di agire per conto della società/ente
+              </label>
+            </div>
+
+            {form.domanda8 && (
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nome società / ente</label>
+                    <input name="nome_soc" value={form.nome_soc} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sede legale</label>
+                    <input name="sede_legale" value={form.sede_legale} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Indirizzo sede</label>
+                    <input name="indirizzo_sede" value={form.indirizzo_sede} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Registro imprese</label>
+                    <input name="reg_imprese" value={form.reg_imprese} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Numero registro imprese</label>
+                    <input name="num_reg_imprese" value={form.num_reg_imprese} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Codice fiscale società</label>
+                    <input name="cod_fiscale_soc" value={form.cod_fiscale_soc} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                </div>
+
+                <div className="text-sm">
+                  in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
+                </div>
+
+                {av4Id ? (
+                  <TitolariEffettiviForm
+                    sezione="domanda8"
+                    av4_id={av4Id}
+                    studio_id={form.studio_id}
+                    cliente_id={form.cliente_id}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 8.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda9" checked={form.domanda9} onChange={handleChange} />
+                (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
+              </label>
+            </div>
+
+            {form.domanda9 && (
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nome società / ente</label>
+                    <input name="nome_soc_bis" value={form.nome_soc_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sede legale</label>
+                    <input name="sede_legale_bis" value={form.sede_legale_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Indirizzo sede</label>
+                    <input name="indirizzo_sede_bis" value={form.indirizzo_sede_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Registro imprese</label>
+                    <input name="reg_imprese_bis" value={form.reg_imprese_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Numero registro imprese</label>
+                    <input name="num_reg_imprese_bis" value={form.num_reg_imprese_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Codice fiscale società</label>
+                    <input name="cod_fiscale_soc_bis" value={form.cod_fiscale_soc_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">Denominazione società per art. 20, comma 4</label>
+                    <input name="nome_soc_ter" value={form.nome_soc_ter} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+                  </div>
+                </div>
+
+                <div className="text-sm">
+                  in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
+                </div>
+
+                {av4Id ? (
+                  <TitolariEffettiviForm
+                    sezione="domanda9"
+                    av4_id={av4Id}
+                    studio_id={form.studio_id}
+                    cliente_id={form.cliente_id}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 9.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="font-semibold">PPE titolari effettivi</div>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda10" checked={form.domanda10} onChange={handleChange} />
+                che il/i titolare/i effettivo/i non costituisce/costituiscono persona/e politicamente esposta/e
+              </label>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="domanda11" checked={form.domanda11} onChange={handleChange} />
+                che il/i titolari effettivi costituisce/costituiscono persona/e politicamente esposte estere o nazionali
+              </label>
+            </div>
+
+            {form.domanda11 && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Specifica PPE titolari effettivi</label>
+                <textarea
+                  name="specifica12"
+                  value={form.specifica12}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono
+              </label>
+              <textarea
+                name="specifica10b"
+                value={form.specifica10b}
+                onChange={handleChange}
+                className="w-full border rounded-md px-3 py-2"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Che la provenienza dei fondi utilizzati nell’operazione è</label>
+              <textarea
+                name="specifica10c"
+                value={form.specifica10c}
+                onChange={handleChange}
+                className="w-full border rounded-md px-3 py-2"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Che i mezzi di pagamento forniti dal Cliente al professionista sono</label>
+              <textarea
+                name="specifica11c"
+                value={form.specifica11c}
+                onChange={handleChange}
+                className="w-full border rounded-md px-3 py-2"
+                rows={3}
+              />
+            </div>
+
+            <div className="text-sm leading-6 text-gray-700">
+              Che i medesimi fondi e le risorse economiche eventualmente utilizzati non provengono né sono destinati a un’attività criminosa o al finanziamento del terrorismo di cui all’art. 2, co. 6, del D.Lgs. 231/2007.
+            </div>
+
+            <div className="font-semibold">Professione / attività del cliente</div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Che la professione/attività del cliente è la seguente</label>
+              <input name="specifica10d" value={form.specifica10d} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Esercitata / svolta dal</label>
+              <input name="specifica10e" value={form.specifica10e} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Nell’ambito territoriale</label>
+              <input name="specifica10f" value={form.specifica10f} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Firma</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Luogo firma</label>
+              <input name="luogo_firma" value={form.luogo_firma} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Data firma</label>
+              <input type="date" name="data_firma" value={form.data_firma} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Luogo firma bis</label>
+              <input name="luogo_firma_bis" value={form.luogo_firma_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Data firma bis</label>
+              <input type="date" name="data_firma_bis" value={form.data_firma_bis} onChange={handleChange} className="w-full border rounded-md px-3 py-2" />
+            </div>
+
+            <div className="md:col-span-2 flex justify-end gap-3 pt-3 flex-wrap">
+              <Button onClick={salvaAV4} disabled={loading}>
+                {loading ? "Salvataggio..." : "Salva AV4"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (!av4Id) {
+                    alert("Salva prima l'AV4, poi potrai stamparlo.");
+                    return;
+                  }
+                  router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
+                }}
+              >
+                Stampa AV4
+              </Button>
+
+              <Button type="button" variant="outline" onClick={handleChiudiModello}>
+                Chiudi Modello
+              </Button>
+            </div>
+          </div>
+
+          {!av4Id && (
+            <p className="mt-3 text-sm text-gray-600">
+              Dopo il primo salvataggio verrà abilitato l’inserimento dei titolari effettivi nelle sezioni Domanda 7, 8 e 9.
             </p>
           )}
-        </div>
-      )}
 
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda8" checked={form.domanda8} onChange={handleChange} />
-          di agire per conto della società/ente
-        </label>
-      </div>
-
-      {form.domanda8 && (
-        <div className="mb-6 border rounded p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block font-medium mb-1">Nome società / ente</label>
-              <input name="nome_soc" value={form.nome_soc} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Sede legale</label>
-              <input name="sede_legale" value={form.sede_legale} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Indirizzo sede</label>
-              <input name="indirizzo_sede" value={form.indirizzo_sede} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Registro imprese</label>
-              <input name="reg_imprese" value={form.reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Numero registro imprese</label>
-              <input name="num_reg_imprese" value={form.num_reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Codice fiscale società</label>
-              <input name="cod_fiscale_soc" value={form.cod_fiscale_soc} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-          </div>
-
-          <div className="mb-3 text-sm">
-            in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
-          </div>
-
-          {av4Id ? (
-            <TitolariEffettiviForm
-              sezione="domanda8"
-              av4_id={av4Id}
-              studio_id={form.studio_id}
-              cliente_id={form.cliente_id}
-            />
-          ) : (
-            <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 8.
+          {av4Id && (
+            <p className="mt-3 text-sm text-green-700">
+              AV4 salvato. ID pratica: {av4Id}
             </p>
           )}
-        </div>
-      )}
-
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda9" checked={form.domanda9} onChange={handleChange} />
-          (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
-        </label>
-      </div>
-
-      {form.domanda9 && (
-        <div className="mb-6 border rounded p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block font-medium mb-1">Nome società / ente</label>
-              <input name="nome_soc_bis" value={form.nome_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Sede legale</label>
-              <input name="sede_legale_bis" value={form.sede_legale_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Indirizzo sede</label>
-              <input name="indirizzo_sede_bis" value={form.indirizzo_sede_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Registro imprese</label>
-              <input name="reg_imprese_bis" value={form.reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Numero registro imprese</label>
-              <input name="num_reg_imprese_bis" value={form.num_reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Codice fiscale società</label>
-              <input name="cod_fiscale_soc_bis" value={form.cod_fiscale_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block font-medium mb-1">Denominazione società per art. 20, comma 4</label>
-              <input name="nome_soc_ter" value={form.nome_soc_ter} onChange={handleChange} className="border p-2 w-full rounded" />
-            </div>
-          </div>
-
-          <div className="mb-3 text-sm">
-            in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
-          </div>
-
-          {av4Id ? (
-            <TitolariEffettiviForm
-              sezione="domanda9"
-              av4_id={av4Id}
-              studio_id={form.studio_id}
-              cliente_id={form.cliente_id}
-            />
-          ) : (
-            <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 9.
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="mt-6 font-semibold mb-3">PPE titolari effettivi</div>
-
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda10" checked={form.domanda10} onChange={handleChange} />
-          che il/i titolare/i effettivo/i non costituisce/costituiscono persona/e politicamente esposta/e
-        </label>
-      </div>
-
-      <div className="mb-3">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="domanda11" checked={form.domanda11} onChange={handleChange} />
-          che il/i titolari effettivi costituisce/costituiscono persona/e politicamente esposte estere o nazionali
-        </label>
-      </div>
-
-      {form.domanda11 && (
-        <div className="mb-6">
-          <label className="block font-medium mb-1">Specifica PPE titolari effettivi</label>
-          <textarea
-            name="specifica12"
-            value={form.specifica12}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-            rows={3}
-          />
-        </div>
-      )}
-
-      <div className="mt-6 mb-4">
-        <label className="block font-medium mb-1">
-          Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono
-        </label>
-        <textarea
-          name="specifica10b"
-          value={form.specifica10b}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-          rows={3}
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="block font-medium mb-1">Che la provenienza dei fondi utilizzati nell’operazione è</label>
-        <textarea
-          name="specifica10c"
-          value={form.specifica10c}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-          rows={3}
-        />
-      </div>
-
-      <div className="mb-6">
-        <label className="block font-medium mb-1">Che i mezzi di pagamento forniti dal Cliente al professionista sono</label>
-        <textarea
-          name="specifica11c"
-          value={form.specifica11c}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-          rows={3}
-        />
-      </div>
-
-      <div className="mb-6 text-sm leading-6">
-        Che i medesimi fondi e le risorse economiche eventualmente utilizzati non provengono né sono destinati a un’attività criminosa o al finanziamento del terrorismo di cui all’art. 2, co. 6, del D.Lgs. 231/2007.
-      </div>
-
-      <div className="mt-6 font-semibold mb-3">Professione / attività del cliente</div>
-
-      <div className="mb-4">
-        <label className="block font-medium mb-1">Che la professione/attività del cliente è la seguente</label>
-        <input name="specifica10d" value={form.specifica10d} onChange={handleChange} className="border p-2 w-full rounded" />
-      </div>
-
-      <div className="mb-4">
-        <label className="block font-medium mb-1">Esercitata / svolta dal</label>
-        <input name="specifica10e" value={form.specifica10e} onChange={handleChange} className="border p-2 w-full rounded" />
-      </div>
-
-      <div className="mb-6">
-        <label className="block font-medium mb-1">Nell’ambito territoriale</label>
-        <input name="specifica10f" value={form.specifica10f} onChange={handleChange} className="border p-2 w-full rounded" />
-      </div>
-
-      <div className="mt-6 font-semibold mb-3">Firma</div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block font-medium mb-1">Luogo firma</label>
-          <input name="luogo_firma" value={form.luogo_firma} onChange={handleChange} className="border p-2 w-full rounded" />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Data firma</label>
-          <input type="date" name="data_firma" value={form.data_firma} onChange={handleChange} className="border p-2 w-full rounded" />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Luogo firma bis</label>
-          <input name="luogo_firma_bis" value={form.luogo_firma_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Data firma bis</label>
-          <input type="date" name="data_firma_bis" value={form.data_firma_bis} onChange={handleChange} className="border p-2 w-full rounded" />
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <button
-          onClick={salvaAV4}
-          disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-5 py-2 rounded"
-        >
-          {loading ? "Salvataggio..." : "Salva AV4"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            if (!av4Id) {
-              alert("Salva prima l'AV4, poi potrai stamparlo.");
-              return;
-            }
-            router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
-          }}
-          className="border border-gray-300 bg-white hover:bg-gray-50 px-5 py-2 rounded"
-        >
-          Stampa AV4
-        </button>
-      </div>
-
-      {!av4Id && (
-        <p className="mt-3 text-sm text-gray-600">
-          Dopo il primo salvataggio verrà abilitato l’inserimento dei titolari effettivi nelle sezioni Domanda 7, 8 e 9.
-        </p>
-      )}
-
-      {av4Id && (
-        <p className="mt-3 text-sm text-green-700">
-          AV4 salvato. ID pratica: {av4Id}
-        </p>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
