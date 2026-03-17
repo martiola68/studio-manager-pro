@@ -233,9 +233,27 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
-  
+
   const isEditMode = router.isReady && typeof router.query.id === "string" && !!router.query.id;
   const recordId = router.isReady && typeof router.query.id === "string" ? router.query.id : "";
+
+  const from = router.isReady && typeof router.query.from === "string" ? router.query.from : "";
+  const clienteIdFromQuery =
+    router.isReady && typeof router.query.cliente_id === "string"
+      ? router.query.cliente_id
+      : "";
+  const av1IdFromQuery =
+    router.isReady && typeof router.query.av1_id === "string"
+      ? router.query.av1_id
+      : "";
+  const av4IdFromQuery =
+    router.isReady && typeof router.query.av4_id === "string"
+      ? router.query.av4_id
+      : "";
+  const returnTo =
+    router.isReady && typeof router.query.returnTo === "string"
+      ? router.query.returnTo
+      : "";
 
   const [studioId, setStudioId] = useState<string>("");
   const [form, setForm] = useState<FormState>(initialFormState);
@@ -253,8 +271,8 @@ export default function NuovoRappresentantePage() {
      ========================================================= */
   useEffect(() => {
     const loadStudioId = async () => {
-  const supabase = getSupabaseClient() as any;
-  setErrMsg(null);
+      const supabase = getSupabaseClient() as any;
+      setErrMsg(null);
 
       try {
         if (typeof window !== "undefined") {
@@ -312,37 +330,33 @@ export default function NuovoRappresentantePage() {
 
     let cancelled = false;
 
-   const loadRecord = async () => {
-  const supabase = getSupabaseClient() as any;
-  setPageLoading(true);
-  setErrMsg(null);
-  setOkMsg(null);
-     
+    const loadRecord = async () => {
+      const supabase = getSupabaseClient() as any;
+      setPageLoading(true);
+      setErrMsg(null);
+      setOkMsg(null);
+
       try {
         let row: RappLegaleRow | null = null;
 
-        // 1) Tentativo via API
         try {
-         const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
-const contentType = response.headers.get("content-type") || "";
+          const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
+          const contentType = response.headers.get("content-type") || "";
 
-let result: any = null;
+          let result: any = null;
 
-if (contentType.includes("application/json")) {
-  result = await response.json();
-}
+          if (contentType.includes("application/json")) {
+            result = await response.json();
+          }
 
-if (response.ok && result?.ok && result?.data) {
-  row = result.data as RappLegaleRow;
-}
-          
+          if (response.ok && result?.ok && result?.data) {
+            row = result.data as RappLegaleRow;
+          }
         } catch {
           // fallback sotto
         }
 
-        // 2) Fallback diretto Supabase
         if (!row) {
-
           const { data, error } = await supabase
             .from("rapp_legali")
             .select(
@@ -365,10 +379,6 @@ if (response.ok && result?.ok && result?.data) {
         if (cancelled) return;
 
         const mapped = mapRowToForm(row);
-
-        console.log("RAPP_LEGALE LOAD row:", row);
-console.log("RAPP_LEGALE LOAD mapped:", mapped);
-console.log("RAPP_LEGALE LOAD recordId:", recordId);
 
         setForm(mapped);
         setInitialLoadedForm(mapped);
@@ -534,31 +544,68 @@ console.log("RAPP_LEGALE LOAD recordId:", recordId);
         allegato_doc: form.allegato_doc || null,
       };
 
-const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
+      const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
 
-const response = await fetch(url, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(payload),
-});
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-const contentType = response.headers.get("content-type") || "";
-let result: any = null;
+      const contentType = response.headers.get("content-type") || "";
+      let result: any = null;
 
-if (contentType.includes("application/json")) {
-  result = await response.json();
-} else {
-  const text = await response.text();
-  throw new Error(
-    `Endpoint ${url} non restituisce JSON. Risposta ricevuta: ${text.slice(0, 200)}`
-  );
-}
+      if (contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(
+          `Endpoint ${url} non restituisce JSON. Risposta ricevuta: ${text.slice(0, 200)}`
+        );
+      }
 
-if (!response.ok || !result?.ok) {
-  throw new Error(result?.error || "Errore salvataggio rappresentante legale");
-}
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Errore salvataggio rappresentante legale");
+      }
+
+      const savedId = result?.data?.id || result?.id || result?.record?.id || "";
+
+      if (!isEditMode && from === "av4" && clienteIdFromQuery && savedId) {
+        const supabase = getSupabaseClient() as any;
+
+        const { error: updateClienteError } = await supabase
+          .from("tbclienti")
+          .update({ rapp_legale_id: savedId })
+          .eq("id", clienteIdFromQuery);
+
+        if (updateClienteError) {
+          throw new Error(
+            `Rappresentante salvato ma errore aggiornamento cliente: ${updateClienteError.message}`
+          );
+        }
+
+        if (returnTo) {
+          const sep = returnTo.includes("?") ? "&" : "?";
+          await router.push(`${returnTo}${sep}rapp_saved=1`);
+          return;
+        }
+
+        const fallbackParams = new URLSearchParams({
+          av1_id: av1IdFromQuery || "",
+          cliente_id: clienteIdFromQuery || "",
+          studio_id: studioId || "",
+          rapp_saved: "1",
+        });
+
+        if (av4IdFromQuery) {
+          fallbackParams.set("id", av4IdFromQuery);
+        }
+
+        await router.push(`/antiriciclaggio/modello-av4?${fallbackParams.toString()}`);
+        return;
+      }
 
       await router.push("/antiriciclaggio/rappresentanti?saved=1");
     } catch (error: any) {
@@ -568,9 +615,15 @@ if (!response.ok || !result?.ok) {
     }
   }
 
-  /* =========================================================
-     RENDER
-     ========================================================= */
+  function handleCancel() {
+    if (from === "av4" && returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    router.push("/antiriciclaggio/rappresentanti");
+  }
+
   return (
     <div className="p-6 space-y-6">
       <Card>
@@ -582,11 +635,7 @@ if (!response.ok || !result?.ok) {
           </CardTitle>
 
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => router.push("/antiriciclaggio/rappresentanti")}
-            >
+            <Button variant="secondary" type="button" onClick={handleCancel}>
               Annulla inserimento
             </Button>
           </div>
@@ -794,7 +843,8 @@ if (!response.ok || !result?.ok) {
 
               <p className="text-xs text-muted-foreground">
                 Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME} | Mode:{" "}
-                {isEditMode ? `edit (${recordId})` : "create"}
+                {isEditMode ? `edit (${recordId})` : "create"} | From: {from || "-"} | Cliente:{" "}
+                {clienteIdFromQuery || "-"}
               </p>
 
               <div className="flex gap-2">
