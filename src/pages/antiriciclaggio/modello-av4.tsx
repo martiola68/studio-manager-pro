@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
-import TitolariDaRappLegaliForm from "@/pages/antiriciclaggio/TitolariDaRappLegaliForm";
 
 type ClienteOption = {
   id: string;
@@ -76,7 +75,11 @@ type FormState = {
   versione: number;
 };
 
-const initialFormState = (studioId = "", av1Id = "", clienteId = ""): FormState => ({
+const initialFormState = (
+  studioId = "",
+  av1Id = "",
+  clienteId = ""
+): FormState => ({
   studio_id: studioId,
   cliente_id: clienteId,
   av1_id: av1Id,
@@ -356,18 +359,23 @@ export default function ModelloAV4() {
         .from("tbclienti")
         .select("id, rapp_legale_id")
         .eq("id", clienteId)
-        .single();
+        .maybeSingle();
 
       if (clienteError) {
-        console.error("Errore caricamento cliente:", clienteError);
+        console.error("Errore lettura tbclienti per rappresentante:", clienteError);
         clearRappresentanteFields();
         return;
       }
 
+      console.log("Cliente letto per rappresentante:", clienteRow);
+
       const rappLegaleId =
-        clienteRow?.rapp_legale_id != null ? String(clienteRow.rapp_legale_id) : "";
+        clienteRow?.rapp_legale_id != null
+          ? String(clienteRow.rapp_legale_id).trim()
+          : "";
 
       if (!rappLegaleId) {
+        console.warn("Nessun rapp_legale_id presente su tbclienti per cliente:", clienteId);
         clearRappresentanteFields();
         return;
       }
@@ -386,10 +394,18 @@ export default function ModelloAV4() {
           nazionalita
         `)
         .eq("id", rappLegaleId)
-        .single();
+        .maybeSingle();
 
       if (rappError) {
-        console.error("Errore caricamento rappresentante:", rappError);
+        console.error("Errore lettura rapp_legali:", rappError);
+        clearRappresentanteFields();
+        return;
+      }
+
+      console.log("Rappresentante letto:", rappRow);
+
+      if (!rappRow) {
+        console.warn("Record rapp_legali non trovato per id:", rappLegaleId);
         clearRappresentanteFields();
         return;
       }
@@ -397,14 +413,14 @@ export default function ModelloAV4() {
       setForm((prev) => ({
         ...prev,
         rapp_legale_id: rappLegaleId,
-        dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
-        dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
-        dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
-        dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
-        dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
-        dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
-        dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
-        dichiarante_nazionalita: rappRow?.nazionalita ?? "",
+        dichiarante_nome_cognome: rappRow.nome_cognome ?? "",
+        dichiarante_codice_fiscale: rappRow.codice_fiscale ?? "",
+        dichiarante_luogo_nascita: rappRow.luogo_nascita ?? "",
+        dichiarante_data_nascita: normalizeDateForInput(rappRow.data_nascita),
+        dichiarante_indirizzo_residenza: rappRow.indirizzo_residenza ?? "",
+        dichiarante_citta_residenza: rappRow.citta_residenza ?? "",
+        dichiarante_cap_residenza: rappRow.cap_residenza ?? "",
+        dichiarante_nazionalita: rappRow.nazionalita ?? "",
       }));
     } catch (error) {
       console.error("Errore imprevisto caricamento rappresentante:", error);
@@ -414,7 +430,11 @@ export default function ModelloAV4() {
     }
   }
 
-  async function prefillFromAV1(studioIdValue: string, av1IdValue: string, clienteIdValue: string) {
+  async function prefillFromAV1(
+    studioIdValue: string,
+    av1IdValue: string,
+    clienteIdValue: string
+  ) {
     const supabase = getSupabaseClient() as any;
 
     let resolvedClienteId = clienteIdValue || "";
@@ -1019,14 +1039,14 @@ export default function ModelloAV4() {
 
       {form.domanda7 && (
         <div className="mb-6 p-4 border rounded">
-{av4Id ? (
-  <TitolariEffettiviForm
-    sezione="domanda7"
-    av4_id={av4Id}
-    studio_id={form.studio_id}
-    cliente_id={form.cliente_id}
-  />
-) : (
+          {av4Id ? (
+            <TitolariEffettiviForm
+              sezione="domanda7"
+              av4_id={av4Id}
+              studio_id={form.studio_id}
+              cliente_id={form.cliente_id}
+            />
+          ) : (
             <p className="text-sm text-gray-600">
               Salva prima l’AV4 per poter inserire i nominativi collegati alla
               sezione Domanda 7.
