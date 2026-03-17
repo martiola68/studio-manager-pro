@@ -238,9 +238,8 @@ function mapDbRowToForm(row: any): FormState {
   };
 }
 
-function toNumericOrNull(value: string) {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+function normalizeId(value?: string | null): string {
+  return value ? String(value).trim() : "";
 }
 
 function pickString(...values: any[]): string {
@@ -476,14 +475,14 @@ export default function ModelloAV4() {
         const supabase = getSupabaseClient() as any;
         let existingRow: any = null;
 
-        if (av4IdFromQuery) {
-          const av4Numeric = toNumericOrNull(av4IdFromQuery);
+      if (av4IdFromQuery) {
+          const av4IdValue = normalizeId(av4IdFromQuery);
 
-          if (av4Numeric !== null) {
+          if (av4IdValue) {
             const { data, error } = await supabase
               .from("tbAV4")
               .select("*")
-              .eq("id", av4Numeric)
+              .eq("id", av4IdValue)
               .maybeSingle();
 
             if (error) {
@@ -513,8 +512,10 @@ export default function ModelloAV4() {
         }
 
         if (existingRow) {
+          console.log("AV4 CARICATO DA DB:", existingRow);
           setAv4Id(String(existingRow.id));
           const mapped = mapDbRowToForm(existingRow);
+          console.log("AV4 MAPPATO NEL FORM:", mapped);
           setForm(mapped);
 
           if (mapped.cliente_id) {
@@ -804,13 +805,15 @@ export default function ModelloAV4() {
         versione: form.versione,
       };
 
+      console.log("PAYLOAD AV4 IN SALVATAGGIO:", payload);
+
       let savedId: string | null = av4Id;
 
-      if (av4Id) {
+     if (av4Id) {
         const { error } = await supabase
           .from("tbAV4")
           .update(payload)
-          .eq("id", Number(av4Id));
+          .eq("id", av4Id);
 
         if (error) {
           console.error("Errore aggiornamento AV4:", error);
