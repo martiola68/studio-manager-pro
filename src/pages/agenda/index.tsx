@@ -1228,13 +1228,7 @@ export default function AgendaPage() {
   // - return JSX finale con dialog
   // ----------------------------------------------------
 
-  if (loading) {
-    return <div className="p-10 text-center">Caricamento in corso...</div>;
-  }
-
-  return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
-  const handleSaveEvento = async () => {
+   const handleSaveEvento = async () => {
     const supabase = getSupabaseClient();
 
     try {
