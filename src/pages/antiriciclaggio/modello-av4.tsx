@@ -219,7 +219,7 @@ function TitolariTable({
 
 export default function StampaAV4Page() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, av1_id } = router.query;
 
   const [record, setRecord] = useState<AV4Row | null>(null);
   const [cliente, setCliente] = useState<ClienteRow | null>(null);
@@ -242,7 +242,7 @@ export default function StampaAV4Page() {
   );
 
   useEffect(() => {
-    if (!router.isReady || !id) return;
+    if (!router.isReady) return;
 
     const load = async () => {
       setLoading(true);
@@ -251,11 +251,32 @@ export default function StampaAV4Page() {
       try {
         const supabase = getSupabaseClient() as any;
 
-        const { data: av4Data, error: av4Error } = await supabase
-          .from("tbAV4")
-          .select("*")
-          .eq("id", id)
-          .maybeSingle();
+        let av4Data: AV4Row | null = null;
+        let av4Error: any = null;
+
+        if (typeof id === "string" && id.trim() !== "") {
+          const result = await supabase
+            .from("tbAV4")
+            .select("*")
+            .eq("id", id)
+            .maybeSingle();
+
+          av4Data = (result.data as AV4Row) || null;
+          av4Error = result.error;
+        } else if (typeof av1_id === "string" && av1_id.trim() !== "") {
+          const result = await supabase
+            .from("tbAV4")
+            .select("*")
+            .eq("av1_id", Number(av1_id))
+            .maybeSingle();
+
+          av4Data = (result.data as AV4Row) || null;
+          av4Error = result.error;
+        } else {
+          setError("Parametro mancante: specificare id oppure av1_id.");
+          setLoading(false);
+          return;
+        }
 
         if (av4Error || !av4Data) {
           setError(av4Error?.message || "Record AV4 non trovato.");
@@ -263,7 +284,7 @@ export default function StampaAV4Page() {
           return;
         }
 
-        setRecord(av4Data as AV4Row);
+        setRecord(av4Data);
 
         if (av4Data.cliente_id) {
           const { data: clienteData } = await supabase
@@ -273,6 +294,8 @@ export default function StampaAV4Page() {
             .maybeSingle();
 
           setCliente((clienteData as ClienteRow) || null);
+        } else {
+          setCliente(null);
         }
 
         if (av4Data.rapp_legale_id) {
@@ -283,13 +306,22 @@ export default function StampaAV4Page() {
             .maybeSingle();
 
           setRappresentante((rappData as RappresentanteRow) || null);
+        } else {
+          setRappresentante(null);
         }
 
-        const { data: titolariData } = await supabase
+        const { data: titolariData, error: titolariError } = await supabase
           .from("tbAV4_titolari")
           .select("*")
-          .eq("av4_id", id)
+          .eq("av4_id", av4Data.id)
           .order("id", { ascending: true });
+
+        if (titolariError) {
+          setError(titolariError.message);
+          setTitolari([]);
+          setLoading(false);
+          return;
+        }
 
         setTitolari((titolariData as TitolareRow[]) || []);
       } catch (err: any) {
@@ -300,7 +332,7 @@ export default function StampaAV4Page() {
     };
 
     load();
-  }, [router.isReady, id]);
+  }, [router.isReady, id, av1_id]);
 
   if (loading) {
     return <div className="p-8">Caricamento stampa AV4...</div>;
@@ -364,8 +396,10 @@ export default function StampaAV4Page() {
           <div className="grid grid-cols-2 gap-4 mb-6 print-section">
             <ReadBox label="Cliente" value={buildClienteLabel(cliente)} />
             <ReadBox label="Codice fiscale cliente" value={cliente?.codice_fiscale} />
+            <ReadBox label="ID AV4" value={record.id} />
             <ReadBox label="ID collegato AV1" value={record.av1_id} />
             <ReadBox label="Natura prestazione" value={record.natura_prestazione} />
+            <ReadBox label="Stato" value={record.stato} />
           </div>
 
           <div className="mb-6 print-section">
