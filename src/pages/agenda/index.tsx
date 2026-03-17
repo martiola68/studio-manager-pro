@@ -131,6 +131,7 @@ type UtenteAgenda = {
   attivo: boolean | null;
   created_at: string | null;
   updated_at: string | null;
+  studio_id?: string | null;
 };
 
 type ContactEmailOption = {
@@ -144,7 +145,7 @@ type AgendaRow = Database["public"]["Tables"]["tbagenda"]["Row"];
 
 type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   cliente_id: string | null;
-  utente_id: string;
+  utente_id: string | null;
 
   cliente: ClienteBase | null;
   utente: UtenteBase | null;
@@ -155,6 +156,43 @@ type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
 
   partecipanti?: unknown;
   email_partecipanti_esterni?: unknown;
+};
+
+type EventoGroup = {
+  id: string;
+  gruppo_evento: string;
+  titolo: string;
+  descrizione: string | null;
+  data_inizio: string;
+  data_fine: string;
+  tutto_giorno: boolean;
+  cliente_id: string | null;
+  cliente: ClienteBase | null;
+  utente_id: string | null;
+  utente: UtenteBase | null;
+  in_sede: boolean;
+  sala: string | null;
+  colore: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  luogo: string | null;
+  partecipanti: string[];
+  email_partecipanti_esterni: string[];
+  riunione_teams: boolean;
+  link_teams: string | null;
+  evento_generico: boolean;
+  studio_id: string | null;
+  ora_inizio: string | null;
+  ora_fine: string | null;
+  ricorrente: boolean;
+  frequenza_giorni: number | null;
+  durata_giorni: number | null;
+  microsoft_event_id: string | null;
+  outlook_synced: boolean | null;
+  external_id: string | null;
+  provider: string | null;
+  rows: EventoWithRelations[];
+  participantUsers: UtenteBase[];
 };
 
 type FormDataState = {
@@ -199,22 +237,6 @@ const toNotificationPayload = (e: Record<string, unknown>) => ({
   ricorrenza_count: (e as any)?.ricorrenza_count ?? null,
   outlook_event_id: (e as any)?.outlook_event_id ?? null,
 });
-
-const formatTimeWithTimezone = (value: string): string => {
-  if (/^\d{2}:\d{2}$/.test(value)) return value;
-
-  try {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "00:00";
-    return date.toLocaleTimeString("it-IT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/Rome",
-    });
-  } catch {
-    return "00:00";
-  }
-};
 
 const safeParseISO = (value: string | null | undefined): Date => {
   if (!value) return new Date();
@@ -267,6 +289,98 @@ const toArrayOfStrings = (value: unknown): string[] => {
   return [];
 };
 
+const groupKeyFromRow = (row: EventoWithRelations) => {
+  return String(row.gruppo_evento || row.id);
+};
+
+const sortUsersByName = (users: UtenteBase[]) => {
+  return [...users].sort((a, b) => {
+    const aLabel = `${a.cognome} ${a.nome}`.toLowerCase();
+    const bLabel = `${b.cognome} ${b.nome}`.toLowerCase();
+    return aLabel.localeCompare(bLabel, "it");
+  });
+};
+
+const uniqueStrings = (items: Array<string | null | undefined>) =>
+  [...new Set(items.filter((v): v is string => Boolean(v && String(v).trim())).map((v) => String(v).trim()))];
+
+const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
+  const grouped = new Map<string, EventoWithRelations[]>();
+
+  for (const row of rows) {
+    const key = groupKeyFromRow(row);
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(row);
+  }
+
+  const result: EventoGroup[] = [];
+
+  for (const [groupKey, groupRows] of grouped.entries()) {
+    const sortedRows = [...groupRows].sort((a, b) => {
+      const aUser = `${a.utente?.cognome ?? ""} ${a.utente?.nome ?? ""}`;
+      const bUser = `${b.utente?.cognome ?? ""} ${b.utente?.nome ?? ""}`;
+      return aUser.localeCompare(bUser, "it");
+    });
+
+    const master =
+      sortedRows.find((r) => r.utente_id && toArrayOfStrings(r.partecipanti).includes(String(r.utente_id))) ||
+      sortedRows[0];
+
+    const participantUsers = sortUsersByName(
+      sortedRows
+        .map((r) => r.utente)
+        .filter((u): u is UtenteBase => Boolean(u?.id))
+        .filter((u, idx, arr) => arr.findIndex((x) => x.id === u.id) === idx)
+    );
+
+    const participantIds = uniqueStrings(participantUsers.map((u) => u.id));
+    const externalEmails = uniqueStrings(
+      sortedRows.flatMap((r) => toArrayOfStrings((r as any).email_partecipanti_esterni))
+    );
+
+    result.push({
+      id: String(master.id),
+      gruppo_evento: String(master.gruppo_evento || groupKey),
+      titolo: master.titolo || "",
+      descrizione: (master.descrizione as string | null) || null,
+      data_inizio: String(master.data_inizio),
+      data_fine: String(master.data_fine),
+      tutto_giorno: Boolean(master.tutto_giorno),
+      cliente_id: master.cliente_id || null,
+      cliente: master.cliente || null,
+      utente_id: master.utente_id || null,
+      utente: master.utente || null,
+      in_sede: Boolean(master.in_sede),
+      sala: master.sala ? String(master.sala) : null,
+      colore: master.colore ? String(master.colore) : null,
+      created_at: master.created_at ? String(master.created_at) : null,
+      updated_at: master.updated_at ? String(master.updated_at) : null,
+      luogo: master.luogo ? String(master.luogo) : null,
+      partecipanti: participantIds,
+      email_partecipanti_esterni: externalEmails,
+      riunione_teams: Boolean((master as any).riunione_teams),
+      link_teams: ((master as any).link_teams as string) || null,
+      evento_generico: Boolean((master as any).evento_generico),
+      studio_id: master.studio_id ? String(master.studio_id) : null,
+      ora_inizio: master.ora_inizio ? normalizeTime(String(master.ora_inizio)) : null,
+      ora_fine: master.ora_fine ? normalizeTime(String(master.ora_fine)) : null,
+      ricorrente: Boolean((master as any).ricorrente),
+      frequenza_giorni: (master as any).frequenza_giorni ? Number((master as any).frequenza_giorni) : null,
+      durata_giorni: (master as any).durata_giorni ? Number((master as any).durata_giorni) : null,
+      microsoft_event_id: master.microsoft_event_id ? String(master.microsoft_event_id) : null,
+      outlook_synced: master.outlook_synced ?? null,
+      external_id: master.external_id ? String(master.external_id) : null,
+      provider: master.provider ? String(master.provider) : null,
+      rows: sortedRows,
+      participantUsers,
+    });
+  }
+
+  return result.sort(
+    (a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime()
+  );
+};
+
 // --------------------
 // COMPONENT
 // --------------------
@@ -275,12 +389,13 @@ export default function AgendaPage() {
   const { toast } = useToast();
 
   // Stati principali
-  const [eventi, setEventi] = useState<EventoWithRelations[]>([]);
+  const [eventiRows, setEventiRows] = useState<EventoWithRelations[]>([]);
   const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
   const [utenti, setUtenti] = useState<UtenteAgenda[]>([]);
   const [contactOptions, setContactOptions] = useState<ContactEmailOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentStudioId, setCurrentStudioId] = useState<string | null>(null);
 
   // Stati UI
   const [view, setView] = useState<"list" | "month" | "week" | "ricorrenti" | "teams">("week");
@@ -293,11 +408,12 @@ export default function AgendaPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
   const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
+  const [editingGruppoEvento, setEditingGruppoEvento] = useState<string | null>(null);
 
   // Popup eventi multipli
   const [moreEventsOpen, setMoreEventsOpen] = useState(false);
   const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
-  const [moreEventsList, setMoreEventsList] = useState<EventoWithRelations[]>([]);
+  const [moreEventsList, setMoreEventsList] = useState<EventoGroup[]>([]);
 
   // Popup selezione contatti
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -352,12 +468,13 @@ export default function AgendaPage() {
       if (session?.user?.email) {
         const { data: userData, error: userErr } = await supabase
           .from("tbutenti")
-          .select("id")
+          .select("id, studio_id")
           .eq("email", session.user.email)
           .single();
 
         if (!userErr && userData?.id) {
-          setCurrentUserId(userData.id);
+          setCurrentUserId(String(userData.id));
+          setCurrentStudioId((userData as any).studio_id ? String((userData as any).studio_id) : null);
         }
       }
 
@@ -371,7 +488,7 @@ export default function AgendaPage() {
         .order("data_inizio", { ascending: true });
 
       if (eventiError) throw eventiError;
-      setEventi(((eventiData ?? []) as unknown) as EventoWithRelations[]);
+      setEventiRows(((eventiData ?? []) as unknown) as EventoWithRelations[]);
 
       const { data: clientiData, error: clientiError } = await supabase
         .from("tbclienti")
@@ -394,7 +511,8 @@ export default function AgendaPage() {
           ruolo_operatore_id,
           attivo,
           created_at,
-          updated_at
+          updated_at,
+          studio_id
         `)
         .eq("attivo", true)
         .order("cognome", { ascending: true });
@@ -402,8 +520,6 @@ export default function AgendaPage() {
       if (utentiError) throw utentiError;
       setUtenti(((utentiData ?? []) as unknown) as UtenteAgenda[]);
 
-      // Caricamento contatti per email esterne
-      // Assunzione: tabella "tbcontatti" con almeno id, nome, cognome, email, attivo
       const { data: contattiData, error: contattiError } = await (supabase as any)
         .from("tbcontatti")
         .select("*")
@@ -438,11 +554,41 @@ export default function AgendaPage() {
   };
 
   // --------------------
+  // DATI AGGREGATI
+  // --------------------
+
+  const groupedEvents = useMemo(() => aggregateEventGroups(eventiRows), [eventiRows]);
+
+  const filteredEvents = useMemo(() => {
+    return groupedEvents.filter((e) => {
+      if (filtroUtenti.length === 0) return true;
+      return e.partecipanti.some((id) => filtroUtenti.includes(id));
+    });
+  }, [groupedEvents, filtroUtenti]);
+
+  const teamsEvents = useMemo(() => {
+    return filteredEvents
+      .filter((e) => Boolean(e.riunione_teams) && Boolean(String(e.link_teams || "").trim()))
+      .sort((a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime());
+  }, [filteredEvents]);
+
+  const filteredContactOptions = useMemo(() => {
+    const search = searchContatti.trim().toLowerCase();
+    if (!search) return contactOptions;
+
+    return contactOptions.filter((c) => {
+      const fullName = `${c.cognome} ${c.nome}`.toLowerCase();
+      return fullName.includes(search) || c.email.toLowerCase().includes(search);
+    });
+  }, [contactOptions, searchContatti]);
+
+  // --------------------
   // FORM
   // --------------------
 
   const resetForm = () => {
     setEditingEventoId(null);
+    setEditingGruppoEvento(null);
     setSearchPartecipanti("");
     setSearchContatti("");
 
@@ -492,43 +638,44 @@ export default function AgendaPage() {
         ora_inizio: startHour,
         ora_fine: endHour,
       }));
+      setSelectedDate(date);
+    } else {
+      setSelectedDate(null);
     }
 
     setDialogOpen(true);
   };
 
-  const handleEditEvento = (evento: EventoWithRelations) => {
-    const startDate = safeParseISO(evento.data_inizio as any);
-    const endDate = safeParseISO(evento.data_fine as any);
-
-    const partecipanti = toArrayOfStrings(evento.partecipanti);
-    const emailPartecipantiEsterni = toArrayOfStrings((evento as any).email_partecipanti_esterni);
+  const handleEditEvento = (evento: EventoGroup) => {
+    const startDate = safeParseISO(evento.data_inizio);
+    const endDate = safeParseISO(evento.data_fine);
 
     setEditingEventoId(String(evento.id));
+    setEditingGruppoEvento(String(evento.gruppo_evento));
     setSearchPartecipanti("");
     setSearchContatti("");
 
     setFormData({
       titolo: evento.titolo ?? "",
-      descrizione: (evento.descrizione as string) || "",
+      descrizione: evento.descrizione || "",
       data_inizio: format(startDate, "yyyy-MM-dd"),
       ora_inizio: evento.ora_inizio ? normalizeTime(String(evento.ora_inizio)) : "09:00",
       data_fine: format(endDate, "yyyy-MM-dd"),
       ora_fine: evento.ora_fine ? normalizeTime(String(evento.ora_fine)) : "10:00",
       tutto_giorno: Boolean(evento.tutto_giorno),
       cliente_id: evento.cliente_id || "",
-      utente_id: evento.utente_id,
+      utente_id: evento.utente_id || "",
       in_sede: Boolean(evento.in_sede),
       sala: evento.in_sede ? (evento.sala ? String(evento.sala) : "") : "",
       luogo: !evento.in_sede ? (evento.luogo ? String(evento.luogo) : "") : "",
-      evento_generico: Boolean((evento as any).evento_generico),
-      riunione_teams: Boolean((evento as any).riunione_teams),
-      link_teams: ((evento as any).link_teams as string) || "",
-      partecipanti,
-      email_partecipanti_esterni: emailPartecipantiEsterni,
-      ricorrente: Boolean((evento as any).ricorrente),
-      frequenza_giorni: Number((evento as any).frequenza_giorni ?? 7),
-      durata_giorni: Number((evento as any).durata_giorni ?? 180),
+      evento_generico: Boolean(evento.evento_generico),
+      riunione_teams: Boolean(evento.riunione_teams),
+      link_teams: evento.link_teams || "",
+      partecipanti: evento.partecipanti,
+      email_partecipanti_esterni: evento.email_partecipanti_esterni,
+      ricorrente: Boolean(evento.ricorrente),
+      frequenza_giorni: Number(evento.frequenza_giorni ?? 7),
+      durata_giorni: Number(evento.durata_giorni ?? 180),
     });
 
     setDialogOpen(true);
@@ -559,6 +706,119 @@ export default function AgendaPage() {
         ? [...new Set([...prev.email_partecipanti_esterni, email])]
         : prev.email_partecipanti_esterni.filter((e) => e !== email),
     }));
+  };
+
+  const getStudioIdForOwner = async (ownerUserId: string) => {
+    if (!ownerUserId) return null;
+
+    const localUser = utenti.find((u) => u.id === ownerUserId);
+    if (localUser?.studio_id) return String(localUser.studio_id);
+
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", ownerUserId)
+      .maybeSingle();
+
+    if (error || !data?.studio_id) return null;
+    return String(data.studio_id);
+  };
+
+  const buildBasePayload = (
+    utenteId: string,
+    gruppoEvento: string,
+    dataInizio: string,
+    dataFine: string,
+    teamsLink: string | null,
+    studioId: string | null
+  ): Partial<AgendaRow> & Record<string, unknown> => ({
+    gruppo_evento: gruppoEvento,
+    titolo: formData.titolo,
+    descrizione: formData.descrizione || null,
+    data_inizio: dataInizio,
+    data_fine: dataFine,
+    ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
+    ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
+    tutto_giorno: formData.tutto_giorno as any,
+    cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
+    utente_id: utenteId as any,
+    in_sede: formData.in_sede as any,
+    sala: formData.in_sede ? formData.sala || null : null,
+    luogo: !formData.in_sede ? formData.luogo || null : null,
+    evento_generico: formData.evento_generico,
+    riunione_teams: formData.riunione_teams,
+    link_teams: teamsLink || null,
+    partecipanti: [...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean))],
+    email_partecipanti_esterni: [...new Set(formData.email_partecipanti_esterni.filter(Boolean))],
+    ricorrente: formData.ricorrente,
+    frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
+    durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
+    studio_id: studioId || currentStudioId || null,
+    updated_at: new Date().toISOString(),
+  });
+
+  const syncRowsToOutlook = async (rows: Array<{ id: string; utente_id: string | null }>) => {
+    for (const row of rows) {
+      if (!row.utente_id) continue;
+      try {
+        await calendarSyncService.syncEventToOutlook(String(row.utente_id), String(row.id));
+      } catch (syncError) {
+        console.error("Errore sincronizzazione Outlook:", syncError);
+      }
+    }
+  };
+
+  const deleteRowsFromOutlook = async (rows: Array<{ id: string; utente_id: string | null }>) => {
+    for (const row of rows) {
+      if (!row.utente_id) continue;
+      try {
+        await calendarSyncService.deleteEventFromOutlook(String(row.utente_id), String(row.id));
+      } catch (syncError) {
+        console.error("Errore cancellazione Outlook:", syncError);
+      }
+    }
+  };
+
+  const sendTeamsMessagesToParticipants = async (
+    ownerUserId: string,
+    internalParticipantIds: string[],
+    teamsLink: string,
+    title: string,
+    date: string,
+    time: string
+  ) => {
+    try {
+      const studioId = await getStudioIdForOwner(ownerUserId);
+      if (!studioId) {
+        console.error("Errore invio notifiche Teams: studioId non trovato.");
+        return;
+      }
+
+      const { teamsService } = await import("@/services/teamsService");
+
+      for (const pId of internalParticipantIds) {
+        const user = utenti.find((u) => u.id === pId);
+
+        if (user?.email) {
+          const dmRes = await teamsService.sendDirectMessage(
+            studioId,
+            ownerUserId,
+            user.email,
+            {
+              content: `<strong>Nuova riunione Teams:</strong> ${title}<br><br>📅 ${date} alle ${time}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
+              contentType: "html",
+            }
+          );
+
+          if (!dmRes?.success) {
+            console.error("Errore invio DM Teams:", (dmRes as any)?.error);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Errore invio notifiche Teams:", err);
+    }
   };
 
   const handleSaveEvento = async () => {
@@ -611,6 +871,10 @@ export default function AgendaPage() {
         ? new Date(formData.data_fine || formData.data_inizio).toISOString()
         : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
 
+      const allParticipantIds = [...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean))];
+      const internalParticipantIds = allParticipantIds.filter((id) => id !== formData.utente_id);
+      const externalEmails = [...new Set(formData.email_partecipanti_esterni.filter(Boolean))];
+
       let teamsLink = formData.link_teams || "";
       let teamsJoinUrl: string | null = null;
 
@@ -625,32 +889,17 @@ export default function AgendaPage() {
             });
             return;
           }
-        } else {
-          if (!currentUserId) {
-            toast({
-              title: "Errore autenticazione",
-              description: "Impossibile identificare l'utente loggato. Ricarica la pagina.",
-              variant: "destructive",
-            });
-            return;
-          }
+        } else if (!editingGruppoEvento) {
+          const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
 
-          const { data: uRow, error: uErr } = await supabase
-            .from("tbutenti")
-            .select("studio_id")
-            .eq("id", currentUserId)
-            .maybeSingle();
-
-          if (uErr || !uRow?.studio_id) {
+          if (!ownerStudioId) {
             toast({
               title: "Errore",
-              description: "Impossibile determinare lo studio dell'utente loggato.",
+              description: "Impossibile determinare lo studio dell'utente selezionato.",
               variant: "destructive",
             });
             return;
           }
-
-          const studioId = uRow.studio_id as string;
 
           const {
             data: { session: m365Session },
@@ -689,8 +938,8 @@ export default function AgendaPage() {
           const { teamsService } = await import("@/services/teamsService");
 
           const meeting = await teamsService.createTeamsMeeting(
-            studioId,
-            currentUserId,
+            ownerStudioId,
+            formData.utente_id,
             formData.titolo || "Riunione",
             new Date(startDateTimeISO),
             new Date(endDateTimeISO)
@@ -718,60 +967,103 @@ export default function AgendaPage() {
 
           teamsLink = teamsJoinUrl;
         }
+      } else {
+        teamsLink = "";
       }
 
-      const internalParticipantIds = [...new Set(formData.partecipanti.filter(Boolean))].filter(
-        (id) => id !== formData.utente_id
-      );
+      const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
 
-      const externalEmails = [...new Set(formData.email_partecipanti_esterni.filter(Boolean))];
+      if (editingGruppoEvento) {
+        const existingRows = eventiRows.filter(
+          (r) => String(r.gruppo_evento || r.id) === String(editingGruppoEvento)
+        );
 
-      const buildPayloadForUser = (utenteId: string): Partial<AgendaRow> & Record<string, unknown> => ({
-        titolo: formData.titolo,
-        descrizione: formData.descrizione || null,
-        data_inizio: startDateTimeISO,
-        data_fine: endDateTimeISO,
-        ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
-        ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
-        tutto_giorno: formData.tutto_giorno as any,
-        cliente_id: formData.cliente_id || null,
-        utente_id: utenteId as any,
-        in_sede: formData.in_sede as any,
-        sala: formData.in_sede ? formData.sala : null,
-        luogo: !formData.in_sede ? formData.luogo : null,
-        evento_generico: formData.evento_generico,
-        riunione_teams: formData.riunione_teams,
-        link_teams: teamsLink || null,
-        partecipanti: internalParticipantIds.length ? internalParticipantIds : null,
-        email_partecipanti_esterni: externalEmails.length ? externalEmails : null,
-        ricorrente: formData.ricorrente,
-        frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-      });
+        const existingUserIds = uniqueStrings(existingRows.map((r) => r.utente_id || ""));
+        const desiredUserIds = allParticipantIds;
 
-      if (editingEventoId) {
-        const updatePayload = buildPayloadForUser(formData.utente_id);
+        const userIdsToInsert = desiredUserIds.filter((id) => !existingUserIds.includes(id));
+        const rowIdsToDelete = existingRows
+          .filter((r) => !desiredUserIds.includes(String(r.utente_id || "")))
+          .map((r) => String(r.id));
 
-        const { data, error } = await supabase
+        const commonData = {
+          titolo: formData.titolo,
+          descrizione: formData.descrizione || null,
+          data_inizio: startDateTimeISO,
+          data_fine: endDateTimeISO,
+          ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
+          ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
+          tutto_giorno: formData.tutto_giorno as any,
+          cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
+          in_sede: formData.in_sede as any,
+          sala: formData.in_sede ? formData.sala || null : null,
+          luogo: !formData.in_sede ? formData.luogo || null : null,
+          evento_generico: formData.evento_generico,
+          riunione_teams: formData.riunione_teams,
+          link_teams: teamsLink || null,
+          partecipanti: desiredUserIds,
+          email_partecipanti_esterni: externalEmails,
+          ricorrente: formData.ricorrente,
+          frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
+          durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
+          studio_id: ownerStudioId || currentStudioId || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: updatedRows, error: updateError } = await supabase
           .from("tbagenda")
-          .update(updatePayload as any)
-          .eq("id", editingEventoId)
-          .select()
-          .single();
+          .update(commonData as any)
+          .eq("gruppo_evento", editingGruppoEvento)
+          .select();
 
-        if (error) throw error;
+        if (updateError) throw updateError;
+
+        let insertedRows: any[] = [];
+        if (userIdsToInsert.length > 0) {
+          const payloads = userIdsToInsert.map((utenteId) =>
+            buildBasePayload(
+              utenteId,
+              editingGruppoEvento,
+              startDateTimeISO,
+              endDateTimeISO,
+              teamsLink || null,
+              ownerStudioId
+            )
+          );
+
+          const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
+          if (error) throw error;
+          insertedRows = data ?? [];
+        }
+
+        if (rowIdsToDelete.length > 0) {
+          const rowsToDeleteFromOutlook = existingRows
+            .filter((r) => rowIdsToDelete.includes(String(r.id)))
+            .map((r) => ({ id: String(r.id), utente_id: r.utente_id }));
+
+          await deleteRowsFromOutlook(rowsToDeleteFromOutlook);
+
+          const { error } = await supabase.from("tbagenda").delete().in("id", rowIdsToDelete);
+          if (error) throw error;
+        }
+
+        const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
         const { eventoService } = await import("@/services/eventoService");
-        await eventoService.sendEventNotification(toNotificationPayload(data as any) as any);
-
-        try {
-          await calendarSyncService.syncEventToOutlook(formData.utente_id, editingEventoId);
-        } catch (syncError) {
-          console.error("Errore sincronizzazione Outlook:", syncError);
+        for (const row of finalRows) {
+          await eventoService.sendEventNotification(toNotificationPayload(row as any) as any);
         }
+
+        await syncRowsToOutlook(
+          finalRows.map((row: any) => ({
+            id: String(row.id),
+            utente_id: row.utente_id ? String(row.utente_id) : null,
+          }))
+        );
 
         toast({
           title: "Successo",
-          description: "Evento aggiornato",
+          description: "Gruppo evento aggiornato",
         });
       } else {
         if (formData.ricorrente) {
@@ -779,26 +1071,31 @@ export default function AgendaPage() {
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + formData.durata_giorni);
 
-          const allUserIds = [...new Set([formData.utente_id, ...internalParticipantIds])];
           const occurrences: Array<Record<string, unknown>> = [];
-
           let current = new Date(startDate);
 
           while (current <= endDate) {
-            for (const utenteId of allUserIds) {
-              const occurrenceStartDateTime = formData.tutto_giorno
-                ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
-                : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+            const gruppoEvento = crypto.randomUUID();
 
-              const occurrenceEndDateTime = formData.tutto_giorno
-                ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
-                : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+            const occurrenceStartDateTime = formData.tutto_giorno
+              ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+              : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
 
-              occurrences.push({
-                ...buildPayloadForUser(utenteId),
-                data_inizio: occurrenceStartDateTime,
-                data_fine: occurrenceEndDateTime,
-              });
+            const occurrenceEndDateTime = formData.tutto_giorno
+              ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+              : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+
+            for (const utenteId of allParticipantIds) {
+              occurrences.push(
+                buildBasePayload(
+                  utenteId,
+                  gruppoEvento,
+                  occurrenceStartDateTime,
+                  occurrenceEndDateTime,
+                  teamsLink || null,
+                  ownerStudioId
+                )
+              );
             }
 
             current = new Date(current);
@@ -813,24 +1110,30 @@ export default function AgendaPage() {
             await eventoService.sendEventNotification(toNotificationPayload(occurrence as any) as any);
           }
 
-          try {
-            for (const occurrence of data ?? []) {
-              await calendarSyncService.syncEventToOutlook(
-                String((occurrence as any).utente_id),
-                String((occurrence as any).id)
-              );
-            }
-          } catch (syncError) {
-            console.error("Errore sincronizzazione Outlook eventi ricorrenti:", syncError);
-          }
+          await syncRowsToOutlook(
+            (data ?? []).map((row: any) => ({
+              id: String(row.id),
+              utente_id: row.utente_id ? String(row.utente_id) : null,
+            }))
+          );
 
           toast({
             title: "Successo",
-            description: `${occurrences.length} eventi creati e sincronizzati`,
+            description: `${data?.length ?? 0} righe evento create e sincronizzate`,
           });
         } else {
-          const allUserIds = [...new Set([formData.utente_id, ...internalParticipantIds])];
-          const payloads = allUserIds.map((utenteId) => buildPayloadForUser(utenteId));
+          const gruppoEvento = crypto.randomUUID();
+
+          const payloads = allParticipantIds.map((utenteId) =>
+            buildBasePayload(
+              utenteId,
+              gruppoEvento,
+              startDateTimeISO,
+              endDateTimeISO,
+              teamsLink || null,
+              ownerStudioId
+            )
+          );
 
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
           if (error) throw error;
@@ -840,69 +1143,34 @@ export default function AgendaPage() {
             await eventoService.sendEventNotification(toNotificationPayload(insertedEvent as any) as any);
           }
 
-          try {
-            for (const insertedEvent of data ?? []) {
-              await calendarSyncService.syncEventToOutlook(
-                String((insertedEvent as any).utente_id),
-                String((insertedEvent as any).id)
-              );
-            }
-          } catch (syncError) {
-            console.error("Errore sincronizzazione Outlook:", syncError);
-          }
+          await syncRowsToOutlook(
+            (data ?? []).map((row: any) => ({
+              id: String(row.id),
+              utente_id: row.utente_id ? String(row.utente_id) : null,
+            }))
+          );
 
           if (formData.riunione_teams && teamsLink) {
-            try {
-              if (!currentUserId) {
-                console.error("Errore invio notifiche Teams: currentUserId mancante.");
-              } else {
-                const { data: uRow, error: uErr } = await supabase
-                  .from("tbutenti")
-                  .select("studio_id")
-                  .eq("id", currentUserId)
-                  .maybeSingle();
-
-                if (uErr || !uRow?.studio_id) {
-                  console.error("Errore invio notifiche Teams: studioId non trovato.", uErr);
-                } else {
-                  const studioId = uRow.studio_id as string;
-                  const { teamsService } = await import("@/services/teamsService");
-
-                  for (const pId of internalParticipantIds) {
-                    const user = utenti.find((u) => u.id === pId);
-
-                    if (user?.email) {
-                      const dmRes = await teamsService.sendDirectMessage(
-                        studioId,
-                        currentUserId,
-                        user.email,
-                        {
-                          content: `<strong>Nuova riunione Teams:</strong> ${formData.titolo}<br><br>📅 ${formData.data_inizio} alle ${formData.ora_inizio}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
-                          contentType: "html",
-                        }
-                      );
-
-                      if (!dmRes?.success) {
-                        console.error("Errore invio DM Teams:", (dmRes as any)?.error);
-                      }
-                    }
-                  }
-                }
-              }
-            } catch (err) {
-              console.error("Errore invio notifiche Teams:", err);
-            }
+            await sendTeamsMessagesToParticipants(
+              formData.utente_id,
+              internalParticipantIds,
+              teamsLink,
+              formData.titolo,
+              formData.data_inizio,
+              formData.ora_inizio
+            );
           }
 
           toast({
             title: "Successo",
-            description: "Evento creato e sincronizzato",
+            description: "Evento gruppo creato e sincronizzato",
           });
         }
       }
 
       setDialogOpen(false);
-      void loadData();
+      resetForm();
+      await loadData();
     } catch (error) {
       console.error(error);
       toast({
@@ -919,50 +1187,48 @@ export default function AgendaPage() {
     if (!eventoToDelete) return;
 
     try {
-      const eventoPrincipale = eventi.find((e) => String(e.id) === eventoToDelete);
+      const gruppo = filteredEvents.find((e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete);
 
-      if (currentUserId) {
-        try {
-          await calendarSyncService.deleteEventFromOutlook(currentUserId, eventoToDelete);
-        } catch (syncError) {
-          console.error("Errore cancellazione Outlook:", syncError);
-        }
+      if (!gruppo) {
+        toast({
+          title: "Errore",
+          description: "Evento non trovato",
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (eventoPrincipale) {
-        const sameMeetingIds = eventi
-          .filter((e) => {
-            const sameTitle = (e.titolo || "") === (eventoPrincipale.titolo || "");
-            const sameStart = String(e.data_inizio || "") === String(eventoPrincipale.data_inizio || "");
-            const sameEnd = String(e.data_fine || "") === String(eventoPrincipale.data_fine || "");
-            const sameTeamsLink = String((e as any).link_teams || "") === String((eventoPrincipale as any).link_teams || "");
-            const sameTeamsFlag = Boolean((e as any).riunione_teams) === Boolean((eventoPrincipale as any).riunione_teams);
+      const rowsToDelete = eventiRows.filter(
+        (r) => String(r.gruppo_evento || r.id) === String(gruppo.gruppo_evento)
+      );
 
-            return sameTitle && sameStart && sameEnd && sameTeamsLink && sameTeamsFlag;
-          })
-          .map((e) => String(e.id));
+      await deleteRowsFromOutlook(
+        rowsToDelete.map((r) => ({
+          id: String(r.id),
+          utente_id: r.utente_id,
+        }))
+      );
 
-        const idsToDelete = sameMeetingIds.length > 0 ? sameMeetingIds : [eventoToDelete];
+      const { error } = await supabase
+        .from("tbagenda")
+        .delete()
+        .eq("gruppo_evento", gruppo.gruppo_evento);
 
-        const { error } = await supabase.from("tbagenda").delete().in("id", idsToDelete);
-        if (error) throw error;
+      if (error) throw error;
 
-        setEventi((prev) => prev.filter((e) => !idsToDelete.includes(String(e.id))));
-      } else {
-        const { error } = await supabase.from("tbagenda").delete().eq("id", eventoToDelete);
-        if (error) throw error;
-
-        setEventi((prev) => prev.filter((e) => String(e.id) !== eventoToDelete));
-      }
+      setEventiRows((prev) =>
+        prev.filter((r) => String(r.gruppo_evento || r.id) !== String(gruppo.gruppo_evento))
+      );
 
       setDeleteDialogOpen(false);
       setDialogOpen(false);
       setEventoToDelete(null);
       setEditingEventoId(null);
+      setEditingGruppoEvento(null);
 
       toast({
         title: "Evento eliminato",
-        description: "L'evento è stato eliminato con successo",
+        description: "Il gruppo evento è stato eliminato con successo",
       });
     } catch (error) {
       console.error("Errore eliminazione evento:", error);
@@ -998,7 +1264,7 @@ export default function AgendaPage() {
     } else {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: [...new Set([...prev.partecipanti, ...ids])],
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])].filter((id) => id !== prev.utente_id),
       }));
     }
   };
@@ -1015,7 +1281,7 @@ export default function AgendaPage() {
     } else {
       setFormData((prev) => ({
         ...prev,
-        partecipanti: [...new Set([...prev.partecipanti, ...ids])],
+        partecipanti: [...new Set([...prev.partecipanti, ...ids])].filter((id) => id !== prev.utente_id),
       }));
     }
   };
@@ -1023,19 +1289,12 @@ export default function AgendaPage() {
   const handleSelezioneTutti = () => {
     setFormData((prev) => ({
       ...prev,
-      partecipanti: utenti.map((u) => u.id),
+      partecipanti: utenti.map((u) => u.id).filter((id) => id !== prev.utente_id),
     }));
   };
 
-  const getEventColor = (evento: EventoWithRelations) => {
-    if ((evento as any).evento_generico) return "#3B82F6";
-    if (evento.in_sede) return "#10B981";
-    if ((evento as any).riunione_teams) return "#F97316";
-    return "#EF4444";
-  };
-
-  const getEventClasses = (evento: EventoWithRelations) => {
-    if ((evento as any).riunione_teams) {
+  const getEventClasses = (evento: EventoGroup) => {
+    if (evento.riunione_teams) {
       return {
         card: "border-l-violet-700",
         box: "bg-violet-100 border-violet-700 text-gray-900",
@@ -1043,7 +1302,7 @@ export default function AgendaPage() {
       };
     }
 
-    if ((evento as any).evento_generico) {
+    if (evento.evento_generico) {
       return {
         card: "border-l-blue-500",
         box: "bg-blue-50 border-blue-500 text-gray-900",
@@ -1066,37 +1325,10 @@ export default function AgendaPage() {
     };
   };
 
-  const filteredEvents = useMemo(() => {
-    return eventi.filter((e) => filtroUtenti.length === 0 || filtroUtenti.includes(e.utente_id));
-  }, [eventi, filtroUtenti]);
+  const getEventoSummary = (evento: EventoGroup): string => {
+    const startDate = safeParseISO(evento.data_inizio);
 
-  const teamsEvents = useMemo(() => {
-    return filteredEvents
-      .filter((e) => {
-        const isTeams = Boolean((e as any).riunione_teams);
-        const hasLink = typeof (e as any).link_teams === "string" && String((e as any).link_teams).trim().length > 0;
-        return isTeams && hasLink;
-      })
-      .sort((a, b) => {
-        return safeParseISO(a.data_inizio as any).getTime() - safeParseISO(b.data_inizio as any).getTime();
-      });
-  }, [filteredEvents]);
-
-  const filteredContactOptions = useMemo(() => {
-    const search = searchContatti.trim().toLowerCase();
-
-    if (!search) return contactOptions;
-
-    return contactOptions.filter((c) => {
-      const fullName = `${c.cognome} ${c.nome}`.toLowerCase();
-      return fullName.includes(search) || c.email.toLowerCase().includes(search);
-    });
-  }, [contactOptions, searchContatti]);
-
-  const getEventoSummary = (evento: EventoWithRelations): string => {
-    const startDate = safeParseISO(evento.data_inizio as any);
-
-    const utenteNome = evento.utente
+    const ownerName = evento.utente
       ? `${evento.utente.nome} ${evento.utente.cognome}${evento.utente.settore ? ` (${evento.utente.settore})` : ""}`
       : "Non assegnato";
 
@@ -1108,26 +1340,36 @@ export default function AgendaPage() {
       ? String(evento.luogo)
       : "Fuori Sede";
 
-    const tipo = (evento as any).evento_generico
+    const tipo = evento.evento_generico
       ? "Evento Generico"
-      : (evento as any).riunione_teams
+      : evento.riunione_teams
       ? "Riunione Teams"
       : "Appuntamento";
 
     const oraInizio = evento.ora_inizio ? String(evento.ora_inizio).substring(0, 5) : "";
     const oraFine = evento.ora_fine ? String(evento.ora_fine).substring(0, 5) : "";
 
+    const partecipantiInterni =
+      evento.participantUsers.length > 0
+        ? evento.participantUsers.map((u) => `${u.cognome} ${u.nome}`).join(", ")
+        : "Nessuno";
+
     let summary = `📝 ${evento.titolo || "Senza titolo"}\n\n`;
     summary += `📅 ${format(startDate, "dd MMMM yyyy", { locale: it })}\n`;
     summary += `⏰ ${oraInizio} - ${oraFine}\n\n`;
-    summary += `👤 Assegnato a: ${utenteNome}\n\n`;
+    summary += `👤 Referente: ${ownerName}\n\n`;
+    summary += `👥 Partecipanti interni: ${partecipantiInterni}\n\n`;
     summary += `🏢 Cliente: ${clienteNome}\n\n`;
     summary += `📍 Luogo: ${luogo}\n\n`;
     summary += `🔵 Tipo: ${tipo}\n`;
 
-    if ((evento as any).riunione_teams) {
+    if (evento.email_partecipanti_esterni.length > 0) {
+      summary += `📧 Esterni: ${evento.email_partecipanti_esterni.join(", ")}\n`;
+    }
+
+    if (evento.riunione_teams) {
       summary += `💻 Riunione Teams: Sì\n`;
-      if ((evento as any).link_teams) summary += `🔗 Link: ${(evento as any).link_teams}\n`;
+      if (evento.link_teams) summary += `🔗 Link: ${evento.link_teams}\n`;
     }
 
     if (evento.descrizione) {
@@ -1137,24 +1379,33 @@ export default function AgendaPage() {
     return summary;
   };
 
-  const handleOpenMoreEvents = (date: Date, events: EventoWithRelations[]) => {
+  const handleOpenMoreEvents = (date: Date, events: EventoGroup[]) => {
     setMoreEventsDate(date);
     setMoreEventsList(events);
     setMoreEventsOpen(true);
+  };
+
+  const getParticipantLabel = (evento: EventoGroup) => {
+    if (evento.participantUsers.length === 0) return "Nessun partecipante";
+    if (evento.participantUsers.length === 1) {
+      const u = evento.participantUsers[0];
+      return `${u.cognome} ${u.nome}`;
+    }
+    return `${evento.participantUsers.length} partecipanti`;
   };
 
   // --------------------
   // RENDERERS
   // --------------------
 
-  const renderEventCard = (evento: EventoWithRelations, compact = false) => {
-    const utenteNome = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
+  const renderEventCard = (evento: EventoGroup, compact = false) => {
+    const ownerName = evento.utente ? `${evento.utente.nome} ${evento.utente.cognome}` : "Non assegnato";
     const clienteNome = evento.cliente?.ragione_sociale || "Nessun cliente";
     const styles = getEventClasses(evento);
     const colorClass = styles.card;
 
     return (
-      <TooltipProvider key={String(evento.id)}>
+      <TooltipProvider key={evento.gruppo_evento}>
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <Card
@@ -1188,7 +1439,7 @@ export default function AgendaPage() {
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteEventoDirect(String(evento.id), e);
+                        handleDeleteEventoDirect(evento.id, e);
                       }}
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -1199,7 +1450,12 @@ export default function AgendaPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" />
-                    <span className="font-semibold text-base">{utenteNome}</span>
+                    <span className="font-semibold text-base">{ownerName}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>{getParticipantLabel(evento)}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1219,7 +1475,7 @@ export default function AgendaPage() {
                   {!evento.in_sede && evento.luogo && (
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-red-600" />
-                      <span className="text-xs text-gray-600 truncate max-w-[200px]">{String(evento.luogo)}</span>
+                      <span className="text-xs text-gray-600 truncate max-w-[240px]">{String(evento.luogo)}</span>
                     </div>
                   )}
 
@@ -1230,7 +1486,7 @@ export default function AgendaPage() {
                     </div>
                   )}
 
-                  {!compact && (evento as any).riunione_teams && (evento as any).link_teams && (
+                  {!compact && evento.riunione_teams && evento.link_teams && (
                     <div className="flex items-center gap-2 text-sm mt-2 text-violet-700">
                       <ExternalLink className="h-4 w-4" />
                       <span className="truncate">Link Teams disponibile</span>
@@ -1273,7 +1529,7 @@ export default function AgendaPage() {
 
         {days.map((dayItem) => {
           const isCurrentMonth = isSameMonth(dayItem, currentDate);
-          const dayEvents = filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), dayItem));
+          const dayEvents = filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio), dayItem));
 
           return (
             <div
@@ -1287,7 +1543,7 @@ export default function AgendaPage() {
 
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((ev) => (
-                  <TooltipProvider key={String(ev.id)}>
+                  <TooltipProvider key={ev.gruppo_evento}>
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <div
@@ -1304,11 +1560,9 @@ export default function AgendaPage() {
                               {ev.titolo || "(senza titolo)"} {ev.sala ? `(Sala ${String(ev.sala)})` : ""}
                             </div>
 
-                            {ev.utente && (
-                              <div className="truncate text-[11px] text-gray-700">
-                                👤 {ev.utente.nome?.charAt(0)}. {ev.utente.cognome}
-                              </div>
-                            )}
+                            <div className="truncate text-[11px] text-gray-700">
+                              👥 {getParticipantLabel(ev)}
+                            </div>
 
                             <div className="truncate text-[11px] text-gray-600">
                               ⏰ {ev.ora_inizio ? String(ev.ora_inizio).substring(0, 5) : ""}
@@ -1318,7 +1572,7 @@ export default function AgendaPage() {
 
                           <button
                             className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                            onClick={(e) => handleDeleteEventoDirect(String(ev.id), e)}
+                            onClick={(e) => handleDeleteEventoDirect(ev.id, e)}
                             title="Elimina"
                           >
                             ×
@@ -1400,7 +1654,7 @@ export default function AgendaPage() {
                   const isWeekend = index === 5 || index === 6;
 
                   const cellEvents = filteredEvents.filter((e) => {
-                    const eventDate = safeParseISO(e.data_inizio as any);
+                    const eventDate = safeParseISO(e.data_inizio);
 
                     if (e.tutto_giorno) return isSameDay(eventDate, day) && hour === 9;
                     if (!e.ora_inizio) return false;
@@ -1420,7 +1674,7 @@ export default function AgendaPage() {
                       {cellEvents.length > 0 && (
                         <div className="space-y-1">
                           {cellEvents.map((evento) => (
-                            <TooltipProvider key={String(evento.id)}>
+                            <TooltipProvider key={evento.gruppo_evento}>
                               <Tooltip delayDuration={300}>
                                 <TooltipTrigger asChild>
                                   <div
@@ -1437,11 +1691,7 @@ export default function AgendaPage() {
                                         {evento.titolo || "(senza titolo)"}
                                       </div>
 
-                                      {evento.utente && (
-                                        <div className="text-gray-600 truncate">
-                                          👤 {evento.utente.nome?.charAt(0)}. {evento.utente.cognome}
-                                        </div>
-                                      )}
+                                      <div className="text-gray-600 truncate">👥 {getParticipantLabel(evento)}</div>
 
                                       {evento.cliente?.ragione_sociale && (
                                         <div className="text-gray-600 truncate">🏢 {evento.cliente.ragione_sociale}</div>
@@ -1467,7 +1717,7 @@ export default function AgendaPage() {
 
                                     <button
                                       className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-sm font-bold"
-                                      onClick={(e) => handleDeleteEventoDirect(String(evento.id), e)}
+                                      onClick={(e) => handleDeleteEventoDirect(evento.id, e)}
                                       title="Elimina evento"
                                     >
                                       ×
@@ -1496,7 +1746,7 @@ export default function AgendaPage() {
 
   const renderListView = () => {
     const now = new Date();
-    const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio as any) < now);
+    const pastEvents = filteredEvents.filter((evento) => safeParseISO(evento.data_inizio) < now);
 
     if (pastEvents.length === 0) {
       return (
@@ -1507,14 +1757,18 @@ export default function AgendaPage() {
       );
     }
 
-    return <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">{pastEvents.map((e) => renderEventCard(e, false))}</div>;
+    return (
+      <div className="max-h-[600px] overflow-y-auto space-y-3 pr-2">
+        {pastEvents.map((e) => renderEventCard(e, false))}
+      </div>
+    );
   };
 
   const renderRicorrentiView = () => {
     const now = new Date();
     const ricorrentiEvents = filteredEvents.filter((evento) => {
-      const isRecurring = (evento as any).ricorrente === true;
-      const eventDate = safeParseISO(evento.data_inizio as any);
+      const isRecurring = evento.ricorrente === true;
+      const eventDate = safeParseISO(evento.data_inizio);
       return isRecurring && eventDate >= now;
     });
 
@@ -1552,7 +1806,7 @@ export default function AgendaPage() {
               <tr className="border-b">
                 <th className="text-left p-3 text-sm font-semibold">Data</th>
                 <th className="text-left p-3 text-sm font-semibold">Orario</th>
-                <th className="text-left p-3 text-sm font-semibold">Nominativo</th>
+                <th className="text-left p-3 text-sm font-semibold">Partecipanti</th>
                 <th className="text-left p-3 text-sm font-semibold">Descrizione</th>
                 <th className="text-left p-3 text-sm font-semibold">Link</th>
               </tr>
@@ -1560,14 +1814,11 @@ export default function AgendaPage() {
 
             <tbody>
               {teamsEvents.map((evento) => {
-                const startDate = safeParseISO(evento.data_inizio as any);
-                const link = String((evento as any).link_teams || "").trim();
-                const nominativo = evento.utente
-                  ? `${evento.utente.cognome} ${evento.utente.nome}`
-                  : "Non assegnato";
+                const startDate = safeParseISO(evento.data_inizio);
+                const link = String(evento.link_teams || "").trim();
 
                 return (
-                  <tr key={String(evento.id)} className="border-b last:border-b-0 hover:bg-violet-50/40">
+                  <tr key={evento.gruppo_evento} className="border-b last:border-b-0 hover:bg-violet-50/40">
                     <td className="p-3 text-sm whitespace-nowrap font-medium">
                       {format(startDate, "dd/MM/yyyy", { locale: it })}
                     </td>
@@ -1578,7 +1829,14 @@ export default function AgendaPage() {
                     </td>
 
                     <td className="p-3 text-sm">
-                      <div className="font-medium">{nominativo}</div>
+                      <div className="font-medium">
+                        {evento.participantUsers.map((u) => `${u.cognome} ${u.nome}`).join(", ")}
+                      </div>
+                      {evento.email_partecipanti_esterni.length > 0 && (
+                        <div className="text-muted-foreground text-xs mt-1">
+                          Esterni: {evento.email_partecipanti_esterni.join(", ")}
+                        </div>
+                      )}
                     </td>
 
                     <td className="p-3 text-sm">
@@ -1648,7 +1906,7 @@ export default function AgendaPage() {
               <Filter className="h-4 w-4 text-gray-500" />
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-[200px] justify-between">
+                  <Button variant="outline" className="w-[220px] justify-between">
                     {filtroUtenti.length === 0 ? "Tutti gli utenti" : `${filtroUtenti.length} selezionati`}
                   </Button>
                 </PopoverTrigger>
@@ -1729,7 +1987,6 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* MOBILE */}
       <div className="md:hidden space-y-3 px-1">
         <div className="bg-white p-3 rounded-lg shadow-sm border space-y-3">
           <div className="flex items-center justify-between">
@@ -1831,7 +2088,7 @@ export default function AgendaPage() {
           {view === "week" && (
             <>
               {filteredEvents
-                .filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate))
+                .filter((e) => isSameDay(safeParseISO(e.data_inizio), currentDate))
                 .sort((a, b) => {
                   const aTime = String(a.ora_inizio || "00:00");
                   const bTime = String(b.ora_inizio || "00:00");
@@ -1839,7 +2096,7 @@ export default function AgendaPage() {
                 })
                 .map((e) => renderEventCard(e, false))}
 
-              {filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio as any), currentDate)).length === 0 && (
+              {filteredEvents.filter((e) => isSameDay(safeParseISO(e.data_inizio), currentDate)).length === 0 && (
                 <div className="text-center py-10 text-gray-500">Nessun evento per questo giorno</div>
               )}
             </>
@@ -1847,11 +2104,10 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Dialog Nuovo/Modifica Evento */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingEventoId ? "Modifica Evento" : "Nuovo Evento"}</DialogTitle>
+            <DialogTitle>{editingEventoId ? "Modifica Evento Gruppo" : "Nuovo Evento"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -1967,8 +2223,17 @@ export default function AgendaPage() {
             </div>
 
             <div>
-              <Label>Assegna a Utente *</Label>
-              <Select value={formData.utente_id} onValueChange={(v) => setFormData({ ...formData, utente_id: v })}>
+              <Label>Utente principale / organizzatore *</Label>
+              <Select
+                value={formData.utente_id}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    utente_id: v,
+                    partecipanti: [...new Set(prev.partecipanti.filter((id) => id !== v))],
+                  }))
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleziona utente" />
                 </SelectTrigger>
@@ -2176,9 +2441,14 @@ export default function AgendaPage() {
                   .map((u) => (
                     <div key={u.id} className="flex items-center space-x-2 mb-1">
                       <Checkbox
-                        checked={formData.partecipanti.includes(u.id)}
+                        checked={formData.utente_id === u.id || formData.partecipanti.includes(u.id)}
                         onCheckedChange={(checked: CheckedState) => {
                           const isChecked = toBool(checked);
+
+                          if (u.id === formData.utente_id) {
+                            return;
+                          }
+
                           const newPart = isChecked
                             ? [...formData.partecipanti, u.id]
                             : formData.partecipanti.filter((id) => id !== u.id);
@@ -2188,6 +2458,7 @@ export default function AgendaPage() {
                       />
                       <span className="text-sm">
                         {u.cognome} {u.nome} {u.settore && `(${u.settore})`}
+                        {u.id === formData.utente_id ? " - organizzatore" : ""}
                       </span>
                     </div>
                   ))}
@@ -2215,7 +2486,7 @@ export default function AgendaPage() {
                 }}
                 className="mr-auto"
               >
-                <Trash2 className="h-4 w-4 mr-2" /> Elimina Evento
+                <Trash2 className="h-4 w-4 mr-2" /> Elimina Gruppo Evento
               </Button>
             ) : (
               <div className="mr-auto" />
@@ -2227,7 +2498,7 @@ export default function AgendaPage() {
                 variant="outline"
                 onClick={() => {
                   setDialogOpen(false);
-                  setEditingEventoId(null);
+                  resetForm();
                 }}
               >
                 Annulla
@@ -2241,7 +2512,6 @@ export default function AgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog selezione contatti esterni */}
       <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
         <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
@@ -2294,7 +2564,6 @@ export default function AgendaPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog eventi multipli */}
       <Dialog open={moreEventsOpen} onOpenChange={setMoreEventsOpen}>
         <DialogContent className="max-w-xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
@@ -2316,7 +2585,7 @@ export default function AgendaPage() {
                 })
                 .map((evento) => (
                   <div
-                    key={String(evento.id)}
+                    key={evento.gruppo_evento}
                     className="rounded-lg border p-3 hover:bg-gray-50 cursor-pointer"
                     onClick={() => {
                       setMoreEventsOpen(false);
@@ -2330,11 +2599,7 @@ export default function AgendaPage() {
                       {evento.ora_fine ? ` - ${String(evento.ora_fine).substring(0, 5)}` : ""}
                     </div>
 
-                    {evento.utente && (
-                      <div className="text-xs text-gray-700 mt-1">
-                        👤 {evento.utente.nome} {evento.utente.cognome}
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-700 mt-1">👥 {getParticipantLabel(evento)}</div>
 
                     {evento.cliente?.ragione_sociale && (
                       <div className="text-xs text-gray-700 mt-1">🏢 {evento.cliente.ragione_sociale}</div>
@@ -2358,7 +2623,9 @@ export default function AgendaPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Evento</AlertDialogTitle>
-            <AlertDialogDescription>Sei sicuro? L&apos;azione è irreversibile.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Sei sicuro? Verrà eliminato l&apos;intero gruppo evento per tutti i partecipanti.
+            </AlertDialogDescription>
           </AlertDialogHeader>
 
           <AlertDialogFooter>
