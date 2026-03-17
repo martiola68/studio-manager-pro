@@ -9,6 +9,31 @@ type ClienteOption = {
   label: string;
 };
 
+type ClienteRow = {
+  id: string;
+  rapp_legale_id?: string | null;
+  ragione_sociale?: string | null;
+  denominazione?: string | null;
+  cognome_nome?: string | null;
+  nome_cognome?: string | null;
+  nome?: string | null;
+  cognome?: string | null;
+  codice_fiscale?: string | null;
+  email?: string | null;
+};
+
+type RappLegaleRow = {
+  id: string;
+  nome_cognome?: string | null;
+  codice_fiscale?: string | null;
+  luogo_nascita?: string | null;
+  data_nascita?: string | null;
+  indirizzo_residenza?: string | null;
+  citta_residenza?: string | null;
+  cap_residenza?: string | null;
+  nazionalita?: string | null;
+};
+
 type FormState = {
   studio_id: string;
   cliente_id: string;
@@ -284,36 +309,6 @@ export default function ModelloAV4() {
     }));
   }
 
-  async function loadClienteCorrente(clienteId: string) {
-    if (!clienteId) {
-      setClienteLabel("");
-      return null;
-    }
-
-    const supabase = getSupabaseClient() as any;
-
-    try {
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .eq("id", clienteId)
-        .single();
-
-      if (error) {
-        console.error("Errore caricamento cliente:", error);
-        setClienteLabel("");
-        return null;
-      }
-
-      setClienteLabel(buildClienteLabel(data));
-      return data;
-    } catch (err) {
-      console.error("Errore imprevisto caricamento cliente:", err);
-      setClienteLabel("");
-      return null;
-    }
-  }
-
   async function loadClienti() {
     const supabase = getSupabaseClient() as any;
     setLoadingClienti(true);
@@ -345,8 +340,9 @@ export default function ModelloAV4() {
     }
   }
 
-  async function loadRappresentanteDaCliente(clienteId: string) {
+  async function resolveClienteAndRappresentante(clienteId: string) {
     if (!clienteId) {
+      setClienteLabel("");
       clearRappresentanteFields();
       return;
     }
@@ -357,25 +353,35 @@ export default function ModelloAV4() {
     try {
       const { data: clienteRow, error: clienteError } = await supabase
         .from("tbclienti")
-        .select("id, rapp_legale_id")
+        .select("*")
         .eq("id", clienteId)
         .maybeSingle();
 
       if (clienteError) {
-        console.error("Errore lettura tbclienti per rappresentante:", clienteError);
+        console.error("Errore lettura tbclienti:", clienteError);
+        setClienteLabel("");
         clearRappresentanteFields();
         return;
       }
 
-      console.log("Cliente letto per rappresentante:", clienteRow);
+      if (!clienteRow) {
+        console.warn("Cliente non trovato in tbclienti:", clienteId);
+        setClienteLabel("");
+        clearRappresentanteFields();
+        return;
+      }
+
+      setClienteLabel(buildClienteLabel(clienteRow));
 
       const rappLegaleId =
         clienteRow?.rapp_legale_id != null
           ? String(clienteRow.rapp_legale_id).trim()
           : "";
 
+      console.log("tbclienti.id:", clienteId);
+      console.log("tbclienti.rapp_legale_id:", rappLegaleId);
+
       if (!rappLegaleId) {
-        console.warn("Nessun rapp_legale_id presente su tbclienti per cliente:", clienteId);
         clearRappresentanteFields();
         return;
       }
@@ -402,28 +408,29 @@ export default function ModelloAV4() {
         return;
       }
 
-      console.log("Rappresentante letto:", rappRow);
+      console.log("rapp_legali record:", rappRow);
 
       if (!rappRow) {
-        console.warn("Record rapp_legali non trovato per id:", rappLegaleId);
         clearRappresentanteFields();
         return;
       }
 
       setForm((prev) => ({
         ...prev,
+        cliente_id: clienteId,
         rapp_legale_id: rappLegaleId,
-        dichiarante_nome_cognome: rappRow.nome_cognome ?? "",
-        dichiarante_codice_fiscale: rappRow.codice_fiscale ?? "",
-        dichiarante_luogo_nascita: rappRow.luogo_nascita ?? "",
-        dichiarante_data_nascita: normalizeDateForInput(rappRow.data_nascita),
-        dichiarante_indirizzo_residenza: rappRow.indirizzo_residenza ?? "",
-        dichiarante_citta_residenza: rappRow.citta_residenza ?? "",
-        dichiarante_cap_residenza: rappRow.cap_residenza ?? "",
-        dichiarante_nazionalita: rappRow.nazionalita ?? "",
+        dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
+        dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
+        dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
+        dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
+        dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
+        dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
+        dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
+        dichiarante_nazionalita: rappRow?.nazionalita ?? "",
       }));
     } catch (error) {
-      console.error("Errore imprevisto caricamento rappresentante:", error);
+      console.error("Errore imprevisto risoluzione cliente/rappresentante:", error);
+      setClienteLabel("");
       clearRappresentanteFields();
     } finally {
       setLoadingRappresentante(false);
@@ -469,23 +476,11 @@ export default function ModelloAV4() {
       studio_id: studioIdValue || prev.studio_id || "",
       av1_id: av1IdValue || prev.av1_id || "",
       cliente_id: resolvedClienteId || prev.cliente_id || "",
-      natura_prestazione: naturaPrestazione || prev.natura_prestazione || "",
-      domanda1: prev.domanda1,
-      domanda2: prev.domanda2,
-      domanda3: prev.domanda3,
-      domanda4: prev.domanda4,
-      domanda5: prev.domanda5,
-      domanda6: prev.domanda6,
-      domanda7: prev.domanda7,
-      domanda8: prev.domanda8,
-      domanda9: prev.domanda9,
-      domanda10: prev.domanda10,
-      domanda11: prev.domanda11,
+      natura_prestazione: naturaPrestazione || "",
     }));
 
     if (resolvedClienteId) {
-      await loadClienteCorrente(resolvedClienteId);
-      await loadRappresentanteDaCliente(resolvedClienteId);
+      await resolveClienteAndRappresentante(resolvedClienteId);
     } else {
       setClienteLabel("");
       clearRappresentanteFields();
@@ -548,8 +543,7 @@ export default function ModelloAV4() {
           setForm(mapped);
 
           if (mapped.cliente_id) {
-            await loadClienteCorrente(mapped.cliente_id);
-            await loadRappresentanteDaCliente(mapped.cliente_id);
+            await resolveClienteAndRappresentante(mapped.cliente_id);
           } else {
             setClienteLabel("");
             clearRappresentanteFields();
@@ -577,8 +571,7 @@ export default function ModelloAV4() {
       return;
     }
 
-    void loadClienteCorrente(form.cliente_id);
-    void loadRappresentanteDaCliente(form.cliente_id);
+    void resolveClienteAndRappresentante(form.cliente_id);
   }, [form.cliente_id, initialized]);
 
   function handleChange(
@@ -781,7 +774,6 @@ export default function ModelloAV4() {
 
       <div className="mb-4">
         <label className="block font-medium mb-1">Cliente</label>
-
         <input
           value={
             loadingClienti
@@ -908,24 +900,14 @@ export default function ModelloAV4() {
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda1"
-            checked={form.domanda1}
-            onChange={handleChange}
-          />
+          <input type="checkbox" name="domanda1" checked={form.domanda1} onChange={handleChange} />
           Dati di nascita e residenza come da documento di identificazione allegato
         </label>
       </div>
 
       <div className="mb-6">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda2"
-            checked={form.domanda2}
-            onChange={handleChange}
-          />
+          <input type="checkbox" name="domanda2" checked={form.domanda2} onChange={handleChange} />
           Domicilio diverso rispetto al documento di identificazione allegato
         </label>
       </div>
@@ -949,47 +931,31 @@ export default function ModelloAV4() {
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda3"
-            checked={form.domanda3}
-            onChange={handleChange}
-          />
-          di non costituire persona politicamente esposta (estera o nazionale),
-          ai sensi dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007 oppure
+          <input type="checkbox" name="domanda3" checked={form.domanda3} onChange={handleChange} />
+          di non costituire persona politicamente esposta (estera o nazionale), ai sensi
+          dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007 oppure
         </label>
       </div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda4"
-            checked={form.domanda4}
-            onChange={handleChange}
-          />
+          <input type="checkbox" name="domanda4" checked={form.domanda4} onChange={handleChange} />
           di non rivestire lo status di PPE da più di un anno
         </label>
       </div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda5"
-            checked={form.domanda5}
-            onChange={handleChange}
-          />
-          di costituire persona politicamente esposta estera o nazionale, ai
-          sensi dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007
+          <input type="checkbox" name="domanda5" checked={form.domanda5} onChange={handleChange} />
+          di costituire persona politicamente esposta estera o nazionale, ai sensi
+          dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007
         </label>
       </div>
 
       {form.domanda5 && (
         <div className="mb-6">
           <label className="block font-medium mb-1">
-            Specificare carica pubblica, nome e legame con il titolare della
-            carica pubblica
+            Specificare carica pubblica, nome e legame con il titolare della carica pubblica
           </label>
 
           <textarea
@@ -1003,36 +969,25 @@ export default function ModelloAV4() {
       )}
 
       <div className="mt-6 mb-3 text-sm leading-6">
-        - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1,
-        comma 2, lettera pp) e ai criteri per la determinazione della titolarità
-        effettiva di clienti diversi dalle persone fisiche di cui all’art. 20
-        del D.Lgs. 231/2007, consapevole delle sanzioni penali previste
-        dall’art. 55 del D.Lgs. 231/2007 nel caso di falsa indicazione delle
-        generalità del soggetto per conto del quale eventualmente viene eseguita
-        l’operazione, dichiara:
+        - ai fini dell’identificazione del Titolare Effettivo di cui all’art. 1, comma 2,
+        lettera pp) e ai criteri per la determinazione della titolarità effettiva di clienti
+        diversi dalle persone fisiche di cui all’art. 20 del D.Lgs. 231/2007, consapevole
+        delle sanzioni penali previste dall’art. 55 del D.Lgs. 231/2007 nel caso di falsa
+        indicazione delle generalità del soggetto per conto del quale eventualmente viene
+        eseguita l’operazione, dichiara:
       </div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda6"
-            checked={form.domanda6}
-            onChange={handleChange}
-          />
-          di agire in proprio e, quindi, l’inesistenza di un diverso titolare
-          effettivo così come previsto e definito dal D.Lgs. 231/2007
+          <input type="checkbox" name="domanda6" checked={form.domanda6} onChange={handleChange} />
+          di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo
+          così come previsto e definito dal D.Lgs. 231/2007
         </label>
       </div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda7"
-            checked={form.domanda7}
-            onChange={handleChange}
-          />
+          <input type="checkbox" name="domanda7" checked={form.domanda7} onChange={handleChange} />
           di agire per conto dei seguenti titolari effettivi
         </label>
       </div>
@@ -1048,8 +1003,7 @@ export default function ModelloAV4() {
             />
           ) : (
             <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i nominativi collegati alla
-              sezione Domanda 7.
+              Salva prima l’AV4 per poter inserire i nominativi collegati alla sezione Domanda 7.
             </p>
           )}
         </div>
@@ -1057,12 +1011,7 @@ export default function ModelloAV4() {
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda8"
-            checked={form.domanda8}
-            onChange={handleChange}
-          />
+          <input type="checkbox" name="domanda8" checked={form.domanda8} onChange={handleChange} />
           di agire per conto della società/ente
         </label>
       </div>
@@ -1072,68 +1021,37 @@ export default function ModelloAV4() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block font-medium mb-1">Nome società / ente</label>
-              <input
-                name="nome_soc"
-                value={form.nome_soc}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="nome_soc" value={form.nome_soc} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Sede legale</label>
-              <input
-                name="sede_legale"
-                value={form.sede_legale}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="sede_legale" value={form.sede_legale} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Indirizzo sede</label>
-              <input
-                name="indirizzo_sede"
-                value={form.indirizzo_sede}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="indirizzo_sede" value={form.indirizzo_sede} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Registro imprese</label>
-              <input
-                name="reg_imprese"
-                value={form.reg_imprese}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="reg_imprese" value={form.reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Numero registro imprese</label>
-              <input
-                name="num_reg_imprese"
-                value={form.num_reg_imprese}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="num_reg_imprese" value={form.num_reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Codice fiscale società</label>
-              <input
-                name="cod_fiscale_soc"
-                value={form.cod_fiscale_soc}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="cod_fiscale_soc" value={form.cod_fiscale_soc} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
           </div>
 
           <div className="mb-3 text-sm">
-            in qualità di legale rappresentante, munito dei necessari poteri, e
-            attesta che il/i titolare/i effettivi sono:
+            in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
           </div>
 
           {av4Id ? (
@@ -1145,8 +1063,7 @@ export default function ModelloAV4() {
             />
           ) : (
             <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i titolari effettivi della
-              sezione Domanda 8.
+              Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 8.
             </p>
           )}
         </div>
@@ -1154,14 +1071,8 @@ export default function ModelloAV4() {
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda9"
-            checked={form.domanda9}
-            onChange={handleChange}
-          />
-          (caso residuale, in assenza di controllo o partecipazioni rilevanti) di
-          agire per conto della società/ente
+          <input type="checkbox" name="domanda9" checked={form.domanda9} onChange={handleChange} />
+          (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
         </label>
       </div>
 
@@ -1170,81 +1081,42 @@ export default function ModelloAV4() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block font-medium mb-1">Nome società / ente</label>
-              <input
-                name="nome_soc_bis"
-                value={form.nome_soc_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="nome_soc_bis" value={form.nome_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Sede legale</label>
-              <input
-                name="sede_legale_bis"
-                value={form.sede_legale_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="sede_legale_bis" value={form.sede_legale_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Indirizzo sede</label>
-              <input
-                name="indirizzo_sede_bis"
-                value={form.indirizzo_sede_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="indirizzo_sede_bis" value={form.indirizzo_sede_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Registro imprese</label>
-              <input
-                name="reg_imprese_bis"
-                value={form.reg_imprese_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="reg_imprese_bis" value={form.reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Numero registro imprese</label>
-              <input
-                name="num_reg_imprese_bis"
-                value={form.num_reg_imprese_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="num_reg_imprese_bis" value={form.num_reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div>
               <label className="block font-medium mb-1">Codice fiscale società</label>
-              <input
-                name="cod_fiscale_soc_bis"
-                value={form.cod_fiscale_soc_bis}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <input name="cod_fiscale_soc_bis" value={form.cod_fiscale_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block font-medium mb-1">
-                Denominazione società per art. 20, comma 4
-              </label>
-              <input
-                name="nome_soc_ter"
-                value={form.nome_soc_ter}
-                onChange={handleChange}
-                className="border p-2 w-full rounded"
-              />
+              <label className="block font-medium mb-1">Denominazione società per art. 20, comma 4</label>
+              <input name="nome_soc_ter" value={form.nome_soc_ter} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
           </div>
 
           <div className="mb-3 text-sm">
-            in qualità di legale rappresentante, munito dei necessari poteri, e
-            attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i
-            titolari effettivi sono:
+            in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
           </div>
 
           {av4Id ? (
@@ -1256,8 +1128,7 @@ export default function ModelloAV4() {
             />
           ) : (
             <p className="text-sm text-gray-600">
-              Salva prima l’AV4 per poter inserire i titolari effettivi della
-              sezione Domanda 9.
+              Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 9.
             </p>
           )}
         </div>
@@ -1267,35 +1138,21 @@ export default function ModelloAV4() {
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda10"
-            checked={form.domanda10}
-            onChange={handleChange}
-          />
-          che il/i titolare/i effettivo/i non costituisce/costituiscono persona/e
-          politicamente esposta/e
+          <input type="checkbox" name="domanda10" checked={form.domanda10} onChange={handleChange} />
+          che il/i titolare/i effettivo/i non costituisce/costituiscono persona/e politicamente esposta/e
         </label>
       </div>
 
       <div className="mb-3">
         <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="domanda11"
-            checked={form.domanda11}
-            onChange={handleChange}
-          />
-          che il/i titolari effettivi costituisce/costituiscono persona/e
-          politicamente esposte estere o nazionali
+          <input type="checkbox" name="domanda11" checked={form.domanda11} onChange={handleChange} />
+          che il/i titolari effettivi costituisce/costituiscono persona/e politicamente esposte estere o nazionali
         </label>
       </div>
 
       {form.domanda11 && (
         <div className="mb-6">
-          <label className="block font-medium mb-1">
-            Specifica PPE titolari effettivi
-          </label>
+          <label className="block font-medium mb-1">Specifica PPE titolari effettivi</label>
           <textarea
             name="specifica12"
             value={form.specifica12}
@@ -1308,8 +1165,7 @@ export default function ModelloAV4() {
 
       <div className="mt-6 mb-4">
         <label className="block font-medium mb-1">
-          Che le relazioni intercorrenti tra il Cliente e il titolare effettivo
-          nonché, ove rilevi, l’esecutore sono
+          Che le relazioni intercorrenti tra il Cliente e il titolare effettivo nonché, ove rilevi, l’esecutore sono
         </label>
         <textarea
           name="specifica10b"
@@ -1347,10 +1203,7 @@ export default function ModelloAV4() {
       </div>
 
       <div className="mb-6 text-sm leading-6">
-        Che i medesimi fondi e le risorse economiche eventualmente utilizzati
-        non provengono né sono destinati a un’attività criminosa o al
-        finanziamento del terrorismo di cui all’art. 2, co. 6, del D.Lgs.
-        231/2007.
+        Che i medesimi fondi e le risorse economiche eventualmente utilizzati non provengono né sono destinati a un’attività criminosa o al finanziamento del terrorismo di cui all’art. 2, co. 6, del D.Lgs. 231/2007.
       </div>
 
       <div className="mt-6 font-semibold mb-3">Professione / attività del cliente</div>
@@ -1359,32 +1212,17 @@ export default function ModelloAV4() {
         <label className="block font-medium mb-1">
           Che la professione/attività del cliente è la seguente
         </label>
-        <input
-          name="specifica10d"
-          value={form.specifica10d}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-        />
+        <input name="specifica10d" value={form.specifica10d} onChange={handleChange} className="border p-2 w-full rounded" />
       </div>
 
       <div className="mb-4">
         <label className="block font-medium mb-1">Esercitata / svolta dal</label>
-        <input
-          name="specifica10e"
-          value={form.specifica10e}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-        />
+        <input name="specifica10e" value={form.specifica10e} onChange={handleChange} className="border p-2 w-full rounded" />
       </div>
 
       <div className="mb-6">
         <label className="block font-medium mb-1">Nell’ambito territoriale</label>
-        <input
-          name="specifica10f"
-          value={form.specifica10f}
-          onChange={handleChange}
-          className="border p-2 w-full rounded"
-        />
+        <input name="specifica10f" value={form.specifica10f} onChange={handleChange} className="border p-2 w-full rounded" />
       </div>
 
       <div className="mt-6 font-semibold mb-3">Firma</div>
@@ -1392,44 +1230,22 @@ export default function ModelloAV4() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block font-medium mb-1">Luogo firma</label>
-          <input
-            name="luogo_firma"
-            value={form.luogo_firma}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-          />
+          <input name="luogo_firma" value={form.luogo_firma} onChange={handleChange} className="border p-2 w-full rounded" />
         </div>
 
         <div>
           <label className="block font-medium mb-1">Data firma</label>
-          <input
-            type="date"
-            name="data_firma"
-            value={form.data_firma}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-          />
+          <input type="date" name="data_firma" value={form.data_firma} onChange={handleChange} className="border p-2 w-full rounded" />
         </div>
 
         <div>
           <label className="block font-medium mb-1">Luogo firma bis</label>
-          <input
-            name="luogo_firma_bis"
-            value={form.luogo_firma_bis}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-          />
+          <input name="luogo_firma_bis" value={form.luogo_firma_bis} onChange={handleChange} className="border p-2 w-full rounded" />
         </div>
 
         <div>
           <label className="block font-medium mb-1">Data firma bis</label>
-          <input
-            type="date"
-            name="data_firma_bis"
-            value={form.data_firma_bis}
-            onChange={handleChange}
-            className="border p-2 w-full rounded"
-          />
+          <input type="date" name="data_firma_bis" value={form.data_firma_bis} onChange={handleChange} className="border p-2 w-full rounded" />
         </div>
       </div>
 
@@ -1459,8 +1275,7 @@ export default function ModelloAV4() {
 
       {!av4Id && (
         <p className="mt-3 text-sm text-gray-600">
-          Dopo il primo salvataggio verrà abilitato l’inserimento dei titolari
-          effettivi nelle sezioni Domanda 7, 8 e 9.
+          Dopo il primo salvataggio verrà abilitato l’inserimento dei titolari effettivi nelle sezioni Domanda 7, 8 e 9.
         </p>
       )}
 
