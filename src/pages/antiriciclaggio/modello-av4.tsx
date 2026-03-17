@@ -139,6 +139,89 @@ const initialFormState = (
   versione: 1,
 });
 
+async function importaAmministratoreDaCliente() {
+  if (!form.cliente_id) {
+    alert("Cliente non valorizzato.");
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+  setLoadingRappresentante(true);
+
+  try {
+    const { data: clienteRow, error: clienteError } = await supabase
+      .from("tbclienti")
+      .select("id, rapp_legale_id")
+      .eq("id", form.cliente_id)
+      .single();
+
+    if (clienteError || !clienteRow) {
+      console.error("Errore lettura tbclienti:", clienteError);
+      alert("Impossibile leggere il cliente.");
+      return;
+    }
+
+    const rappLegaleId =
+      clienteRow?.rapp_legale_id != null
+        ? String(clienteRow.rapp_legale_id).trim()
+        : "";
+
+    console.log("cliente_id:", form.cliente_id);
+    console.log("rapp_legale_id:", rappLegaleId);
+
+    if (!rappLegaleId) {
+      alert("Per questo cliente non risulta alcun rappresentante legale collegato.");
+      clearRappresentanteFields();
+      return;
+    }
+
+    const { data: rappRow, error: rappError } = await supabase
+      .from("rapp_legali")
+      .select(`
+        id,
+        nome_cognome,
+        codice_fiscale,
+        luogo_nascita,
+        data_nascita,
+        indirizzo_residenza,
+        citta_residenza,
+        cap_residenza,
+        nazionalita
+      `)
+      .eq("id", rappLegaleId)
+      .single();
+
+    if (rappError || !rappRow) {
+      console.error("Errore lettura rapp_legali:", rappError);
+      alert("Rappresentante legale non trovato.");
+      clearRappresentanteFields();
+      return;
+    }
+
+    console.log("rappresentante trovato:", rappRow);
+
+    setForm((prev) => ({
+      ...prev,
+      rapp_legale_id: rappLegaleId,
+      dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
+      dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
+      dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
+      dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
+      dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
+      dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
+      dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
+      dichiarante_nazionalita: rappRow?.nazionalita ?? "",
+    }));
+
+    alert("Amministratore importato correttamente.");
+  } catch (error) {
+    console.error("Errore imprevisto import amministratore:", error);
+    alert("Errore durante l'import dell'amministratore.");
+  } finally {
+    setLoadingRappresentante(false);
+  }
+}
+
 function normalizeDateForInput(value?: string | null): string {
   if (!value) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -403,12 +486,20 @@ export default function ModelloAV4() {
       natura_prestazione: naturaPrestazione || "",
     }));
 
-    if (resolvedClienteId) {
-      await hydrateClienteAndRappresentante(resolvedClienteId);
-    } else {
-      setClienteLabel("");
-      clearRappresentanteFields();
-    }
+   if (resolvedClienteId) {
+  const supabase = getSupabaseClient() as any;
+  const { data: clienteRow } = await supabase
+    .from("tbclienti")
+    .select("*")
+    .eq("id", resolvedClienteId)
+    .single();
+
+  setClienteLabel(clienteRow ? buildClienteLabel(clienteRow) : "");
+  clearRappresentanteFields();
+} else {
+  setClienteLabel("");
+  clearRappresentanteFields();
+}
   }
 
   useEffect(() => {
@@ -481,13 +572,6 @@ export default function ModelloAV4() {
 
     void init();
   }, [router.isReady, initialized, studioId, av1Id, clienteIdFromQuery, av4IdFromQuery]);
-
-  useEffect(() => {
-    if (!initialized) return;
-    if (!form.cliente_id) return;
-
-    void hydrateClienteAndRappresentante(form.cliente_id);
-  }, [form.cliente_id, initialized]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -715,6 +799,19 @@ export default function ModelloAV4() {
         </p>
       </div>
 
+    <div className="mt-3">
+  <button
+    type="button"
+    onClick={importaAmministratoreDaCliente}
+    disabled={!form.cliente_id || loadingRappresentante}
+    className="border border-gray-300 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 px-4 py-2 rounded"
+  >
+    {loadingRappresentante
+      ? "Importazione amministratore..."
+      : "Importa amministratore da cliente"}
+  </button>
+</div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block font-medium mb-1">Cognome e nome</label>
