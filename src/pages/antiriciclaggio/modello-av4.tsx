@@ -555,7 +555,7 @@ export default function ModelloAV4() {
     }
   }, [router.isReady, router.query.rapp_saved, form.cliente_id]);
 
-  function handleChange(
+   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target;
@@ -567,8 +567,104 @@ export default function ModelloAV4() {
         [name]: type === "checkbox" ? checked : value,
       };
 
+      // Gruppo domanda1 / domanda2
+      if (type === "checkbox" && name === "domanda1" && checked) {
+        next.domanda2 = false;
+      }
+      if (type === "checkbox" && name === "domanda2" && checked) {
+        next.domanda1 = false;
+      }
+
+      // Gruppo PPE cliente: domanda3 / domanda4 / domanda5
+      if (type === "checkbox" && name === "domanda3" && checked) {
+        next.domanda4 = false;
+        next.domanda5 = false;
+        next.spec_domanda5 = "";
+      }
+
+      if (type === "checkbox" && name === "domanda4" && checked) {
+        next.domanda3 = false;
+        next.domanda5 = false;
+        next.spec_domanda5 = "";
+      }
+
+      if (type === "checkbox" && name === "domanda5" && checked) {
+        next.domanda3 = false;
+        next.domanda4 = false;
+      }
+
       if (name === "domanda5" && type === "checkbox" && !checked) {
         next.spec_domanda5 = "";
+      }
+
+      // Gruppo titolare effettivo: domanda6 / domanda7 / domanda8 / domanda9
+      if (type === "checkbox" && name === "domanda6" && checked) {
+        next.domanda7 = false;
+        next.domanda8 = false;
+        next.domanda9 = false;
+
+        next.nome_soc = "";
+        next.sede_legale = "";
+        next.indirizzo_sede = "";
+        next.reg_imprese = "";
+        next.num_reg_imprese = "";
+        next.cod_fiscale_soc = "";
+
+        next.nome_soc_bis = "";
+        next.sede_legale_bis = "";
+        next.indirizzo_sede_bis = "";
+        next.reg_imprese_bis = "";
+        next.num_reg_imprese_bis = "";
+        next.cod_fiscale_soc_bis = "";
+        next.nome_soc_ter = "";
+      }
+
+      if (type === "checkbox" && name === "domanda7" && checked) {
+        next.domanda6 = false;
+        next.domanda8 = false;
+        next.domanda9 = false;
+
+        next.nome_soc = "";
+        next.sede_legale = "";
+        next.indirizzo_sede = "";
+        next.reg_imprese = "";
+        next.num_reg_imprese = "";
+        next.cod_fiscale_soc = "";
+
+        next.nome_soc_bis = "";
+        next.sede_legale_bis = "";
+        next.indirizzo_sede_bis = "";
+        next.reg_imprese_bis = "";
+        next.num_reg_imprese_bis = "";
+        next.cod_fiscale_soc_bis = "";
+        next.nome_soc_ter = "";
+      }
+
+      if (type === "checkbox" && name === "domanda8" && checked) {
+        next.domanda6 = false;
+        next.domanda7 = false;
+        next.domanda9 = false;
+
+        next.nome_soc_bis = "";
+        next.sede_legale_bis = "";
+        next.indirizzo_sede_bis = "";
+        next.reg_imprese_bis = "";
+        next.num_reg_imprese_bis = "";
+        next.cod_fiscale_soc_bis = "";
+        next.nome_soc_ter = "";
+      }
+
+      if (type === "checkbox" && name === "domanda9" && checked) {
+        next.domanda6 = false;
+        next.domanda7 = false;
+        next.domanda8 = false;
+
+        next.nome_soc = "";
+        next.sede_legale = "";
+        next.indirizzo_sede = "";
+        next.reg_imprese = "";
+        next.num_reg_imprese = "";
+        next.cod_fiscale_soc = "";
       }
 
       if (name === "domanda8" && type === "checkbox" && !checked) {
@@ -590,6 +686,16 @@ export default function ModelloAV4() {
         next.nome_soc_ter = "";
       }
 
+      // Gruppo PPE titolari effettivi: domanda10 / domanda11
+      if (type === "checkbox" && name === "domanda10" && checked) {
+        next.domanda11 = false;
+        next.specifica12 = "";
+      }
+
+      if (type === "checkbox" && name === "domanda11" && checked) {
+        next.domanda10 = false;
+      }
+
       if (name === "domanda11" && type === "checkbox" && !checked) {
         next.specifica12 = "";
       }
@@ -597,7 +703,6 @@ export default function ModelloAV4() {
       return next;
     });
   }
-
   function validateBeforeSave() {
     if (!form.av1_id) {
       alert("Manca av1_id.");
