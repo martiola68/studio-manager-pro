@@ -72,7 +72,6 @@ export function TopNavBar() {
       } = await supabase.auth.getSession();
 
       if (session?.user?.email) {
-        // ✅ SOLO colonne "sicure" (evita mismatch con types/schema)
         const { data: utente, error } = await supabase
           .from("tbutenti")
           .select(
@@ -269,30 +268,28 @@ export function TopNavBar() {
       label: "Antiriciclaggio",
       icon: <ShieldCheck className="h-5 w-5" />,
       children: [
+        { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
         { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
-        { label: "Modello AV1", href: "/antiriciclaggio/modello-av1", icon: null },
-        { label: "Modello AV4", href: "/antiriciclaggio/modello-av4", icon: null },
-        { label: "Elenco antiriciclaggio", href: "/antiriciclaggio", icon: null },
         { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
       ],
     },
     { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
     {
-  label: "Microsoft 365",
-  icon: <Cloud className="h-4 w-4" />,
-  children: [
-    {
-      label: "Connessioni",
-      href: "/microsoft365?tab=connessioni",
-      icon: <Link2 className="h-4 w-4" />,
+      label: "Microsoft 365",
+      icon: <Cloud className="h-4 w-4" />,
+      children: [
+        {
+          label: "Connessioni",
+          href: "/microsoft365?tab=connessioni",
+          icon: <Link2 className="h-4 w-4" />,
+        },
+        {
+          label: "Sync",
+          href: "/microsoft365?tab=sync",
+          icon: <RefreshCcw className="h-4 w-4" />,
+        },
+      ],
     },
-    {
-      label: "Sync",
-      href: "/microsoft365?tab=sync",
-      icon: <RefreshCcw className="h-4 w-4" />,
-    },
-  ],
-},
     {
       label: "Impostazioni",
       icon: <Settings className="h-4 w-4" />,
