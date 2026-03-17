@@ -33,6 +33,19 @@ type FormDataType = {
   AV4Generato?: boolean;
 };
 
+const sectionTitles: Record<string, string> = {
+  A1: "A.1 - Natura giuridica",
+  A2: "A.2 - Prevalente attività svolta",
+  A3: "A.3 - Comportamento tenuto al momento del conferimento dell’incarico",
+  A4: "A.4 - Area geografica di residenza del cliente",
+  B1: "B.1 - Tipologia",
+  B2: "B.2 - Modalità di svolgimento",
+  B3: "B.3 - Ammontare dell’operazione",
+  B4: "B.4 - Frequenza e volume delle operazioni/durata della prestazione professionale",
+  B5: "B.5 - Ragionevolezza",
+  B6: "B.6 - Area geografica di destinazione",
+};
+
 export const av1Labels = {
   A1: {
     a1a: "Non congruità della natura giuridica prescelta in relazione all’attività svolta e alle sue dimensioni",
