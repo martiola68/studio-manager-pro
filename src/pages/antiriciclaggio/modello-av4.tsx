@@ -3,37 +3,6 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
-type ClienteOption = {
-  id: string;
-  rapp_legale_id: string | null;
-  label: string;
-};
-
-type ClienteRow = {
-  id: string;
-  rapp_legale_id?: string | null;
-  ragione_sociale?: string | null;
-  denominazione?: string | null;
-  cognome_nome?: string | null;
-  nome_cognome?: string | null;
-  nome?: string | null;
-  cognome?: string | null;
-  codice_fiscale?: string | null;
-  email?: string | null;
-};
-
-type RappLegaleRow = {
-  id: string;
-  nome_cognome?: string | null;
-  codice_fiscale?: string | null;
-  luogo_nascita?: string | null;
-  data_nascita?: string | null;
-  indirizzo_residenza?: string | null;
-  citta_residenza?: string | null;
-  cap_residenza?: string | null;
-  nazionalita?: string | null;
-};
-
 type FormState = {
   studio_id: string;
   cliente_id: string;
@@ -185,11 +154,11 @@ function normalizeDateForInput(value?: string | null): string {
 
 function buildClienteLabel(row: any): string {
   const parts = [
-    row?.cognome_nome,
-    row?.denominazione,
     row?.ragione_sociale,
-    [row?.cognome, row?.nome].filter(Boolean).join(" ").trim(),
+    row?.denominazione,
+    row?.cognome_nome,
     row?.nome_cognome,
+    [row?.cognome, row?.nome].filter(Boolean).join(" ").trim(),
     row?.codice_fiscale,
     row?.email,
   ]
@@ -275,14 +244,6 @@ function toNumericOrNull(value: string) {
 export default function ModelloAV4() {
   const router = useRouter();
 
-  const [clienti, setClienti] = useState<ClienteOption[]>([]);
-  const [clienteLabel, setClienteLabel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingClienti, setLoadingClienti] = useState(false);
-  const [loadingRappresentante, setLoadingRappresentante] = useState(false);
-  const [av4Id, setAv4Id] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
-
   const studioId =
     typeof router.query.studio_id === "string" ? router.query.studio_id : "";
   const av1Id =
@@ -291,6 +252,12 @@ export default function ModelloAV4() {
     typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
   const av4IdFromQuery =
     typeof router.query.id === "string" ? router.query.id : "";
+
+  const [clienteLabel, setClienteLabel] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingRappresentante, setLoadingRappresentante] = useState(false);
+  const [av4Id, setAv4Id] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const [form, setForm] = useState<FormState>(initialFormState());
 
@@ -309,187 +276,140 @@ export default function ModelloAV4() {
     }));
   }
 
-  async function loadClienti() {
-    const supabase = getSupabaseClient() as any;
-    setLoadingClienti(true);
-
-    try {
-      const { data, error } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (error) {
-        console.error("Errore caricamento clienti:", error);
-        return;
-      }
-
-      const rows = Array.isArray(data) ? data : [];
-
-      const mapped: ClienteOption[] = rows.map((row: any) => ({
-        id: String(row.id),
-        rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : null,
-        label: buildClienteLabel(row),
-      }));
-
-      setClienti(mapped);
-    } catch (error) {
-      console.error("Errore imprevisto caricamento clienti:", error);
-    } finally {
-      setLoadingClienti(false);
-    }
-  }
-
- async function resolveClienteAndRappresentanteFromClienteId(clienteId: string) {
-  if (!clienteId) {
-    setClienteLabel("");
-    clearRappresentanteFields();
-    return;
-  }
-
-  const supabase = getSupabaseClient() as any;
-  setLoadingRappresentante(true);
-
-  try {
-    // 1. leggo il cliente reale
-    const { data: clienteRow, error: clienteError } = await supabase
-      .from("tbclienti")
-      .select(`
-        id,
-        rapp_legale_id,
-        ragione_sociale,
-        denominazione,
-        cognome_nome,
-        nome_cognome,
-        nome,
-        cognome,
-        codice_fiscale,
-        email
-      `)
-      .eq("id", clienteId)
-      .single();
-
-    if (clienteError || !clienteRow) {
-      console.error("Errore lettura tbclienti:", clienteError);
+  async function hydrateClienteAndRappresentante(clienteId: string) {
+    if (!clienteId) {
       setClienteLabel("");
       clearRappresentanteFields();
       return;
     }
 
-    setClienteLabel(buildClienteLabel(clienteRow));
+    const supabase = getSupabaseClient() as any;
+    setLoadingRappresentante(true);
 
-    const rappLegaleId =
-      clienteRow?.rapp_legale_id != null
-        ? String(clienteRow.rapp_legale_id).trim()
-        : "";
+    try {
+      const { data: clienteRow, error: clienteError } = await supabase
+        .from("tbclienti")
+        .select("*")
+        .eq("id", clienteId)
+        .single();
 
-    console.log("cliente_id AV1 -> tbclienti.id:", clienteId);
-    console.log("tbclienti.rapp_legale_id:", rappLegaleId);
+      if (clienteError || !clienteRow) {
+        console.error("Errore caricamento cliente:", clienteError);
+        setClienteLabel("");
+        clearRappresentanteFields();
+        return;
+      }
 
-    if (!rappLegaleId) {
+      setClienteLabel(buildClienteLabel(clienteRow));
+
+      const rappLegaleId =
+        clienteRow?.rapp_legale_id != null
+          ? String(clienteRow.rapp_legale_id).trim()
+          : "";
+
+      console.log("tbAV1/tbAV4 cliente_id:", clienteId);
+      console.log("tbclienti.rapp_legale_id:", rappLegaleId);
+
+      if (!rappLegaleId) {
+        clearRappresentanteFields();
+        return;
+      }
+
+      const { data: rappRow, error: rappError } = await supabase
+        .from("rapp_legali")
+        .select(`
+          id,
+          nome_cognome,
+          codice_fiscale,
+          luogo_nascita,
+          data_nascita,
+          indirizzo_residenza,
+          citta_residenza,
+          cap_residenza,
+          nazionalita
+        `)
+        .eq("id", rappLegaleId)
+        .single();
+
+      if (rappError || !rappRow) {
+        console.error("Errore caricamento rappresentante:", rappError);
+        clearRappresentanteFields();
+        return;
+      }
+
+      console.log("rapp_legali trovato:", rappRow);
+
+      setForm((prev) => ({
+        ...prev,
+        cliente_id: clienteId,
+        rapp_legale_id: rappLegaleId,
+        dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
+        dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
+        dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
+        dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
+        dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
+        dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
+        dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
+        dichiarante_nazionalita: rappRow?.nazionalita ?? "",
+      }));
+    } catch (error) {
+      console.error("Errore imprevisto caricamento cliente/rappresentante:", error);
+      setClienteLabel("");
       clearRappresentanteFields();
-      return;
+    } finally {
+      setLoadingRappresentante(false);
     }
+  }
 
-    // 2. leggo il rappresentante tramite tbclienti.rapp_legale_id -> rapp_legali.id
-    const { data: rappRow, error: rappError } = await supabase
-      .from("rapp_legali")
-      .select(`
-        id,
-        nome_cognome,
-        codice_fiscale,
-        luogo_nascita,
-        data_nascita,
-        indirizzo_residenza,
-        citta_residenza,
-        cap_residenza,
-        nazionalita
-      `)
-      .eq("id", rappLegaleId)
-      .single();
+  async function prefillFromAV1(
+    studioIdValue: string,
+    av1IdValue: string,
+    clienteIdValue: string
+  ) {
+    const supabase = getSupabaseClient() as any;
 
-    if (rappError || !rappRow) {
-      console.error("Errore lettura rapp_legali:", rappError);
-      clearRappresentanteFields();
-      return;
+    let resolvedClienteId = clienteIdValue || "";
+    let naturaPrestazione = "";
+
+    if (av1IdValue) {
+      const av1Numeric = toNumericOrNull(av1IdValue);
+
+      if (av1Numeric !== null) {
+        const { data: av1Row, error: av1Error } = await supabase
+          .from("tbAV1")
+          .select("id, studio_id, cliente_id, Prestazione")
+          .eq("id", av1Numeric)
+          .single();
+
+        if (av1Error) {
+          console.error("Errore caricamento AV1:", av1Error);
+        }
+
+        if (av1Row) {
+          if (av1Row?.cliente_id != null) {
+            resolvedClienteId = String(av1Row.cliente_id);
+          }
+          naturaPrestazione = av1Row?.Prestazione ?? "";
+        }
+      }
     }
-
-    console.log("rapp_legali.id trovato:", rappRow?.id);
-    console.log("rapp_legali.nome_cognome:", rappRow?.nome_cognome);
 
     setForm((prev) => ({
       ...prev,
-      cliente_id: clienteId,
-      rapp_legale_id: rappLegaleId,
-      dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
-      dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
-      dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
-      dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
-      dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
-      dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
-      dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
-      dichiarante_nazionalita: rappRow?.nazionalita ?? "",
+      ...initialFormState(studioIdValue, av1IdValue, resolvedClienteId),
+      studio_id: studioIdValue || prev.studio_id || "",
+      av1_id: av1IdValue || prev.av1_id || "",
+      cliente_id: resolvedClienteId || prev.cliente_id || "",
+      natura_prestazione: naturaPrestazione || "",
     }));
-  } catch (error) {
-    console.error("Errore imprevisto risoluzione cliente/rappresentante:", error);
-    setClienteLabel("");
-    clearRappresentanteFields();
-  } finally {
-    setLoadingRappresentante(false);
-  }
-}
 
-async function prefillFromAV1(
-  studioIdValue: string,
-  av1IdValue: string,
-  clienteIdValue: string
-) {
-  const supabase = getSupabaseClient() as any;
-
-  let resolvedClienteId = clienteIdValue || "";
-  let naturaPrestazione = "";
-
-  if (av1IdValue) {
-    const av1Numeric = toNumericOrNull(av1IdValue);
-
-    if (av1Numeric !== null) {
-      const { data: av1Row, error: av1Error } = await supabase
-        .from("tbAV1")
-        .select("id, studio_id, cliente_id, Prestazione")
-        .eq("id", av1Numeric)
-        .single();
-
-      if (av1Error || !av1Row) {
-        console.error("Errore caricamento AV1:", av1Error);
-      } else {
-        resolvedClienteId =
-          av1Row?.cliente_id != null ? String(av1Row.cliente_id) : resolvedClienteId;
-
-        naturaPrestazione = av1Row?.Prestazione ?? "";
-      }
+    if (resolvedClienteId) {
+      await hydrateClienteAndRappresentante(resolvedClienteId);
+    } else {
+      setClienteLabel("");
+      clearRappresentanteFields();
     }
   }
-
-  setForm((prev) => ({
-    ...prev,
-    ...initialFormState(studioIdValue, av1IdValue, resolvedClienteId),
-    studio_id: studioIdValue || prev.studio_id || "",
-    av1_id: av1IdValue || prev.av1_id || "",
-    cliente_id: resolvedClienteId || prev.cliente_id || "",
-    natura_prestazione: naturaPrestazione || "",
-  }));
-
-  if (resolvedClienteId) {
-    await resolveClienteAndRappresentanteFromClienteId(resolvedClienteId);
-  } else {
-    setClienteLabel("");
-    clearRappresentanteFields();
-  }
-}
-
-  useEffect(() => {
-    void loadClienti();
-  }, []);
 
   useEffect(() => {
     if (!router.isReady || initialized) return;
@@ -543,7 +463,7 @@ async function prefillFromAV1(
           setForm(mapped);
 
           if (mapped.cliente_id) {
-            await resolveClienteAndRappresentanteFromClienteId(mapped.cliente_id);
+            await hydrateClienteAndRappresentante(mapped.cliente_id);
           } else {
             setClienteLabel("");
             clearRappresentanteFields();
@@ -563,16 +483,11 @@ async function prefillFromAV1(
   }, [router.isReady, initialized, studioId, av1Id, clienteIdFromQuery, av4IdFromQuery]);
 
   useEffect(() => {
-  if (!initialized) return;
+    if (!initialized) return;
+    if (!form.cliente_id) return;
 
-  if (!form.cliente_id) {
-    setClienteLabel("");
-    clearRappresentanteFields();
-    return;
-  }
-
-  void resolveClienteAndRappresentanteFromClienteId(form.cliente_id);
-}, [form.cliente_id, initialized]);
+    void hydrateClienteAndRappresentante(form.cliente_id);
+  }, [form.cliente_id, initialized]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -629,7 +544,7 @@ async function prefillFromAV1(
     }
 
     if (!form.cliente_id) {
-      alert("Seleziona il cliente.");
+      alert("Cliente non valorizzato.");
       return false;
     }
 
@@ -775,21 +690,14 @@ async function prefillFromAV1(
       <div className="mb-4">
         <label className="block font-medium mb-1">Cliente</label>
         <input
-          value={
-            loadingClienti
-              ? "Caricamento cliente..."
-              : clienteLabel || "Cliente non valorizzato da AV1"
-          }
+          value={clienteLabel || "Cliente non valorizzato da AV1"}
           className="border p-2 w-full rounded bg-gray-50"
           readOnly
         />
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium mb-1">
-          Rappresentante collegato al cliente
-        </label>
-
+        <label className="block font-medium mb-1">Rappresentante collegato al cliente</label>
         <input
           value={
             loadingRappresentante
@@ -799,7 +707,6 @@ async function prefillFromAV1(
           className="border p-2 w-full rounded bg-gray-50"
           readOnly
         />
-
         <p className="text-xs text-gray-500 mt-1">
           Il rappresentante viene recuperato automaticamente da
           <strong> tbclienti.rapp_legale_id </strong>
@@ -914,10 +821,9 @@ async function prefillFromAV1(
 
       <div className="mb-6">
         <label className="block font-medium mb-1">
-          Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo
-          scopo e la natura della prestazione professionale richiesta sono
+          Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo scopo e la natura
+          della prestazione professionale richiesta sono
         </label>
-
         <textarea
           name="natura_prestazione"
           value={form.natura_prestazione}
@@ -957,7 +863,6 @@ async function prefillFromAV1(
           <label className="block font-medium mb-1">
             Specificare carica pubblica, nome e legame con il titolare della carica pubblica
           </label>
-
           <textarea
             name="spec_domanda5"
             value={form.spec_domanda5}
@@ -980,8 +885,8 @@ async function prefillFromAV1(
       <div className="mb-3">
         <label className="flex items-center gap-2">
           <input type="checkbox" name="domanda6" checked={form.domanda6} onChange={handleChange} />
-          di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo
-          così come previsto e definito dal D.Lgs. 231/2007
+          di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo così
+          come previsto e definito dal D.Lgs. 231/2007
         </label>
       </div>
 
@@ -1023,27 +928,22 @@ async function prefillFromAV1(
               <label className="block font-medium mb-1">Nome società / ente</label>
               <input name="nome_soc" value={form.nome_soc} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Sede legale</label>
               <input name="sede_legale" value={form.sede_legale} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Indirizzo sede</label>
               <input name="indirizzo_sede" value={form.indirizzo_sede} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Registro imprese</label>
               <input name="reg_imprese" value={form.reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Numero registro imprese</label>
               <input name="num_reg_imprese" value={form.num_reg_imprese} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Codice fiscale società</label>
               <input name="cod_fiscale_soc" value={form.cod_fiscale_soc} onChange={handleChange} className="border p-2 w-full rounded" />
@@ -1083,32 +983,26 @@ async function prefillFromAV1(
               <label className="block font-medium mb-1">Nome società / ente</label>
               <input name="nome_soc_bis" value={form.nome_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Sede legale</label>
               <input name="sede_legale_bis" value={form.sede_legale_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Indirizzo sede</label>
               <input name="indirizzo_sede_bis" value={form.indirizzo_sede_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Registro imprese</label>
               <input name="reg_imprese_bis" value={form.reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Numero registro imprese</label>
               <input name="num_reg_imprese_bis" value={form.num_reg_imprese_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div>
               <label className="block font-medium mb-1">Codice fiscale società</label>
               <input name="cod_fiscale_soc_bis" value={form.cod_fiscale_soc_bis} onChange={handleChange} className="border p-2 w-full rounded" />
             </div>
-
             <div className="md:col-span-2">
               <label className="block font-medium mb-1">Denominazione società per art. 20, comma 4</label>
               <input name="nome_soc_ter" value={form.nome_soc_ter} onChange={handleChange} className="border p-2 w-full rounded" />
@@ -1177,9 +1071,7 @@ async function prefillFromAV1(
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium mb-1">
-          Che la provenienza dei fondi utilizzati nell’operazione è
-        </label>
+        <label className="block font-medium mb-1">Che la provenienza dei fondi utilizzati nell’operazione è</label>
         <textarea
           name="specifica10c"
           value={form.specifica10c}
@@ -1190,9 +1082,7 @@ async function prefillFromAV1(
       </div>
 
       <div className="mb-6">
-        <label className="block font-medium mb-1">
-          Che i mezzi di pagamento forniti dal Cliente al professionista sono
-        </label>
+        <label className="block font-medium mb-1">Che i mezzi di pagamento forniti dal Cliente al professionista sono</label>
         <textarea
           name="specifica11c"
           value={form.specifica11c}
@@ -1209,9 +1099,7 @@ async function prefillFromAV1(
       <div className="mt-6 font-semibold mb-3">Professione / attività del cliente</div>
 
       <div className="mb-4">
-        <label className="block font-medium mb-1">
-          Che la professione/attività del cliente è la seguente
-        </label>
+        <label className="block font-medium mb-1">Che la professione/attività del cliente è la seguente</label>
         <input name="specifica10d" value={form.specifica10d} onChange={handleChange} className="border p-2 w-full rounded" />
       </div>
 
