@@ -157,6 +157,10 @@ export default function AntiriciclaggioPage() {
     return Array.isArray(row.tbclienti) ? row.tbclienti[0] : row.tbclienti;
   };
 
+  const handleNuovoAV1 = () => {
+    router.push("/antiriciclaggio/modello-av1");
+  };
+
   const handleModificaAV1 = (id: string) => {
     router.push(`/antiriciclaggio/modello-av1?id=${id}`);
   };
@@ -282,14 +286,14 @@ export default function AntiriciclaggioPage() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Antiriciclaggio</h1>
+        <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
 
         <button
           type="button"
-          onClick={() => router.push("/antiriciclaggio/modello-av1")}
-          className="px-4 py-2 rounded bg-blue-600 text-white"
+          onClick={handleNuovoAV1}
+          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
         >
-          Nuovo AV1
+          Nuova pratica
         </button>
       </div>
 
@@ -357,18 +361,18 @@ export default function AntiriciclaggioPage() {
                           <button
                             type="button"
                             onClick={() => handleModificaAV1(row.id)}
-                            className="px-3 py-1 rounded bg-amber-500 text-white"
+                            className="px-3 py-1 rounded bg-amber-500 text-white hover:bg-amber-600"
                           >
-                            Modifica AV1
+                            Apri AV1
                           </button>
 
                           {row.AV4Generato ? (
                             <button
                               type="button"
                               onClick={() => handleModificaAV4(row.id)}
-                              className="px-3 py-1 rounded bg-green-600 text-white"
+                              className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
                             >
-                              Modifica AV4
+                              Apri AV4
                             </button>
                           ) : (
                             <button
@@ -390,7 +394,7 @@ export default function AntiriciclaggioPage() {
                           <button
                             type="button"
                             onClick={() => handleEliminaCompleto(row.id)}
-                            className="px-3 py-1 rounded bg-red-700 text-white"
+                            className="px-3 py-1 rounded bg-red-700 text-white hover:bg-red-800"
                           >
                             Elimina record completo
                           </button>
