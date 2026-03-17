@@ -797,27 +797,41 @@ export default function ModelloAV4() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={importaAmministratoreDaCliente}
-                disabled={!form.cliente_id || loadingRappresentante}
-              >
-                {loadingRappresentante
-                  ? "Importazione amministratore..."
-                  : "Importa amministratore da cliente"}
-              </Button>
+           <div className="mt-3 mb-6 flex gap-3 flex-wrap">
+  <button
+    type="button"
+    onClick={importaAmministratoreDaCliente}
+    disabled={!form.cliente_id || loadingRappresentante}
+    className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 px-4 py-2 rounded shadow"
+  >
+    {loadingRappresentante
+      ? "Importazione..."
+      : "Importa amministratore"}
+  </button>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleNuovoRappresentante}
-                disabled={!form.cliente_id}
-              >
-                Nuovo rappresentante
-              </Button>
-            </div>
+  <button
+    type="button"
+    onClick={() => {
+      if (!form.cliente_id) {
+        alert("Cliente non valorizzato.");
+        return;
+      }
+
+      const query = new URLSearchParams({
+        from: "av4",
+        cliente_id: form.cliente_id,
+        av1_id: form.av1_id,
+        av4_id: av4Id || "",
+        returnTo: `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${av4Id || ""}`,
+      });
+
+      router.push(`/antiriciclaggio/rappresentanti/nuovo?${query.toString()}`);
+    }}
+    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+  >
+    Nuovo rappresentante
+  </button>
+</div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -855,13 +869,15 @@ export default function ModelloAV4() {
 
               <div>
                 <label className="block text-sm font-medium mb-1">Data di nascita</label>
-                <input
-                  name="dichiarante_data_nascita"
-                  value={form.dichiarante_data_nascita}
-                  onChange={handleChange}
-                  className="w-full border rounded-md px-3 py-2 bg-gray-50"
-                  readOnly
-                />
+               <input
+  value={
+    form.dichiarante_data_nascita
+      ? new Date(form.dichiarante_data_nascita).toLocaleDateString("it-IT")
+      : ""
+  }
+  className="border p-2 w-full rounded bg-gray-50"
+  readOnly
+/>
               </div>
 
               <div>
