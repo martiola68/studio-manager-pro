@@ -76,9 +76,9 @@ type FormState = {
   versione: number;
 };
 
-const initialFormState = (studioId = "", av1Id = ""): FormState => ({
+const initialFormState = (studioId = "", av1Id = "", clienteId = ""): FormState => ({
   studio_id: studioId,
-  cliente_id: "",
+  cliente_id: clienteId,
   av1_id: av1Id,
   rapp_legale_id: "",
 
@@ -239,6 +239,11 @@ function mapDbRowToForm(row: any): FormState {
   };
 }
 
+function toNumericOrNull(value: string) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function ModelloAV4() {
   const router = useRouter();
 
@@ -248,24 +253,18 @@ export default function ModelloAV4() {
   const [loadingClienti, setLoadingClienti] = useState(false);
   const [loadingRappresentante, setLoadingRappresentante] = useState(false);
   const [av4Id, setAv4Id] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  const queryParams = useMemo(() => {
-    if (typeof window === "undefined") {
-      return { studioId: "", av1Id: "", clienteId: "" };
-    }
+  const studioId =
+    typeof router.query.studio_id === "string" ? router.query.studio_id : "";
+  const av1Id =
+    typeof router.query.av1_id === "string" ? router.query.av1_id : "";
+  const clienteIdFromQuery =
+    typeof router.query.cliente_id === "string" ? router.query.cliente_id : "";
+  const av4IdFromQuery =
+    typeof router.query.id === "string" ? router.query.id : "";
 
-    const params = new URLSearchParams(window.location.search);
-
-    return {
-      studioId: params.get("studio_id") || "",
-      av1Id: params.get("av1_id") || "",
-      clienteId: params.get("cliente_id") || "",
-    };
-  }, []);
-
-  const [form, setForm] = useState<FormState>(
-    initialFormState(queryParams.studioId, queryParams.av1Id)
-  );
+  const [form, setForm] = useState<FormState>(initialFormState());
 
   function clearRappresentanteFields() {
     setForm((prev) => ({
@@ -285,12 +284,10 @@ export default function ModelloAV4() {
   async function loadClienteCorrente(clienteId: string) {
     if (!clienteId) {
       setClienteLabel("");
-      clearRappresentanteFields();
-      return;
+      return null;
     }
 
     const supabase = getSupabaseClient() as any;
-    setLoadingClienti(true);
 
     try {
       const { data, error } = await supabase
@@ -302,17 +299,15 @@ export default function ModelloAV4() {
       if (error) {
         console.error("Errore caricamento cliente:", error);
         setClienteLabel("");
-        clearRappresentanteFields();
-        return;
+        return null;
       }
 
       setClienteLabel(buildClienteLabel(data));
+      return data;
     } catch (err) {
       console.error("Errore imprevisto caricamento cliente:", err);
       setClienteLabel("");
-      clearRappresentanteFields();
-    } finally {
-      setLoadingClienti(false);
+      return null;
     }
   }
 
@@ -419,29 +414,143 @@ export default function ModelloAV4() {
     }
   }
 
-  useEffect(() => {
+  async function prefillFromAV1(studioIdValue: string, av1IdValue: string, clienteIdValue: string) {
+    const supabase = getSupabaseClient() as any;
+
+    let resolvedClienteId = clienteIdValue || "";
+    let naturaPrestazione = "";
+
+    if (av1IdValue) {
+      const av1Numeric = toNumericOrNull(av1IdValue);
+
+      if (av1Numeric !== null) {
+        const { data: av1Row, error: av1Error } = await supabase
+          .from("tbAV1")
+          .select("id, studio_id, cliente_id, Prestazione")
+          .eq("id", av1Numeric)
+          .maybeSingle();
+
+        if (av1Error) {
+          console.error("Errore caricamento AV1:", av1Error);
+        }
+
+        if (av1Row) {
+          if (!resolvedClienteId && av1Row?.cliente_id != null) {
+            resolvedClienteId = String(av1Row.cliente_id);
+          }
+          naturaPrestazione = av1Row?.Prestazione ?? "";
+        }
+      }
+    }
+
     setForm((prev) => ({
       ...prev,
-      studio_id: queryParams.studioId,
-      av1_id: queryParams.av1Id,
-      cliente_id: queryParams.clienteId || prev.cliente_id,
+      ...initialFormState(studioIdValue, av1IdValue, resolvedClienteId),
+      studio_id: studioIdValue || prev.studio_id || "",
+      av1_id: av1IdValue || prev.av1_id || "",
+      cliente_id: resolvedClienteId || prev.cliente_id || "",
+      natura_prestazione: naturaPrestazione || prev.natura_prestazione || "",
+      domanda1: prev.domanda1,
+      domanda2: prev.domanda2,
+      domanda3: prev.domanda3,
+      domanda4: prev.domanda4,
+      domanda5: prev.domanda5,
+      domanda6: prev.domanda6,
+      domanda7: prev.domanda7,
+      domanda8: prev.domanda8,
+      domanda9: prev.domanda9,
+      domanda10: prev.domanda10,
+      domanda11: prev.domanda11,
     }));
-  }, [queryParams.studioId, queryParams.av1Id, queryParams.clienteId]);
+
+    if (resolvedClienteId) {
+      await loadClienteCorrente(resolvedClienteId);
+      await loadRappresentanteDaCliente(resolvedClienteId);
+    } else {
+      setClienteLabel("");
+      clearRappresentanteFields();
+    }
+  }
 
   useEffect(() => {
     void loadClienti();
   }, []);
 
   useEffect(() => {
-    if (queryParams.clienteId) {
-      setForm((prev) => ({
-        ...prev,
-        cliente_id: queryParams.clienteId,
-      }));
-    }
-  }, [queryParams.clienteId]);
+    if (!router.isReady || initialized) return;
+
+    const init = async () => {
+      setLoading(true);
+
+      try {
+        const supabase = getSupabaseClient() as any;
+        let existingRow: any = null;
+
+        if (av4IdFromQuery) {
+          const av4Numeric = toNumericOrNull(av4IdFromQuery);
+
+          if (av4Numeric !== null) {
+            const { data, error } = await supabase
+              .from("tbAV4")
+              .select("*")
+              .eq("id", av4Numeric)
+              .maybeSingle();
+
+            if (error) {
+              console.error("Errore caricamento AV4 da id:", error);
+            } else {
+              existingRow = data || null;
+            }
+          }
+        }
+
+        if (!existingRow && av1Id) {
+          const av1Numeric = toNumericOrNull(av1Id);
+
+          if (av1Numeric !== null) {
+            const { data, error } = await supabase
+              .from("tbAV4")
+              .select("*")
+              .eq("av1_id", av1Numeric)
+              .maybeSingle();
+
+            if (error) {
+              console.error("Errore caricamento AV4 da av1_id:", error);
+            } else {
+              existingRow = data || null;
+            }
+          }
+        }
+
+        if (existingRow) {
+          setAv4Id(String(existingRow.id));
+          const mapped = mapDbRowToForm(existingRow);
+          setForm(mapped);
+
+          if (mapped.cliente_id) {
+            await loadClienteCorrente(mapped.cliente_id);
+            await loadRappresentanteDaCliente(mapped.cliente_id);
+          } else {
+            setClienteLabel("");
+            clearRappresentanteFields();
+          }
+        } else {
+          await prefillFromAV1(studioId, av1Id, clienteIdFromQuery);
+        }
+      } catch (err) {
+        console.error("Errore inizializzazione AV4:", err);
+      } finally {
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
+
+    void init();
+  }, [router.isReady, initialized, studioId, av1Id, clienteIdFromQuery, av4IdFromQuery]);
 
   useEffect(() => {
+    if (!initialized) return;
+
     if (!form.cliente_id) {
       setClienteLabel("");
       clearRappresentanteFields();
@@ -450,52 +559,7 @@ export default function ModelloAV4() {
 
     void loadClienteCorrente(form.cliente_id);
     void loadRappresentanteDaCliente(form.cliente_id);
-  }, [form.cliente_id]);
-
-  useEffect(() => {
-    const av1IdFromQuery = queryParams.av1Id;
-
-    if (typeof window === "undefined") return;
-
-    async function loadAV4Esistente() {
-      const supabase = getSupabaseClient() as any;
-      setLoading(true);
-
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const av4IdFromQuery = params.get("id");
-
-        let query = supabase.from("tbAV4").select("*");
-
-        if (av4IdFromQuery) {
-          query = query.eq("id", Number(av4IdFromQuery));
-        } else if (av1IdFromQuery) {
-          query = query.eq("av1_id", Number(av1IdFromQuery));
-        } else {
-          setLoading(false);
-          return;
-        }
-
-        const { data, error } = await query.maybeSingle();
-
-        if (error) {
-          console.error("Errore caricamento AV4 esistente:", error);
-          return;
-        }
-
-        if (!data) return;
-
-        setAv4Id(String(data.id));
-        setForm(mapDbRowToForm(data));
-      } catch (err) {
-        console.error("Errore imprevisto caricamento AV4:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void loadAV4Esistente();
-  }, [queryParams.av1Id]);
+  }, [form.cliente_id, initialized]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
