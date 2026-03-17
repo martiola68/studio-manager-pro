@@ -340,152 +340,152 @@ export default function ModelloAV4() {
     }
   }
 
-  async function resolveClienteAndRappresentante(clienteId: string) {
-    if (!clienteId) {
+ async function resolveClienteAndRappresentanteFromClienteId(clienteId: string) {
+  if (!clienteId) {
+    setClienteLabel("");
+    clearRappresentanteFields();
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+  setLoadingRappresentante(true);
+
+  try {
+    // 1. leggo il cliente reale
+    const { data: clienteRow, error: clienteError } = await supabase
+      .from("tbclienti")
+      .select(`
+        id,
+        rapp_legale_id,
+        ragione_sociale,
+        denominazione,
+        cognome_nome,
+        nome_cognome,
+        nome,
+        cognome,
+        codice_fiscale,
+        email
+      `)
+      .eq("id", clienteId)
+      .single();
+
+    if (clienteError || !clienteRow) {
+      console.error("Errore lettura tbclienti:", clienteError);
       setClienteLabel("");
       clearRappresentanteFields();
       return;
     }
 
-    const supabase = getSupabaseClient() as any;
-    setLoadingRappresentante(true);
+    setClienteLabel(buildClienteLabel(clienteRow));
 
-    try {
-      const { data: clienteRow, error: clienteError } = await supabase
-        .from("tbclienti")
-        .select("*")
-        .eq("id", clienteId)
-        .maybeSingle();
+    const rappLegaleId =
+      clienteRow?.rapp_legale_id != null
+        ? String(clienteRow.rapp_legale_id).trim()
+        : "";
 
-      if (clienteError) {
-        console.error("Errore lettura tbclienti:", clienteError);
-        setClienteLabel("");
-        clearRappresentanteFields();
-        return;
-      }
+    console.log("cliente_id AV1 -> tbclienti.id:", clienteId);
+    console.log("tbclienti.rapp_legale_id:", rappLegaleId);
 
-      if (!clienteRow) {
-        console.warn("Cliente non trovato in tbclienti:", clienteId);
-        setClienteLabel("");
-        clearRappresentanteFields();
-        return;
-      }
-
-      setClienteLabel(buildClienteLabel(clienteRow));
-
-      const rappLegaleId =
-        clienteRow?.rapp_legale_id != null
-          ? String(clienteRow.rapp_legale_id).trim()
-          : "";
-
-      console.log("tbclienti.id:", clienteId);
-      console.log("tbclienti.rapp_legale_id:", rappLegaleId);
-
-      if (!rappLegaleId) {
-        clearRappresentanteFields();
-        return;
-      }
-
-      const { data: rappRow, error: rappError } = await supabase
-        .from("rapp_legali")
-        .select(`
-          id,
-          nome_cognome,
-          codice_fiscale,
-          luogo_nascita,
-          data_nascita,
-          indirizzo_residenza,
-          citta_residenza,
-          cap_residenza,
-          nazionalita
-        `)
-        .eq("id", rappLegaleId)
-        .maybeSingle();
-
-      if (rappError) {
-        console.error("Errore lettura rapp_legali:", rappError);
-        clearRappresentanteFields();
-        return;
-      }
-
-      console.log("rapp_legali record:", rappRow);
-
-      if (!rappRow) {
-        clearRappresentanteFields();
-        return;
-      }
-
-      setForm((prev) => ({
-        ...prev,
-        cliente_id: clienteId,
-        rapp_legale_id: rappLegaleId,
-        dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
-        dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
-        dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
-        dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
-        dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
-        dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
-        dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
-        dichiarante_nazionalita: rappRow?.nazionalita ?? "",
-      }));
-    } catch (error) {
-      console.error("Errore imprevisto risoluzione cliente/rappresentante:", error);
-      setClienteLabel("");
+    if (!rappLegaleId) {
       clearRappresentanteFields();
-    } finally {
-      setLoadingRappresentante(false);
+      return;
     }
-  }
 
-  async function prefillFromAV1(
-    studioIdValue: string,
-    av1IdValue: string,
-    clienteIdValue: string
-  ) {
-    const supabase = getSupabaseClient() as any;
+    // 2. leggo il rappresentante tramite tbclienti.rapp_legale_id -> rapp_legali.id
+    const { data: rappRow, error: rappError } = await supabase
+      .from("rapp_legali")
+      .select(`
+        id,
+        nome_cognome,
+        codice_fiscale,
+        luogo_nascita,
+        data_nascita,
+        indirizzo_residenza,
+        citta_residenza,
+        cap_residenza,
+        nazionalita
+      `)
+      .eq("id", rappLegaleId)
+      .single();
 
-    let resolvedClienteId = clienteIdValue || "";
-    let naturaPrestazione = "";
-
-    if (av1IdValue) {
-      const av1Numeric = toNumericOrNull(av1IdValue);
-
-      if (av1Numeric !== null) {
-        const { data: av1Row, error: av1Error } = await supabase
-          .from("tbAV1")
-          .select("id, studio_id, cliente_id, Prestazione")
-          .eq("id", av1Numeric)
-          .maybeSingle();
-
-        if (av1Error) {
-          console.error("Errore caricamento AV1:", av1Error);
-        }
-
-        if (av1Row) {
-          if (!resolvedClienteId && av1Row?.cliente_id != null) {
-            resolvedClienteId = String(av1Row.cliente_id);
-          }
-          naturaPrestazione = av1Row?.Prestazione ?? "";
-        }
-      }
+    if (rappError || !rappRow) {
+      console.error("Errore lettura rapp_legali:", rappError);
+      clearRappresentanteFields();
+      return;
     }
+
+    console.log("rapp_legali.id trovato:", rappRow?.id);
+    console.log("rapp_legali.nome_cognome:", rappRow?.nome_cognome);
 
     setForm((prev) => ({
       ...prev,
-      ...initialFormState(studioIdValue, av1IdValue, resolvedClienteId),
-      studio_id: studioIdValue || prev.studio_id || "",
-      av1_id: av1IdValue || prev.av1_id || "",
-      cliente_id: resolvedClienteId || prev.cliente_id || "",
-      natura_prestazione: naturaPrestazione || "",
+      cliente_id: clienteId,
+      rapp_legale_id: rappLegaleId,
+      dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
+      dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
+      dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
+      dichiarante_data_nascita: normalizeDateForInput(rappRow?.data_nascita),
+      dichiarante_indirizzo_residenza: rappRow?.indirizzo_residenza ?? "",
+      dichiarante_citta_residenza: rappRow?.citta_residenza ?? "",
+      dichiarante_cap_residenza: rappRow?.cap_residenza ?? "",
+      dichiarante_nazionalita: rappRow?.nazionalita ?? "",
     }));
+  } catch (error) {
+    console.error("Errore imprevisto risoluzione cliente/rappresentante:", error);
+    setClienteLabel("");
+    clearRappresentanteFields();
+  } finally {
+    setLoadingRappresentante(false);
+  }
+}
 
-    if (resolvedClienteId) {
-      await resolveClienteAndRappresentante(resolvedClienteId);
-    } else {
-      setClienteLabel("");
-      clearRappresentanteFields();
+async function prefillFromAV1(
+  studioIdValue: string,
+  av1IdValue: string,
+  clienteIdValue: string
+) {
+  const supabase = getSupabaseClient() as any;
+
+  let resolvedClienteId = clienteIdValue || "";
+  let naturaPrestazione = "";
+
+  if (av1IdValue) {
+    const av1Numeric = toNumericOrNull(av1IdValue);
+
+    if (av1Numeric !== null) {
+      const { data: av1Row, error: av1Error } = await supabase
+        .from("tbAV1")
+        .select("id, studio_id, cliente_id, Prestazione")
+        .eq("id", av1Numeric)
+        .single();
+
+      if (av1Error || !av1Row) {
+        console.error("Errore caricamento AV1:", av1Error);
+      } else {
+        resolvedClienteId =
+          av1Row?.cliente_id != null ? String(av1Row.cliente_id) : resolvedClienteId;
+
+        naturaPrestazione = av1Row?.Prestazione ?? "";
+      }
     }
   }
+
+  setForm((prev) => ({
+    ...prev,
+    ...initialFormState(studioIdValue, av1IdValue, resolvedClienteId),
+    studio_id: studioIdValue || prev.studio_id || "",
+    av1_id: av1IdValue || prev.av1_id || "",
+    cliente_id: resolvedClienteId || prev.cliente_id || "",
+    natura_prestazione: naturaPrestazione || "",
+  }));
+
+  if (resolvedClienteId) {
+    await resolveClienteAndRappresentanteFromClienteId(resolvedClienteId);
+  } else {
+    setClienteLabel("");
+    clearRappresentanteFields();
+  }
+}
 
   useEffect(() => {
     void loadClienti();
@@ -543,7 +543,7 @@ export default function ModelloAV4() {
           setForm(mapped);
 
           if (mapped.cliente_id) {
-            await resolveClienteAndRappresentante(mapped.cliente_id);
+            await resolveClienteAndRappresentanteFromClienteId(mapped.cliente_id);
           } else {
             setClienteLabel("");
             clearRappresentanteFields();
@@ -563,16 +563,16 @@ export default function ModelloAV4() {
   }, [router.isReady, initialized, studioId, av1Id, clienteIdFromQuery, av4IdFromQuery]);
 
   useEffect(() => {
-    if (!initialized) return;
+  if (!initialized) return;
 
-    if (!form.cliente_id) {
-      setClienteLabel("");
-      clearRappresentanteFields();
-      return;
-    }
+  if (!form.cliente_id) {
+    setClienteLabel("");
+    clearRappresentanteFields();
+    return;
+  }
 
-    void resolveClienteAndRappresentante(form.cliente_id);
-  }, [form.cliente_id, initialized]);
+  void resolveClienteAndRappresentanteFromClienteId(form.cliente_id);
+}, [form.cliente_id, initialized]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
