@@ -148,16 +148,24 @@ type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   utente_id: string | null;
 
   gruppo_evento?: string | null;
-
-  cliente: ClienteBase | null;
-  utente: UtenteBase | null;
-
+  external_id?: string | null;
+  provider?: string | null;
+  microsoft_event_id?: string | null;
+  outlook_synced?: boolean | null;
+  studio_id?: string | null;
+  riunione_teams?: boolean | null;
+  link_teams?: string | null;
+  evento_generico?: boolean | null;
+  ora_inizio?: string | null;
+  ora_fine?: string | null;
   ricorrente?: boolean | null;
   frequenza_giorni?: number | null;
   durata_giorni?: number | null;
-
   partecipanti?: unknown;
   email_partecipanti_esterni?: unknown;
+
+  cliente: ClienteBase | null;
+  utente: UtenteBase | null;
 };
 
 type EventoGroup = {
