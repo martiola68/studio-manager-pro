@@ -386,23 +386,8 @@ export default function ModelloAV1Page() {
     }));
   };
 
-  const handleNuovo = () => {
-    setFormData((prev) => ({
-      ...initialFormData,
-      studio_id: prev.studio_id,
-      A1: 1,
-      A2: 1,
-      A3: 1,
-      A4: 1,
-      B1: 1,
-      B2: 1,
-      B3: 1,
-      B4: 1,
-      B5: 1,
-      B6: 1,
-    }));
-
-    router.replace("/antiriciclaggio/modello-av1");
+  const handleChiudiModello = () => {
+    router.push("/antiriciclaggio");
   };
 
   const handleSave = async () => {
@@ -512,11 +497,8 @@ export default function ModelloAV1Page() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Dati principali</CardTitle>
-          <Button type="button" variant="outline" onClick={handleNuovo}>
-            Nuovo AV1
-          </Button>
         </CardHeader>
 
         <CardContent>
@@ -771,24 +753,6 @@ export default function ModelloAV1Page() {
                 onClick={() => {
                   const av1Id = router.query.id || formData.id;
                   if (!av1Id) {
-                    alert("Salva prima il record AV1.");
-                    return;
-                  }
-
-                  router.push(
-                    `/antiriciclaggio/modello-av4?studio_id=${formData.studio_id ?? ""}&av1_id=${av1Id}&cliente_id=${formData.cliente_id ?? ""}`
-                  );
-                }}
-              >
-                Crea AV4
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  const av1Id = router.query.id || formData.id;
-                  if (!av1Id) {
                     alert("Salva prima il record AV1, poi potrai stamparlo.");
                     return;
                   }
@@ -796,6 +760,10 @@ export default function ModelloAV1Page() {
                 }}
               >
                 Stampa AV1
+              </Button>
+
+              <Button type="button" variant="outline" onClick={handleChiudiModello}>
+                Chiudi Modello
               </Button>
             </div>
           </div>
