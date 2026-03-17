@@ -383,6 +383,23 @@ export default function ModelloAV4() {
     alert("Amministratore importato correttamente.");
   }
 
+  function handleNuovoRappresentante() {
+    if (!form.cliente_id) {
+      alert("Cliente non valorizzato.");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      from: "av4",
+      cliente_id: form.cliente_id,
+      av1_id: form.av1_id || "",
+      av4_id: av4Id || "",
+      returnTo: `/antiriciclaggio/modello-av4?studio_id=${form.studio_id || ""}&av1_id=${form.av1_id || ""}&cliente_id=${form.cliente_id || ""}${av4Id ? `&id=${av4Id}` : ""}`,
+    });
+
+    router.push(`/antiriciclaggio/rappresentanti/nuovo?${params.toString()}`);
+  }
+
   async function prefillFromAV1(
     studioIdValue: string,
     av1IdValue: string,
@@ -530,6 +547,13 @@ export default function ModelloAV4() {
     clienteIdFromQuery,
     av4IdFromQuery,
   ]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.rapp_saved === "1" && form.cliente_id) {
+      void hydrateClienteAndRappresentante(form.cliente_id);
+    }
+  }, [router.isReady, router.query.rapp_saved, form.cliente_id]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -773,7 +797,7 @@ export default function ModelloAV4() {
               </p>
             </div>
 
-            <div>
+            <div className="flex flex-wrap gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -783,6 +807,15 @@ export default function ModelloAV4() {
                 {loadingRappresentante
                   ? "Importazione amministratore..."
                   : "Importa amministratore da cliente"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleNuovoRappresentante}
+                disabled={!form.cliente_id}
+              >
+                Nuovo rappresentante
               </Button>
             </div>
 
