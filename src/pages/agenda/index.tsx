@@ -147,6 +147,8 @@ type EventoWithRelations = Omit<AgendaRow, "cliente_id" | "utente_id"> & {
   cliente_id: string | null;
   utente_id: string | null;
 
+  gruppo_evento?: string | null;
+
   cliente: ClienteBase | null;
   utente: UtenteBase | null;
 
