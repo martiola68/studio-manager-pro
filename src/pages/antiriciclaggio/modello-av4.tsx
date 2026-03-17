@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
+import TitolariDaRappLegaliForm from "@/components/antiriciclaggio/TitolariDaRappLegaliForm";
 
 type ClienteOption = {
   id: string;
