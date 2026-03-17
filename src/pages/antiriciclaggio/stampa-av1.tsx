@@ -13,7 +13,7 @@ type Cliente = {
 };
 
 type AV1Record = {
-  id: number;
+  id: number | string;
   studio_id?: string | null;
   cliente_id?: string | null;
   Prestazione?: string | null;
@@ -123,8 +123,12 @@ const av1Labels = {
 
 function formatDate(dateString?: string | null) {
   if (!dateString) return "-";
-  const [y, m, d] = dateString.split("-");
-  if (!y || !m || !d) return dateString;
+  const normalized = String(dateString).includes("T")
+    ? String(dateString).split("T")[0]
+    : String(dateString);
+
+  const [y, m, d] = normalized.split("-");
+  if (!y || !m || !d) return normalized;
   return `${d}/${m}/${y}`;
 }
 
@@ -137,6 +141,27 @@ function getClienteLabel(cliente?: Cliente | null) {
     `${cliente.nome || ""} ${cliente.cognome || ""}`.trim() ||
     cliente.id
   );
+}
+
+function toNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getCategoriaRischio(value: number) {
+  if (value <= 1.5) return "non";
+  if (value <= 2.5) return "poco";
+  if (value <= 3.5) return "abbastanza";
+  return "molto";
+}
+
+function isActiveMatrixCell(
+  row: string,
+  col: string,
+  categoriaInerente: string,
+  categoriaVulnerabilita: string
+) {
+  return categoriaInerente === row && categoriaVulnerabilita === col;
 }
 
 function Checked({ value }: { value: boolean }) {
@@ -162,15 +187,41 @@ export default function StampaAV1Page() {
 
   const matrices = useMemo(() => {
     if (!record) return null;
+
+    const TotA =
+      record.TotA ??
+      (toNumber(record.A1) + toNumber(record.A2) + toNumber(record.A3) + toNumber(record.A4));
+
+    const TotB =
+      record.TotB ??
+      (toNumber(record.B1) +
+        toNumber(record.B2) +
+        toNumber(record.B3) +
+        toNumber(record.B4) +
+        toNumber(record.B5) +
+        toNumber(record.B6));
+
+    const MediaPunteggio =
+      record.MediaPunteggio ?? Number(((TotA + TotB) / 10).toFixed(2));
+
+    const RisInerentePonderato = toNumber(record.RisInerentePonderato);
+    const RisSpecificoPonderato = toNumber(record.RisSpecificoPonderato);
+    const RischioEffettivo = toNumber(record.RischioEffettivo);
+
+    const categoriaInerente = getCategoriaRischio(RisInerentePonderato);
+    const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
+
     return {
-      TotA: record.TotA ?? 0,
-      TotB: record.TotB ?? 0,
-      MediaPunteggio: record.MediaPunteggio ?? 0,
+      TotA,
+      TotB,
+      MediaPunteggio,
       LivelloRischio: record.LivelloRischio ?? "-",
-      RisInerentePonderato: record.RisInerentePonderato ?? 0,
-      RisSpecificoPonderato: record.RisSpecificoPonderato ?? 0,
-      RischioEffettivo: record.RischioEffettivo ?? 0,
+      RisInerentePonderato,
+      RisSpecificoPonderato,
+      RischioEffettivo,
       AdeguataVerifica: record.AdeguataVerifica ?? "-",
+      categoriaInerente,
+      categoriaVulnerabilita,
     };
   }, [record]);
 
@@ -265,9 +316,7 @@ export default function StampaAV1Page() {
         <div className="max-w-4xl mx-auto bg-white p-8 text-[12px] leading-5 text-black">
           <div className="border-b-2 border-black pb-4 mb-6">
             <h1 className="text-2xl font-bold uppercase">Modello AV1</h1>
-            <p className="text-sm">
-              Scheda di valutazione del rischio antiriciclaggio
-            </p>
+            <p className="text-sm">Scheda di valutazione del rischio antiriciclaggio</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6 print-section">
@@ -372,13 +421,291 @@ export default function StampaAV1Page() {
             </div>
           </div>
 
+          <div
+            className="mb-6 mt-10 print-section"
+            style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+          >
+            <h2 className="text-lg font-bold border-b border-black pb-1 mb-4">
+              Matrice del rischio
+            </h2>
+
+            <div className="overflow-hidden border border-gray-500">
+              <div className="grid grid-cols-5">
+                <div className="border border-gray-400 p-4 flex items-center justify-center font-bold text-center bg-gray-100">
+                  RISCHIO INERENTE 40%
+                </div>
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
+                  Non significativo
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativo
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativo
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativo
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativo
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "molto",
+                      "non",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "molto",
+                      "poco",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "molto",
+                      "abbastanza",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-red-400 ${
+                    isActiveMatrixCell(
+                      "molto",
+                      "molto",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativo
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "abbastanza",
+                      "non",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "abbastanza",
+                      "poco",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "abbastanza",
+                      "abbastanza",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "abbastanza",
+                      "molto",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativo
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div
+                  className={`border border-gray-400 h-24 bg-green-300 ${
+                    isActiveMatrixCell(
+                      "poco",
+                      "non",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "poco",
+                      "poco",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "poco",
+                      "abbastanza",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "poco",
+                      "molto",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-300">
+                  Non significativo
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div
+                  className={`border border-gray-400 h-24 bg-green-300 ${
+                    isActiveMatrixCell(
+                      "non",
+                      "non",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "non",
+                      "poco",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-yellow-200 ${
+                    isActiveMatrixCell(
+                      "non",
+                      "abbastanza",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+                <div
+                  className={`border border-gray-400 h-24 bg-orange-300 ${
+                    isActiveMatrixCell(
+                      "non",
+                      "molto",
+                      matrices?.categoriaInerente || "",
+                      matrices?.categoriaVulnerabilita || ""
+                    )
+                      ? "border-4 border-black"
+                      : ""
+                  }`}
+                />
+              </div>
+
+              <div className="grid grid-cols-5">
+                <div className="border border-gray-400 p-4 bg-gray-100" />
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
+                  Non significativa
+                  <div className="text-sm font-normal">1 - 1,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
+                  Poco significativa
+                  <div className="text-sm font-normal">1,6 - 2,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
+                  Abbastanza significativa
+                  <div className="text-sm font-normal">2,6 - 3,5</div>
+                </div>
+                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
+                  Molto significativa
+                  <div className="text-sm font-normal">3,6 - 4</div>
+                </div>
+
+                <div className="col-span-5 border border-gray-400 p-4 text-center text-xl font-bold bg-gray-100">
+                  VULNERABILITÀ 60%
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 text-sm">
+              <strong>Rischio inerente ponderato:</strong> {matrices?.RisInerentePonderato}{" "}
+              &nbsp; | &nbsp;
+              <strong>Vulnerabilità:</strong> {matrices?.MediaPunteggio}
+            </div>
+          </div>
+
           <div className="mt-10 pt-6 border-t border-black print-section">
             <div className="grid grid-cols-2 gap-10">
               <div>
                 <div className="mb-10">Luogo e data: __________________________</div>
               </div>
               <div>
-                <div className="mb-10 text-right">Firma professionista: __________________________</div>
+                <div className="mb-10 text-right">
+                  Firma professionista: __________________________
+                </div>
               </div>
             </div>
           </div>
