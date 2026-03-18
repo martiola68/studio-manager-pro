@@ -478,7 +478,7 @@ export default function AntiriciclaggioPage() {
                             title="Apri AV1"
                           >
                             <img
-                              src="/icons/av1.png"
+                              src="/av1.png"
                               alt="AV1"
                               className="h-14 w-14 rounded-[24px] object-contain"
                             />
@@ -494,7 +494,7 @@ export default function AntiriciclaggioPage() {
                             title="Apri AV2"
                           >
                             <img
-                              src="/icons/av2.png"
+                              src="/av2.png"
                               alt="AV2"
                               className="h-14 w-14 rounded-[24px] object-contain"
                             />
@@ -510,7 +510,7 @@ export default function AntiriciclaggioPage() {
                             title="Apri AV4"
                           >
                             <img
-                              src="/icons/av4.png"
+                              src="/av4.png"
                               alt="AV4"
                               className="h-14 w-14 rounded-[24px] object-contain"
                             />
