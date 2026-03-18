@@ -509,14 +509,14 @@ export default function AntiriciclaggioPage() {
     </button>
 
     {/* CESTINO */}
-    <button
-      type="button"
-      onClick={() => handleEliminaCompleto(row.id)}
-      className="flex h-7 w-7 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-      title="Elimina record completo"
-    >
-      <span className="text-xl">🗑️</span>
-    </button>
+   <button
+  type="button"
+  onClick={() => handleEliminaCompleto(row.id)}
+  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition hover:scale-105 hover:bg-red-700"
+  title="Elimina record completo"
+>
+  <span className="text-sm">🗑️</span>
+</button>
 
   </div>
 </td>
