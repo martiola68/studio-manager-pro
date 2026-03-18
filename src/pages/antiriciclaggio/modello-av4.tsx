@@ -188,18 +188,17 @@ function mapDbRowToForm(row: any): FormState {
 
     natura_prestazione: row?.natura_prestazione ?? "",
 
-    domanda1: Boolean(row?.domanda1),
-    domanda2: Boolean(row?.domanda2),
+domanda1: !!row?.domanda1,
+domanda2: !!row?.domanda2,
+domanda3: !!row?.domanda3,
+domanda4: !!row?.domanda4,
+domanda5: !!row?.domanda5,
+spec_domanda5: row?.spec_domanda5 ?? "",
 
-    domanda3: Boolean(row?.domanda3),
-    domanda4: Boolean(row?.domanda4),
-    domanda5: Boolean(row?.domanda5),
-    spec_domanda5: row?.spec_domanda5 ?? "",
-
-    domanda6: Boolean(row?.domanda6),
-    domanda7: Boolean(row?.domanda7),
-    domanda8: Boolean(row?.domanda8),
-    domanda9: Boolean(row?.domanda9),
+domanda6: !!row?.domanda6,
+domanda7: !!row?.domanda7,
+domanda8: !!row?.domanda8,
+domanda9: !!row?.domanda9,
 
     nome_soc: row?.nome_soc ?? "",
     sede_legale: row?.sede_legale ?? "",
@@ -216,8 +215,8 @@ function mapDbRowToForm(row: any): FormState {
     cod_fiscale_soc_bis: row?.cod_fiscale_soc_bis ?? "",
     nome_soc_ter: row?.nome_soc_ter ?? "",
 
-    domanda10: Boolean(row?.domanda10),
-    domanda11: Boolean(row?.domanda11),
+    domanda10: !!row?.domanda10,
+domanda11: !!row?.domanda11,
     specifica12: row?.specifica12 ?? "",
 
     specifica10b: row?.specifica10b ?? "",
@@ -752,17 +751,17 @@ useEffect(() => {
 
         natura_prestazione: form.natura_prestazione || null,
 
-        domanda1: form.domanda1,
-        domanda2: form.domanda2,
-        domanda3: form.domanda3,
-        domanda4: form.domanda4,
-        domanda5: form.domanda5,
+        domanda1: !!form.domanda1,
+        domanda2: !!form.domanda2,
+        domanda3: !!form.domanda3,
+        domanda4: !!form.domanda4,
+        domanda5: !!form.domanda5,
         spec_domanda5: form.spec_domanda5 || null,
 
-        domanda6: form.domanda6,
-        domanda7: form.domanda7,
-        domanda8: form.domanda8,
-        domanda9: form.domanda9,
+        domanda6: !!form.domanda6,
+        domanda7: !!form.domanda7,
+        domanda8: !!form.domanda8,
+        domanda9: !!form.domanda9,
 
         nome_soc: form.nome_soc || null,
         sede_legale: form.sede_legale || null,
@@ -779,8 +778,8 @@ useEffect(() => {
         cod_fiscale_soc_bis: form.cod_fiscale_soc_bis || null,
         nome_soc_ter: form.nome_soc_ter || null,
 
-        domanda10: form.domanda10,
-        domanda11: form.domanda11,
+        domanda10: !!form.domanda10,
+        domanda11: !!form.domanda11,
         specifica12: form.specifica12 || null,
 
         specifica10b: form.specifica10b || null,
