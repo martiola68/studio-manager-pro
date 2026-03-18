@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { getStudioId } from "@/services/getStudioId";
+import { useRouter } from "next/router";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AV2_CHECKLIST } from "@/config/av2Checklist";
-import { getStudioId } from "@/lib/getStudioId";
 
 type Cliente = {
   id: string;
   cod_cliente?: string | null;
   ragione_sociale?: string | null;
+  codice_fiscale?: string | null;
+  partita_iva?: string | null;
 };
 
 type AV2FormState = {
@@ -16,10 +20,12 @@ type AV2FormState = {
   cliente_id: string;
   data_check: string;
   firma_check: string;
-} & Record<string, boolean | string | undefined>;
+  [key: string]: string | boolean | undefined;
+};
 
 const buildInitialForm = (studioId: string): AV2FormState => {
   const base: AV2FormState = {
+    id: "",
     studio_id: studioId,
     cliente_id: "",
     data_check: "",
@@ -37,20 +43,23 @@ const buildInitialForm = (studioId: string): AV2FormState => {
 const formatClienteLabel = (cliente: Cliente) => {
   if (cliente.ragione_sociale) return cliente.ragione_sociale;
   if (cliente.cod_cliente) return cliente.cod_cliente;
-  return "Cliente";
+  return cliente.id;
 };
 
+function normalizeDateValue(value: unknown) {
+  if (!value) return "";
+  const str = String(value);
+  return str.includes("T") ? str.split("T")[0] : str;
+}
+
 export default function ModelloAV2Page() {
+  const router = useRouter();
   const [studioId, setStudioId] = useState<string>("");
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [form, setForm] = useState<AV2FormState>(buildInitialForm(""));
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
-  const [messaggio, setMessaggio] = useState<string>("");
-
-  useEffect(() => {
-    void bootstrapPage();
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   const clienteSelezionato = useMemo(
     () => clienti.find((c) => c.id === form.cliente_id) || null,
@@ -60,40 +69,33 @@ export default function ModelloAV2Page() {
   const bootstrapPage = async () => {
     try {
       setLoading(true);
-      setMessaggio("");
+      setError(null);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const currentStudioId = await getStudioId();
 
-      const user = session?.user;
-      if (!user) {
-        setMessaggio("Sessione non trovata.");
+      if (!currentStudioId) {
+        setError("Studio ID non trovato nella sessione.");
         return;
       }
 
-const currentStudioId = await getStudioId();
+      setStudioId(currentStudioId);
+      setForm(buildInitialForm(currentStudioId));
 
-if (!currentStudioId) {
-  setMessaggio("Studio ID non trovato nella sessione.");
-  return;
-}
+      const { data: clientiData, error: clientiError } = await (supabase as any)
+        .from("tbclienti")
+        .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
+        .eq("studio_id", currentStudioId)
+        .order("ragione_sociale", { ascending: true });
 
-setStudioId(currentStudioId);
-setForm(buildInitialForm(currentStudioId));
+      if (clientiError) {
+        setError(clientiError.message);
+        return;
+      }
 
-  const { data: clientiData, error: clientiError } = await (supabase as any)
-  .from("tbclienti")
-  .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
-  .eq("studio_id", currentStudioId)
-  .order("ragione_sociale", { ascending: true });
-      
-      if (clientiError) throw clientiError;
-
-      setClienti(clientiData || []);
-    } catch (error) {
-      console.error("Errore bootstrap AV2:", error);
-      setMessaggio("Errore durante il caricamento iniziale.");
+      setClienti((clientiData || []) as Cliente[]);
+    } catch (err: any) {
+      console.error("Errore bootstrap AV2:", err);
+      setError(err?.message || "Errore durante il caricamento iniziale.");
     } finally {
       setLoading(false);
     }
@@ -104,23 +106,29 @@ setForm(buildInitialForm(currentStudioId));
       if (!clienteId || !studioId) return;
 
       setLoading(true);
-      setMessaggio("");
+      setError(null);
 
       const { data, error } = await (supabase as any)
-  .from("tbAV2")
-  .select("*")
-  .eq("studio_id", studioId)
-  .eq("cliente_id", clienteId)
-  .maybeSingle();
+        .from("tbAV2")
+        .select("*")
+        .eq("studio_id", studioId)
+        .eq("cliente_id", clienteId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        setError(error.message);
+        return;
+      }
 
       if (data) {
         const nextForm: AV2FormState = {
           ...buildInitialForm(studioId),
           ...data,
-          data_check: data.data_check || "",
-          firma_check: data.firma_check || "",
+          id: String(data.id),
+          studio_id: data.studio_id ?? studioId,
+          cliente_id: data.cliente_id ?? clienteId,
+          data_check: normalizeDateValue(data.data_check),
+          firma_check: data.firma_check ?? "",
         };
 
         setForm(nextForm);
@@ -129,17 +137,19 @@ setForm(buildInitialForm(currentStudioId));
         emptyForm.cliente_id = clienteId;
         setForm(emptyForm);
       }
-    } catch (error) {
-      console.error("Errore caricamento AV2:", error);
-      setMessaggio("Errore nel caricamento della scheda AV2.");
+    } catch (err: any) {
+      console.error("Errore caricamento AV2:", err);
+      setError(err?.message || "Errore nel caricamento della scheda AV2.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClienteChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  useEffect(() => {
+    bootstrapPage();
+  }, []);
+
+  const handleClienteChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const clienteId = e.target.value;
 
     setForm((prev) => ({
@@ -169,15 +179,15 @@ setForm(buildInitialForm(currentStudioId));
   const handleSave = async () => {
     try {
       setSaving(true);
-      setMessaggio("");
+      setError(null);
 
       if (!studioId) {
-        setMessaggio("Studio non disponibile.");
+        alert("Studio non disponibile.");
         return;
       }
 
       if (!form.cliente_id) {
-        setMessaggio("Seleziona un cliente.");
+        alert("Seleziona un cliente.");
         return;
       }
 
@@ -193,157 +203,198 @@ setForm(buildInitialForm(currentStudioId));
         payload[`annotazioni${i}`] = String(form[`annotazioni${i}`] || "");
       }
 
+      let savedId = form.id || "";
+
       if (form.id) {
         const { error } = await (supabase as any)
-        .from("tbAV2")
-        .update(payload)
-        .eq("id", form.id);
+          .from("tbAV2")
+          .update(payload)
+          .eq("id", form.id);
 
-        if (error) throw error;
+        if (error) {
+          setError(error.message);
+          setSaving(false);
+          return;
+        }
       } else {
         const { data, error } = await (supabase as any)
-  .from("tbAV2")
-  .insert([payload])
-  .select()
-  .single();
+          .from("tbAV2")
+          .insert([payload])
+          .select("id")
+          .single();
 
-        if (error) throw error;
-
-        if (data) {
-          setForm((prev) => ({
-            ...prev,
-            ...data,
-          }));
+        if (error) {
+          setError(error.message);
+          setSaving(false);
+          return;
         }
+
+        savedId = String(data.id);
       }
 
-      setMessaggio("Scheda AV2 salvata correttamente.");
-    } catch (error) {
-      console.error("Errore salvataggio AV2:", error);
-      setMessaggio("Errore durante il salvataggio della scheda AV2.");
-    } finally {
+      setForm((prev) => ({
+        ...prev,
+        id: savedId,
+      }));
+
+      alert("Scheda AV2 salvata correttamente.");
+      setSaving(false);
+
+      if (savedId) {
+        router.replace(`/antiriciclaggio/modello-av2?id=${savedId}`);
+      }
+    } catch (err: any) {
+      console.error("Errore salvataggio AV2:", err);
+      setError(err?.message || "Errore durante il salvataggio della scheda AV2.");
       setSaving(false);
     }
   };
 
+  const handleChiudiModello = () => {
+    router.push("/antiriciclaggio");
+  };
+
   return (
-    <div className="w-full px-6 py-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">
-            AV.2 – CHECK-LIST AI FINI DELLA FORMAZIONE DEL FASCICOLO DEL CLIENTE
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Gestione documentazione e annotazioni professionista.
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">
+          AV.2 – CHECK-LIST AI FINI DELLA FORMAZIONE DEL FASCICOLO DEL CLIENTE
+        </h1>
+        <p className="text-gray-500 mt-1">
+          Gestione documentazione e annotazioni professionista
+        </p>
+      </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700">
-                Cliente
-              </label>
-              <select
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-                value={form.cliente_id}
-                onChange={handleClienteChange}
-                disabled={loading || saving}
-              >
-                <option value="">Seleziona cliente</option>
-                {clienti.map((cliente) => (
-                  <option key={cliente.id} value={cliente.id}>
-                    {formatClienteLabel(cliente)}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Dati principali</CardTitle>
+        </CardHeader>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
-                Data check
-              </label>
-              <input
-                type="date"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
-                value={form.data_check || ""}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    data_check: e.target.value,
-                  }))
-                }
-                disabled={loading || saving}
-              />
-            </div>
-          </div>
+        <CardContent>
+          {loading ? (
+            <p>Caricamento...</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Cliente</label>
+                <select
+                  className="w-full border rounded-md px-3 py-2"
+                  value={form.cliente_id}
+                  onChange={handleClienteChange}
+                >
+                  <option value="">Seleziona cliente</option>
+                  {clienti.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {formatClienteLabel(cliente)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {clienteSelezionato && (
-            <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              <span className="font-semibold">Cliente selezionato:</span>{" "}
-              {formatClienteLabel(clienteSelezionato)}
+              <div>
+                <label className="block text-sm font-medium mb-1">Data check</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-md px-3 py-2"
+                  value={form.data_check || ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      data_check: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              {clienteSelezionato && (
+                <div className="md:col-span-3">
+                  <div className="rounded-md bg-gray-50 border px-4 py-3 text-sm text-gray-700">
+                    <span className="font-semibold">Cliente selezionato:</span>{" "}
+                    {formatClienteLabel(clienteSelezionato)}
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="md:col-span-3">
+                  <p className="text-red-600 text-sm">Errore: {error}</p>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid grid-cols-12 gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-800">
-            <div className="col-span-1 text-center">X</div>
-            <div className="col-span-3">DOCUMENTAZIONE</div>
-            <div className="col-span-4">OSSERVAZIONI</div>
-            <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
-          </div>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Check-list fascicolo cliente</CardTitle>
+        </CardHeader>
 
-          {AV2_CHECKLIST.map((item) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-12 gap-3 border-b border-slate-100 px-4 py-4"
-            >
-              <div className="col-span-1 flex items-start justify-center pt-1">
-                <input
-                  type="checkbox"
-                  checked={Boolean(form[`spunta${item.id}`])}
-                  onChange={(e) =>
-                    handleCheckboxChange(item.id, e.target.checked)
-                  }
-                  disabled={loading || saving}
-                  className="h-4 w-4"
-                />
+        <CardContent>
+          <div className="overflow-x-auto">
+            <div className="min-w-[1200px]">
+              <div className="grid grid-cols-12 gap-3 border-b pb-3 mb-4 font-semibold text-sm">
+                <div className="col-span-1 text-center">X</div>
+                <div className="col-span-3">DOCUMENTAZIONE</div>
+                <div className="col-span-4">OSSERVAZIONI</div>
+                <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
               </div>
 
-              <div className="col-span-3 whitespace-pre-line text-sm text-slate-900">
-                {item.documento}
-              </div>
+              <div className="space-y-4">
+                {AV2_CHECKLIST.map((item) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-12 gap-3 border rounded-lg p-4"
+                  >
+                    <div className="col-span-1 flex justify-center items-start pt-1">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(form[`spunta${item.id}`])}
+                        onChange={(e) =>
+                          handleCheckboxChange(item.id, e.target.checked)
+                        }
+                      />
+                    </div>
 
-              <div className="col-span-4 whitespace-pre-line text-sm text-slate-600">
-                {item.osservazioni || "-"}
-              </div>
+                    <div className="col-span-3 text-sm whitespace-pre-line">
+                      {item.documento}
+                    </div>
 
-              <div className="col-span-4">
-                <textarea
-                  rows={5}
-                  className="min-h-[120px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
-                  value={String(form[`annotazioni${item.id}`] || "")}
-                  onChange={(e) =>
-                    handleAnnotazioneChange(item.id, e.target.value)
-                  }
-                  disabled={loading || saving}
-                  placeholder="Inserisci annotazioni..."
-                />
+                    <div className="col-span-4 text-sm text-gray-700 whitespace-pre-line">
+                      {item.osservazioni || "-"}
+                    </div>
+
+                    <div className="col-span-4">
+                      <textarea
+                        rows={5}
+                        className="w-full border rounded-md px-3 py-2 text-sm"
+                        value={String(form[`annotazioni${item.id}`] || "")}
+                        onChange={(e) =>
+                          handleAnnotazioneChange(item.id, e.target.value)
+                        }
+                        placeholder="Inserisci annotazioni..."
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Chiusura check-list</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
-                Firma check
-              </label>
+              <label className="block text-sm font-medium mb-1">Firma check</label>
               <input
                 type="text"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500"
+                className="w-full border rounded-md px-3 py-2"
                 value={form.firma_check || ""}
                 onChange={(e) =>
                   setForm((prev) => ({
@@ -351,30 +402,22 @@ setForm(buildInitialForm(currentStudioId));
                     firma_check: e.target.value,
                   }))
                 }
-                disabled={loading || saving}
                 placeholder="Firma professionista"
               />
             </div>
-          </div>
 
-          {messaggio && (
-            <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
-              {messaggio}
+            <div className="md:col-span-2 flex justify-end gap-3 pt-3 flex-wrap">
+              <Button onClick={handleSave} disabled={saving || loading}>
+                {saving ? "Salvataggio..." : "Salva AV2"}
+              </Button>
+
+              <Button type="button" variant="outline" onClick={handleChiudiModello}>
+                Chiudi Modello
+              </Button>
             </div>
-          )}
-
-          <div className="mt-5 flex justify-end">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={loading || saving}
-              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? "Salvataggio..." : "Salva AV2"}
-            </button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
