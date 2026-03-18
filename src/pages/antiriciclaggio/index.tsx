@@ -15,8 +15,9 @@ type AV1Row = {
   cliente_id?: string | null;
   DataVerifica?: string | null;
   ScadenzaVerifica?: string | null;
-  AV4Generato?: boolean | null;
   AV1Conferma?: boolean | null;
+  AV2Generato?: boolean | null;
+  AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
 };
 
@@ -25,21 +26,32 @@ export default function AntiriciclaggioPage() {
 
   const [rows, setRows] = useState<AV1Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [workingId, setWorkingId] = useState<string | null>(null);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
-    const [y, m, d] = dateString.split("-");
+
+    const normalized = dateString.includes("T")
+      ? dateString.split("T")[0]
+      : dateString;
+
+    const [y, m, d] = normalized.split("-");
+    if (!y || !m || !d) return dateString;
+
     return `${d}/${m}/${y}`;
   };
 
   const getScadenzaStatus = (dateString?: string | null) => {
     if (!dateString) return "none";
 
+    const normalized = dateString.includes("T")
+      ? dateString.split("T")[0]
+      : dateString;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const scadenza = new Date(dateString);
+    const scadenza = new Date(normalized);
     scadenza.setHours(0, 0, 0, 0);
 
     const diffDays = Math.ceil(
@@ -56,7 +68,9 @@ export default function AntiriciclaggioPage() {
 
     if (scadenzaStatus === "expired") return "bg-red-100";
     if (scadenzaStatus === "warning") return "bg-orange-50";
-    if (!row.AV4Generato) return "bg-red-50";
+    if (!row.AV1Conferma || !row.AV2Generato || !row.AV4Generato) {
+      return "bg-red-50";
+    }
 
     return "";
   };
@@ -75,7 +89,7 @@ export default function AntiriciclaggioPage() {
 
     if (scadenzaStatus === "expired") {
       return {
-        icon: "🔴",
+        dotClass: "bg-red-500",
         text: "Scaduta",
         className: "text-red-700 font-bold",
       };
@@ -83,25 +97,47 @@ export default function AntiriciclaggioPage() {
 
     if (scadenzaStatus === "warning") {
       return {
-        icon: "🟠",
+        dotClass: "bg-orange-500",
         text: "In scadenza",
         className: "text-orange-600 font-semibold",
       };
     }
 
+    if (!row.AV1Conferma) {
+      return {
+        dotClass: "bg-red-500",
+        text: "AV1 da confermare",
+        className: "text-red-700 font-semibold",
+      };
+    }
+
+    if (!row.AV2Generato) {
+      return {
+        dotClass: "bg-red-500",
+        text: "AV2 da generare",
+        className: "text-red-700 font-semibold",
+      };
+    }
+
     if (!row.AV4Generato) {
       return {
-        icon: "🟡",
+        dotClass: "bg-red-500",
         text: "AV4 da generare",
-        className: "text-yellow-600 font-semibold",
+        className: "text-red-700 font-semibold",
       };
     }
 
     return {
-      icon: "🟢",
+      dotClass: "bg-green-500",
       text: "Completa",
       className: "text-green-700 font-semibold",
     };
+  };
+
+  const getIconBorderClass = (enabled: boolean) => {
+    return enabled
+      ? "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]"
+      : "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
   };
 
   const loadRows = async () => {
@@ -119,8 +155,9 @@ export default function AntiriciclaggioPage() {
           cliente_id,
           DataVerifica,
           ScadenzaVerifica,
-          AV4Generato,
           AV1Conferma,
+          AV2Generato,
+          AV4Generato,
           tbclienti (
             id,
             cod_cliente,
@@ -128,7 +165,6 @@ export default function AntiriciclaggioPage() {
             codice_fiscale
           )
         `)
-        .eq("AV1Conferma", true)
         .order("DataVerifica", { ascending: false });
 
       if (error) {
@@ -161,82 +197,123 @@ export default function AntiriciclaggioPage() {
     router.push("/antiriciclaggio/modello-av1");
   };
 
-  const handleModificaAV1 = (id: string) => {
+  const handleApriAV1 = (id: string) => {
     router.push(`/antiriciclaggio/modello-av1?id=${id}`);
   };
 
-  const handleModificaAV4 = async (av1Id: string) => {
+  const handleApriAV2 = async (row: AV1Row) => {
     try {
+      setWorkingId(row.id);
+
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
 
-      const { data, error } = await supabaseAny
-        .from("tbAV4")
+      const { data: av2, error: av2Error } = await supabaseAny
+        .from("tbAV2")
         .select("id")
-        .eq("av1_id", av1Id)
+        .eq("av1_id", row.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("Errore ricerca AV4:", error);
-        alert("Errore durante la ricerca del modello AV4.");
+      if (av2Error) {
+        console.error("Errore ricerca AV2:", av2Error);
+        alert("Errore durante la ricerca del modello AV2.");
         return;
       }
 
-      if (data?.id) {
-        router.push(`/antiriciclaggio/modello-av4?id=${data.id}&av1_id=${av1Id}`);
-      } else {
-        router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+      if (!row.AV2Generato) {
+        const { error: updateError } = await supabaseAny
+          .from("tbAV1")
+          .update({ AV2Generato: true })
+          .eq("id", row.id);
+
+        if (updateError) {
+          console.error("Errore aggiornamento AV2Generato:", updateError);
+          alert("Errore durante l'aggiornamento del flag AV2.");
+          return;
+        }
       }
-    } catch (err) {
-      console.error("Errore apertura AV4:", err);
-      alert("Errore durante l'apertura del modello AV4.");
-    }
-  };
-
-  const handleGeneraAV4 = async (av1Id: string) => {
-    try {
-      setGeneratingId(av1Id);
-
-      const supabase = getSupabaseClient();
-      const supabaseAny = supabase as any;
-
-      const { error: updateError } = await supabaseAny
-        .from("tbAV1")
-        .update({ AV4Generato: true })
-        .eq("id", av1Id);
-
-      if (updateError) throw updateError;
-
-      const { data: av4, error: av4SearchError } = await supabaseAny
-        .from("tbAV4")
-        .select("id")
-        .eq("av1_id", av1Id)
-        .maybeSingle();
-
-      if (av4SearchError) throw av4SearchError;
 
       await loadRows();
 
-      if (av4?.id) {
-        router.push(`/antiriciclaggio/modello-av4?id=${av4.id}&av1_id=${av1Id}`);
+      if (av2?.id) {
+        router.push(
+          `/antiriciclaggio/modello-av2?id=${av2.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+        );
       } else {
-        router.push(`/antiriciclaggio/modello-av4?av1_id=${av1Id}`);
+        router.push(
+          `/antiriciclaggio/modello-av2?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+        );
       }
     } catch (err: any) {
-      console.error("Errore generazione AV4:", err);
+      console.error("Errore apertura AV2:", err);
       alert(
-        `Errore durante la generazione di AV4: ${
+        `Errore durante l'apertura del modello AV2: ${
           err?.message || "errore sconosciuto"
         }`
       );
     } finally {
-      setGeneratingId(null);
+      setWorkingId(null);
+    }
+  };
+
+  const handleApriAV4 = async (row: AV1Row) => {
+    try {
+      setWorkingId(row.id);
+
+      const supabase = getSupabaseClient();
+      const supabaseAny = supabase as any;
+
+      const { data: av4, error: av4Error } = await supabaseAny
+        .from("tbAV4")
+        .select("id")
+        .eq("av1_id", row.id)
+        .maybeSingle();
+
+      if (av4Error) {
+        console.error("Errore ricerca AV4:", av4Error);
+        alert("Errore durante la ricerca del modello AV4.");
+        return;
+      }
+
+      if (!row.AV4Generato) {
+        const { error: updateError } = await supabaseAny
+          .from("tbAV1")
+          .update({ AV4Generato: true })
+          .eq("id", row.id);
+
+        if (updateError) {
+          console.error("Errore aggiornamento AV4Generato:", updateError);
+          alert("Errore durante l'aggiornamento del flag AV4.");
+          return;
+        }
+      }
+
+      await loadRows();
+
+      if (av4?.id) {
+        router.push(
+          `/antiriciclaggio/modello-av4?id=${av4.id}&av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+        );
+      } else {
+        router.push(
+          `/antiriciclaggio/modello-av4?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}&studio_id=${row.studio_id || ""}`
+        );
+      }
+    } catch (err: any) {
+      console.error("Errore apertura AV4:", err);
+      alert(
+        `Errore durante l'apertura del modello AV4: ${
+          err?.message || "errore sconosciuto"
+        }`
+      );
+    } finally {
+      setWorkingId(null);
     }
   };
 
   const handleEliminaCompleto = async (av1Id: string) => {
     const conferma = window.confirm(
-      "Vuoi eliminare AV1 e l'eventuale AV4 collegato?"
+      "Vuoi eliminare AV1 e gli eventuali AV2/AV4 collegati?"
     );
     if (!conferma) return;
 
@@ -269,6 +346,13 @@ export default function AntiriciclaggioPage() {
         if (deleteAV4Error) throw deleteAV4Error;
       }
 
+      const { error: deleteAV2Error } = await supabaseAny
+        .from("tbAV2")
+        .delete()
+        .eq("av1_id", av1Id);
+
+      if (deleteAV2Error) throw deleteAV2Error;
+
       const { error: deleteAV1Error } = await supabaseAny
         .from("tbAV1")
         .delete()
@@ -277,21 +361,25 @@ export default function AntiriciclaggioPage() {
       if (deleteAV1Error) throw deleteAV1Error;
 
       await loadRows();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Errore eliminazione completa:", err);
-      alert("Errore durante l'eliminazione del record.");
+      alert(
+        `Errore durante l'eliminazione del record: ${
+          err?.message || "errore sconosciuto"
+        }`
+      );
     }
   };
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
 
         <button
           type="button"
           onClick={handleNuovoAV1}
-          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         >
           Nuova pratica
         </button>
@@ -300,7 +388,7 @@ export default function AntiriciclaggioPage() {
       {loading ? (
         <div>Caricamento...</div>
       ) : (
-        <div className="overflow-x-auto border rounded-lg bg-white">
+        <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
             <thead className="bg-gray-100">
               <tr>
@@ -310,6 +398,7 @@ export default function AntiriciclaggioPage() {
                 <th className="p-3 text-left">Data verifica</th>
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
+                <th className="p-3 text-center">AV2 generato</th>
                 <th className="p-3 text-center">AV4 generato</th>
                 <th className="p-3 text-center">Azioni</th>
               </tr>
@@ -318,8 +407,8 @@ export default function AntiriciclaggioPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-4 text-center">
-                    Nessun AV1 confermato
+                  <td colSpan={9} className="p-4 text-center">
+                    Nessuna pratica presente
                   </td>
                 </tr>
               ) : (
@@ -327,15 +416,18 @@ export default function AntiriciclaggioPage() {
                   const cliente = getCliente(row);
                   const nomeCliente =
                     cliente?.ragione_sociale || cliente?.cod_cliente || "-";
-
-                  const av4Mancante = !row.AV4Generato;
                   const statoInfo = getStatoInfo(row);
 
                   return (
-                    <tr key={row.id} className={`border-t ${getRowClassName(row)}`}>
+                    <tr
+                      key={row.id}
+                      className={`border-t ${getRowClassName(row)}`}
+                    >
                       <td className={`p-3 ${statoInfo.className}`}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{statoInfo.icon}</span>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`inline-block h-5 w-5 rounded-full ${statoInfo.dotClass} shadow`}
+                          />
                           <span>{statoInfo.text}</span>
                         </div>
                       </td>
@@ -343,58 +435,91 @@ export default function AntiriciclaggioPage() {
                       <td className="p-3">{nomeCliente}</td>
                       <td className="p-3">{cliente?.codice_fiscale || "-"}</td>
                       <td className="p-3">{formatDate(row.DataVerifica)}</td>
-                      <td className={`p-3 ${getScadenzaCellClassName(row.ScadenzaVerifica)}`}>
+                      <td
+                        className={`p-3 ${getScadenzaCellClassName(
+                          row.ScadenzaVerifica
+                        )}`}
+                      >
                         {formatDate(row.ScadenzaVerifica)}
                       </td>
-                      <td className="p-3 text-center">
-                        {row.AV1Conferma ? "Sì" : "No"}
-                      </td>
+
                       <td
                         className={`p-3 text-center font-semibold ${
-                          av4Mancante ? "text-red-600" : "text-green-600"
+                          row.AV1Conferma ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {row.AV1Conferma ? "Sì" : "No"}
+                      </td>
+
+                      <td
+                        className={`p-3 text-center font-semibold ${
+                          row.AV2Generato ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {row.AV2Generato ? "Sì" : "No"}
+                      </td>
+
+                      <td
+                        className={`p-3 text-center font-semibold ${
+                          row.AV4Generato ? "text-green-600" : "text-red-600"
                         }`}
                       >
                         {row.AV4Generato ? "Sì" : "No"}
                       </td>
+
                       <td className="p-3">
-                        <div className="flex flex-wrap justify-center gap-2">
+                        <div className="flex flex-wrap items-center justify-center gap-3">
                           <button
                             type="button"
-                            onClick={() => handleModificaAV1(row.id)}
-                            className="px-3 py-1 rounded bg-amber-500 text-white hover:bg-amber-600"
+                            onClick={() => handleApriAV1(row.id)}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
+                              !!row.AV1Conferma
+                            )}`}
+                            title="Apri AV1"
                           >
-                            Apri AV1
+                            <img
+                              src="/icons/av1.png"
+                              alt="AV1"
+                              className="h-14 w-14 rounded-[24px] object-contain"
+                            />
                           </button>
 
-                          {row.AV4Generato ? (
-                            <button
-                              type="button"
-                              onClick={() => handleModificaAV4(row.id)}
-                              className="px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700"
-                            >
-                              Apri AV4
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleGeneraAV4(row.id)}
-                              disabled={generatingId === row.id}
-                              className={`px-3 py-1 rounded text-white ${
-                                generatingId === row.id
-                                  ? "bg-gray-400 cursor-not-allowed"
-                                  : "bg-red-600 hover:bg-red-700"
-                              }`}
-                            >
-                              {generatingId === row.id
-                                ? "Generazione..."
-                                : "Genera AV4"}
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleApriAV2(row)}
+                            disabled={workingId === row.id}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 ${getIconBorderClass(
+                              !!row.AV2Generato
+                            )}`}
+                            title="Apri AV2"
+                          >
+                            <img
+                              src="/icons/av2.png"
+                              alt="AV2"
+                              className="h-14 w-14 rounded-[24px] object-contain"
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleApriAV4(row)}
+                            disabled={workingId === row.id}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 ${getIconBorderClass(
+                              !!row.AV4Generato
+                            )}`}
+                            title="Apri AV4"
+                          >
+                            <img
+                              src="/icons/av4.png"
+                              alt="AV4"
+                              className="h-14 w-14 rounded-[24px] object-contain"
+                            />
+                          </button>
 
                           <button
                             type="button"
                             onClick={() => handleEliminaCompleto(row.id)}
-                            className="px-3 py-1 rounded bg-red-700 text-white hover:bg-red-800"
+                            className="rounded bg-red-700 px-3 py-2 text-white hover:bg-red-800"
                           >
                             Elimina record completo
                           </button>
