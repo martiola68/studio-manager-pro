@@ -479,11 +479,7 @@ export default function AntiriciclaggioPage() {
       )}`}
       title="Apri AV1"
     >
-      <img
-        src="/av1.png"
-        alt="AV1"
-        className="h-7 w-7 rounded-[16px] object-contain"
-      />
+      <span className="text-blue-600 font-semibold">AV1</span>
     </button>
 
     {/* AV2 */}
@@ -496,11 +492,7 @@ export default function AntiriciclaggioPage() {
       )}`}
       title="Apri AV2"
     >
-      <img
-        src="/av2.png"
-        alt="AV2"
-        className="h-7 w-7 rounded-[24px] object-contain"
-      />
+      <span className="text-blue-600 font-semibold">AV2</span>
     </button>
 
     {/* AV4 */}
@@ -513,11 +505,7 @@ export default function AntiriciclaggioPage() {
       )}`}
       title="Apri AV4"
     >
-      <img
-        src="/av4.png"
-        alt="AV4"
-        className="h-7 w-7 rounded-[24px] object-contain"
-      />
+     <span className="text-blue-600 font-semibold">AV4</span>
     </button>
 
     {/* CESTINO */}
