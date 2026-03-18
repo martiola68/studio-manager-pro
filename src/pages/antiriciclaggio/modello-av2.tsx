@@ -442,6 +442,21 @@ export default function ModelloAV2Page() {
                 {saving ? "Salvataggio..." : "Salva AV2"}
               </Button>
 
+              <Button
+  type="button"
+  variant="outline"
+  onClick={() => {
+    const av2Id = form.id;
+    if (!av2Id) {
+      alert("Salva prima il record AV2, poi potrai stamparlo.");
+      return;
+    }
+    router.push(`/antiriciclaggio/stampa-av2?id=${av2Id}`);
+  }}
+>
+  Stampa AV2
+</Button>
+
               <Button type="button" variant="outline" onClick={handleChiudiModello}>
                 Chiudi Modello
               </Button>
