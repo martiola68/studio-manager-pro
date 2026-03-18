@@ -1,11 +1,11 @@
 import { Save, Printer, LogOut } from "lucide-react";
 
-type FormStickyHeaderProps = {
+type Props = {
   title: string;
   subtitle?: string;
-  onSave: () => void;
-  onPrint: () => void;
-  onClose: () => void;
+  onSave?: () => void;
+  onPrint?: () => void;
+  onClose?: () => void;
   saving?: boolean;
 };
 
@@ -16,45 +16,45 @@ export default function FormStickyHeader({
   onPrint,
   onClose,
   saving = false,
-}: FormStickyHeaderProps) {
+}: Props) {
   return (
-    <div className="no-print sticky top-[118px] z-40 border-b bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
-            {subtitle ? <p className="mt-1 text-lg text-slate-500">{subtitle}</p> : null}
-          </div>
+    <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 shadow-sm">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 md:px-8 md:py-5">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
+          {subtitle ? (
+            <p className="mt-1 text-sm text-slate-600 md:text-base">{subtitle}</p>
+          ) : null}
+        </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              title="Salva"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-60"
-            >
-              <Save className="h-5 w-5" />
-            </button>
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400 bg-emerald-100 text-emerald-700 shadow-sm transition hover:bg-emerald-200 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Salva"
+          >
+            <Save className="h-5 w-5" />
+          </button>
 
-            <button
-              type="button"
-              onClick={onPrint}
-              title="Stampa"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 text-sky-600 transition hover:bg-sky-100"
-            >
-              <Printer className="h-5 w-5" />
-            </button>
+          <button
+            type="button"
+            onClick={onPrint}
+            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-sky-400 bg-sky-100 text-sky-700 shadow-sm transition hover:bg-sky-200 hover:text-sky-800"
+            title="Stampa"
+          >
+            <Printer className="h-5 w-5" />
+          </button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              title="Chiudi"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-rose-400 bg-rose-100 text-rose-700 shadow-sm transition hover:bg-rose-200 hover:text-rose-800"
+            title="Chiudi"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </div>
