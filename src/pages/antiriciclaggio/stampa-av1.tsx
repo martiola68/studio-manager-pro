@@ -164,7 +164,7 @@ function isActiveMatrixCell(
   return categoriaInerente === row && categoriaVulnerabilita === col;
 }
 
- function Checked({ value }: { value: boolean }) {
+function Checked({ value }: { value: boolean }) {
   return (
     <span
       className={`mt-[1px] inline-flex h-5 w-5 min-h-[20px] min-w-[20px] shrink-0 flex-none items-center justify-center rounded border border-black text-[11px] font-bold leading-none box-border ${
