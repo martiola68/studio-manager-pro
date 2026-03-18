@@ -516,13 +516,7 @@ export default function AntiriciclaggioPage() {
                             />
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleEliminaCompleto(row.id)}
-                            className="rounded bg-red-700 px-3 py-2 text-white hover:bg-red-800"
-                          >
-                            Elimina record completo
-                          </button>
+                          onClick={() => handleEliminaCompleto(row.id)}
                         </div>
                       </td>
                     </tr>
