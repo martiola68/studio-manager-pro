@@ -129,8 +129,8 @@ function buildClienteLabel(row?: ClienteRow | null) {
 function Checked({ value }: { value: boolean }) {
   return (
     <span
-      className={`inline-flex h-5 w-5 items-center justify-center rounded border text-xs font-bold ${
-        value ? "bg-black text-white border-black" : "bg-white text-white border-black"
+      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold ${
+        value ? "border-black bg-black text-white" : "border-black bg-white text-white"
       }`}
     >
       {value ? "X" : ""}
@@ -146,8 +146,8 @@ function ReadBox({
   value?: string | number | null;
 }) {
   return (
-    <div className="border p-3">
-      <div className="font-semibold mb-1">{label}</div>
+    <div className="border border-black p-3">
+      <div className="mb-1 font-semibold">{label}</div>
       <div>{value || "-"}</div>
     </div>
   );
@@ -162,20 +162,20 @@ function TitolariTable({
 }) {
   if (!rows.length) {
     return (
-      <div className="border p-3">
-        <div className="font-semibold mb-2">{title}</div>
+      <div className="border border-black p-3">
+        <div className="mb-2 font-semibold">{title}</div>
         <div>-</div>
       </div>
     );
   }
 
   return (
-    <div className="border p-3">
-      <div className="font-semibold mb-3">{title}</div>
+    <div className="border border-black p-3">
+      <div className="mb-3 font-semibold">{title}</div>
 
       <div className="space-y-3">
         {rows.map((row, index) => (
-          <div key={row.id || index} className="border p-3">
+          <div key={row.id || index} className="border border-black p-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="font-medium">Nome e cognome: </span>
@@ -318,16 +318,54 @@ export default function StampaAV4Page() {
           margin: 12mm;
         }
 
+        html,
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
         @media print {
+          @page {
+            size: A4;
+            margin: 12mm;
+          }
+
+          html,
+          body {
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          #print-area,
+          #print-area * {
+            visibility: visible !important;
+          }
+
+          #print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+
           .no-print {
             display: none !important;
           }
 
-          body {
-            background: #fff !important;
+          .print-section {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
 
-          .print-section {
+          .print-table-row {
             break-inside: avoid;
             page-break-inside: avoid;
           }
@@ -335,11 +373,11 @@ export default function StampaAV4Page() {
       `}</style>
 
       <div className="min-h-screen bg-gray-100">
-        <div className="no-print max-w-6xl mx-auto p-4 flex justify-between items-center">
+        <div className="no-print mx-auto flex max-w-6xl items-center justify-between p-4">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 rounded border bg-white"
+            className="rounded border bg-white px-4 py-2"
           >
             Indietro
           </button>
@@ -347,21 +385,19 @@ export default function StampaAV4Page() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="px-4 py-2 rounded bg-blue-600 text-white"
+            className="rounded bg-blue-600 px-4 py-2 text-white"
           >
             Stampa / Salva PDF
           </button>
         </div>
 
-        <div className="max-w-4xl mx-auto bg-white p-8 text-[12px] leading-5 text-black">
-          <div className="border-b-2 border-black pb-4 mb-6">
+        <div id="print-area" className="mx-auto max-w-4xl bg-white p-8 text-[12px] leading-5 text-black">
+          <div className="mb-6 border-b-2 border-black pb-4 print-section">
             <h1 className="text-2xl font-bold uppercase">AV.4 – Dichiarazione del Cliente</h1>
-            <p className="text-sm">
-              Modello di adeguata verifica e dichiarazioni del cliente
-            </p>
+            <p className="text-sm">Modello di adeguata verifica e dichiarazioni del cliente</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6 print-section">
+          <div className="mb-6 grid grid-cols-2 gap-4 print-section">
             <ReadBox label="Cliente" value={buildClienteLabel(cliente)} />
             <ReadBox label="Codice fiscale cliente" value={cliente?.codice_fiscale} />
             <ReadBox label="ID collegato AV1" value={record.av1_id} />
@@ -369,7 +405,7 @@ export default function StampaAV4Page() {
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Dichiarante / rappresentante
             </h2>
 
@@ -412,7 +448,7 @@ export default function StampaAV4Page() {
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Dichiarazioni iniziali
             </h2>
 
@@ -429,7 +465,7 @@ export default function StampaAV4Page() {
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Persona politicamente esposta
             </h2>
 
@@ -448,10 +484,8 @@ export default function StampaAV4Page() {
               </div>
 
               {record.domanda5 && (
-                <div className="border p-3">
-                  <div className="font-semibold mb-1">
-                    Specifica carica pubblica / legame
-                  </div>
+                <div className="border border-black p-3">
+                  <div className="mb-1 font-semibold">Specifica carica pubblica / legame</div>
                   <div>{record.spec_domanda5 || "-"}</div>
                 </div>
               )}
@@ -459,11 +493,11 @@ export default function StampaAV4Page() {
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Titolare effettivo
             </h2>
 
-            <div className="space-y-3 mb-4">
+            <div className="mb-4 space-y-3">
               <div className="flex items-start gap-3">
                 <Checked value={Boolean(record.domanda6)} />
                 <span>Agisce in proprio</span>
@@ -483,7 +517,7 @@ export default function StampaAV4Page() {
               </div>
             )}
 
-            <div className="space-y-3 mb-4">
+            <div className="mb-4 space-y-3">
               <div className="flex items-start gap-3">
                 <Checked value={Boolean(record.domanda8)} />
                 <span>Agisce per conto della società / ente</span>
@@ -508,7 +542,7 @@ export default function StampaAV4Page() {
               </div>
             )}
 
-            <div className="space-y-3 mb-4">
+            <div className="mb-4 space-y-3">
               <div className="flex items-start gap-3">
                 <Checked value={Boolean(record.domanda9)} />
                 <span>
@@ -541,7 +575,7 @@ export default function StampaAV4Page() {
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               PPE titolari effettivi
             </h2>
 
@@ -557,40 +591,40 @@ export default function StampaAV4Page() {
             </div>
 
             {record.domanda11 && (
-              <div className="border p-3 mt-3">
-                <div className="font-semibold mb-1">Specifica PPE titolari effettivi</div>
+              <div className="mt-3 border border-black p-3">
+                <div className="mb-1 font-semibold">Specifica PPE titolari effettivi</div>
                 <div>{record.specifica12 || "-"}</div>
               </div>
             )}
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Informazioni integrative
             </h2>
 
             <div className="space-y-4">
-              <div className="border p-3">
-                <div className="font-semibold mb-1">
+              <div className="border border-black p-3">
+                <div className="mb-1 font-semibold">
                   Relazioni tra cliente e titolare effettivo / esecutore
                 </div>
                 <div>{record.specifica10b || "-"}</div>
               </div>
 
-              <div className="border p-3">
-                <div className="font-semibold mb-1">Provenienza dei fondi</div>
+              <div className="border border-black p-3">
+                <div className="mb-1 font-semibold">Provenienza dei fondi</div>
                 <div>{record.specifica10c || "-"}</div>
               </div>
 
-              <div className="border p-3">
-                <div className="font-semibold mb-1">Mezzi di pagamento</div>
+              <div className="border border-black p-3">
+                <div className="mb-1 font-semibold">Mezzi di pagamento</div>
                 <div>{record.specifica11c || "-"}</div>
               </div>
             </div>
           </div>
 
           <div className="mb-6 print-section">
-            <h2 className="text-lg font-bold border-b border-black pb-1 mb-3">
+            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
               Professione / attività del cliente
             </h2>
 
@@ -601,20 +635,20 @@ export default function StampaAV4Page() {
             </div>
           </div>
 
-          <div className="mt-10 pt-6 border-t border-black print-section">
+          <div className="mt-10 border-t border-black pt-6 print-section">
             <div className="grid grid-cols-2 gap-10">
               <div>
                 <div className="mb-3">
-                  Luogo e data: {record.luogo_firma || "________________"}{" "}
-                  {record.data_firma ? `- ${formatDate(record.data_firma)}` : ""}
+                  Luogo e data: {record.luogo_firma || "________________"}
+                  {record.data_firma ? ` - ${formatDate(record.data_firma)}` : ""}
                 </div>
                 <div className="mt-10">Firma cliente / dichiarante: __________________________</div>
               </div>
 
               <div>
                 <div className="mb-3">
-                  Luogo e data: {record.luogo_firma_bis || "________________"}{" "}
-                  {record.data_firma_bis ? `- ${formatDate(record.data_firma_bis)}` : ""}
+                  Luogo e data: {record.luogo_firma_bis || "________________"}
+                  {record.data_firma_bis ? ` - ${formatDate(record.data_firma_bis)}` : ""}
                 </div>
                 <div className="mt-10">Firma professionista: __________________________</div>
               </div>
