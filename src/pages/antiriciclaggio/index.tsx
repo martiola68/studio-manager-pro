@@ -467,63 +467,71 @@ export default function AntiriciclaggioPage() {
                         {row.AV4Generato ? "Sì" : "No"}
                       </td>
 
-                      <td className="p-3">
-                        <div className="flex flex-wrap items-center justify-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleApriAV1(row.id)}
-                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
-                              !!row.AV1Conferma
-                            )}`}
-                            title="Apri AV1"
-                          >
-                            <img
-                              src="/av1.png"
-                              alt="AV1"
-                              className="h-14 w-14 rounded-[24px] object-contain"
-                            />
-                          </button>
+                     <td className="p-3">
+  <div className="flex flex-wrap items-center justify-center gap-3">
 
-                          <button
-                            type="button"
-                            onClick={() => handleApriAV2(row)}
-                            disabled={workingId === row.id}
-                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 ${getIconBorderClass(
-                              !!row.AV2Generato
-                            )}`}
-                            title="Apri AV2"
-                          >
-                            <img
-                              src="/av2.png"
-                              alt="AV2"
-                              className="h-14 w-14 rounded-[24px] object-contain"
-                            />
-                          </button>
+    {/* AV1 */}
+    <button
+      type="button"
+      onClick={() => handleApriAV1(row.id)}
+      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
+        !!row.AV1Conferma
+      )}`}
+      title="Apri AV1"
+    >
+      <img
+        src="/av1.png"
+        alt="AV1"
+        className="h-16 w-16 rounded-[24px] object-contain"
+      />
+    </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleApriAV4(row)}
-                            disabled={workingId === row.id}
-                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 ${getIconBorderClass(
-                              !!row.AV4Generato
-                            )}`}
-                            title="Apri AV4"
-                          >
-                            <img
-                              src="/av4.png"
-                              alt="AV4"
-                              className="h-14 w-14 rounded-[24px] object-contain"
-                            />
-                      <button
-  type="button"
-  onClick={() => handleEliminaCompleto(row.id)}
-  className="flex h-16 w-16 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-  title="Elimina record completo"
->
-  <span className="text-2xl">🗑️</span>
-</button>
-                        </div>
-                      </td>
+    {/* AV2 */}
+    <button
+      type="button"
+      onClick={() => handleApriAV2(row)}
+      disabled={workingId === row.id}
+      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
+        !!row.AV2Generato
+      )}`}
+      title="Apri AV2"
+    >
+      <img
+        src="/av2.png"
+        alt="AV2"
+        className="h-16 w-16 rounded-[24px] object-contain"
+      />
+    </button>
+
+    {/* AV4 */}
+    <button
+      type="button"
+      onClick={() => handleApriAV4(row)}
+      disabled={workingId === row.id}
+      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
+        !!row.AV4Generato
+      )}`}
+      title="Apri AV4"
+    >
+      <img
+        src="/av4.png"
+        alt="AV4"
+        className="h-16 w-16 rounded-[24px] object-contain"
+      />
+    </button>
+
+    {/* CESTINO */}
+    <button
+      type="button"
+      onClick={() => handleEliminaCompleto(row.id)}
+      className="flex h-16 w-16 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+      title="Elimina record completo"
+    >
+      <span className="text-3xl">🗑️</span>
+    </button>
+
+  </div>
+</td>
                     </tr>
                   );
                 })
