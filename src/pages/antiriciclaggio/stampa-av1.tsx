@@ -166,15 +166,17 @@ function isActiveMatrixCell(
 
 function Checked({ value }: { value: boolean }) {
   return (
+   function Checked({ value }: { value: boolean }) {
+  return (
     <span
-      className={`inline-flex h-5 w-5 items-center justify-center rounded border text-xs font-bold ${
-        value
-          ? "bg-black text-white border-black"
-          : "bg-white text-white border-black"
+      className={`mt-[1px] inline-flex h-5 w-5 min-h-[20px] min-w-[20px] shrink-0 flex-none items-center justify-center rounded border border-black text-[11px] font-bold leading-none box-border ${
+        value ? "bg-black text-white" : "bg-white text-transparent"
       }`}
     >
-      {value ? "X" : ""}
+      {value ? "X" : "X"}
     </span>
+  );
+}
   );
 }
 
