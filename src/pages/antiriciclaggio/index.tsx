@@ -514,9 +514,14 @@ export default function AntiriciclaggioPage() {
                               alt="AV4"
                               className="h-14 w-14 rounded-[24px] object-contain"
                             />
-                          </button>
-
-                          onClick={() => handleEliminaCompleto(row.id)}
+                      <button
+  type="button"
+  onClick={() => handleEliminaCompleto(row.id)}
+  className="flex h-16 w-16 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+  title="Elimina record completo"
+>
+  <span className="text-2xl">🗑️</span>
+</button>
                         </div>
                       </td>
                     </tr>
