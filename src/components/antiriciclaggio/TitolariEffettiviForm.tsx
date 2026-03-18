@@ -150,9 +150,39 @@ export default function TitolariEffettiviForm({
     setRighe((prev) => [...prev, emptyRiga()]);
   }
 
-  function eliminaRiga(index: number) {
+ async function eliminaRiga(index: number) {
+  const riga = righe[index];
+  if (!riga) return;
+
+  const conferma = window.confirm("Vuoi eliminare questo titolare effettivo?");
+  if (!conferma) return;
+
+  const rowId = normalizeId(riga.id);
+
+  // Se la riga non è ancora salvata a DB, la tolgo solo dallo stato
+  if (!rowId) {
     setRighe((prev) => prev.filter((_, i) => i !== index));
+    return;
   }
+
+  try {
+    const { error } = await supabase
+      .from("tbAV4_titolari")
+      .delete()
+      .eq("id", rowId);
+
+    if (error) {
+      console.error("Errore eliminazione titolare:", error);
+      alert("Errore durante l'eliminazione del titolare effettivo.");
+      return;
+    }
+
+    setRighe((prev) => prev.filter((_, i) => i !== index));
+  } catch (error) {
+    console.error("Errore imprevisto eliminazione titolare:", error);
+    alert("Errore durante l'eliminazione del titolare effettivo.");
+  }
+}
 
   function selezionaRappresentante(index: number, id: string) {
     const normalizedSelectedId = normalizeId(id);
@@ -343,13 +373,13 @@ export default function TitolariEffettiviForm({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => eliminaRiga(index)}
-            className="mt-3 text-red-600"
-          >
-            Elimina
-          </button>
+         <button
+  type="button"
+  onClick={() => eliminaRiga(index)}
+  className="mt-3 text-red-600"
+>
+  Elimina
+</button>
         </div>
       ))}
 
