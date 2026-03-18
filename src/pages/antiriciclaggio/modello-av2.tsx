@@ -5,10 +5,8 @@ import { getStudioId } from "@/lib/getStudioId";
 
 type Cliente = {
   id: string;
+  cod_cliente?: string | null;
   ragione_sociale?: string | null;
-  denominazione?: string | null;
-  nome?: string | null;
-  cognome?: string | null;
 };
 
 type AV2FormState = {
@@ -39,9 +37,7 @@ const buildInitialForm = (studioId: string): AV2FormState => {
 
 const formatClienteLabel = (cliente: Cliente) => {
   if (cliente.ragione_sociale) return cliente.ragione_sociale;
-  if (cliente.cognome || cliente.nome) {
-    return `${cliente.cognome || ""} ${cliente.nome || ""}`.trim();
-  }
+  if (cliente.cod_cliente) return cliente.cod_cliente;
   return "Cliente";
 };
 
@@ -87,9 +83,9 @@ if (!currentStudioId) {
 setStudioId(currentStudioId);
 setForm(buildInitialForm(currentStudioId));
 
-     const { data: clientiData, error: clientiError } = await supabase
+  const { data: clientiData, error: clientiError } = await supabase
   .from("tbclienti")
-  .select("id, ragione_sociale, nome, cognome")
+  .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
   .eq("studio_id", currentStudioId)
   .order("ragione_sociale", { ascending: true });
       
