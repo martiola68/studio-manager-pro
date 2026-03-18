@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
+import { getStudioId } from "@/services/getStudioId";
 import { AV2_CHECKLIST } from "@/config/av2Checklist";
 import { getStudioId } from "@/lib/getStudioId";
 
@@ -16,8 +17,6 @@ type AV2FormState = {
   data_check: string;
   firma_check: string;
 } & Record<string, boolean | string | undefined>;
-
-const supabase = getSupabaseClient();
 
 const buildInitialForm = (studioId: string): AV2FormState => {
   const base: AV2FormState = {
@@ -73,7 +72,7 @@ export default function ModelloAV2Page() {
         return;
       }
 
-     const currentStudioId = await getStudioId();
+const currentStudioId = await getStudioId();
 
 if (!currentStudioId) {
   setMessaggio("Studio ID non trovato nella sessione.");
@@ -83,7 +82,7 @@ if (!currentStudioId) {
 setStudioId(currentStudioId);
 setForm(buildInitialForm(currentStudioId));
 
-  const { data: clientiData, error: clientiError } = await supabase
+  const { data: clientiData, error: clientiError } = await (supabase as any)
   .from("tbclienti")
   .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
   .eq("studio_id", currentStudioId)
@@ -107,12 +106,12 @@ setForm(buildInitialForm(currentStudioId));
       setLoading(true);
       setMessaggio("");
 
-      const { data, error } = await supabase
-        .from("tbAV2")
-        .select("*")
-        .eq("studio_id", studioId)
-        .eq("cliente_id", clienteId)
-        .maybeSingle();
+      const { data, error } = await (supabase as any)
+  .from("tbAV2")
+  .select("*")
+  .eq("studio_id", studioId)
+  .eq("cliente_id", clienteId)
+  .maybeSingle();
 
       if (error) throw error;
 
@@ -195,18 +194,18 @@ setForm(buildInitialForm(currentStudioId));
       }
 
       if (form.id) {
-        const { error } = await supabase
-          .from("tbAV2")
-          .update(payload)
-          .eq("id", form.id);
+        const { error } = await (supabase as any)
+        .from("tbAV2")
+        .update(payload)
+        .eq("id", form.id);
 
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
-          .from("tbAV2")
-          .insert([payload])
-          .select()
-          .single();
+        const { data, error } = await (supabase as any)
+  .from("tbAV2")
+  .insert([payload])
+  .select()
+  .single();
 
         if (error) throw error;
 
