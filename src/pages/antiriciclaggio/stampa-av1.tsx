@@ -431,32 +431,51 @@ export default function StampaAV1Page() {
           </div>
 
           <div className="print-section mb-6">
-            <h2 className="mb-3 border-b border-black pb-1 text-lg font-bold">
-              A. Aspetti connessi al cliente / B. Aspetti connessi all’operazione
-            </h2>
+           <div className="space-y-4">
+  {Object.entries(av1Labels).map(([sectionKey, fields], index) => {
+    
+    const isSezioneA = sectionKey.startsWith("A");
+    const isSezioneB = sectionKey.startsWith("B");
 
-            <div className="space-y-4">
-              {Object.entries(av1Labels).map(([sectionKey, fields]) => (
-                <div key={sectionKey} className="border p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="font-semibold">{sectionTitles[sectionKey]}</h3>
-                    <div>
-                      <span className="font-semibold">Valore {sectionKey}: </span>
-                      <span>{record[sectionKey] ?? "-"}</span>
-                    </div>
-                  </div>
+    return (
+      <div key={sectionKey}>
 
-                  <div className="space-y-2">
-                    {Object.entries(fields).map(([fieldKey, label]) => (
-                      <div key={fieldKey} className="flex items-start gap-3">
-                        <Checked value={Boolean(record[fieldKey])} />
-                        <span>{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+        {/* Titolo sezione A */}
+        {index === 0 && isSezioneA && (
+          <h2 className="mb-4 border-b-2 border-black pb-1 text-lg font-bold">
+            A - Aspetti connessi al cliente
+          </h2>
+        )}
+
+        {/* Titolo sezione B (prima volta che appare) */}
+        {isSezioneB && sectionKey === "B1" && (
+          <h2 className="mt-6 mb-4 border-b-2 border-black pb-1 text-lg font-bold">
+            B. Aspetti connessi all’operazione e/o prestazione professionale
+          </h2>
+        )}
+
+        <div className="border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold">{sectionTitles[sectionKey]}</h3>
+            <div>
+              <span className="font-semibold">Valore {sectionKey}: </span>
+              <span>{record[sectionKey] ?? "-"}</span>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            {Object.entries(fields).map(([fieldKey, label]) => (
+              <div key={fieldKey} className="flex items-start gap-3">
+                <Checked value={Boolean(record[fieldKey])} />
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  })}
+</div>
           </div>
 
           <div className="print-section mb-6">
