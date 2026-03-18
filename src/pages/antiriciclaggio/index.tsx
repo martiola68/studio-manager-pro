@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { Trash2 } from "lucide-react";
 
 type Cliente = {
   id: string;
@@ -509,14 +510,14 @@ export default function AntiriciclaggioPage() {
     </button>
 
     {/* CESTINO */}
-   <button
-  type="button"
-  onClick={() => handleEliminaCompleto(row.id)}
-  className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white transition hover:scale-105 hover:bg-red-700"
-  title="Elimina record completo"
->
-  <span className="text-sm">🗑️</span>
-</button>
+        <button
+          type="button"
+          onClick={() => handleEliminaCompleto(row.id)}
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
+          title="Elimina record completo"
+        >
+          <Trash2 className="h-4 w-4 text-red-500" strokeWidth={2.2} />
+        </button>
 
   </div>
 </td>
