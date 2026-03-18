@@ -175,8 +175,6 @@ function isActiveMatrixCell(
     </span>
   );
 }
-  );
-}
 
 export default function StampaAV1Page() {
   const router = useRouter();
