@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase/client";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { AV2_CHECKLIST } from "@/config/av2Checklist";
 
 type Cliente = {
@@ -70,10 +70,7 @@ export default function ModelloAV2Page() {
     [clienti, form.cliente_id]
   );
 
-  const prefillFromAV1 = async (
-    studioIdValue: string,
-    av1IdValue: string
-  ) => {
+  const prefillFromAV1 = async (studioIdValue: string, av1IdValue: string) => {
     try {
       if (!av1IdValue) return;
 
@@ -270,9 +267,7 @@ export default function ModelloAV2Page() {
       }));
 
       alert("Scheda AV2 salvata correttamente.");
-      await router.replace(
-        `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id}`
-      );
+      await router.replace(`/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id}`);
     } catch (err: any) {
       console.error("Errore salvataggio AV2:", err);
       setError(err?.message || "Errore durante il salvataggio della scheda AV2.");
@@ -281,189 +276,186 @@ export default function ModelloAV2Page() {
     }
   };
 
-  const handleChiudiModello = () => {
-    router.push("/antiriciclaggio");
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          AV.2 – CHECK-LIST AI FINI DELLA FORMAZIONE DEL FASCICOLO DEL CLIENTE
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Gestione documentazione e annotazioni professionista
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Dati principali</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          {loading ? (
-            <p>Caricamento...</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">Cliente</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                  value={form.cliente_id}
-                  disabled
-                >
-                  <option value="">Seleziona cliente</option>
-                  {clienti.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {formatClienteLabel(cliente)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Data check</label>
-                <input
-                  type="date"
-                  className="w-full border rounded-md px-3 py-2"
-                  value={form.data_check || ""}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      data_check: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              {clienteSelezionato && (
-                <div className="md:col-span-3">
-                  <div className="rounded-md bg-gray-50 border px-4 py-3 text-sm text-gray-700">
-                    <span className="font-semibold">Cliente selezionato:</span>{" "}
-                    {formatClienteLabel(clienteSelezionato)}
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="md:col-span-3">
-                  <p className="text-red-600 text-sm">Errore: {error}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Check-list fascicolo cliente</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div className="min-w-[1200px]">
-              <div className="grid grid-cols-12 gap-3 border-b pb-3 mb-4 font-semibold text-sm">
-                <div className="col-span-1 text-center">X</div>
-                <div className="col-span-3">DOCUMENTAZIONE</div>
-                <div className="col-span-4">OSSERVAZIONI</div>
-                <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
-              </div>
-
-              <div className="space-y-4">
-                {AV2_CHECKLIST.map((item) => (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-12 gap-3 border rounded-lg p-4"
-                  >
-                    <div className="col-span-1 flex justify-center items-start pt-1">
-                      <input
-                        type="checkbox"
-                        checked={!!form[`spunta${item.id}`]}
-                        onChange={(e) =>
-                          handleCheckboxChange(item.id, e.target.checked)
-                        }
-                      />
-                    </div>
-
-                    <div className="col-span-3 text-sm whitespace-pre-line">
-                      {item.documento}
-                    </div>
-
-                    <div className="col-span-4 text-sm text-gray-700 whitespace-pre-line">
-                      {item.osservazioni || "-"}
-                    </div>
-
-                    <div className="col-span-4">
-                      <textarea
-                        rows={5}
-                        className="w-full border rounded-md px-3 py-2 text-sm"
-                        value={String(form[`annotazioni${item.id}`] || "")}
-                        onChange={(e) =>
-                          handleAnnotazioneChange(item.id, e.target.value)
-                        }
-                        placeholder="Inserisci annotazioni..."
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Chiusura check-list</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Firma check</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2"
-                value={form.firma_check || ""}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    firma_check: e.target.value,
-                  }))
-                }
-                placeholder="Firma professionista"
-              />
-            </div>
-
-            <div className="md:col-span-2 flex justify-end gap-3 pt-3 flex-wrap">
-              <Button onClick={handleSave} disabled={saving || loading}>
-                {saving ? "Salvataggio..." : "Salva AV2"}
-              </Button>
-
-              <Button
-  type="button"
-  variant="outline"
-  onClick={() => {
+  const handlePrint = () => {
     const av2Id = form.id;
     if (!av2Id) {
       alert("Salva prima il record AV2, poi potrai stamparlo.");
       return;
     }
     router.push(`/antiriciclaggio/stampa-av2?id=${av2Id}`);
-  }}
->
-  Stampa AV2
-</Button>
+  };
 
-              <Button type="button" variant="outline" onClick={handleChiudiModello}>
-                Chiudi Modello
-              </Button>
-            </div>
+  const handleChiudiModello = () => {
+    router.push("/antiriciclaggio");
+  };
+
+  return (
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
+      <FormStickyHeader
+        title="Modello AV2"
+        subtitle="Gestione documentazione e annotazioni professionista"
+        onSave={handleSave}
+        onPrint={handlePrint}
+        onClose={handleChiudiModello}
+        saving={saving || loading}
+      />
+
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <div className="mx-auto max-w-7xl px-4 pb-32 pt-4 md:px-8 md:pb-40 md:pt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Dati principali</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                {loading ? (
+                  <p>Caricamento...</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                      <label className="mb-1 block text-sm font-medium">Cliente</label>
+                      <select
+                        className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                        value={form.cliente_id}
+                        disabled
+                      >
+                        <option value="">Seleziona cliente</option>
+                        {clienti.map((cliente) => (
+                          <option key={cliente.id} value={cliente.id}>
+                            {formatClienteLabel(cliente)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Data check</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-md border px-3 py-2"
+                        value={form.data_check || ""}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            data_check: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {clienteSelezionato && (
+                      <div className="md:col-span-3">
+                        <div className="rounded-md border bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                          <span className="font-semibold">Cliente selezionato:</span>{" "}
+                          {formatClienteLabel(clienteSelezionato)}
+                        </div>
+                      </div>
+                    )}
+
+                    {error && (
+                      <div className="md:col-span-3">
+                        <p className="text-sm text-red-600">Errore: {error}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Check-list fascicolo cliente</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[1200px]">
+                    <div className="mb-4 grid grid-cols-12 gap-3 border-b pb-3 text-sm font-semibold">
+                      <div className="col-span-1 text-center">X</div>
+                      <div className="col-span-3">DOCUMENTAZIONE</div>
+                      <div className="col-span-4">OSSERVAZIONI</div>
+                      <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {AV2_CHECKLIST.map((item) => (
+                        <div
+                          key={item.id}
+                          className="grid grid-cols-12 gap-3 rounded-lg border p-4"
+                        >
+                          <div className="col-span-1 flex items-start justify-center pt-1">
+                            <input
+                              type="checkbox"
+                              checked={!!form[`spunta${item.id}`]}
+                              onChange={(e) =>
+                                handleCheckboxChange(item.id, e.target.checked)
+                              }
+                            />
+                          </div>
+
+                          <div className="col-span-3 whitespace-pre-line text-sm">
+                            {item.documento}
+                          </div>
+
+                          <div className="col-span-4 whitespace-pre-line text-sm text-gray-700">
+                            {item.osservazioni || "-"}
+                          </div>
+
+                          <div className="col-span-4">
+                            <textarea
+                              rows={5}
+                              className="w-full rounded-md border px-3 py-2 text-sm"
+                              value={String(form[`annotazioni${item.id}`] || "")}
+                              onChange={(e) =>
+                                handleAnnotazioneChange(item.id, e.target.value)
+                              }
+                              placeholder="Inserisci annotazioni..."
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Chiusura check-list</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Firma check</label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border px-3 py-2"
+                      value={form.firma_check || ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          firma_check: e.target.value,
+                        }))
+                      }
+                      placeholder="Firma professionista"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                      Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
+                      <strong>stampare</strong> o <strong>chiudere</strong> il modello.
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
