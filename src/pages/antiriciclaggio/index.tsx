@@ -482,7 +482,7 @@ export default function AntiriciclaggioPage() {
       <img
         src="/av1.png"
         alt="AV1"
-        className="h-16 w-16 rounded-[24px] object-contain"
+        className="h-10 w-10 rounded-[16px] object-contain"
       />
     </button>
 
@@ -499,7 +499,7 @@ export default function AntiriciclaggioPage() {
       <img
         src="/av2.png"
         alt="AV2"
-        className="h-16 w-16 rounded-[24px] object-contain"
+        className="h-10 w-10 rounded-[24px] object-contain"
       />
     </button>
 
@@ -516,7 +516,7 @@ export default function AntiriciclaggioPage() {
       <img
         src="/av4.png"
         alt="AV4"
-        className="h-16 w-16 rounded-[24px] object-contain"
+        className="h-10 w-10 rounded-[24px] object-contain"
       />
     </button>
 
@@ -524,7 +524,7 @@ export default function AntiriciclaggioPage() {
     <button
       type="button"
       onClick={() => handleEliminaCompleto(row.id)}
-      className="flex h-16 w-16 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+      className="flex h-10 w-10 items-center justify-center rounded-[28px] bg-white transition hover:scale-105 border-2 border-red-600 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
       title="Elimina record completo"
     >
       <span className="text-3xl">🗑️</span>
