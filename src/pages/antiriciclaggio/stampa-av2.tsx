@@ -28,7 +28,7 @@ function normalizeDateValue(value: unknown) {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return "";
+  if (!value) return "-";
   const normalized = normalizeDateValue(value);
   const [y, m, d] = normalized.split("-");
   if (!y || !m || !d) return normalized;
@@ -94,10 +94,6 @@ export default function StampaAV2Page() {
     void loadData();
   }, [router.isReady, id]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (loading) {
     return <div className="p-8">Caricamento stampa AV2...</div>;
   }
@@ -111,122 +107,179 @@ export default function StampaAV2Page() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-black">
+    <>
       <style jsx global>{`
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+
         @media print {
-          .no-print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          .no-print,
+          header,
+          nav,
+          aside,
+          [role="navigation"],
+          [data-no-print="true"] {
             display: none !important;
           }
 
+          html,
           body {
-            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          #print-area,
+          #print-area * {
+            visibility: visible;
+          }
+
+          #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
           }
 
           .print-break-inside-avoid {
             break-inside: avoid;
             page-break-inside: avoid;
           }
+
+          .bg-gray-100 {
+            background-color: #f3f4f6 !important;
+          }
+
+          .border-gray-200,
+          .border-gray-300,
+          .border-gray-400 {
+            border-color: #9ca3af !important;
+          }
+
+          .text-gray-700 {
+            color: #374151 !important;
+          }
         }
       `}</style>
 
-      <div className="no-print sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
-        <h1 className="text-xl font-bold">Stampa AV2</h1>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Stampa / PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="rounded border px-4 py-2 hover:bg-gray-50"
-          >
-            Chiudi
-          </button>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl p-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold">
-            AV.2 – CHECK-LIST AI FINI DELLA FORMAZIONE DEL FASCICOLO DEL CLIENTE
-          </h1>
-        </div>
-
-        <div className="mb-6 rounded border p-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="font-semibold">Cliente:</span>{" "}
-              {getClienteLabel(cliente)}
-            </div>
-            <div>
-              <span className="font-semibold">Codice fiscale:</span>{" "}
-              {cliente?.codice_fiscale || "-"}
-            </div>
-            <div>
-              <span className="font-semibold">Data check:</span>{" "}
-              {formatDate(row.data_check)}
-            </div>
-            <div>
-              <span className="font-semibold">Firma check:</span>{" "}
-              {row.firma_check || "-"}
-            </div>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded border">
-          <div className="grid grid-cols-12 gap-3 border-b bg-gray-100 px-4 py-3 text-xs font-bold">
-            <div className="col-span-1 text-center">X</div>
-            <div className="col-span-3">DOCUMENTAZIONE</div>
-            <div className="col-span-4">OSSERVAZIONI</div>
-            <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
-          </div>
-
-          {AV2_CHECKLIST.map((item) => (
-            <div
-              key={item.id}
-              className="print-break-inside-avoid grid grid-cols-12 gap-3 border-b px-4 py-4 text-xs"
+      <div className="min-h-screen bg-gray-100 text-black">
+        <div className="no-print sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4">
+          <h1 className="text-xl font-bold">Stampa AV2</h1>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
             >
-              <div className="col-span-1 flex justify-center pt-1">
-                <div className="flex h-5 w-5 items-center justify-center border text-[10px]">
-                  {row[`spunta${item.id}`] ? "X" : ""}
+              Stampa / PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="rounded border px-4 py-2 hover:bg-gray-50"
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="print-area"
+          className="mx-auto max-w-7xl bg-white p-8 text-[12px] leading-5 text-black"
+        >
+          <div className="mb-8 border-b-2 border-black pb-4 text-center">
+            <h1 className="text-2xl font-bold uppercase">
+              AV.2 – CHECK-LIST AI FINI DELLA FORMAZIONE DEL FASCICOLO DEL CLIENTE
+            </h1>
+          </div>
+
+          <div className="print-break-inside-avoid mb-6 rounded border p-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-semibold">Cliente:</span>{" "}
+                {getClienteLabel(cliente)}
+              </div>
+              <div>
+                <span className="font-semibold">Codice fiscale:</span>{" "}
+                {cliente?.codice_fiscale || "-"}
+              </div>
+              <div>
+                <span className="font-semibold">Data check:</span>{" "}
+                {formatDate(row.data_check)}
+              </div>
+              <div>
+                <span className="font-semibold">Firma check:</span>{" "}
+                {row.firma_check || "-"}
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded border">
+            <div className="grid grid-cols-12 gap-3 border-b bg-gray-100 px-4 py-3 text-xs font-bold">
+              <div className="col-span-1 text-center">X</div>
+              <div className="col-span-3">DOCUMENTAZIONE</div>
+              <div className="col-span-4">OSSERVAZIONI</div>
+              <div className="col-span-4">ANNOTAZIONI PROFESSIONISTA</div>
+            </div>
+
+            {AV2_CHECKLIST.map((item) => (
+              <div
+                key={item.id}
+                className="print-break-inside-avoid grid grid-cols-12 gap-3 border-b px-4 py-4 text-xs"
+              >
+                <div className="col-span-1 flex justify-center pt-1">
+                  <div className="flex h-5 w-5 items-center justify-center border border-black text-[10px] font-bold">
+                    {row[`spunta${item.id}`] ? "X" : ""}
+                  </div>
+                </div>
+
+                <div className="col-span-3 whitespace-pre-line">
+                  {item.documento}
+                </div>
+
+                <div className="col-span-4 whitespace-pre-line text-gray-700">
+                  {item.osservazioni || "-"}
+                </div>
+
+                <div className="col-span-4 whitespace-pre-line rounded border p-2">
+                  {row[`annotazioni${item.id}`] || ""}
                 </div>
               </div>
-
-              <div className="col-span-3 whitespace-pre-line">
-                {item.documento}
-              </div>
-
-              <div className="col-span-4 whitespace-pre-line text-gray-700">
-                {item.osservazioni || "-"}
-              </div>
-
-              <div className="col-span-4 whitespace-pre-line rounded border p-2">
-                {row[`annotazioni${item.id}`] || ""}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 grid grid-cols-2 gap-8 text-sm">
-          <div>
-            <div className="mb-2 font-semibold">Data</div>
-            <div className="min-h-[40px] border-b border-black">
-              {formatDate(row.data_check)}
-            </div>
+            ))}
           </div>
 
-          <div>
-            <div className="mb-2 font-semibold">Firma</div>
-            <div className="min-h-[40px] border-b border-black">
-              {row.firma_check || ""}
+          <div className="print-break-inside-avoid mt-8 grid grid-cols-2 gap-8 text-sm">
+            <div>
+              <div className="mb-2 font-semibold">Data</div>
+              <div className="min-h-[40px] border-b border-black">
+                {formatDate(row.data_check)}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 font-semibold">Firma</div>
+              <div className="min-h-[40px] border-b border-black">
+                {row.firma_check || ""}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
