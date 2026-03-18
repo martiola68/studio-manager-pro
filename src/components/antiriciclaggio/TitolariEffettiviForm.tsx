@@ -373,7 +373,7 @@ export default function TitolariEffettiviForm({
             />
           </div>
 
-         <button
+ <button
   type="button"
   onClick={() => eliminaRiga(index)}
   className="mt-3 text-red-600"
