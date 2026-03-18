@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
+import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 
 type Cliente = {
   id: string;
@@ -390,6 +390,15 @@ export default function ModelloAV1Page() {
     router.push("/antiriciclaggio");
   };
 
+  const handlePrint = () => {
+    const av1Id = router.query.id || formData.id;
+    if (!av1Id) {
+      alert("Salva prima il record AV1, poi potrai stamparlo.");
+      return;
+    }
+    router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
+  };
+
   const handleSave = async () => {
     if (!formData.studio_id) {
       alert("Studio non disponibile.");
@@ -488,386 +497,432 @@ export default function ModelloAV1Page() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Modello AV1</h1>
-        <p className="text-gray-500 mt-1">
-          {formData.id ? "Modifica verifica antiriciclaggio" : "Inserimento verifica antiriciclaggio"}
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <FormStickyHeader
+        title="Modello AV1"
+        subtitle={
+          formData.id
+            ? "Modifica verifica antiriciclaggio"
+            : "Inserimento verifica antiriciclaggio"
+        }
+        onSave={handleSave}
+        onPrint={handlePrint}
+        onClose={handleChiudiModello}
+        saving={saving}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Dati principali</CardTitle>
-        </CardHeader>
+      <div className="mx-auto max-w-5xl p-4 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dati principali</CardTitle>
+          </CardHeader>
 
-        <CardContent>
-          {loading ? (
-            <p>Caricamento...</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">Cliente</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2"
-                  value={formData.cliente_id}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      cliente_id: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Seleziona cliente</option>
-                  {clienti.map((cliente) => (
-                    <option key={cliente.id} value={cliente.id}>
-                      {getClienteLabel(cliente)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Prestazione</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2"
-                  value={formData.Prestazione}
-                  onChange={(e) => handlePrestazioneChange(e.target.value)}
-                >
-                  <option value="">Seleziona prestazione</option>
-                  {prestazioni.map((prestazione) => (
-                    <option key={prestazione.id} value={prestazione.TipoPrestazioneAR}>
-                      {prestazione.TipoPrestazioneAR}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Valore rischio inerente</label>
-                <input
-                  type="text"
-                  className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(formData.ValRischioIner)}`}
-                  value={formData.ValRischioIner}
-                  readOnly
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Data verifica</label>
-                <input
-                  type="date"
-                  className="w-full border rounded-md px-3 py-2"
-                  value={formData.DataVerifica}
-                  onChange={(e) => handleDataVerificaChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Scadenza verifica</label>
-                <input
-                  type="date"
-                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                  value={ScadenzaVerificaCalcolata}
-                  readOnly
-                />
-              </div>
-
-              {error && (
+          <CardContent>
+            {loading ? (
+              <p>Caricamento...</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <p className="text-red-600 text-sm">Errore: {error}</p>
+                  <label className="mb-1 block text-sm font-medium">Cliente</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={formData.cliente_id}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        cliente_id: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Seleziona cliente</option>
+                    {clienti.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {getClienteLabel(cliente)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>A - Aspetti connessi al cliente</CardTitle>
-        </CardHeader>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Prestazione</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={formData.Prestazione}
+                    onChange={(e) => handlePrestazioneChange(e.target.value)}
+                  >
+                    <option value="">Seleziona prestazione</option>
+                    {prestazioni.map((prestazione) => (
+                      <option key={prestazione.id} value={prestazione.TipoPrestazioneAR}>
+                        {prestazione.TipoPrestazioneAR}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        <CardContent>
-          <div className="space-y-6">
-            {Object.entries(av1Labels).map(([sectionKey, fields]) => {
-              const isBStart = sectionKey === "B1";
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Valore rischio inerente</label>
+                  <input
+                    type="text"
+                    className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
+                      formData.ValRischioIner
+                    )}`}
+                    value={formData.ValRischioIner}
+                    readOnly
+                  />
+                </div>
 
-              return (
-                <div key={sectionKey}>
-                  {isBStart && (
-                    <div className="mb-6">
-                      <h3 className="text-xl font-semibold">
-                        B. Aspetti connessi all’operazione e/o prestazione professionale
-                      </h3>
-                    </div>
-                  )}
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Data verifica</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-md border px-3 py-2"
+                    value={formData.DataVerifica}
+                    onChange={(e) => handleDataVerificaChange(e.target.value)}
+                  />
+                </div>
 
-                  <div className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3 gap-4">
-                      <h3 className="text-lg font-semibold">{sectionTitles[sectionKey]}</h3>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Scadenza verifica</label>
+                  <input
+                    type="date"
+                    className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                    value={ScadenzaVerificaCalcolata}
+                    readOnly
+                  />
+                </div>
 
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium whitespace-nowrap">
-                          Valore {sectionKey}
-                        </label>
-                        <select
-                          className="border rounded-md px-3 py-2 w-24 bg-sky-100"
-                          value={formData[sectionKey] ?? 1}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              [sectionKey]: Number(e.target.value),
-                            }))
-                          }
-                        >
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                        </select>
+                {error && (
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-red-600">Errore: {error}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>A - Aspetti connessi al cliente</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="space-y-6">
+              {Object.entries(av1Labels).map(([sectionKey, fields]) => {
+                const isBStart = sectionKey === "B1";
+
+                return (
+                  <div key={sectionKey}>
+                    {isBStart && (
+                      <div className="mb-6">
+                        <h3 className="text-xl font-semibold">
+                          B. Aspetti connessi all’operazione e/o prestazione professionale
+                        </h3>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-3">
-                      {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => (
-                        <label key={fieldKey} className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            className="mt-1"
-                            checked={Boolean(formData[fieldKey])}
+                    <div className="rounded-lg border p-4">
+                      <div className="mb-3 flex items-center justify-between gap-4">
+                        <h3 className="text-lg font-semibold">{sectionTitles[sectionKey]}</h3>
+
+                        <div className="flex items-center gap-2">
+                          <label className="whitespace-nowrap text-sm font-medium">
+                            Valore {sectionKey}
+                          </label>
+                          <select
+                            className="w-24 rounded-md border bg-sky-100 px-3 py-2"
+                            value={formData[sectionKey] ?? 1}
                             onChange={(e) =>
                               setFormData((prev) => ({
                                 ...prev,
-                                [fieldKey]: e.target.checked,
+                                [sectionKey]: Number(e.target.value),
                               }))
                             }
-                          />
-                          <span className="text-sm text-gray-800">{label}</span>
-                        </label>
-                      ))}
+                          >
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        {Object.entries(fields as Record<string, string>).map(
+                          ([fieldKey, label]) => (
+                            <label key={fieldKey} className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                className="mt-1"
+                                checked={Boolean(formData[fieldKey])}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    [fieldKey]: e.target.checked,
+                                  }))
+                                }
+                              />
+                              <span className="text-sm text-gray-800">{label}</span>
+                            </label>
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Calcoli finali</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">TotA</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={TotA}
-                readOnly
-              />
+                );
+              })}
             </div>
+          </CardContent>
+        </Card>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">TotB</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={TotB}
-                readOnly
-              />
-            </div>
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Calcoli finali</CardTitle>
+          </CardHeader>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Media punteggio</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={MediaPunteggio}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Livello rischio</label>
-              <input
-                type="text"
-                className={`w-full border rounded-md px-3 py-2 ${getLivelloRischioBgClass(LivelloRischio)}`}
-                value={LivelloRischio}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Rischio inerente ponderato</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={RisInerentePonderato}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Rischio specifico ponderato</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={RisSpecificoPonderato}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Rischio effettivo</label>
-              <input
-                type="text"
-                className="w-full border rounded-md px-3 py-2 bg-gray-100"
-                value={RischioEffettivo}
-                readOnly
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Adeguata verifica</label>
-              <input
-                type="text"
-                className={`w-full border rounded-md px-3 py-2 ${getAdeguataVerificaBgClass(AdeguataVerifica)}`}
-                value={AdeguataVerifica}
-                readOnly
-              />
-            </div>
-
-            <div className="md:col-span-2 flex justify-end gap-3 pt-3 flex-wrap">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Salvataggio..." : "Salva AV1"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  const av1Id = router.query.id || formData.id;
-                  if (!av1Id) {
-                    alert("Salva prima il record AV1, poi potrai stamparlo.");
-                    return;
-                  }
-                  router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
-                }}
-              >
-                Stampa AV1
-              </Button>
-
-              <Button type="button" variant="outline" onClick={handleChiudiModello}>
-                Chiudi Modello
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Matrice del rischio</CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div className="min-w-[760px]">
-              <div className="grid grid-cols-5 gap-0 border border-gray-400">
-                <div className="border border-gray-400 p-4 flex items-center justify-center font-bold text-center bg-white">
-                  RISCHIO INERENTE 40%
-                </div>
-
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
-                  Non significativo
-                  <div className="text-sm font-normal">1 - 1,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
-                  Poco significativo
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
-                  Abbastanza significativo
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
-                  Molto significativo
-                  <div className="text-sm font-normal">3,6 - 4</div>
-                </div>
-
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
-                  Molto significativo
-                  <div className="text-sm font-normal">3,6 - 4</div>
-                </div>
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("molto", "non")}`} />
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("molto", "poco")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("molto", "abbastanza")}`} />
-                <div className={`border border-gray-400 h-24 bg-red-400 ${isActiveCell("molto", "molto")}`} />
-
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
-                  Abbastanza significativo
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
-                </div>
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("abbastanza", "non")}`} />
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("abbastanza", "poco")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("abbastanza", "abbastanza")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("abbastanza", "molto")}`} />
-
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
-                  Poco significativo
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
-                </div>
-                <div className={`border border-gray-400 h-24 bg-green-300 ${isActiveCell("poco", "non")}`} />
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("poco", "poco")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("poco", "abbastanza")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("poco", "molto")}`} />
-
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-300">
-                  Non significativo
-                  <div className="text-sm font-normal">1 - 1,5</div>
-                </div>
-                <div className={`border border-gray-400 h-24 bg-green-300 ${isActiveCell("non", "non")}`} />
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("non", "poco")}`} />
-                <div className={`border border-gray-400 h-24 bg-yellow-200 ${isActiveCell("non", "abbastanza")}`} />
-                <div className={`border border-gray-400 h-24 bg-orange-300 ${isActiveCell("non", "molto")}`} />
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium">TotA</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={TotA}
+                  readOnly
+                />
               </div>
 
-              <div className="grid grid-cols-5 gap-0 border-l border-r border-b border-gray-400">
-                <div className="border border-gray-400 p-4 bg-white" />
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-green-200">
-                  Non significativa
-                  <div className="text-sm font-normal">1 - 1,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-yellow-200">
-                  Poco significativa
-                  <div className="text-sm font-normal">1,6 - 2,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-orange-300">
-                  Abbastanza significativa
-                  <div className="text-sm font-normal">2,6 - 3,5</div>
-                </div>
-                <div className="border border-gray-400 p-3 text-center font-semibold bg-red-400 text-white">
-                  Molto significativa
-                  <div className="text-sm font-normal">3,6 - 4</div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">TotB</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={TotB}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Media punteggio</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={MediaPunteggio}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Livello rischio</label>
+                <input
+                  type="text"
+                  className={`w-full rounded-md border px-3 py-2 ${getLivelloRischioBgClass(
+                    LivelloRischio
+                  )}`}
+                  value={LivelloRischio}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Rischio inerente ponderato</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={RisInerentePonderato}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Rischio specifico ponderato</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={RisSpecificoPonderato}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Rischio effettivo</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={RischioEffettivo}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Adeguata verifica</label>
+                <input
+                  type="text"
+                  className={`w-full rounded-md border px-3 py-2 ${getAdeguataVerificaBgClass(
+                    AdeguataVerifica
+                  )}`}
+                  value={AdeguataVerifica}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">AV1 confermato</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={formData.AV1Conferma ? "SI" : "NO"}
+                  readOnly
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">AV4 generato</label>
+                <input
+                  type="text"
+                  className="w-full rounded-md border bg-gray-100 px-3 py-2"
+                  value={formData.AV4Generato ? "SI" : "NO"}
+                  readOnly
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Matrice del rischio</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <div className="overflow-x-auto">
+              <div className="min-w-[760px]">
+                <div className="grid grid-cols-5 gap-0 border border-gray-400">
+                  <div className="flex items-center justify-center border border-gray-400 bg-white p-4 text-center font-bold">
+                    RISCHIO INERENTE 40%
+                  </div>
+
+                  <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+                    Non significativo
+                    <div className="text-sm font-normal">1 - 1,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                    Poco significativo
+                    <div className="text-sm font-normal">1,6 - 2,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                    Abbastanza significativo
+                    <div className="text-sm font-normal">2,6 - 3,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                    Molto significativo
+                    <div className="text-sm font-normal">3,6 - 4</div>
+                  </div>
+
+                  <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                    Molto significativo
+                    <div className="text-sm font-normal">3,6 - 4</div>
+                  </div>
+                  <div className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell("molto", "non")}`} />
+                  <div className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell("molto", "poco")}`} />
+                  <div
+                    className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell(
+                      "molto",
+                      "abbastanza"
+                    )}`}
+                  />
+                  <div className={`h-24 border border-gray-400 bg-red-400 ${isActiveCell("molto", "molto")}`} />
+
+                  <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                    Abbastanza significativo
+                    <div className="text-sm font-normal">2,6 - 3,5</div>
+                  </div>
+                  <div
+                    className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
+                      "abbastanza",
+                      "non"
+                    )}`}
+                  />
+                  <div
+                    className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
+                      "abbastanza",
+                      "poco"
+                    )}`}
+                  />
+                  <div
+                    className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell(
+                      "abbastanza",
+                      "abbastanza"
+                    )}`}
+                  />
+                  <div
+                    className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell(
+                      "abbastanza",
+                      "molto"
+                    )}`}
+                  />
+
+                  <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                    Poco significativo
+                    <div className="text-sm font-normal">1,6 - 2,5</div>
+                  </div>
+                  <div className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell("poco", "non")}`} />
+                  <div className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell("poco", "poco")}`} />
+                  <div
+                    className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell(
+                      "poco",
+                      "abbastanza"
+                    )}`}
+                  />
+                  <div className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell("poco", "molto")}`} />
+
+                  <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
+                    Non significativo
+                    <div className="text-sm font-normal">1 - 1,5</div>
+                  </div>
+                  <div className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell("non", "non")}`} />
+                  <div className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell("non", "poco")}`} />
+                  <div
+                    className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
+                      "non",
+                      "abbastanza"
+                    )}`}
+                  />
+                  <div className={`h-24 border border-gray-400 bg-orange-300 ${isActiveCell("non", "molto")}`} />
                 </div>
 
-                <div className="col-span-5 border border-gray-400 p-4 text-center text-xl font-bold bg-white">
-                  VULNERABILITÀ 60%
+                <div className="grid grid-cols-5 gap-0 border-b border-l border-r border-gray-400">
+                  <div className="border border-gray-400 bg-white p-4" />
+                  <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+                    Non significativa
+                    <div className="text-sm font-normal">1 - 1,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                    Poco significativa
+                    <div className="text-sm font-normal">1,6 - 2,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                    Abbastanza significativa
+                    <div className="text-sm font-normal">2,6 - 3,5</div>
+                  </div>
+                  <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                    Molto significativa
+                    <div className="text-sm font-normal">3,6 - 4</div>
+                  </div>
+
+                  <div className="col-span-5 border border-gray-400 bg-white p-4 text-center text-xl font-bold">
+                    VULNERABILITÀ 60%
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-4 text-sm text-gray-600">
-            Livello rischio effettivo calcolato: <strong>{LivelloRischioEffettivo}</strong>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-4 text-sm text-gray-600">
+              Livello rischio effettivo calcolato: <strong>{LivelloRischioEffettivo}</strong>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
