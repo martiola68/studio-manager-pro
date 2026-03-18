@@ -18,6 +18,7 @@ type AV2FormState = {
   id?: string;
   studio_id: string;
   cliente_id: string;
+  av1_id: string;
   data_check: string;
   firma_check: string;
   [key: string]: string | boolean | undefined;
@@ -28,6 +29,7 @@ const buildInitialForm = (studioId: string): AV2FormState => {
     id: "",
     studio_id: studioId,
     cliente_id: "",
+    av1_id: "",
     data_check: "",
     firma_check: "",
   };
@@ -54,6 +56,8 @@ function normalizeDateValue(value: unknown) {
 
 export default function ModelloAV2Page() {
   const router = useRouter();
+  const { id, av1_id } = router.query;
+
   const [studioId, setStudioId] = useState<string>("");
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [form, setForm] = useState<AV2FormState>(buildInitialForm(""));
@@ -66,113 +70,126 @@ export default function ModelloAV2Page() {
     [clienti, form.cliente_id]
   );
 
-  const bootstrapPage = async () => {
+  const prefillFromAV1 = async (
+    studioIdValue: string,
+    av1IdValue: string
+  ) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!av1IdValue) return;
 
-      const currentStudioId = await getStudioId();
+      const { data: av1Row, error: av1Error } = await (supabase as any)
+        .from("tbAV1")
+        .select("id, studio_id, cliente_id, DataVerifica")
+        .eq("id", Number(av1IdValue))
+        .single();
 
-      if (!currentStudioId) {
-        setError("Studio ID non trovato nella sessione.");
+      if (av1Error) {
+        console.error("Errore caricamento AV1:", av1Error);
+        setError(av1Error.message);
         return;
       }
 
-      setStudioId(currentStudioId);
-      setForm(buildInitialForm(currentStudioId));
+      if (!av1Row) return;
 
-      const { data: clientiData, error: clientiError } = await (supabase as any)
-        .from("tbclienti")
-        .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
-        .eq("studio_id", currentStudioId)
-        .order("ragione_sociale", { ascending: true });
+      const resolvedStudioId = av1Row.studio_id || studioIdValue || "";
+      const resolvedClienteId = av1Row.cliente_id || "";
 
-      if (clientiError) {
-        setError(clientiError.message);
-        return;
-      }
-
-      setClienti((clientiData || []) as Cliente[]);
+      setForm((prev) => ({
+        ...buildInitialForm(resolvedStudioId),
+        ...prev,
+        studio_id: resolvedStudioId,
+        av1_id: String(av1Row.id),
+        cliente_id: resolvedClienteId,
+      }));
     } catch (err: any) {
-      console.error("Errore bootstrap AV2:", err);
-      setError(err?.message || "Errore durante il caricamento iniziale.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAV2ByCliente = async (clienteId: string) => {
-    try {
-      if (!clienteId || !studioId) return;
-
-      setLoading(true);
-      setError(null);
-
-      const { data, error } = await (supabase as any)
-        .from("tbAV2")
-        .select("*")
-        .eq("studio_id", studioId)
-        .eq("cliente_id", clienteId)
-        .maybeSingle();
-
-      if (error) {
-        setError(error.message);
-        return;
-      }
-
-      if (data) {
-        const nextForm: AV2FormState = {
-          ...buildInitialForm(studioId),
-          ...data,
-          id: String(data.id),
-          studio_id: data.studio_id ?? studioId,
-          cliente_id: data.cliente_id ?? clienteId,
-          data_check: normalizeDateValue(data.data_check),
-          firma_check: data.firma_check ?? "",
-        };
-
-        setForm(nextForm);
-      } else {
-        const emptyForm = buildInitialForm(studioId);
-        emptyForm.cliente_id = clienteId;
-        setForm(emptyForm);
-      }
-    } catch (err: any) {
-      console.error("Errore caricamento AV2:", err);
-      setError(err?.message || "Errore nel caricamento della scheda AV2.");
-    } finally {
-      setLoading(false);
+      console.error("Errore prefill AV2 da AV1:", err);
+      setError(err?.message || "Errore durante il prefill da AV1.");
     }
   };
 
   useEffect(() => {
-    bootstrapPage();
-  }, []);
+    const init = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const handleClienteChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const clienteId = e.target.value;
+        const currentStudioId = await getStudioId();
 
+        if (!currentStudioId) {
+          setError("Studio ID non trovato nella sessione.");
+          return;
+        }
+
+        setStudioId(currentStudioId);
+
+        const { data: clientiData, error: clientiError } = await (supabase as any)
+          .from("tbclienti")
+          .select("id, cod_cliente, ragione_sociale, codice_fiscale, partita_iva")
+          .eq("studio_id", currentStudioId)
+          .order("ragione_sociale", { ascending: true });
+
+        if (clientiError) {
+          setError(clientiError.message);
+          return;
+        }
+
+        setClienti((clientiData || []) as Cliente[]);
+
+        if (id && typeof id === "string") {
+          const { data, error } = await (supabase as any)
+            .from("tbAV2")
+            .select("*")
+            .eq("id", id)
+            .single();
+
+          if (error) {
+            setError(error.message);
+            return;
+          }
+
+          if (data) {
+            setForm({
+              ...buildInitialForm(data.studio_id || currentStudioId),
+              ...data,
+              id: String(data.id),
+              studio_id: data.studio_id || currentStudioId,
+              cliente_id: data.cliente_id || "",
+              av1_id: data.av1_id ? String(data.av1_id) : "",
+              data_check: normalizeDateValue(data.data_check),
+              firma_check: data.firma_check || "",
+            });
+            return;
+          }
+        }
+
+        if (av1_id && typeof av1_id === "string") {
+          await prefillFromAV1(currentStudioId, av1_id);
+        } else {
+          setForm(buildInitialForm(currentStudioId));
+        }
+      } catch (err: any) {
+        console.error("Errore init AV2:", err);
+        setError(err?.message || "Errore durante inizializzazione AV2.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!router.isReady) return;
+    void init();
+  }, [router.isReady, id, av1_id]);
+
+  const handleAnnotazioneChange = (index: number, value: string) => {
     setForm((prev) => ({
-      ...buildInitialForm(studioId),
-      cliente_id: clienteId,
+      ...prev,
+      [`annotazioni${index}`]: value,
     }));
-
-    if (clienteId) {
-      await loadAV2ByCliente(clienteId);
-    }
   };
 
   const handleCheckboxChange = (index: number, checked: boolean) => {
     setForm((prev) => ({
       ...prev,
       [`spunta${index}`]: checked,
-    }));
-  };
-
-  const handleAnnotazioneChange = (index: number, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      [`annotazioni${index}`]: value,
     }));
   };
 
@@ -187,19 +204,25 @@ export default function ModelloAV2Page() {
       }
 
       if (!form.cliente_id) {
-        alert("Seleziona un cliente.");
+        alert("Cliente non disponibile.");
+        return;
+      }
+
+      if (!form.av1_id) {
+        alert("AV1 non collegato.");
         return;
       }
 
       const payload: Record<string, unknown> = {
         studio_id: studioId,
         cliente_id: form.cliente_id,
+        av1_id: Number(form.av1_id),
         data_check: form.data_check || null,
         firma_check: form.firma_check || null,
       };
 
       for (let i = 1; i <= 23; i++) {
-        payload[`spunta${i}`] = Boolean(form[`spunta${i}`]);
+        payload[`spunta${i}`] = !!form[`spunta${i}`];
         payload[`annotazioni${i}`] = String(form[`annotazioni${i}`] || "");
       }
 
@@ -232,20 +255,28 @@ export default function ModelloAV2Page() {
         savedId = String(data.id);
       }
 
+      const { error: av1UpdateError } = await (supabase as any)
+        .from("tbAV1")
+        .update({ AV2Generato: true })
+        .eq("id", Number(form.av1_id));
+
+      if (av1UpdateError) {
+        console.error("Errore aggiornamento AV2Generato:", av1UpdateError);
+      }
+
       setForm((prev) => ({
         ...prev,
         id: savedId,
       }));
 
       alert("Scheda AV2 salvata correttamente.");
-      setSaving(false);
-
-      if (savedId) {
-        router.replace(`/antiriciclaggio/modello-av2?id=${savedId}`);
-      }
+      await router.replace(
+        `/antiriciclaggio/modello-av2?id=${savedId}&av1_id=${form.av1_id}`
+      );
     } catch (err: any) {
       console.error("Errore salvataggio AV2:", err);
       setError(err?.message || "Errore durante il salvataggio della scheda AV2.");
+    } finally {
       setSaving(false);
     }
   };
@@ -278,9 +309,9 @@ export default function ModelloAV2Page() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">Cliente</label>
                 <select
-                  className="w-full border rounded-md px-3 py-2"
+                  className="w-full border rounded-md px-3 py-2 bg-gray-100"
                   value={form.cliente_id}
-                  onChange={handleClienteChange}
+                  disabled
                 >
                   <option value="">Seleziona cliente</option>
                   {clienti.map((cliente) => (
@@ -349,7 +380,7 @@ export default function ModelloAV2Page() {
                     <div className="col-span-1 flex justify-center items-start pt-1">
                       <input
                         type="checkbox"
-                        checked={Boolean(form[`spunta${item.id}`])}
+                        checked={!!form[`spunta${item.id}`]}
                         onChange={(e) =>
                           handleCheckboxChange(item.id, e.target.checked)
                         }
