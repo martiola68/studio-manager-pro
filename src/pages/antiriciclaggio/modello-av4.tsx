@@ -399,151 +399,150 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/rappresentanti/nuovo?${params.toString()}`);
   }
 
-  async function prefillFromAV1(
-    studioIdValue: string,
-    av1IdValue: string,
-    clienteIdValue: string
-  ) {
-    const supabase = getSupabaseClient() as any;
+ async function prefillFromAV1(
+  studioIdValue: string,
+  av1IdValue: string,
+  clienteIdValue: string
+) {
+  const supabase = getSupabaseClient() as any;
 
-    let resolvedStudioId = studioIdValue || "";
-    let resolvedClienteId = clienteIdValue || "";
-    let naturaPrestazione = "";
+  let resolvedStudioId = studioIdValue || "";
+  let resolvedClienteId = clienteIdValue || "";
+  let naturaPrestazione = "";
 
-    if (av1IdValue) {
-  const { data: av1Row, error: av1Error } = await supabase
-    .from("tbAV1")
-    .select("*")
-    .eq("id", av1IdValue)
-    .single();
+  if (av1IdValue) {
+    const { data: av1Row, error: av1Error } = await supabase
+      .from("tbAV1")
+      .select("*")
+      .eq("id", av1IdValue)
+      .single();
 
-        if (av1Error) {
-          console.error("Errore caricamento AV1:", av1Error);
-        }
-
-        if (av1Row) {
-          resolvedStudioId = pickString(
-            av1Row?.studio_id,
-            av1Row?.StudioID,
-            av1Row?.studioId,
-            resolvedStudioId
-          );
-
-          resolvedClienteId = pickString(
-            av1Row?.cliente_id,
-            av1Row?.ClienteID,
-            av1Row?.clienteId,
-            clienteIdValue
-          );
-
-          naturaPrestazione = pickString(
-            av1Row?.Prestazione,
-            av1Row?.prestazione,
-            av1Row?.natura_prestazione
-          );
-        }
-      }
+    if (av1Error) {
+      console.error("Errore caricamento AV1:", av1Error);
     }
 
-    setForm((prev) => ({
-      ...prev,
-      ...initialFormState(resolvedStudioId, av1IdValue, resolvedClienteId),
-      studio_id: resolvedStudioId || prev.studio_id || "",
-      av1_id: av1IdValue || prev.av1_id || "",
-      cliente_id: resolvedClienteId || prev.cliente_id || "",
-      natura_prestazione: naturaPrestazione || "",
-    }));
+    if (av1Row) {
+      resolvedStudioId = pickString(
+        av1Row?.studio_id,
+        av1Row?.StudioID,
+        av1Row?.studioId,
+        resolvedStudioId
+      );
 
-    if (resolvedClienteId) {
-      await hydrateClienteAndRappresentante(resolvedClienteId);
-    } else {
-      setClienteLabel("");
-      clearRappresentanteFields();
+      resolvedClienteId = pickString(
+        av1Row?.cliente_id,
+        av1Row?.ClienteID,
+        av1Row?.clienteId,
+        clienteIdValue
+      );
+
+      naturaPrestazione = pickString(
+        av1Row?.Prestazione,
+        av1Row?.prestazione,
+        av1Row?.natura_prestazione
+      );
     }
   }
 
-  useEffect(() => {
-    if (!router.isReady || initialized) return;
+  setForm((prev) => ({
+    ...prev,
+    ...initialFormState(resolvedStudioId, av1IdValue, resolvedClienteId),
+    studio_id: resolvedStudioId || prev.studio_id || "",
+    av1_id: av1IdValue || prev.av1_id || "",
+    cliente_id: resolvedClienteId || prev.cliente_id || "",
+    natura_prestazione: naturaPrestazione || prev.natura_prestazione || "",
+  }));
 
-    const init = async () => {
-      setLoading(true);
-
-      try {
-        const supabase = getSupabaseClient() as any;
-        let existingRow: any = null;
-
-      if (av4IdFromQuery) {
-          const av4IdValue = normalizeId(av4IdFromQuery);
-
-          if (av4IdValue) {
-            const { data, error } = await supabase
-              .from("tbAV4")
-              .select("*")
-              .eq("id", av4IdValue)
-              .maybeSingle();
-
-            if (error) {
-              console.error("Errore caricamento AV4 da id:", error);
-            } else {
-              existingRow = data || null;
-            }
-          }
-        }
-
-        if (!existingRow && av1IdFromQuery) {
-          const av1Numeric = toNumericOrNull(av1IdFromQuery);
-
-       if (av1IdFromQuery) {
-  const { data, error } = await supabase
-    .from("tbAV4")
-    .select("*")
-    .eq("av1_id", av1IdFromQuery)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Errore caricamento AV4 da av1_id:", error);
+  if (resolvedClienteId) {
+    await hydrateClienteAndRappresentante(resolvedClienteId);
   } else {
-    existingRow = data || null;
+    setClienteLabel("");
+    clearRappresentanteFields();
   }
 }
 
-        if (existingRow) {
-          console.log("AV4 CARICATO DA DB:", existingRow);
-          setAv4Id(String(existingRow.id));
-          const mapped = mapDbRowToForm(existingRow);
-          console.log("AV4 MAPPATO NEL FORM:", mapped);
-          setForm(mapped);
+useEffect(() => {
+  if (!router.isReady || initialized) return;
 
-          if (mapped.cliente_id) {
-            await hydrateClienteAndRappresentante(mapped.cliente_id);
+  const init = async () => {
+    setLoading(true);
+
+    try {
+      const supabase = getSupabaseClient() as any;
+      let existingRow: any = null;
+
+      if (av4IdFromQuery) {
+        const av4IdValue = normalizeId(av4IdFromQuery);
+
+        if (av4IdValue) {
+          const { data, error } = await supabase
+            .from("tbAV4")
+            .select("*")
+            .eq("id", av4IdValue)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Errore caricamento AV4 da id:", error);
           } else {
-            setClienteLabel("");
-            clearRappresentanteFields();
+            existingRow = data || null;
           }
-        } else {
-          await prefillFromAV1(
-            studioIdFromQuery,
-            av1IdFromQuery,
-            clienteIdFromQuery
-          );
         }
-      } catch (err) {
-        console.error("Errore inizializzazione AV4:", err);
-      } finally {
-        setLoading(false);
-        setInitialized(true);
       }
-    };
 
-    void init();
-  }, [
-    router.isReady,
-    initialized,
-    studioIdFromQuery,
-    av1IdFromQuery,
-    clienteIdFromQuery,
-    av4IdFromQuery,
-  ]);
+      if (!existingRow && av1IdFromQuery) {
+        const { data, error } = await supabase
+          .from("tbAV4")
+          .select("*")
+          .eq("av1_id", av1IdFromQuery)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Errore caricamento AV4 da av1_id:", error);
+        } else {
+          existingRow = data || null;
+        }
+      }
+
+      if (existingRow) {
+        console.log("AV4 CARICATO DA DB:", existingRow);
+
+        setAv4Id(String(existingRow.id));
+
+        const mapped = mapDbRowToForm(existingRow);
+        console.log("AV4 MAPPATO NEL FORM:", mapped);
+
+        setForm(mapped);
+
+        if (mapped.cliente_id) {
+          await hydrateClienteAndRappresentante(mapped.cliente_id);
+        } else {
+          setClienteLabel("");
+          clearRappresentanteFields();
+        }
+      } else {
+        await prefillFromAV1(
+          studioIdFromQuery,
+          av1IdFromQuery,
+          clienteIdFromQuery
+        );
+      }
+    } catch (err) {
+      console.error("Errore inizializzazione AV4:", err);
+    } finally {
+      setLoading(false);
+      setInitialized(true);
+    }
+  };
+
+  void init();
+}, [
+  router.isReady,
+  initialized,
+  studioIdFromQuery,
+  av1IdFromQuery,
+  clienteIdFromQuery,
+  av4IdFromQuery,
+]);
 
   useEffect(() => {
     if (!router.isReady) return;
