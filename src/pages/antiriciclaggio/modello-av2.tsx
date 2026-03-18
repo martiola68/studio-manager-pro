@@ -39,7 +39,6 @@ const buildInitialForm = (studioId: string): AV2FormState => {
 
 const formatClienteLabel = (cliente: Cliente) => {
   if (cliente.ragione_sociale) return cliente.ragione_sociale;
-  if (cliente.denominazione) return cliente.denominazione;
   if (cliente.cognome || cliente.nome) {
     return `${cliente.cognome || ""} ${cliente.nome || ""}`.trim();
   }
@@ -88,12 +87,12 @@ if (!currentStudioId) {
 setStudioId(currentStudioId);
 setForm(buildInitialForm(currentStudioId));
 
-      const { data: clientiData, error: clientiError } = await supabase
-        .from("tbclienti")
-        .select("id, ragione_sociale, denominazione, nome, cognome")
-        .eq("studio_id", currentStudioId)
-        .order("ragione_sociale", { ascending: true });
-
+     const { data: clientiData, error: clientiError } = await supabase
+  .from("tbclienti")
+  .select("id, ragione_sociale, nome, cognome")
+  .eq("studio_id", currentStudioId)
+  .order("ragione_sociale", { ascending: true });
+      
       if (clientiError) throw clientiError;
 
       setClienti(clientiData || []);
