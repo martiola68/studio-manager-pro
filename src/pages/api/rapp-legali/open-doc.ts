@@ -16,6 +16,28 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
+function normalizeStoragePath(input: string) {
+  const value = String(input || "").trim();
+  if (!value) return "";
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    const markerPublic = `/storage/v1/object/public/${BUCKET_NAME}/`;
+    const markerSign = `/storage/v1/object/sign/${BUCKET_NAME}/`;
+
+    const publicIdx = value.indexOf(markerPublic);
+    if (publicIdx !== -1) {
+      return value.substring(publicIdx + markerPublic.length).split("?")[0];
+    }
+
+    const signIdx = value.indexOf(markerSign);
+    if (signIdx !== -1) {
+      return value.substring(signIdx + markerSign.length).split("?")[0];
+    }
+  }
+
+  return value.replace(/^\/+/, "").replace(new RegExp(`^${BUCKET_NAME}/`), "");
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
@@ -25,10 +47,16 @@ export default async function handler(
   }
 
   try {
-    const { path } = req.body ?? {};
+    const rawPath = req.body?.path;
+
+    if (!rawPath) {
+      return res.status(400).json({ ok: false, error: "Path documento mancante" });
+    }
+
+    const path = normalizeStoragePath(rawPath);
 
     if (!path) {
-      return res.status(400).json({ ok: false, error: "Path documento mancante" });
+      return res.status(400).json({ ok: false, error: "Path documento non valido" });
     }
 
     const { data, error } = await supabaseAdmin.storage
