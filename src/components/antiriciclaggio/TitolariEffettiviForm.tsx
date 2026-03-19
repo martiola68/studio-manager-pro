@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
 
 type Props = {
   sezione: "domanda7" | "domanda8" | "domanda9";
@@ -25,10 +26,10 @@ type RigaTitolare = {
   error_codice_fiscale?: string;
 };
 
-function emptyRiga(): RigaTitolare {
+function emptyRiga(mode: SourceMode = "import"): RigaTitolare {
   return {
     rapp_legale_id: "",
-    source_mode: "import",
+    source_mode: mode,
     nome_cognome: "",
     codice_fiscale: "",
     luogo_nascita: "",
@@ -49,10 +50,6 @@ function normalizeText(value: unknown): string {
   return String(value || "").trim();
 }
 
-function normalizeCf(value: unknown): string {
-  return String(value || "").trim().toUpperCase();
-}
-
 function normalizeDateForInput(value: unknown): string {
   if (!value) return "";
   const str = String(value).trim();
@@ -69,26 +66,17 @@ function normalizeDateForInput(value: unknown): string {
   return `${year}-${month}-${day}`;
 }
 
-function validaCodiceFiscale(cf: string): boolean {
-  const value = normalizeCf(cf);
-  if (!value) return false;
-  return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(value);
-}
-
 function isDuplicateTitolare(
   righe: RigaTitolare[],
   candidato: RigaTitolare,
   currentIndex?: number
 ): boolean {
-  const cf = normalizeCf(candidato.codice_fiscale);
-
-  if (!cf) {
-    return false;
-  }
+  const cf = normalizeCF(candidato.codice_fiscale);
+  if (!cf) return false;
 
   return righe.some((r, index) => {
     if (currentIndex !== undefined && index === currentIndex) return false;
-    return normalizeCf(r.codice_fiscale) === cf;
+    return normalizeCF(r.codice_fiscale) === cf;
   });
 }
 
@@ -96,7 +84,7 @@ function isMeaningfulRow(riga: RigaTitolare): boolean {
   return Boolean(
     normalizeId(riga.rapp_legale_id) ||
       normalizeText(riga.nome_cognome) ||
-      normalizeCf(riga.codice_fiscale) ||
+      normalizeCF(riga.codice_fiscale) ||
       normalizeText(riga.luogo_nascita) ||
       normalizeDateForInput(riga.data_nascita) ||
       normalizeText(riga.indirizzo_residenza) ||
@@ -162,13 +150,13 @@ export default function TitolariEffettiviForm({
         if (Array.isArray(parsed)) {
           setRighe(
             parsed.map((row: any) => ({
-              ...emptyRiga(),
+              ...emptyRiga(row?.source_mode === "manual" ? "manual" : "import"),
               ...row,
               id: normalizeId(row?.id),
               rapp_legale_id: normalizeId(row?.rapp_legale_id),
               source_mode: row?.source_mode === "manual" ? "manual" : "import",
               nome_cognome: normalizeText(row?.nome_cognome),
-              codice_fiscale: normalizeCf(row?.codice_fiscale),
+              codice_fiscale: normalizeCF(row?.codice_fiscale),
               luogo_nascita: normalizeText(row?.luogo_nascita),
               data_nascita: normalizeDateForInput(row?.data_nascita),
               indirizzo_residenza: normalizeText(row?.indirizzo_residenza),
@@ -200,7 +188,7 @@ export default function TitolariEffettiviForm({
         ...r,
         id: normalizeId(r.id),
         rapp_legale_id: normalizeId(r.rapp_legale_id),
-        codice_fiscale: normalizeCf(r.codice_fiscale),
+        codice_fiscale: normalizeCF(r.codice_fiscale),
         data_nascita: normalizeDateForInput(r.data_nascita),
         error_codice_fiscale: "",
       }));
@@ -261,7 +249,7 @@ export default function TitolariEffettiviForm({
       rapp_legale_id: normalizeId(row.rapp_legale_id),
       source_mode: normalizeId(row.rapp_legale_id) ? "import" : "manual",
       nome_cognome: normalizeText(row?.nome_cognome),
-      codice_fiscale: normalizeCf(row?.codice_fiscale),
+      codice_fiscale: normalizeCF(row?.codice_fiscale),
       luogo_nascita: normalizeText(row?.luogo_nascita),
       data_nascita: normalizeDateForInput(row?.data_nascita),
       indirizzo_residenza: normalizeText(row?.indirizzo_residenza),
@@ -273,7 +261,7 @@ export default function TitolariEffettiviForm({
   }
 
   function aggiungiRiga(mode: SourceMode) {
-    setRighe((prev) => [...prev, { ...emptyRiga(), source_mode: mode }]);
+    setRighe((prev) => [...prev, emptyRiga(mode)]);
   }
 
   async function eliminaRiga(index: number) {
@@ -316,12 +304,12 @@ export default function TitolariEffettiviForm({
         ...patch,
       };
 
-      next.codice_fiscale = normalizeCf(next.codice_fiscale);
+      next.codice_fiscale = normalizeCF(next.codice_fiscale);
       next.data_nascita = normalizeDateForInput(next.data_nascita);
 
       if (!next.codice_fiscale) {
         next.error_codice_fiscale = "Codice fiscale obbligatorio";
-      } else if (!validaCodiceFiscale(next.codice_fiscale)) {
+      } else if (!isValidCF(next.codice_fiscale)) {
         next.error_codice_fiscale = "Codice fiscale non valido";
       } else if (isDuplicateTitolare(nuovaLista, next, index)) {
         next.error_codice_fiscale = "Codice fiscale già presente";
@@ -360,7 +348,7 @@ export default function TitolariEffettiviForm({
       rapp_legale_id: normalizeId(rapp.id),
       source_mode: "import",
       nome_cognome: normalizeText(rapp.nome_cognome),
-      codice_fiscale: normalizeCf(rapp.codice_fiscale),
+      codice_fiscale: normalizeCF(rapp.codice_fiscale),
       luogo_nascita: normalizeText(rapp.luogo_nascita ?? rapp.comune_nascita),
       data_nascita: normalizeDateForInput(rapp.data_nascita),
       indirizzo_residenza: normalizeText(rapp.indirizzo_residenza),
@@ -379,7 +367,7 @@ export default function TitolariEffettiviForm({
   }
 
   async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
-    const codiceFiscale = normalizeCf(riga.codice_fiscale);
+    const codiceFiscale = normalizeCF(riga.codice_fiscale);
 
     if (!codiceFiscale) {
       throw new Error("Codice fiscale obbligatorio.");
@@ -430,7 +418,7 @@ export default function TitolariEffettiviForm({
       .map((r) => ({
         ...r,
         nome_cognome: normalizeText(r.nome_cognome),
-        codice_fiscale: normalizeCf(r.codice_fiscale),
+        codice_fiscale: normalizeCF(r.codice_fiscale),
         luogo_nascita: normalizeText(r.luogo_nascita),
         data_nascita: normalizeDateForInput(r.data_nascita),
         indirizzo_residenza: normalizeText(r.indirizzo_residenza),
@@ -463,7 +451,7 @@ export default function TitolariEffettiviForm({
         };
       }
 
-      if (!validaCodiceFiscale(r.codice_fiscale)) {
+      if (!isValidCF(r.codice_fiscale)) {
         return {
           ok: false,
           message: `Codice fiscale non valido per "${r.nome_cognome}".`,
@@ -475,14 +463,6 @@ export default function TitolariEffettiviForm({
         return {
           ok: false,
           message: `Codice fiscale duplicato per "${r.nome_cognome}".`,
-          normalizedRows: [],
-        };
-      }
-
-      if (r.source_mode === "manual" && !r.nome_cognome) {
-        return {
-          ok: false,
-          message: `Compila il nominativo del titolare #${i + 1}.`,
           normalizedRows: [],
         };
       }
@@ -613,37 +593,6 @@ export default function TitolariEffettiviForm({
             key={`${riga.id || "new"}-${index}`}
             className="mb-4 rounded-lg border border-sky-200 bg-sky-50/40 p-3"
           >
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm font-medium">Titolare #{index + 1}</div>
-
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateRiga(index, { source_mode: "import" })}
-                  className={`rounded px-3 py-1 text-sm ${
-                    !isManual ? "bg-blue-600 text-white" : "bg-gray-200"
-                  }`}
-                >
-                  Da nominativo
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateRiga(index, {
-                      source_mode: "manual",
-                      rapp_legale_id: "",
-                    })
-                  }
-                  className={`rounded px-3 py-1 text-sm ${
-                    isManual ? "bg-blue-600 text-white" : "bg-gray-200"
-                  }`}
-                >
-                  Inserimento libero
-                </button>
-              </div>
-            </div>
-
             {!isManual && (
               <div className="mb-3">
                 <label className="mb-1 block text-sm font-medium">Seleziona nominativo</label>
