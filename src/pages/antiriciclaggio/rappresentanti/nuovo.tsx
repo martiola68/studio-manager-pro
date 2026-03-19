@@ -25,31 +25,8 @@ const BUCKET_NAME = "allegati";
 const CF_RE =
   /^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/;
 
-const OMO_MAP: Record<string, string> = {
-  L: "0",
-  M: "1",
-  N: "2",
-  P: "3",
-  Q: "4",
-  R: "5",
-  S: "6",
-  T: "7",
-  U: "8",
-  V: "9",
-};
-
 function normalizeCF(cf: string) {
   return (cf || "").trim().toUpperCase();
-}
-
-function cfToDigitsForChecksum(cf: string) {
-  const chars = cf.split("");
-  const idxs = [6, 7, 9, 10, 12, 13, 14];
-  for (const i of idxs) {
-    const c = chars[i];
-    if (OMO_MAP[c]) chars[i] = OMO_MAP[c];
-  }
-  return chars.join("");
 }
 
 const ODD_MAP: Record<string, number> = {
@@ -132,21 +109,24 @@ const EVEN_MAP: Record<string, number> = {
 
 function computeCFCheckChar(cf15: string) {
   let sum = 0;
+
   for (let i = 0; i < 15; i++) {
     const c = cf15[i];
     const isOddPosition = (i + 1) % 2 === 1;
     sum += isOddPosition ? ODD_MAP[c] : EVEN_MAP[c];
   }
+
   const r = sum % 26;
   return String.fromCharCode("A".charCodeAt(0) + r);
 }
 
 function isValidCF(cfRaw: string) {
   const cf = normalizeCF(cfRaw);
+
   if (!CF_RE.test(cf)) return false;
-  const cfNorm = cfToDigitsForChecksum(cf);
-  const expected = computeCFCheckChar(cfNorm.substring(0, 15));
-  return expected === cfNorm[15];
+
+  const expected = computeCFCheckChar(cf.substring(0, 15));
+  return expected === cf[15];
 }
 
 /* =========================================================
