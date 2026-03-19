@@ -392,10 +392,10 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
   studio_id: normalizeId(studio_id) || null,
   nome_cognome: normalizeText(riga.nome_cognome),
   codice_fiscale: codiceFiscale,
-  comune_nascita: normalizeText(riga.luogo_nascita) || null,
+  luogo_nascita: normalizeText(riga.luogo_nascita) || null,
   data_nascita: normalizeDateForInput(riga.data_nascita) || null,
   indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
-  comune_residenza: normalizeText(riga.citta_residenza) || null,
+  citta_residenza: normalizeText(riga.citta_residenza) || null,
   CAP: normalizeText(riga.cap_residenza) || null,
   nazionalita: normalizeText(riga.nazionalita) || null,
 };
