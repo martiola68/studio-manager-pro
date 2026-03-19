@@ -1229,211 +1229,215 @@ function isDuplicateTitolare(
                     </label>
                   </div>
 
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="domanda7"
-                        checked={form.domanda7}
-                        onChange={handleChange}
-                      />
-                      di agire per conto dei seguenti titolari effettivi
-                    </label>
-                  </div>
+               <div>
+  <label className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      name="domanda7"
+      checked={form.domanda7}
+      onChange={handleChange}
+    />
+    di agire per conto dei seguenti titolari effettivi
+  </label>
+</div>
 
-                {form.domanda7 && (
-                <div className="rounded-lg border p-4">
-                  <TitolariEffettiviForm
-                    sezione="domanda7"
-                    av4_id={av4Id || ""}
-                    studio_id={form.studio_id}
-                      cliente_id={form.cliente_id}
-                            />
-                    </div>
-                      )}
+{form.domanda7 && (
+  <div className="rounded-lg border p-4">
+    <TitolariEffettiviForm
+      sezione="domanda7"
+      av4_id={av4Id || ""}
+      studio_id={form.studio_id}
+      cliente_id={form.cliente_id}
+    />
+  </div>
+)}
 
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="domanda8"
-                        checked={form.domanda8}
-                        onChange={handleChange}
-                      />
-                      di agire per conto della società/ente
-                    </label>
-                  </div>
+<div>
+  <label className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      name="domanda8"
+      checked={form.domanda8}
+      onChange={handleChange}
+    />
+    di agire per conto della società/ente
+  </label>
+</div>
 
-                  {form.domanda8 && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
-                          <input
-                            name="nome_soc"
-                            value={form.nome_soc}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Sede legale</label>
-                          <input
-                            name="sede_legale"
-                            value={form.sede_legale}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
-                          <input
-                            name="indirizzo_sede"
-                            value={form.indirizzo_sede}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Registro imprese</label>
-                          <input
-                            name="reg_imprese"
-                            value={form.reg_imprese}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
-                          <input
-                            name="num_reg_imprese"
-                            value={form.num_reg_imprese}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
-                          <input
-                            name="cod_fiscale_soc"
-                            value={form.cod_fiscale_soc}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                      </div>
+{form.domanda8 && (
+  <div className="space-y-4 rounded-lg border p-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div>
+        <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
+        <input
+          name="nome_soc"
+          value={form.nome_soc}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Sede legale</label>
+        <input
+          name="sede_legale"
+          value={form.sede_legale}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
+        <input
+          name="indirizzo_sede"
+          value={form.indirizzo_sede}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Registro imprese</label>
+        <input
+          name="reg_imprese"
+          value={form.reg_imprese}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
+        <input
+          name="num_reg_imprese"
+          value={form.num_reg_imprese}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
+        <input
+          name="cod_fiscale_soc"
+          value={form.cod_fiscale_soc}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+    </div>
 
-                      <div className="text-sm">
-                        in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
-                      </div>
+    <div className="text-sm">
+      in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
+    </div>
 
-                      {av4Id && (
-                      <div className="rounded-lg border p-4">
-                      <TitolariEffettiviForm
-                      sezione="domanda8"
-                      av4_id={av4Id}
-                      studio_id={form.studio_id}
-                      cliente_id={form.cliente_id}
-                      />
-                      </div>
-                      )}
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="domanda9"
-                        checked={form.domanda9}
-                        onChange={handleChange}
-                      />
-                      (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
-                    </label>
-                  </div>
+    {av4Id && (
+      <div className="rounded-lg border p-4">
+        <TitolariEffettiviForm
+          sezione="domanda8"
+          av4_id={av4Id}
+          studio_id={form.studio_id}
+          cliente_id={form.cliente_id}
+        />
+      </div>
+    )}
+  </div>
+)}
 
-                  {form.domanda9 && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
-                          <input
-                            name="nome_soc_bis"
-                            value={form.nome_soc_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Sede legale</label>
-                          <input
-                            name="sede_legale_bis"
-                            value={form.sede_legale_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
-                          <input
-                            name="indirizzo_sede_bis"
-                            value={form.indirizzo_sede_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Registro imprese</label>
-                          <input
-                            name="reg_imprese_bis"
-                            value={form.reg_imprese_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
-                          <input
-                            name="num_reg_imprese_bis"
-                            value={form.num_reg_imprese_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
-                          <input
-                            name="cod_fiscale_soc_bis"
-                            value={form.cod_fiscale_soc_bis}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium">
-                            Denominazione società per art. 20, comma 4
-                          </label>
-                          <input
-                            name="nome_soc_ter"
-                            value={form.nome_soc_ter}
-                            onChange={handleChange}
-                            className="w-full rounded-md border px-3 py-2"
-                          />
-                        </div>
-                      </div>
+<div>
+  <label className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      name="domanda9"
+      checked={form.domanda9}
+      onChange={handleChange}
+    />
+    (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
+  </label>
+</div>
 
-                      <div className="text-sm">
-                        in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
-                      </div>
+{form.domanda9 && (
+  <div className="space-y-4 rounded-lg border p-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div>
+        <label className="mb-1 block text-sm font-medium">Nome società / ente</label>
+        <input
+          name="nome_soc_bis"
+          value={form.nome_soc_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Sede legale</label>
+        <input
+          name="sede_legale_bis"
+          value={form.sede_legale_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Indirizzo sede</label>
+        <input
+          name="indirizzo_sede_bis"
+          value={form.indirizzo_sede_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Registro imprese</label>
+        <input
+          name="reg_imprese_bis"
+          value={form.reg_imprese_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Numero registro imprese</label>
+        <input
+          name="num_reg_imprese_bis"
+          value={form.num_reg_imprese_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Codice fiscale società</label>
+        <input
+          name="cod_fiscale_soc_bis"
+          value={form.cod_fiscale_soc_bis}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+      <div className="md:col-span-2">
+        <label className="mb-1 block text-sm font-medium">
+          Denominazione società per art. 20, comma 4
+        </label>
+        <input
+          name="nome_soc_ter"
+          value={form.nome_soc_ter}
+          onChange={handleChange}
+          className="w-full rounded-md border px-3 py-2"
+        />
+      </div>
+    </div>
 
-                      {av4Id && (
-                      <div className="rounded-lg border p-4">
-                      <TitolariEffettiviForm
-                      sezione="domanda9"
-                      av4_id={av4Id}
-                      studio_id={form.studio_id}
-                      cliente_id={form.cliente_id}
-                        />
-                      </div>
-                      )}
+    <div className="text-sm">
+      in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
+    </div>
 
+    {av4Id && (
+      <div className="rounded-lg border p-4">
+        <TitolariEffettiviForm
+          sezione="domanda9"
+          av4_id={av4Id}
+          studio_id={form.studio_id}
+          cliente_id={form.cliente_id}
+        />
+      </div>
+    )}
+  </div>
+)}
                   <div className="font-semibold">PPE titolari effettivi</div>
 
                   <div>
