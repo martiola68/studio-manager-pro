@@ -1,4 +1,4 @@
-  import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -215,6 +215,75 @@ export default function ClientiPage() {
   const { toast } = useToast();
   const { studioId } = useStudio();
 
+const [importingVisura, setImportingVisura] = useState(false);
+const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  try {
+    setImportingVisura(true);
+
+    let text = "";
+
+    if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
+      text = await file.text();
+    } else {
+      alert("Per la prima versione usa un file .txt con il testo della visura. Poi colleghiamo il PDF.");
+      return;
+    }
+
+    const response = await fetch("/api/clienti/import-visura", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        studio_id: form.studio_id,
+        text,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "Errore import visura");
+    }
+
+    if (result.duplicate_cliente) {
+      alert("Esiste già un cliente con questo codice fiscale o partita IVA. Import bloccato.");
+      return;
+    }
+
+    setForm((prev: any) => ({
+      ...prev,
+      ragione_sociale: result.cliente_prefill.ragione_sociale || prev.ragione_sociale,
+      codice_fiscale: result.cliente_prefill.codice_fiscale || prev.codice_fiscale,
+      partita_iva: result.cliente_prefill.partita_iva || prev.partita_iva,
+      indirizzo: result.cliente_prefill.indirizzo || prev.indirizzo,
+      cap: result.cliente_prefill.cap || prev.cap,
+      citta: result.cliente_prefill.citta || prev.citta,
+      provincia: result.cliente_prefill.provincia || prev.provincia,
+      rapp_legale_id: result.cliente_prefill.rapp_legale_id || prev.rapp_legale_id,
+    }));
+
+    await loadRappresentanti?.();
+
+    alert(
+      result.duplicate_rapp_legale
+        ? "Dati cliente importati. Rappresentante legale già esistente collegato automaticamente."
+        : "Dati cliente importati. Rappresentante legale creato e collegato automaticamente."
+    );
+  } catch (error: any) {
+    alert(error?.message || "Errore import visura");
+  } finally {
+    setImportingVisura(false);
+    e.target.value = "";
+  }
+}
+
+  
   const [clienti, setClienti] = useState<ClienteRow[]>([]);
   const [contatti, setContatti] = useState<ContattoRow[]>([]);
   const [utenti, setUtenti] = useState<UtenteRow[]>([]);
@@ -1780,6 +1849,42 @@ const [searchTerm, setSearchTerm] = useState("");
   </div>
 </div>
 
+<div className="flex items-end gap-2">
+  <div className="flex-1">
+    <label className="mb-1 block text-sm font-medium">Rappresentante legale</label>
+    <select
+      name="rapp_legale_id"
+      value={form.rapp_legale_id || ""}
+      onChange={handleChange}
+      className="w-full rounded-md border px-3 py-2"
+    >
+      <option value="">Seleziona rappresentante legale</option>
+      {rappresentanti.map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.nome_cognome}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <Button
+    type="button"
+    variant="outline"
+    onClick={() => fileInputRef.current?.click()}
+    disabled={importingVisura}
+  >
+    {importingVisura ? "Importazione..." : "Importa visura"}
+  </Button>
+
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept=".txt,.pdf"
+    className="hidden"
+    onChange={handleImportVisura}
+  />
+</div>
+                
 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
   <div>
     <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
