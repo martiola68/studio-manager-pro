@@ -1241,22 +1241,16 @@ function isDuplicateTitolare(
                     </label>
                   </div>
 
-                  {form.domanda7 && (
-                    <div className="rounded-lg border p-4">
-                      {av4Id ? (
-                        <TitolariEffettiviForm
-                          sezione="domanda7"
-                          av4_id={av4Id}
-                          studio_id={form.studio_id}
-                          cliente_id={form.cliente_id}
-                        />
-                      ) : (
-                        <p className="text-sm text-gray-600">
-                          Salva prima l’AV4 per poter inserire i nominativi collegati alla sezione Domanda 7.
-                        </p>
-                      )}
-                    </div>
-                  )}
+                {form.domanda7 && (
+  <div className="rounded-lg border p-4">
+    <TitolariEffettiviForm
+      sezione="domanda7"
+      av4_id={av4Id || ""}
+      studio_id={form.studio_id}
+      cliente_id={form.cliente_id}
+    />
+  </div>
+)}
 
                   <div>
                     <label className="flex items-center gap-2">
