@@ -14,7 +14,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+type ResponseData =
+  | { ok: true; path: string }
+  | { ok: false; error: string };
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ResponseData>
+) {
   if (req.method !== "POST") {
     return res.status(405).json({
       ok: false,
@@ -23,12 +30,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const form = formidable();
+    const form = formidable({
+      multiples: false,
+      keepExtensions: true,
+      maxFileSize: 10 * 1024 * 1024, // 10 MB
+    });
 
     const [fields, files] = await form.parse(req);
 
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
-    const studioId = Array.isArray(fields.studio_id) ? fields.studio_id[0] : fields.studio_id;
+    const studioId = Array.isArray(fields.studio_id)
+      ? fields.studio_id[0]
+      : fields.studio_id;
 
     if (!file || !studioId) {
       return res.status(400).json({
@@ -38,7 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const buffer = fs.readFileSync(file.filepath);
-    const safeName = file.originalFilename || `file_${Date.now()}`;
+    const safeName = (file.originalFilename || `file_${Date.now()}`)
+      .replace(/\s+/g, "_")
+      .replace(/[^\w.\-]/g, "");
     const fileName = `${Date.now()}_${safeName}`;
     const path = `${studioId}/${fileName}`;
 
