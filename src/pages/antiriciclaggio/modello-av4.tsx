@@ -1334,12 +1334,7 @@ function isDuplicateTitolare(
                           studio_id={form.studio_id}
                           cliente_id={form.cliente_id}
                         />
-                      ) : (
-                        <p className="text-sm text-gray-600">
-                          Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 8.
-                        </p>
-                      )}
-                    </div>
+                     </div>
                   )}
 
                   <div>
@@ -1435,12 +1430,7 @@ function isDuplicateTitolare(
                           studio_id={form.studio_id}
                           cliente_id={form.cliente_id}
                         />
-                      ) : (
-                        <p className="text-sm text-gray-600">
-                          Salva prima l’AV4 per poter inserire i titolari effettivi della sezione Domanda 9.
-                        </p>
-                      )}
-                    </div>
+                      </div>
                   )}
 
                   <div className="font-semibold">PPE titolari effettivi</div>
@@ -1611,15 +1601,7 @@ function isDuplicateTitolare(
                     />
                   </div>
 
-                  {!av4Id && (
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-gray-600">
-                        Dopo il primo salvataggio verrà abilitato l’inserimento dei titolari effettivi nelle sezioni Domanda 7, 8 e 9.
-                      </p>
-                    </div>
-                  )}
-
-                  {av4Id && (
+                 {av4Id && (
                     <div className="md:col-span-2">
                       <p className="text-sm text-green-700">
                         AV4 salvato. ID pratica: {av4Id}
