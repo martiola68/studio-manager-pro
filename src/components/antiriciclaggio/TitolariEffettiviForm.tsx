@@ -397,7 +397,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
   indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
   comune_residenza: normalizeText(riga.citta_residenza) || null,
   CAP: normalizeText(riga.cap_residenza) || null,
-  cittadinanza: normalizeText(riga.nazionalita) || null,
+  nazionalita: normalizeText(riga.nazionalita) || null,
 };
   const { data: inserted, error: insertError } = await supabase
     .from("rapp_legali")
