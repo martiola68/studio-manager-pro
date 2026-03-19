@@ -638,7 +638,7 @@ export default function NuovoRappresentantePage() {
         cap: e.target.value.replace(/\D/g, "").slice(0, 5),
       }))
     }
-    placeholder="00133"
+    placeholder="00000"
     maxLength={5}
   />
 </div>
@@ -664,19 +664,18 @@ export default function NuovoRappresentantePage() {
                   </Select>
                 </div>
 
-                <div>
-  <Label htmlFor="cap">CAP</Label>
+ <div>
+  <Label htmlFor="num_doc">Numero documento</Label>
   <Input
-    id="cap"
-    value={form.cap}
+    id="num_doc"
+    value={form.num_doc}
     onChange={(e) =>
       setForm((prev) => ({
         ...prev,
-        cap: e.target.value.replace(/\D/g, "").slice(0, 5),
+        num_doc: e.target.value,
       }))
     }
-    placeholder="00133"
-    maxLength={5}
+    placeholder="AB1234567"
   />
 </div>
 
