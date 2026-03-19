@@ -171,7 +171,7 @@ function calcolaScadenzaFinale(dataVerifica: string, adeguataVerifica: string) {
 
   if (adeguataVerifica === "SEMPLIFICATE") return addMonths(dataVerifica, 36);
   if (adeguataVerifica === "ORDINARIE") return addMonths(dataVerifica, 24);
-  if (adeguataVerifica === "RAFFORZATE") return addMonths(dataVerifica, 12);
+  if (adeguataVerifica === "RAFFORZATE") return addMonths(dataVerifica, 6);
 
   return "";
 }
