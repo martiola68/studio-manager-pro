@@ -1013,26 +1013,3 @@ export default function ModelloAV1Page() {
     </div>
   );
 }
-Le modifiche già incorporate sono queste:
-
-valori A1–A4 e B1–B6 iniziali a 0
-
-range ammesso bloccato a 0..4
-
-null, undefined, "" convertiti a 0
-
-pesi aggiornati a 30% e 70%
-
-payload di salvataggio normalizzato
-
-caricamento record esistente con fallback a 0
-
-nessun reset dopo save
-
-matrice aggiornata a 30% / 70%
-
-L’unica cosa che ti segnalo è questa: nel file hai ancora import { supabase } from "@/lib/supabase/client";, mentre nei memo più recenti del progetto avevi standardizzato getSupabaseClient(). Questo file qui l’ho lasciato volutamente com’era per non toccare una parte che adesso ti funziona.
-
-
-
-
