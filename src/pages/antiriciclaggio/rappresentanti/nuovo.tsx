@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
@@ -401,19 +401,20 @@ export default function NuovoRappresentantePage() {
     setLoading(true);
 
     try {
-      const payload = {
-        ...(isEditMode ? { id: recordId } : { studio_id: studioId }),
-        nome_cognome: form.nome_cognome.trim(),
-        codice_fiscale: cf,
-        luogo_nascita: form.luogo_nascita.trim() || null,
-        data_nascita: form.data_nascita || null,
-        citta_residenza: form.citta_residenza.trim() || null,
-        indirizzo_residenza: form.indirizzo_residenza.trim() || null,
-        nazionalita: form.nazionalita.trim() || null,
-        tipo_doc: form.tipo_doc || null,
-        scadenza_doc: form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null,
-      };
+     const payload = {
+  ...(isEditMode ? { id: recordId } : {}),
+  studio_id: studioId,
+  nome_cognome: form.nome_cognome.trim(),
+  codice_fiscale: cf,
+  luogo_nascita: form.luogo_nascita.trim() || null,
+  data_nascita: form.data_nascita || null,
+  citta_residenza: form.citta_residenza.trim() || null,
+  indirizzo_residenza: form.indirizzo_residenza.trim() || null,
+  nazionalita: form.nazionalita.trim() || null,
+  tipo_doc: form.tipo_doc || null,
+  scadenza_doc: form.scadenza_doc || null,
+  allegato_doc: form.allegato_doc || null,
+};
 
       const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
 
@@ -546,9 +547,9 @@ export default function NuovoRappresentantePage() {
                     placeholder="RSSMRA80A01H501U"
                     maxLength={16}
                   />
-                  {normalizeCF(form.codice_fiscale).length === 16 && !cfOk && (
-                    <p className="text-sm text-red-500 mt-1">Codice fiscale non valido</p>
-                  )}
+                 {cf.length === 16 && !cfOk && (
+                  <p className="mt-1 text-sm text-red-500">Codice fiscale non valido</p>
+                    )}
                 </div>
 
                 <div>
