@@ -366,52 +366,52 @@ export default function TitolariEffettiviForm({
     updateRiga(index, next);
   }
 
-  async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
-    const codiceFiscale = normalizeCF(riga.codice_fiscale);
+async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
+  const codiceFiscale = normalizeCF(riga.codice_fiscale);
 
-    if (!codiceFiscale) {
-      throw new Error("Codice fiscale obbligatorio.");
-    }
-
-    const { data: existing, error: existingError } = await supabase
-      .from("rapp_legali")
-      .select("id")
-      .eq("studio_id", studio_id)
-      .eq("codice_fiscale", codiceFiscale)
-      .maybeSingle();
-
-    if (existingError) {
-      throw existingError;
-    }
-
-    if (existing?.id) {
-      return normalizeId(existing.id);
-    }
-
-    const payload = {
-      studio_id: normalizeId(studio_id) || null,
-      nome_cognome: normalizeText(riga.nome_cognome),
-      codice_fiscale: codiceFiscale,
-      luogo_nascita: normalizeText(riga.luogo_nascita),
-      data_nascita: normalizeDateForInput(riga.data_nascita) || null,
-      indirizzo_residenza: normalizeText(riga.indirizzo_residenza),
-      citta_residenza: normalizeText(riga.citta_residenza),
-      cap_residenza: normalizeText(riga.cap_residenza),
-      nazionalita: normalizeText(riga.nazionalita),
-    };
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("rapp_legali")
-      .insert([payload])
-      .select("id")
-      .single();
-
-    if (insertError) {
-      throw insertError;
-    }
-
-    return normalizeId(inserted.id);
+  if (!codiceFiscale) {
+    throw new Error("Codice fiscale obbligatorio.");
   }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("rapp_legali")
+    .select("id")
+    .eq("studio_id", studio_id)
+    .eq("codice_fiscale", codiceFiscale)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message || "Errore ricerca rappresentante legale.");
+  }
+
+  if (existing?.id) {
+    return normalizeId(existing.id);
+  }
+
+  const payload = {
+    studio_id: normalizeId(studio_id) || null,
+    nome_cognome: normalizeText(riga.nome_cognome),
+    codice_fiscale: codiceFiscale,
+    comune_nascita: normalizeText(riga.luogo_nascita) || null,
+    data_nascita: normalizeDateForInput(riga.data_nascita) || null,
+    indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
+    comune_residenza: normalizeText(riga.citta_residenza) || null,
+    cap_residenza: normalizeText(riga.cap_residenza) || null,
+    cittadinanza: normalizeText(riga.nazionalita) || null,
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("rapp_legali")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (insertError) {
+    throw new Error(insertError.message || "Errore inserimento in rapp_legali.");
+  }
+
+  return normalizeId(inserted.id);
+}
 
   function validateRows(): { ok: boolean; message?: string; normalizedRows: RigaTitolare[] } {
     const righeValide = righe
@@ -551,12 +551,12 @@ export default function TitolariEffettiviForm({
       await loadRappresentanti();
 
       alert("Titolari salvati correttamente.");
-    } catch (error) {
-      console.error("Errore imprevisto salvataggio titolari:", error);
-      alert("Errore durante il salvataggio dei titolari.");
-    } finally {
-      setSaving(false);
-    }
+    } catch (error: any) {
+  console.error("Errore imprevisto salvataggio titolari:", error);
+  alert(error?.message || "Errore durante il salvataggio dei titolari.");
+} finally {
+  setSaving(false);
+}
   }
 
   const showDraftInfo = !normalizeId(av4_id);
