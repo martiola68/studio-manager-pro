@@ -1,13 +1,4 @@
-
-
-riprendiamo da questo memo...MEMO – Ripresa sviluppo AV1 (studio-manager-pro)
-
-Riprendiamo sviluppo Antiriciclaggio > Modello AV1.
-
-🎯 Obiettivi intervento
-1. Reset valori sezioni A e B
-
-Tutti i campi punteggio devono avere: e in più devi modificare anche la matrice di calcolo finale. Ecco il file AV1:import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStudioId } from "@/services/getStudioId";
