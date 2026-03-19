@@ -710,6 +710,94 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
+function normalizeCf(value: string) {
+  return (value || "").trim().toUpperCase();
+}
+
+function normalizeText(value: string) {
+  return (value || "").trim().toUpperCase();
+}
+
+function validaCodiceFiscale(cf: string) {
+  const value = (cf || "").trim().toUpperCase();
+  if (!value) return false;
+
+  return /^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/.test(value);
+}
+
+async function caricaTitolariSezione(sezione: "domanda7" | "domanda8" | "domanda9") {
+  if (!av4Id) return [];
+
+  const supabase = getSupabaseClient() as any;
+
+  const { data, error } = await supabase
+    .from("tbAV4_titolari")
+    .select("*")
+    .eq("av4_id", av4Id)
+    .eq("sezione", sezione);
+
+  if (error) {
+    throw new Error(`Errore caricamento titolari ${sezione}.`);
+  }
+
+  return data || [];
+}
+
+async function validaTitolariPrimaDelSalvataggio() {
+  const sezioniDaControllare: Array<"domanda7" | "domanda8" | "domanda9"> = [];
+
+  if (form.domanda7) sezioniDaControllare.push("domanda7");
+  if (form.domanda8) sezioniDaControllare.push("domanda8");
+  if (form.domanda9) sezioniDaControllare.push("domanda9");
+
+  for (const sezione of sezioniDaControllare) {
+    const titolari = await caricaTitolariSezione(sezione);
+
+    for (let i = 0; i < titolari.length; i++) {
+      const titolare = titolari[i];
+
+      if (!titolare?.codice_fiscale || !String(titolare.codice_fiscale).trim()) {
+        throw new Error(
+          `Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`
+        );
+      }
+
+      if (!validaCodiceFiscale(String(titolare.codice_fiscale))) {
+        throw new Error(
+          `Codice fiscale non valido per il titolare effettivo "${titolare.nome_cognome || `#${i + 1}`}" della sezione ${sezione}.`
+        );
+      }
+
+      if (isDuplicateTitolare(titolari, titolare, i)) {
+        throw new Error(
+          `Titolare effettivo duplicato nella sezione ${sezione}: "${titolare.nome_cognome || titolare.codice_fiscale}".`
+        );
+      }
+    }
+  }
+}
+  
+function isDuplicateTitolare(
+  titolari: any[],
+  candidato: any,
+  currentIndex?: number
+) {
+  const cf = normalizeCf(candidato.codice_fiscale);
+
+  // 🔴 BLOCCO CF OBBLIGATORIO
+  if (!cf) {
+    throw new Error("Il codice fiscale è obbligatorio per il titolare effettivo.");
+  }
+
+  return titolari.some((t, index) => {
+    if (currentIndex !== undefined && index === currentIndex) return false;
+
+    const cfT = normalizeCf(t.codice_fiscale);
+
+    return cfT && cfT === cf;
+  });
+}
+  
   async function salvaAV4() {
     if (!validateBeforeSave()) return;
 
