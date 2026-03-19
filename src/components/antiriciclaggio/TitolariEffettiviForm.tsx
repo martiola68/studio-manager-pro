@@ -353,7 +353,7 @@ export default function TitolariEffettiviForm({
       data_nascita: normalizeDateForInput(rapp.data_nascita),
       indirizzo_residenza: normalizeText(rapp.indirizzo_residenza),
       citta_residenza: normalizeText(rapp.citta_residenza ?? rapp.comune_residenza),
-      cap_residenza: normalizeText(rapp.cap_residenza),
+      cap_residenza: normalizeText(rapp.CAP),
       nazionalita: normalizeText(rapp.nazionalita ?? rapp.cittadinanza),
       error_codice_fiscale: "",
     };
@@ -389,17 +389,16 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
   }
 
   const payload = {
-    studio_id: normalizeId(studio_id) || null,
-    nome_cognome: normalizeText(riga.nome_cognome),
-    codice_fiscale: codiceFiscale,
-    comune_nascita: normalizeText(riga.luogo_nascita) || null,
-    data_nascita: normalizeDateForInput(riga.data_nascita) || null,
-    indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
-    comune_residenza: normalizeText(riga.citta_residenza) || null,
-    cap_residenza: normalizeText(riga.cap_residenza) || null,
-    cittadinanza: normalizeText(riga.nazionalita) || null,
-  };
-
+  studio_id: normalizeId(studio_id) || null,
+  nome_cognome: normalizeText(riga.nome_cognome),
+  codice_fiscale: codiceFiscale,
+  comune_nascita: normalizeText(riga.luogo_nascita) || null,
+  data_nascita: normalizeDateForInput(riga.data_nascita) || null,
+  indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
+  comune_residenza: normalizeText(riga.citta_residenza) || null,
+  CAP: normalizeText(riga.cap_residenza) || null,
+  cittadinanza: normalizeText(riga.nazionalita) || null,
+};
   const { data: inserted, error: insertError } = await supabase
     .from("rapp_legali")
     .insert([payload])
@@ -438,7 +437,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
       if (!r.nome_cognome) {
         return {
           ok: false,
-          message: `Nome e cognome obbligatorio per il titolare #${i + 1}.`,
+          message: `Cognome e nome obbligatorio per il titolare #${i + 1}.`,
           normalizedRows: [],
         };
       }
@@ -615,12 +614,13 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
 
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               <div>
+                
                 <input
-                  value={riga.nome_cognome}
-                  onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
-                  placeholder="Nome e cognome"
-                  className="w-full rounded border p-2"
-                  readOnly={!isManual}
+                value={riga.nome_cognome}
+                onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
+                placeholder="Cognome e nome"
+                className="w-full rounded border p-2"
+                readOnly={!isManual}
                 />
               </div>
 
