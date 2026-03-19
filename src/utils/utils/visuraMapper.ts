@@ -1,30 +1,26 @@
-// src/utils/visuraMapper.ts
+export type VisuraClienteData = {
+  ragione_sociale: string;
+  codice_fiscale: string;
+  partita_iva: string;
+  indirizzo: string;
+  cap: string;
+  citta: string;
+  provincia: string;
+};
 
-export type VisuraImportResult = {
-  cliente: {
-    ragione_sociale: string;
-    codice_fiscale: string;
-    partita_iva: string;
-    indirizzo: string;
-    cap: string;
-    citta: string;
-    provincia: string;
-  };
-  rapp_legale: {
-    nome_cognome: string;
-    codice_fiscale: string;
-    luogo_nascita: string;
-    data_nascita: string; // YYYY-MM-DD
-    citta_residenza: string;
-    indirizzo_residenza: string;
-    CAP: string;
-    nazionalita: string;
-  };
-  raw: {
-    denominazione?: string;
-    sede_legale?: string;
-    rappresentante?: string;
-  };
+export type VisuraRappLegaleData = {
+  nome_cognome: string;
+  codice_fiscale: string;
+  luogo_nascita: string;
+  data_nascita: string;
+  citta_residenza: string;
+  indirizzo_residenza: string;
+  CAP: string;
+};
+
+export type VisuraImportData = {
+  cliente: VisuraClienteData;
+  rappresentante: VisuraRappLegaleData;
 };
 
 function cleanText(input: string): string {
@@ -35,148 +31,90 @@ function cleanText(input: string): string {
     .trim();
 }
 
-function normalizeDateToISO(value: string): string {
+function extract(text: string, patterns: RegExp[]): string {
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m?.[1]) return m[1].trim();
+  }
+  return "";
+}
+
+function normalizeDate(value: string): string {
   const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return "";
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
-function extractMatch(text: string, regexes: RegExp[]): string {
-  for (const regex of regexes) {
-    const match = text.match(regex);
-    if (match?.[1]) return match[1].trim();
-  }
-  return "";
-}
-
-function splitItalianAddress(line: string): {
-  indirizzo: string;
-  cap: string;
-  citta: string;
-  provincia: string;
-} {
+function parseAddressLine(line: string) {
   const normalized = line.replace(/\s+/g, " ").trim();
 
+  const cityMatch = normalized.match(/^([A-ZÀ-Ú'`\s]+)\s*\(([A-Z]{2})\)/i);
   const capMatch = normalized.match(/\b(\d{5})\b/);
-  const provinciaMatch = normalized.match(/\(([A-Z]{2})\)/);
 
-  let cap = capMatch?.[1] || "";
-  let provincia = provinciaMatch?.[1] || "";
-
-  let citta = "";
-  const cityMatch = normalized.match(/^([A-ZÀ-Ü'`\s]+)\s*\(([A-Z]{2})\)/i);
-  if (cityMatch?.[1]) citta = cityMatch[1].trim();
+  const citta = cityMatch?.[1]?.trim() || "";
+  const provincia = cityMatch?.[2]?.trim() || "";
+  const cap = capMatch?.[1] || "";
 
   let indirizzo = normalized;
-
-  if (citta) {
-    indirizzo = indirizzo.replace(/^([A-ZÀ-Ü'`\s]+)\s*\(([A-Z]{2})\)\s*/i, "");
+  if (cityMatch) {
+    indirizzo = indirizzo.replace(cityMatch[0], "").trim();
   }
-  if (cap) {
-    indirizzo = indirizzo.replace(new RegExp(`\\b${cap}\\b`), "").trim();
-  }
-  indirizzo = indirizzo.replace(/\s{2,}/g, " ").trim();
+  indirizzo = indirizzo.replace(/\bCAP\b/i, "").replace(/\b\d{5}\b/, "").trim();
+  indirizzo = indirizzo.replace(/\s+/g, " ").trim();
 
-  return {
-    indirizzo,
-    cap,
-    citta,
-    provincia,
-  };
+  return { indirizzo, cap, citta, provincia };
 }
 
-function parseSedeLegale(text: string) {
-  const sede = extractMatch(text, [
-    /Sede legale:\s*([^\n]+)/i,
-    /indirizzo sede legale\s*([^\n]+)/i,
+export function mapVisuraText(rawText: string): VisuraImportData {
+  const text = cleanText(rawText);
+
+  const ragioneSociale = extract(text, [
+    /Denominazione[:\s]*([^\n]+)/i,
+    /^([A-Z0-9&'.,\-\s]+SOCIETA['’]?\s+A\s+RESPONSABILITA['’]?\s+LIMITATA)/im,
+    /^([A-Z0-9&'.,\-\s]+S\.R\.L\.)/im,
   ]);
 
-  if (!sede) {
-    return {
-      indirizzo: "",
-      cap: "",
-      citta: "",
-      provincia: "",
-      raw: "",
-    };
-  }
-
-  const parsed = splitItalianAddress(sede);
-  return {
-    ...parsed,
-    raw: sede,
-  };
-}
-
-function parseRappresentante(text: string) {
-  const blocco = extractMatch(text, [
-    /Rappresentante dell'impresa\s*([\s\S]{0,500})/i,
-    /Amministratore Unico\s*([\s\S]{0,500})/i,
-    /Amministratrice Unica\s*([\s\S]{0,500})/i,
+  const codiceFiscale = extract(text, [
+    /Codice fiscale[:\s]*([0-9A-Z]{11,16})/i,
   ]);
 
-  const source = blocco || text;
+  const partitaIva =
+    extract(text, [
+      /Partita IVA[:\s]*([0-9]{11})/i,
+      /P\.IVA[:\s]*([0-9]{11})/i,
+    ]) || codiceFiscale;
 
-  const nome = extractMatch(source, [
-    /([A-ZÀ-Ü'`]+\s+[A-ZÀ-Ü'`\s]+)\s+Codice fiscale/i,
-    /Rappresentante dell'impresa[:\s]+([A-ZÀ-Ü'`\s]+)/i,
+  const sedeRaw = extract(text, [
+    /Sede legale[:\s]*([^\n]+)/i,
+  ]);
+  const sede = parseAddressLine(sedeRaw);
+
+  const nomeRapp = extract(text, [
+    /Rappresentante dell'impresa[:\s]*([A-ZÀ-Ú'`\s]+)/i,
+    /Amministratrice Unica[:\s]*([A-ZÀ-Ú'`\s]+)/i,
+    /Amministratore Unico[:\s]*([A-ZÀ-Ú'`\s]+)/i,
+    /([A-ZÀ-Ú'`\s]+)\s+Rappresentante dell'impresa/i,
   ]);
 
-  const codiceFiscale = extractMatch(source, [
+  const cfRapp = extract(text, [
     /Codice fiscale[:\s]*([A-Z0-9]{16})/i,
   ]);
 
-  const luogoNascita = extractMatch(source, [
-    /Nata? a\s+([A-ZÀ-Ü'`\s]+)\s*\(([A-Z]{2})\)/i,
-    /Luogo di nascita[:\s]*([A-ZÀ-Ü'`\s]+)/i,
+  const luogoNascita = extract(text, [
+    /Nata? a\s+([A-ZÀ-Ú'`\s]+)\s*\([A-Z]{2}\)/i,
+    /Luogo di nascita[:\s]*([^\n]+)/i,
   ]);
 
-  const dataNascitaRaw = extractMatch(source, [
+  const dataNascitaRaw = extract(text, [
     /il\s+(\d{2}\/\d{2}\/\d{4})/i,
     /Data nascita[:\s]*(\d{2}\/\d{2}\/\d{4})/i,
   ]);
 
-  const residenzaLine = extractMatch(source, [
+  const residenzaRaw = extract(text, [
     /Residenza[:\s]*([^\n]+)/i,
     /Domicilio[:\s]*([^\n]+)/i,
-    /ROMA\s*\(RM\)\s*[A-ZÀ-Ü0-9'`\s.,-]+\s+CAP\s+\d{5}/i,
   ]);
-
-  const res = splitItalianAddress(residenzaLine);
-
-  return {
-    nome_cognome: nome,
-    codice_fiscale: codiceFiscale,
-    luogo_nascita: luogoNascita,
-    data_nascita: normalizeDateToISO(dataNascitaRaw),
-    citta_residenza: res.citta,
-    indirizzo_residenza: res.indirizzo,
-    CAP: res.cap,
-    nazionalita: "",
-    raw: blocco,
-  };
-}
-
-export function mapVisuraTextToEntities(rawText: string): VisuraImportResult {
-  const text = cleanText(rawText);
-
-  const ragioneSociale = extractMatch(text, [
-    /Denominazione[:\s]*([^\n]+)/i,
-    /^([A-Z0-9&'`.,\-\s]+SOCIETA['’]?\s+A\s+RESPONSABILITA['’]?\s+LIMITATA)/im,
-    /^([A-Z0-9&'`.,\-\s]+S\.R\.L\.)/im,
-  ]);
-
-  const codiceFiscale = extractMatch(text, [
-    /Codice fiscale[:\s]*([0-9A-Z]{11,16})/i,
-  ]);
-
-  const partitaIva = extractMatch(text, [
-    /Partita IVA[:\s]*([0-9]{11})/i,
-    /P\.IVA[:\s]*([0-9]{11})/i,
-  ]) || codiceFiscale;
-
-  const sede = parseSedeLegale(text);
-  const rapp = parseRappresentante(text);
+  const residenza = parseAddressLine(residenzaRaw);
 
   return {
     cliente: {
@@ -188,20 +126,14 @@ export function mapVisuraTextToEntities(rawText: string): VisuraImportResult {
       citta: sede.citta,
       provincia: sede.provincia,
     },
-    rapp_legale: {
-      nome_cognome: rapp.nome_cognome,
-      codice_fiscale: rapp.codice_fiscale,
-      luogo_nascita: rapp.luogo_nascita,
-      data_nascita: rapp.data_nascita,
-      citta_residenza: rapp.citta_residenza,
-      indirizzo_residenza: rapp.indirizzo_residenza,
-      CAP: rapp.CAP,
-      nazionalita: rapp.nazionalita,
-    },
-    raw: {
-      denominazione: ragioneSociale,
-      sede_legale: sede.raw,
-      rappresentante: rapp.raw,
+    rappresentante: {
+      nome_cognome: nomeRapp,
+      codice_fiscale: cfRapp,
+      luogo_nascita: luogoNascita,
+      data_nascita: normalizeDate(dataNascitaRaw),
+      citta_residenza: residenza.citta,
+      indirizzo_residenza: residenza.indirizzo,
+      CAP: residenza.cap,
     },
   };
 }
