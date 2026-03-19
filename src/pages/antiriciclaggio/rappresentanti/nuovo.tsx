@@ -32,8 +32,10 @@ type FormState = {
   data_nascita: string;
   citta_residenza: string;
   indirizzo_residenza: string;
+  cap: string;
   nazionalita: string;
   tipo_doc: TipoDocumento;
+  num_doc: string;
   scadenza_doc: string;
   allegato_doc: string;
 };
@@ -47,8 +49,10 @@ type RappLegaleRow = {
   data_nascita?: string | null;
   citta_residenza?: string | null;
   indirizzo_residenza?: string | null;
+  CAP?: string | null;
   nazionalita?: string | null;
   tipo_doc?: string | null;
+  NumDoc?: string | null;
   scadenza_doc?: string | null;
   allegato_doc?: string | null;
 };
@@ -60,8 +64,10 @@ const initialFormState: FormState = {
   data_nascita: "",
   citta_residenza: "",
   indirizzo_residenza: "",
+  cap: "",
   nazionalita: "",
   tipo_doc: "",
+  num_doc: "",
   scadenza_doc: "",
   allegato_doc: "",
 };
@@ -94,8 +100,10 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     data_nascita: normalizeDateForInput(row?.data_nascita),
     citta_residenza: row?.citta_residenza ?? "",
     indirizzo_residenza: row?.indirizzo_residenza ?? "",
+    cap: row?.CAP ?? "",
     nazionalita: row?.nazionalita ?? "",
     tipo_doc: safeTipo,
+    cap: row?.CAP ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
   };
@@ -231,7 +239,7 @@ export default function NuovoRappresentantePage() {
           const { data, error } = await supabase
             .from("rapp_legali")
             .select(
-              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, nazionalita, tipo_doc, scadenza_doc, allegato_doc"
+              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, tipo_doc, NumDoc, scadenza_doc, allegato_doc"
             )
             .eq("id", recordId)
             .single();
@@ -409,9 +417,11 @@ export default function NuovoRappresentantePage() {
   luogo_nascita: form.luogo_nascita.trim() || null,
   data_nascita: form.data_nascita || null,
   citta_residenza: form.citta_residenza.trim() || null,
+  CAP: form.cap.trim() || null,
   indirizzo_residenza: form.indirizzo_residenza.trim() || null,
   nazionalita: form.nazionalita.trim() || null,
   tipo_doc: form.tipo_doc || null,
+  NumDoc: form.num_doc.trim() || null,
   scadenza_doc: form.scadenza_doc || null,
   allegato_doc: form.allegato_doc || null,
 };
@@ -522,7 +532,7 @@ export default function NuovoRappresentantePage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <Label htmlFor="nome_cognome">Nome e Cognome *</Label>
+                  <Label htmlFor="nome_cognome">Cognome e nome *</Label>
                   <Input
                     id="nome_cognome"
                     value={form.nome_cognome}
@@ -619,6 +629,22 @@ export default function NuovoRappresentantePage() {
                 </div>
 
                 <div>
+  <Label htmlFor="cap">CAP</Label>
+  <Input
+    id="cap"
+    value={form.cap}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        cap: e.target.value.replace(/\D/g, "").slice(0, 5),
+      }))
+    }
+    placeholder="00133"
+    maxLength={5}
+  />
+</div>
+
+                <div>
                   <Label htmlFor="tipo_doc">Tipo documento</Label>
                   <Select
                     value={form.tipo_doc}
@@ -638,6 +664,22 @@ export default function NuovoRappresentantePage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+  <Label htmlFor="cap">CAP</Label>
+  <Input
+    id="cap"
+    value={form.cap}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        cap: e.target.value.replace(/\D/g, "").slice(0, 5),
+      }))
+    }
+    placeholder="00133"
+    maxLength={5}
+  />
+</div>
 
                 <div>
                   <Label htmlFor="scadenza_doc">Scadenza documento</Label>
