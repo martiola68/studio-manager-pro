@@ -1242,15 +1242,15 @@ function isDuplicateTitolare(
                   </div>
 
                 {form.domanda7 && (
-  <div className="rounded-lg border p-4">
-    <TitolariEffettiviForm
-      sezione="domanda7"
-      av4_id={av4Id || ""}
-      studio_id={form.studio_id}
-      cliente_id={form.cliente_id}
-    />
-  </div>
-)}
+                <div className="rounded-lg border p-4">
+                  <TitolariEffettiviForm
+                    sezione="domanda7"
+                    av4_id={av4Id || ""}
+                    studio_id={form.studio_id}
+                      cliente_id={form.cliente_id}
+                            />
+                    </div>
+                      )}
 
                   <div>
                     <label className="flex items-center gap-2">
@@ -1327,16 +1327,16 @@ function isDuplicateTitolare(
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
                       </div>
 
-                      {av4Id ? (
-                        <TitolariEffettiviForm
-                          sezione="domanda8"
-                          av4_id={av4Id}
-                          studio_id={form.studio_id}
-                          cliente_id={form.cliente_id}
-                        />
-                     </div>
-                  )}
-
+                      {av4Id && (
+                      <div className="rounded-lg border p-4">
+                      <TitolariEffettiviForm
+                      sezione="domanda8"
+                      av4_id={av4Id}
+                      studio_id={form.studio_id}
+                      cliente_id={form.cliente_id}
+                      />
+                      </div>
+                      )}
                   <div>
                     <label className="flex items-center gap-2">
                       <input
@@ -1423,15 +1423,16 @@ function isDuplicateTitolare(
                         in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
                       </div>
 
-                      {av4Id ? (
-                        <TitolariEffettiviForm
-                          sezione="domanda9"
-                          av4_id={av4Id}
-                          studio_id={form.studio_id}
-                          cliente_id={form.cliente_id}
+                      {av4Id && (
+                      <div className="rounded-lg border p-4">
+                      <TitolariEffettiviForm
+                      sezione="domanda9"
+                      av4_id={av4Id}
+                      studio_id={form.studio_id}
+                      cliente_id={form.cliente_id}
                         />
                       </div>
-                  )}
+                      )}
 
                   <div className="font-semibold">PPE titolari effettivi</div>
 
