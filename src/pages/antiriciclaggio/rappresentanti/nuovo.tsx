@@ -103,12 +103,11 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     cap: row?.CAP ?? "",
     nazionalita: row?.nazionalita ?? "",
     tipo_doc: safeTipo,
-    cap: row?.CAP ?? "",
+    num_doc: row?.NumDoc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
   };
 }
-
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
