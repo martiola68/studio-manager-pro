@@ -1889,18 +1889,18 @@ setRappLegali(rappLegaliData);
     />
   </div>
 
-  <div className="col-span-6 md:col-span-3">
+<div className="col-span-6 md:col-span-3">
     <Label htmlFor="cap">CAP</Label>
     <Input
       id="cap"
-      value={formData.cap}
+      name="cap"
+      value={formData.cap || ""}
       onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-      placeholder="00100"
     />
   </div>
 </div>
 
-   <div className="mt-3 flex justify-start">
+<div className="mt-4 flex justify-start">
   <button
     type="button"
     onClick={() => fileInputRef.current?.click()}
@@ -1909,56 +1909,43 @@ setRappLegali(rappLegaliData);
   >
     {importingVisura ? "Importazione..." : "Importa visura"}
   </button>
-</div>             
+</div>
 
-<div className="flex items-end gap-2">
-  <div className="flex-1">
-    <label className="mb-1 block text-sm font-medium">Rappresentante legale</label>
-    <select
-      name="rapp_legale_id"
-      value={formData.rapp_legale_id || ""}
-      onChange={(e) =>
-  setFormData((prev) => ({
-    ...prev,
-    rapp_legale_id: e.target.value,
-  }))
-}
-      className="w-full rounded-md border px-3 py-2"
-    >
-      <option value="">Seleziona rappresentante legale</option>
-     {rappLegali.map((r) => (
-        <option key={r.id} value={r.id}>
+<div className="mt-4">
+  <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+  <Select
+    value={formData.rapp_legale_id || "none"}
+    onValueChange={(value) =>
+      setFormData((prev) => ({
+        ...prev,
+        rapp_legale_id: value === "none" ? "" : value,
+      }))
+    }
+  >
+    <SelectTrigger id="rapp_legale_id">
+      <SelectValue placeholder="Seleziona rappresentante legale" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
+      {rappLegali.map((r) => (
+        <SelectItem key={r.id} value={r.id}>
           {r.nome_cognome}
-        </option>
+        </SelectItem>
       ))}
-    </select>
-  </div>
+    </SelectContent>
+  </Select>
+</div>
 
-   <input
-    ref={fileInputRef}
-    type="file"
-    accept=".txt,.pdf"
-    className="hidden"
-    onChange={handleImportVisura}
+<div className="mt-4">
+  <Label htmlFor="email">Email *</Label>
+  <Input
+    id="email"
+    name="email"
+    type="email"
+    value={formData.email || ""}
+    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
   />
 </div>
-                
-<div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-
-  <div>
-    <Label htmlFor="email">Email *</Label>
-    <Input
-      id="email"
-      type="email"
-      value={formData.email}
-      onChange={(e) =>
-        setFormData({ ...formData, email: e.target.value })
-      }
-      placeholder="email@cliente.it"
-    />
-  </div>
-</div>
-
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="attivo"
