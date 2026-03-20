@@ -1900,6 +1900,17 @@ setRappLegali(rappLegaliData);
   </div>
 </div>
 
+   <div className="mt-3 flex justify-start">
+  <button
+    type="button"
+    onClick={() => fileInputRef.current?.click()}
+    disabled={importingVisura}
+    className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {importingVisura ? "Importazione..." : "Importa visura"}
+  </button>
+</div>             
+
 <div className="flex items-end gap-2">
   <div className="flex-1">
     <label className="mb-1 block text-sm font-medium">Rappresentante legale</label>
@@ -1944,18 +1955,7 @@ setRappLegali(rappLegaliData);
         })
       }
     >
-      <SelectTrigger id="rapp_legale_id">
-        <SelectValue placeholder="Seleziona rappresentante legale" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
-        {rappLegali.map((r) => (
-          <SelectItem key={r.id} value={r.id}>
-            {r.nome_cognome}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+   
   </div>
 
   <div>
