@@ -267,7 +267,6 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
   provincia: result.cliente_prefill.provincia || prev.provincia,
   rapp_legale_id: result.cliente_prefill.rapp_legale_id || prev.rapp_legale_id,
 }));
-    await loadRappresentanti?.();
 
     alert(
       result.duplicate_rapp_legale
