@@ -1,13 +1,13 @@
 export function mapVisuraText(text: string) {
   const clean = text.replace(/\s+/g, " ");
 
-  const get = (regex: RegExp) => {
-    const m = clean.match(regex);
-    return m ? m[1].trim() : "";
-  };
-
+const get = (regex: RegExp) => {
+  const m = clean.match(regex);
+  return m?.[1] ? String(m[1]).trim() : "";
+};
+  
   // 👉 RAGIONE SOCIALE (fix: evita "Denominazione")
-  const ragioneSociale = get(/Denominazione[:\s]+([A-Z0-9\s\.\-&]+)/i);
+  const ragioneSociale = get(/(?:Denominazione|Ragione sociale)[:\s]+([A-Z0-9\s\.\-&]+)/i);
 
   // 👉 PIVA / CF
   const piva = get(/Partita IVA[:\s]+([0-9]{11})/i);
@@ -19,8 +19,8 @@ export function mapVisuraText(text: string) {
 
   // 👉 CAP / CITTA / PROVINCIA (fix serio)
   const cap = get(/\b([0-9]{5})\b/);
-  const citta = get(/\bROMA\b|[A-Z]{3,}/i);
-  const provincia = get(/\(([A-Z]{2})\)/);
+  const citta = get(/(?:Comune|Città)[:\s]+([A-Z\s]+)/i);
+  const provincia = get(/Provincia[:\s]+([A-Z]{2})/i);
 
   // 👉 RAPPRESENTANTE (amministratore)
   const rappresentanteNome = get(/Amministratore[^:]*:\s*([A-Z\s]+)/i);
