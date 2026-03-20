@@ -306,11 +306,9 @@ setFormData((prev) => ({
   provincia: cliente.provincia || "",
   rapp_legale_id: rappresentanteId || prev.rapp_legale_id,
 }));
-    alert(
-      result.duplicate_rapp_legale
-        ? "Dati cliente importati. Rappresentante legale già esistente collegato automaticamente."
-        : "Dati cliente importati. Rappresentante legale creato e collegato automaticamente."
-    );
+    
+   alert("Dati cliente, rappresentante legale ed eventuali soci persone fisiche importati correttamente.");
+    
   } catch (error: any) {
     alert(error?.message || "Errore import visura");
   } finally {
