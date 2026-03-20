@@ -249,7 +249,7 @@ const upsertPersonaFisica = async (persona: any) => {
 
   if (persona.codice_fiscale) {
     const { data: existing } = await supabase
-      .from("rapp_legali")
+      .from("rapp_legali" as any)
       .select("id")
       .eq("codice_fiscale", persona.codice_fiscale)
       .maybeSingle();
@@ -258,7 +258,7 @@ const upsertPersonaFisica = async (persona: any) => {
   }
 
   const { data: inserted, error } = await supabase
-    .from("rapp_legali")
+    .from("rapp_legali" as any)
     .insert({
       studio_id: studioId,
       nome_cognome: persona.nome_cognome,
@@ -399,7 +399,7 @@ const [searchTerm, setSearchTerm] = useState("");
         supabase.from("tbutenti").select("*").order("cognome"),
         supabase.from("tbcassetti_fiscali").select("*").order("nominativo"),
         supabase.from("tbprestazioni").select("*").order("descrizione"),
-        (supabase as any).from("rapp_legali").select("id, nome_cognome").order("nome_cognome"),
+        supabase.from("rapp_legali" as any).select("id, nome_cognome").order("nome_cognome"),
       ]);
       
       if (clientiRes.error) throw clientiRes.error;
