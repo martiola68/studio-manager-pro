@@ -1895,7 +1895,12 @@ setRappLegali(rappLegaliData);
     <select
       name="rapp_legale_id"
       value={formData.rapp_legale_id || ""}
-      onChange={handleChange}
+      onChange={(e) =>
+  setFormData((prev) => ({
+    ...prev,
+    rapp_legale_id: e.target.value,
+  }))
+}
       className="w-full rounded-md border px-3 py-2"
     >
       <option value="">Seleziona rappresentante legale</option>
