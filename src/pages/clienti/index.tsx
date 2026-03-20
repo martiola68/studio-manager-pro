@@ -2436,3 +2436,4 @@ setRappLegali(rappLegaliData);
   </DialogContent>
 </Dialog>
 </div>
+);
