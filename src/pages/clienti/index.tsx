@@ -2435,3 +2435,4 @@ setRappLegali(rappLegaliData);
     </div>
   </DialogContent>
 </Dialog>
+</div>
