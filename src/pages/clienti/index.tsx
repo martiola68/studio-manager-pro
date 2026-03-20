@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
-import { extractTextFromPdf } from "@/utils/pdfTextExtractor";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,17 +229,22 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
 
  let text = "";
 
-if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
-  text = await file.text();
-} else if (
-  file.type === "application/pdf" ||
-  file.name.toLowerCase().endsWith(".pdf")
-) {
-  text = await extractTextFromPdf(file);
-} else {
-  alert("Formato non supportato. Carica un file PDF oppure TXT.");
+const form = new FormData();
+form.append("file", file);
+
+const res = await fetch("/api/import-visura", {
+  method: "POST",
+  body: form,
+});
+
+const data = await res.json();
+
+if (!res.ok) {
+  alert(data?.error || "Errore import visura");
   return;
 }
+
+text = data.text || "";
 
     if (!text || text.trim().length < 30) {
   alert("Non sono riuscito a leggere testo utile dal PDF. Probabilmente è una scansione immagine.");
