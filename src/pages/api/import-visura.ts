@@ -11,7 +11,10 @@ export const config = {
 
 function parseForm(
   req: NextApiRequest
-): Promise<{ fields: Record<string, any>; files: Record<string, FormidableFile | FormidableFile[]> }> {
+): Promise<{
+  fields: Record<string, any>;
+  files: Record<string, FormidableFile | FormidableFile[] | undefined>;
+}> {
   const form = new IncomingForm({
     multiples: false,
     keepExtensions: true,
