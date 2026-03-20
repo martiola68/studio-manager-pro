@@ -14,7 +14,7 @@ export function mapVisuraText(text: string) {
       indirizzo: match(/Indirizzo[:\s]+([A-Z0-9\s,\.\-]+)/i),
       cap: match(/CAP[:\s]+([0-9]{5})/i),
       citta: match(/Comune[:\s]+([A-Z\s]+)/i),
-      provincia: match(/\b([A-Z]{2})\b/),
+      provincia: "",
     },
 
     rappresentante: {
