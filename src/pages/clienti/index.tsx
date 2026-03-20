@@ -1708,26 +1708,46 @@ setRappLegali(rappLegaliData);
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
-                  <Select
-                    value={formData.tipologia_cliente || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({
-                        ...formData,
-                        tipologia_cliente: value as "Interno" | "Esterno",
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona tipologia" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Interno">Interno</SelectItem>
-                      <SelectItem value="Esterno">Esterno</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {/* Tipologia Cliente */}
+  <div>
+    <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
+    <Select
+      value={formData.tipologia_cliente || ""}
+      onValueChange={(value) =>
+        setFormData((prev) => ({
+          ...prev,
+          tipologia_cliente: value,
+        }))
+      }
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Seleziona tipologia" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="Interno">Interno</SelectItem>
+        <SelectItem value="Esterno">Esterno</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* Cliente Attivo */}
+  <div className="flex items-end justify-start md:justify-end">
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="attivo"
+        checked={formData.attivo}
+        onCheckedChange={(checked) =>
+          setFormData((prev) => ({
+            ...prev,
+            attivo: checked,
+          }))
+        }
+      />
+      <Label htmlFor="attivo">Cliente Attivo</Label>
+    </div>
+  </div>
+</div>
 
                 <div className="md:col-span-2 space-y-2">
                   <Label>Settori *</Label>
@@ -1943,20 +1963,9 @@ setRappLegali(rappLegaliData);
     name="email"
     type="email"
     value={formData.email || ""}
-    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
   />
 </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="attivo"
-                    checked={formData.attivo}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, attivo: checked })
-                    }
-                  />
-                  <Label htmlFor="attivo">Cliente Attivo</Label>
-                </div>
-
                 <div className="md:col-span-2">
                   <Label htmlFor="note">Note</Label>
                   <Textarea
