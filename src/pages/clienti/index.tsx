@@ -1944,19 +1944,6 @@ setRappLegali(rappLegaliData);
 </div>
                 
 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div>
-    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-    <Select
-      value={formData.rapp_legale_id || "none"}
-      onValueChange={(value) =>
-        setFormData({
-          ...formData,
-          rapp_legale_id: value === "none" ? "" : value,
-        })
-      }
-    >
-   
-  </div>
 
   <div>
     <Label htmlFor="email">Email *</Label>
