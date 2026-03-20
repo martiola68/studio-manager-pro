@@ -1885,13 +1885,15 @@ setRappLegali(rappLegaliData);
 
 {/* Riga città / provincia / cap */}
 <div className="grid grid-cols-12 gap-4">
-  <div className="col-span-12 md:col-span-7">
+  <div className="col-span-12 md:col-span-8">
     <Label htmlFor="citta">Città</Label>
     <Input
       id="citta"
       name="citta"
       value={formData.citta || ""}
-      onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, citta: e.target.value }))
+      }
     />
   </div>
 
@@ -1901,45 +1903,25 @@ setRappLegali(rappLegaliData);
       id="provincia"
       name="provincia"
       value={formData.provincia || ""}
-      onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, provincia: e.target.value }))
+      }
     />
   </div>
 
-  <div className="col-span-6 md:col-span-3">
+  <div className="col-span-6 md:col-span-2">
     <Label htmlFor="cap">CAP</Label>
     <Input
       id="cap"
       name="cap"
       value={formData.cap || ""}
-      onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, cap: e.target.value }))
+      }
     />
   </div>
 </div>
-
-{/* Pulsante da solo */}
-<div className="mt-4">
-  <button
-    type="button"
-    onClick={() => {
-      console.log("click importa visura");
-      fileInputRef.current?.click();
-    }}
-    disabled={importingVisura}
-    className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {importingVisura ? "Importazione..." : "Importa visura"}
-  </button>
-</div>
-
-<input
-  type="file"
-  accept=".pdf,.txt"
-  ref={fileInputRef}
-  style={{ display: "none" }}
-  onChange={handleImportVisura}
-  disabled={importingVisura}
-/>
-                
+               
 {/* Rappresentante legale SOTTO il pulsante */}
 <div className="mt-4">
   <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
@@ -2420,6 +2402,30 @@ setRappLegali(rappLegaliData);
               />
             </div>
 
+{/* Pulsante da solo */}
+<div className="mt-4">
+  <button
+    type="button"
+    onClick={() => {
+      console.log("click importa visura");
+      fileInputRef.current?.click();
+    }}
+    disabled={importingVisura}
+    className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {importingVisura ? "Importazione..." : "Importa visura"}
+  </button>
+</div>
+
+<input
+  type="file"
+  accept=".pdf,.txt"
+  ref={fileInputRef}
+  style={{ display: "none" }}
+  onChange={handleImportVisura}
+  disabled={importingVisura}
+/>
+            
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
                 Annulla
