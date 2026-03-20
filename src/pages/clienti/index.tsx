@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
+import { extractTextFromPdf } from "@/utils/pdfTextExtractor";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,14 +227,24 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
   try {
     setImportingVisura(true);
 
-    let text = "";
+ let text = "";
 
-    if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
-      text = await file.text();
-    } else {
-      alert("Per la prima versione usa un file .txt con il testo della visura. Poi colleghiamo il PDF.");
-      return;
-    }
+if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
+  text = await file.text();
+} else if (
+  file.type === "application/pdf" ||
+  file.name.toLowerCase().endsWith(".pdf")
+) {
+  text = await extractTextFromPdf(file);
+} else {
+  alert("Formato non supportato. Carica un file PDF oppure TXT.");
+  return;
+}
+
+    if (!text || text.trim().length < 30) {
+  alert("Non sono riuscito a leggere testo utile dal PDF. Probabilmente è una scansione immagine.");
+  return;
+}
 
   const { cliente, rappresentante, sociPersoneFisiche } = mapVisuraText(text);
 
