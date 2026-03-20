@@ -1713,22 +1713,22 @@ setRappLegali(rappLegaliData);
   <div>
     <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
     <Select
-      value={formData.tipologia_cliente || ""}
-      onValueChange={(value) =>
-        setFormData((prev) => ({
-          ...prev,
-          tipologia_cliente: value,
-        }))
-      }
-    >
-      <SelectTrigger>
-        <SelectValue placeholder="Seleziona tipologia" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="Interno">Interno</SelectItem>
-        <SelectItem value="Esterno">Esterno</SelectItem>
-      </SelectContent>
-    </Select>
+  value={formData.tipologia_cliente || ""}
+  onValueChange={(value) =>
+    setFormData((prev) => ({
+      ...prev,
+      tipologia_cliente: value as "Interno" | "Esterno",
+    }))
+  }
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Seleziona tipologia" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="Interno">Interno</SelectItem>
+    <SelectItem value="Esterno">Esterno</SelectItem>
+  </SelectContent>
+</Select>
   </div>
 
   {/* Cliente Attivo */}
