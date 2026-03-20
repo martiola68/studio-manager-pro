@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
