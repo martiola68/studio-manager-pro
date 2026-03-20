@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { IncomingForm, type File as FormidableFile } from "formidable";
 import fs from "fs/promises";
-import * as pdfjsLib from "pdfjs-dist";
+import { getDocument } from "pdfjs-dist";
 
 export const config = {
   api: {
@@ -27,7 +27,14 @@ function parseForm(
 
 async function extractTextFromPDF(buffer: Buffer) {
   const uint8Array = new Uint8Array(buffer);
-  const loadingTask = (pdfjsLib as any).getDocument({ data: uint8Array });
+
+  const loadingTask = getDocument({
+    data: uint8Array,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true,
+  });
+
   const pdf = await loadingTask.promise;
 
   let fullText = "";
@@ -35,13 +42,12 @@ async function extractTextFromPDF(buffer: Buffer) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const strings = content.items.map((item: any) => item.str || "");
+    const strings = content.items.map((item: any) => ("str" in item ? item.str : ""));
     fullText += strings.join(" ") + "\n";
   }
 
   return fullText;
 }
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== "POST") {
