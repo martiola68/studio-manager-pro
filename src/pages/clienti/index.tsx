@@ -269,6 +269,11 @@ console.log("VISURA_CLIENTE", cliente);
   provincia: cliente.provincia || "",
 }));
 
+    // 👇 INCOLLA QUI
+if (rappresentante?.codice_fiscale) {
+  console.log("RAPPRESENTANTE TROVATO:", rappresentante);
+}
+
 const supabase = getSupabaseClient();
 
 let rappresentanteId: string | null = null;
