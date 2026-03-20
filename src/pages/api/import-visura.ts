@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { IncomingForm, type File as FormidableFile } from "formidable";
+import fs from "fs/promises";
 import * as pdfjsLib from "pdfjs-dist";
 
 export const config = {
@@ -7,17 +9,25 @@ export const config = {
   },
 };
 
-async function getRawBody(req: any): Promise<Buffer> {
+function parseForm(
+  req: NextApiRequest
+): Promise<{ fields: Record<string, any>; files: Record<string, FormidableFile | FormidableFile[]> }> {
+  const form = new IncomingForm({
+    multiples: false,
+    keepExtensions: true,
+  });
+
   return new Promise((resolve, reject) => {
-    const chunks: any[] = [];
-    req.on("data", (chunk: any) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
-    req.on("error", reject);
+    form.parse(req, (err, fields, files) => {
+      if (err) reject(err);
+      else resolve({ fields, files });
+    });
   });
 }
 
 async function extractTextFromPDF(buffer: Buffer) {
-  const loadingTask = (pdfjsLib as any).getDocument({ data: buffer });
+  const uint8Array = new Uint8Array(buffer);
+  const loadingTask = (pdfjsLib as any).getDocument({ data: uint8Array });
   const pdf = await loadingTask.promise;
 
   let fullText = "";
@@ -25,8 +35,7 @@ async function extractTextFromPDF(buffer: Buffer) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-
-    const strings = content.items.map((item: any) => item.str);
+    const strings = content.items.map((item: any) => item.str || "");
     fullText += strings.join(" ") + "\n";
   }
 
@@ -39,16 +48,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: "Metodo non consentito" });
     }
 
-    const buffer = await getRawBody(req);
+    const { files } = await parseForm(req);
+    const uploaded = files.file;
 
-    try {
-      const text = await extractTextFromPDF(buffer);
-      return res.status(200).json({ text });
-    } catch {
+    const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+
+    if (!file) {
+      return res.status(400).json({ error: "File mancante" });
+    }
+
+    const filepath = (file as any).filepath;
+    const originalFilename = ((file as any).originalFilename || "").toLowerCase();
+    const mimetype = (file as any).mimetype || "";
+
+    const buffer = await fs.readFile(filepath);
+
+    if (mimetype === "text/plain" || originalFilename.endsWith(".txt")) {
       const text = buffer.toString("utf-8");
       return res.status(200).json({ text });
     }
+
+    if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
+      const text = await extractTextFromPDF(buffer);
+      return res.status(200).json({ text });
+    }
+
+    return res.status(400).json({ error: "Formato non supportato. Usa PDF o TXT." });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err?.message || "Errore import visura" });
   }
 }
