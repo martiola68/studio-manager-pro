@@ -1,5 +1,5 @@
 export async function extractTextFromPdf(file: File): Promise<string> {
-  const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
+  const pdfjsLib: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
