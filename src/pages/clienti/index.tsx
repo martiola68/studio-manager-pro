@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
 
 import { Button } from "@/components/ui/button";
@@ -234,40 +235,77 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
       return;
     }
 
-    const response = await fetch("/api/clienti/import-visura", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+  const { cliente, rappresentante, sociPersoneFisiche } = mapVisuraText(text);
+
+const supabase = getSupabaseClient();
+
+let rappresentanteId: string | null = null;
+
+// =========================
+// HELPER UPSERT PERSONA
+// =========================
+const upsertPersonaFisica = async (persona: any) => {
+  if (!persona?.nome_cognome) return null;
+
+  if (persona.codice_fiscale) {
+    const { data: existing } = await supabase
+      .from("rapp_legali")
+      .select("id")
+      .eq("codice_fiscale", persona.codice_fiscale)
+      .maybeSingle();
+
+    if (existing) return existing.id;
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("rapp_legali")
+    .insert({
       studio_id: studioId,
-      text,
-      }),
-    });
+      nome_cognome: persona.nome_cognome,
+      codice_fiscale: persona.codice_fiscale || null,
+      luogo_nascita: persona.luogo_nascita || null,
+      data_nascita: persona.data_nascita || null,
+      indirizzo_residenza: persona.indirizzo_residenza || null,
+      citta_residenza: persona.citta_residenza || null,
+      CAP: persona.CAP || null,
+      nazionalita: persona.nazionalita || null,
+    })
+    .select("id")
+    .single();
 
-    const result = await response.json();
+  if (error) throw error;
 
-    if (!response.ok || !result.ok) {
-      throw new Error(result.error || "Errore import visura");
-    }
+  return inserted.id;
+};
 
-    if (result.duplicate_cliente) {
-      alert("Esiste già un cliente con questo codice fiscale o partita IVA. Import bloccato.");
-      return;
-    }
+// =========================
+// RAPPRESENTANTE LEGALE
+// =========================
+if (rappresentante) {
+  rappresentanteId = await upsertPersonaFisica(rappresentante);
+}
 
-  setFormData((prev: any) => ({
+// =========================
+// SOCI PERSONE FISICHE
+// =========================
+for (const socio of sociPersoneFisiche || []) {
+  await upsertPersonaFisica(socio);
+}
+
+// =========================
+// POPOLA FORM (NO RESET)
+// =========================
+setFormData((prev) => ({
   ...prev,
-  ragione_sociale: result.cliente_prefill.ragione_sociale || prev.ragione_sociale,
-  codice_fiscale: result.cliente_prefill.codice_fiscale || prev.codice_fiscale,
-  partita_iva: result.cliente_prefill.partita_iva || prev.partita_iva,
-  indirizzo: result.cliente_prefill.indirizzo || prev.indirizzo,
-  cap: result.cliente_prefill.cap || prev.cap,
-  citta: result.cliente_prefill.citta || prev.citta,
-  provincia: result.cliente_prefill.provincia || prev.provincia,
-  rapp_legale_id: result.cliente_prefill.rapp_legale_id || prev.rapp_legale_id,
+  ragione_sociale: cliente.ragione_sociale || "",
+  codice_fiscale: cliente.codice_fiscale || "",
+  partita_iva: cliente.partita_iva || "",
+  indirizzo: cliente.indirizzo || "",
+  cap: cliente.cap || "",
+  citta: cliente.citta || "",
+  provincia: cliente.provincia || "",
+  rapp_legale_id: rappresentanteId || prev.rapp_legale_id,
 }));
-
     alert(
       result.duplicate_rapp_legale
         ? "Dati cliente importati. Rappresentante legale già esistente collegato automaticamente."
