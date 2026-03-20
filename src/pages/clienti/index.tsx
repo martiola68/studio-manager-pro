@@ -253,6 +253,9 @@ text = data.text || "";
 
   const { cliente, rappresentante, sociPersoneFisiche } = mapVisuraText(text);
 
+    console.log("TESTO ESTRATTO:", text);
+    console.log("MAPPED:", cliente);
+
     setFormData((prev) => ({
   ...prev,
   ragione_sociale: cliente.ragione_sociale || "",
