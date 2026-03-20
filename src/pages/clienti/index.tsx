@@ -248,17 +248,17 @@ const upsertPersonaFisica = async (persona: any) => {
   if (!persona?.nome_cognome) return null;
 
   if (persona.codice_fiscale) {
-    const { data: existing } = await supabase
-      .from("rapp_legali" as any)
+    const { data: existing } = await (supabase as any)
+      .from("rapp_legali")
       .select("id")
       .eq("codice_fiscale", persona.codice_fiscale)
       .maybeSingle();
 
-    if (existing) return existing.id;
+    if (existing?.id) return existing.id as string;
   }
 
-  const { data: inserted, error } = await supabase
-    .from("rapp_legali" as any)
+  const { data: inserted, error } = await (supabase as any)
+    .from("rapp_legali")
     .insert({
       studio_id: studioId,
       nome_cognome: persona.nome_cognome,
@@ -273,9 +273,9 @@ const upsertPersonaFisica = async (persona: any) => {
     .select("id")
     .single();
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return inserted.id;
+    return inserted?.id as string;
 };
 
 // =========================
