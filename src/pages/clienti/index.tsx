@@ -1882,9 +1882,10 @@ setRappLegali(rappLegaliData);
                     placeholder="Via Roma, 123"
                   />
                 </div>
+                </TabsContent>
 
 {/* Riga città / provincia / cap */}
-<div className="grid grid-cols-12 gap-4">
+<div className="mt-4 grid grid-cols-12 gap-4">
   <div className="col-span-12 md:col-span-8">
     <Label htmlFor="citta">Città</Label>
     <Input
@@ -1921,57 +1922,61 @@ setRappLegali(rappLegaliData);
     />
   </div>
 </div>
-               
-{/* Rappresentante legale SOTTO il pulsante */}
-<div className="mt-4">
-  <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-  <Select
-    value={formData.rapp_legale_id || "none"}
-    onValueChange={(value) =>
-      setFormData((prev) => ({
-        ...prev,
-        rapp_legale_id: value === "none" ? "" : value,
-      }))
-    }
-  >
-    <SelectTrigger id="rapp_legale_id">
-      <SelectValue placeholder="Seleziona rappresentante legale" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
-      {rappLegali.map((r) => (
-        <SelectItem key={r.id} value={r.id}>
-          {r.nome_cognome}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
+
+{/* Riga rappresentante legale + email */}
+<div className="mt-4 grid grid-cols-12 gap-4">
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+    <Select
+      value={formData.rapp_legale_id || "none"}
+      onValueChange={(value) =>
+        setFormData((prev) => ({
+          ...prev,
+          rapp_legale_id: value === "none" ? "" : value,
+        }))
+      }
+    >
+      <SelectTrigger id="rapp_legale_id">
+        <SelectValue placeholder="Seleziona rappresentante legale" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
+        {rappLegali.map((r) => (
+          <SelectItem key={r.id} value={r.id}>
+            {r.nome_cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="email">Email *</Label>
+    <Input
+      id="email"
+      name="email"
+      type="email"
+      value={formData.email || ""}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, email: e.target.value }))
+      }
+    />
+  </div>
 </div>
 
-{/* Email sotto */}
+{/* Note */}
 <div className="mt-4">
-  <Label htmlFor="email">Email *</Label>
-  <Input
-    id="email"
-    name="email"
-    type="email"
-    value={formData.email || ""}
-    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+  <Label htmlFor="note">Note</Label>
+  <Textarea
+    id="note"
+    value={formData.note}
+    onChange={(e) =>
+      setFormData((prev) => ({ ...prev, note: e.target.value }))
+    }
+    placeholder="Note aggiuntive..."
+    rows={4}
   />
 </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="note">Note</Label>
-                  <Textarea
-                    id="note"
-                    value={formData.note}
-                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                    placeholder="Note aggiuntive..."
-                    rows={4}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
             {/* RIFERIMENTI */}
             <TabsContent value="riferimenti" className="space-y-6 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2361,22 +2366,48 @@ setRappLegali(rappLegaliData);
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDialogOpen(false);
-                resetForm();
-              }}
-            >
-              Annulla
-            </Button>
-            <Button onClick={handleSave}>
-              {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+         <div className="flex items-center justify-between gap-3 pt-6 border-t">
+  <div>
+    <button
+      type="button"
+      onClick={() => fileInputRef.current?.click()}
+      disabled={importingVisura}
+      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {importingVisura ? "Importazione..." : "Importa visura"}
+    </button>
+
+    <input
+      type="file"
+      accept=".pdf,.txt"
+      ref={fileInputRef}
+      style={{ display: "none" }}
+      onChange={handleImportVisura}
+      disabled={importingVisura}
+    />
+  </div>
+
+  <div className="flex items-center gap-3">
+    <button
+      type="button"
+      onClick={() => {
+        setIsDialogOpen(false);
+        resetForm();
+      }}
+      className="rounded-md border border-red-500 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+    >
+      Annulla
+    </button>
+
+    <button
+      type="button"
+      onClick={handleSave}
+      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+    >
+      {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
+    </button>
+  </div>
+</div>
 
       {/* DIALOG SBLOCCO */}
       <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
@@ -2401,40 +2432,5 @@ setRappLegali(rappLegaliData);
                 placeholder="Inserisci password..."
               />
             </div>
-
-{/* Pulsante da solo */}
-<div className="mt-4">
-  <button
-    type="button"
-    onClick={() => {
-      console.log("click importa visura");
-      fileInputRef.current?.click();
-    }}
-    disabled={importingVisura}
-    className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
-  >
-    {importingVisura ? "Importazione..." : "Importa visura"}
-  </button>
-</div>
-
-<input
-  type="file"
-  accept=".pdf,.txt"
-  ref={fileInputRef}
-  style={{ display: "none" }}
-  onChange={handleImportVisura}
-  disabled={importingVisura}
-/>
-            
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setShowUnlockDialog(false)}>
-                Annulla
-              </Button>
-              <Button onClick={handleConfirmUnlock}>Sblocca</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+          
+        
