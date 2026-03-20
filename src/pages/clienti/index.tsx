@@ -253,6 +253,17 @@ text = data.text || "";
 
   const { cliente, rappresentante, sociPersoneFisiche } = mapVisuraText(text);
 
+    setFormData((prev) => ({
+  ...prev,
+  ragione_sociale: cliente.ragione_sociale || "",
+  partita_iva: cliente.partita_iva || "",
+  codice_fiscale: cliente.codice_fiscale || "",
+  indirizzo: cliente.indirizzo || "",
+  cap: cliente.cap || "",
+  citta: cliente.citta || "",
+  provincia: cliente.provincia || "",
+}));
+
 const supabase = getSupabaseClient();
 
 let rappresentanteId: string | null = null;
