@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { IncomingForm, type File as FormidableFile } from "formidable";
 import fs from "fs/promises";
-
+import "pdf-parse/worker";
+import { PDFParse } from "pdf-parse";
 
 export const config = {
   api: {
@@ -29,32 +30,9 @@ function parseForm(
 }
 
 async function extractTextFromPDF(buffer: Buffer) {
-  const pdfjsLib: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
-
-  const uint8Array = new Uint8Array(buffer);
-
-  const loadingTask = pdfjsLib.getDocument({
-    data: uint8Array,
-    disableWorker: true,
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    useSystemFonts: true,
-  });
-
-  const pdf = await loadingTask.promise;
-
-  let fullText = "";
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map((item: any) =>
-      "str" in item ? item.str : ""
-    );
-    fullText += strings.join(" ") + "\n";
-  }
-
-  return fullText;
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result?.text || "";
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -65,7 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { files } = await parseForm(req);
     const uploaded = files.file;
-
     const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
 
     if (!file) {
@@ -75,12 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const filepath = (file as any).filepath;
     const originalFilename = ((file as any).originalFilename || "").toLowerCase();
     const mimetype = (file as any).mimetype || "";
-
     const buffer = await fs.readFile(filepath);
 
     if (mimetype === "text/plain" || originalFilename.endsWith(".txt")) {
-      const text = buffer.toString("utf-8");
-      return res.status(200).json({ text });
+      return res.status(200).json({ text: buffer.toString("utf-8") });
     }
 
     if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
