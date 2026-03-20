@@ -1904,7 +1904,7 @@ setRappLegali(rappLegaliData);
       className="w-full rounded-md border px-3 py-2"
     >
       <option value="">Seleziona rappresentante legale</option>
-      {rappresentanti.map((r) => (
+     {rappLegali.map((r) => (
         <option key={r.id} value={r.id}>
           {r.nome_cognome}
         </option>
