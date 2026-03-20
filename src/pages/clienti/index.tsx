@@ -1923,16 +1923,7 @@ setRappLegali(rappLegaliData);
     </select>
   </div>
 
-  <Button
-    type="button"
-    variant="outline"
-    onClick={() => fileInputRef.current?.click()}
-    disabled={importingVisura}
-  >
-    {importingVisura ? "Importazione..." : "Importa visura"}
-  </Button>
-
-  <input
+   <input
     ref={fileInputRef}
     type="file"
     accept=".txt,.pdf"
