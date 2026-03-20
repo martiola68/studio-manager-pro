@@ -1883,16 +1883,15 @@ setRappLegali(rappLegaliData);
                   />
                 </div>
 
-<div className="md:col-span-2 grid grid-cols-12 gap-4">
+{/* Riga città / provincia / cap */}
+<div className="grid grid-cols-12 gap-4">
   <div className="col-span-12 md:col-span-7">
     <Label htmlFor="citta">Città</Label>
     <Input
       id="citta"
-      value={formData.citta}
-      onChange={(e) =>
-        setFormData({ ...formData, citta: e.target.value })
-      }
-      placeholder="Roma"
+      name="citta"
+      value={formData.citta || ""}
+      onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
     />
   </div>
 
@@ -1900,16 +1899,13 @@ setRappLegali(rappLegaliData);
     <Label htmlFor="provincia">Provincia</Label>
     <Input
       id="provincia"
-      value={formData.provincia}
-      onChange={(e) =>
-        setFormData({ ...formData, provincia: e.target.value.toUpperCase() })
-      }
-      placeholder="RM"
-      maxLength={2}
+      name="provincia"
+      value={formData.provincia || ""}
+      onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
     />
   </div>
 
-<div className="col-span-6 md:col-span-3">
+  <div className="col-span-6 md:col-span-3">
     <Label htmlFor="cap">CAP</Label>
     <Input
       id="cap"
@@ -1920,10 +1916,14 @@ setRappLegali(rappLegaliData);
   </div>
 </div>
 
-<div className="mt-4 flex justify-start">
+{/* Pulsante da solo */}
+<div className="mt-4">
   <button
     type="button"
-    onClick={() => fileInputRef.current?.click()}
+    onClick={() => {
+      console.log("click importa visura");
+      fileInputRef.current?.click();
+    }}
     disabled={importingVisura}
     className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
   >
@@ -1931,6 +1931,16 @@ setRappLegali(rappLegaliData);
   </button>
 </div>
 
+<input
+  type="file"
+  accept=".pdf,.txt"
+  ref={fileInputRef}
+  style={{ display: "none" }}
+  onChange={handleImportVisura}
+  disabled={importingVisura}
+/>
+                
+{/* Rappresentante legale SOTTO il pulsante */}
 <div className="mt-4">
   <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
   <Select
@@ -1956,6 +1966,7 @@ setRappLegali(rappLegaliData);
   </Select>
 </div>
 
+{/* Email sotto */}
 <div className="mt-4">
   <Label htmlFor="email">Email *</Label>
   <Input
@@ -1963,7 +1974,7 @@ setRappLegali(rappLegaliData);
     name="email"
     type="email"
     value={formData.email || ""}
-    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
   />
 </div>
                 <div className="md:col-span-2">
