@@ -1149,1288 +1149,1289 @@ setRappLegali(rappLegaliData);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* HEADER */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <h1 className="text-3xl font-bold">Gestione Clienti</h1>
-            <p className="text-muted-foreground mt-1">
-              Anagrafica completa e gestione scadenzari
-            </p>
-          </div>
+     {/* HEADER */}
+<div className="mb-8">
+  <div className="flex justify-between items-center mb-2">
+    <div>
+      <h1 className="text-3xl font-bold">Gestione Clienti</h1>
+      <p className="text-muted-foreground mt-1">
+        Anagrafica completa e gestione scadenzari
+      </p>
+    </div>
 
-          <div className="flex gap-2 flex-wrap justify-end">
-            <Button
-              variant={vistaClienti === "clienti" ? "default" : "outline"}
-              onClick={() => setVistaClienti("clienti")}
-            >
-              Clienti
-            </Button>
+    <div className="flex gap-2 flex-wrap justify-end">
+      <Button
+        variant={vistaClienti === "clienti" ? "default" : "outline"}
+        onClick={() => setVistaClienti("clienti")}
+      >
+        Clienti
+      </Button>
 
-            <Button
-              variant={vistaClienti === "elenco_generale" ? "default" : "outline"}
-              onClick={() => setVistaClienti("elenco_generale")}
-            >
-              Elenco Generale Scadenzari
-            </Button>
+      <Button
+        variant={vistaClienti === "elenco_generale" ? "default" : "outline"}
+        onClick={() => setVistaClienti("elenco_generale")}
+      >
+        Elenco Generale Scadenzari
+      </Button>
 
-            {encryptionEnabled && (
-              <Button
-                variant="outline"
-                onClick={encryptionLocked ? handleUnlockCassetti : handleLockCassetti}
-                className={
-                  encryptionLocked
-                    ? "border-orange-600 text-orange-600"
-                    : "border-green-600 text-green-600"
-                }
-              >
-                {encryptionLocked ? (
-                  <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Sblocca Dati
-                  </>
-                ) : (
-                  <>
-                    <Unlock className="h-4 w-4 mr-2" />
-                    Blocca Dati
-                  </>
-                )}
-              </Button>
-            )}
-
-            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-green-600 text-green-600 hover:bg-green-50"
-                  disabled={importLoading}
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Importa Excel/CSV
-                </Button>
-              </DialogTrigger>
-
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
-                <DialogHeader>
-                  <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-6">
-                  <Button onClick={downloadTemplate} variant="outline" className="w-full">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Scarica Template CSV
-                  </Button>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="csv-file-clienti">Carica File CSV</Label>
-                    <Input
-                      id="csv-file-clienti"
-                      type="file"
-                      accept=".csv,text/csv"
-                      onChange={handleImportCSV}
-                      className="cursor-pointer"
-                      disabled={importLoading}
-                    />
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button onClick={handleAddNew} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Nuovo Cliente
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Totale Clienti
-            </CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold">{clienti.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Con Cassetto Fiscale
-            </CardTitle>
-            <FileSpreadsheet className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-blue-600">
-              {clientiConCassetto}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Percentuale
-            </CardTitle>
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-green-600">
-              {percentualeCassetto}%
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* FILTRI */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-              <Input
-                placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 text-base"
-              />
-            </div>
-
-            <Select
-              value={selectedUtenteFiscale}
-              onValueChange={setSelectedUtenteFiscale}
-            >
-              <SelectTrigger className="w-full md:w-[200px] h-12">
-                <SelectValue placeholder="Utente Fiscale" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti (Fiscale)</SelectItem>
-                {utenti
-                  .slice()
-                  .sort((a, b) =>
-                    `${safeString(a.cognome)} ${safeString(a.nome)}`
-                      .toLowerCase()
-                      .localeCompare(
-                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                      )
-                  )
-                  .map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {safeString(u.nome)} {safeString(u.cognome)}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={selectedUtentePayroll}
-              onValueChange={setSelectedUtentePayroll}
-            >
-              <SelectTrigger className="w-full md:w-[200px] h-12">
-                <SelectValue placeholder="Utente Payroll" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutti (Payroll)</SelectItem>
-                {utenti
-                  .slice()
-                  .sort((a, b) =>
-                    `${safeString(a.cognome)} ${safeString(a.nome)}`
-                      .toLowerCase()
-                      .localeCompare(
-                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                      )
-                  )
-                  .map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {safeString(u.nome)} {safeString(u.cognome)}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={selectedLetter === "Tutti" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedLetter("Tutti")}
-              className="px-4"
-            >
-              Tutti
-            </Button>
-
-            {alphabet.map((letter) => (
-              <Button
-                key={letter}
-                variant={selectedLetter === letter ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedLetter(letter)}
-                className="w-10 h-10 p-0"
-              >
-                {letter}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* TABELLA */}
-      <Card>
-        <CardContent className="p-0">
-          {filteredClienti.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm ||
-                selectedLetter !== "Tutti" ||
-                selectedUtenteFiscale !== "all" ||
-                selectedUtentePayroll !== "all"
-                  ? "Prova a modificare i filtri di ricerca"
-                  : "Inizia aggiungendo il tuo primo cliente"}
-              </p>
-              <Button onClick={handleAddNew}>
-                <Plus className="mr-2 h-4 w-4" />
-                Aggiungi Cliente
-              </Button>
-            </div>
+      {encryptionEnabled && (
+        <Button
+          variant="outline"
+          onClick={encryptionLocked ? handleUnlockCassetti : handleLockCassetti}
+          className={
+            encryptionLocked
+              ? "border-orange-600 text-orange-600"
+              : "border-green-600 text-green-600"
+          }
+        >
+          {encryptionLocked ? (
+            <>
+              <Lock className="h-4 w-4 mr-2" />
+              Sblocca Dati
+            </>
           ) : (
-            <div className="overflow-x-auto">
-              {vistaClienti === "clienti" ? (
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="sticky top-0 left-0 bg-background z-30 w-[120px] border-r">
-                          Cod. Cliente
-                        </TableHead>
-
-                     <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[150px] border-r pr-2">
-                        Ragione Sociale
-                      </TableHead>
-
-                      <TableHead className="min-w-[150px] pl-2 pr-2 text-left">
-                        Utente Fiscale
-                      </TableHead>
-
-                      <TableHead className="min-w-[140px] px-2 text-left">
-                        Utente Payroll
-                      </TableHead>
-
-                      <TableHead className="min-w-[80px] text-left">
-                        Stato
-                      </TableHead>
-
-                      <TableHead className="min-w-[90px] text-center">
-                        Scadenzari
-                      </TableHead>
-
-                      <TableHead className="sticky right-0 bg-background z-20 w-[120px] text-right">
-                        Azioni
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {filteredClienti.map((cliente) => (
-                      <TableRow key={cliente.id}>
-                       <TableCell
-                          className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate border-r"
-                          title={cliente.cod_cliente || cliente.id}
-                          >
-                          {cliente.cod_cliente ||
-                            cliente.id.substring(0, 8).toUpperCase()}
-                        </TableCell>
-
-                            <TableCell
-                            className="sticky left-[120px] bg-background z-20 font-medium w-[150px] truncate border-r pr-2"
-                          title={cliente.ragione_sociale || ""}
-                                >
-                          {cliente.ragione_sociale}
-                            </TableCell>
-
-                        <TableCell className="min-w-[150px] pl-2 pr-2 text-left align-middle">
-                          <div className="w-full whitespace-nowrap text-left">
-                            {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="min-w-[140px] px-2 text-left align-middle">
-                          {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
-                        </TableCell>
-
-                        <TableCell className="min-w-[80px]">
-                          {cliente.attivo ? (
-                            <Badge variant="default" className="bg-green-600">
-                              Attivo
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Inattivo</Badge>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="min-w-[90px] text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleInsertIntoScadenzari(cliente)}
-                            title="Inserisci negli Scadenzari"
-                          >
-                            <Calendar className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-
-                        <TableCell className="sticky right-0 bg-background z-10 w-[120px] text-right">
-                          <div className="flex justify-end gap-3">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(cliente)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(cliente.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <Table>
-                  <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
-                        Cliente
-                      </TableHead>
-                      <TableHead className="min-w-[220px] text-left">
-                        Utente Fiscale
-                      </TableHead>
-                      <TableHead className="text-center min-w-[90px]">IVA</TableHead>
-                      <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
-                      <TableHead className="text-center min-w-[100px]">
-                        Bilancio
-                      </TableHead>
-                      <TableHead className="text-center min-w-[90px]">770</TableHead>
-                      <TableHead className="text-center min-w-[90px]">IMU</TableHead>
-                      <TableHead className="text-center min-w-[90px]">CU</TableHead>
-                      <TableHead className="text-center min-w-[110px]">
-                        Fiscali
-                      </TableHead>
-                      <TableHead className="text-center min-w-[130px]">
-                        Esterometro
-                      </TableHead>
-                      <TableHead className="text-center min-w-[100px]">
-                        CCGG
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {filteredClienti.map((cliente) => (
-                      <TableRow key={cliente.id}>
-                       <TableCell
-                        className="sticky left-[120px] bg-background z-20 font-medium w-[150px] truncate border-r pr-4"
-                          title={cliente.ragione_sociale || ""}
-                            >
-                      {cliente.ragione_sociale}
-                          </TableCell>
-                        
-                        <TableCell className="min-w-[220px] text-left">
-                          {getUtenteNome(cliente.utente_operatore_id)}
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_iva}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_iva", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_lipe}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_lipe", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_bilancio}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(
-                                cliente.id,
-                                "flag_bilancio",
-                                v === true
-                              )
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_770}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_770", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_imu}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_imu", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_cu}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_cu", v === true)
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_fiscali}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(
-                                cliente.id,
-                                "flag_fiscali",
-                                v === true
-                              )
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_esterometro}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(
-                                cliente.id,
-                                "flag_esterometro",
-                                v === true
-                              )
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={!!cliente.flag_ccgg}
-                            onCheckedChange={(v) =>
-                              toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
-                            }
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+            <>
+              <Unlock className="h-4 w-4 mr-2" />
+              Blocca Dati
+            </>
           )}
-        </CardContent>
-      </Card>
+        </Button>
+      )}
 
-      {/* DIALOG CREAZIONE/MODIFICA */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-50"
+            disabled={importLoading}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Importa Excel/CSV
+          </Button>
+        </DialogTrigger>
+
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader>
-            <DialogTitle>
-              {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
-            </DialogTitle>
+            <DialogTitle>Importazione Clienti da Excel/CSV</DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="anagrafica" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
-              <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
-              <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
-              <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
-              <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
-              <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
-            </TabsList>
+          <div className="space-y-6">
+            <Button onClick={downloadTemplate} variant="outline" className="w-full">
+              <Upload className="h-4 w-4 mr-2" />
+              Scarica Template CSV
+            </Button>
 
-            {/* ANAGRAFICA */}
-            <TabsContent value="anagrafica" className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="cod_cliente">Codice Cliente</Label>
-                  <Input
-                    id="cod_cliente"
-                    value={formData.cod_cliente}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cod_cliente: e.target.value })
-                    }
-                    disabled
-                    placeholder="Generato automaticamente"
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="csv-file-clienti">Carica File CSV</Label>
+              <Input
+                id="csv-file-clienti"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleImportCSV}
+                className="cursor-pointer"
+                disabled={importLoading}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-                <div>
-                  <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
-                  <Select
-                    value={formData.tipo_cliente}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, tipo_cliente: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Persona fisica">Persona fisica</SelectItem>
-                      <SelectItem value="Altro">Altro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  {/* Tipologia Cliente */}
-  <div>
-    <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
-    <Select
-  value={formData.tipologia_cliente || ""}
-  onValueChange={(value) =>
-    setFormData((prev) => ({
-      ...prev,
-      tipologia_cliente: value as "Interno" | "Esterno",
-    }))
-  }
->
-  <SelectTrigger>
-    <SelectValue placeholder="Seleziona tipologia" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="Interno">Interno</SelectItem>
-    <SelectItem value="Esterno">Esterno</SelectItem>
-  </SelectContent>
-</Select>
-  </div>
-
-  {/* Cliente Attivo */}
-  <div className="flex items-end justify-start md:justify-end">
-    <div className="flex items-center space-x-2">
-      <Switch
-        id="attivo"
-        checked={formData.attivo}
-        onCheckedChange={(checked) =>
-          setFormData((prev) => ({
-            ...prev,
-            attivo: checked,
-          }))
-        }
-      />
-      <Label htmlFor="attivo">Cliente Attivo</Label>
+      <Button onClick={handleAddNew} className="gap-2">
+        <Plus className="h-4 w-4" />
+        Nuovo Cliente
+      </Button>
     </div>
   </div>
 </div>
 
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Settori *</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="settore-fiscale"
-                        checked={formData.settore_fiscale}
-                        onCheckedChange={(checked) =>
-                          setFormData({
-                            ...formData,
-                            settore_fiscale: checked as boolean,
-                          })
-                        }
-                      />
-                      <Label
-                        htmlFor="settore-fiscale"
-                        className="font-medium cursor-pointer"
-                      >
-                        Settore Fiscale
-                      </Label>
+{/* STATS */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">
+        Totale Clienti
+      </CardTitle>
+      <Users className="h-5 w-5 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-4xl font-bold">{clienti.length}</div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">
+        Con Cassetto Fiscale
+      </CardTitle>
+      <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-4xl font-bold text-blue-600">{clientiConCassetto}</div>
+    </CardContent>
+  </Card>
+
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">
+        Percentuale
+      </CardTitle>
+      <CheckCircle2 className="h-5 w-5 text-green-600" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-4xl font-bold text-green-600">
+        {percentualeCassetto}%
+      </div>
+    </CardContent>
+  </Card>
+</div>
+
+{/* FILTRI */}
+<Card className="mb-6">
+  <CardHeader>
+    <CardTitle className="text-lg">Ricerca e Filtri</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-6">
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+        <Input
+          placeholder="Cerca per ragione sociale, P.IVA, CF o Codice Cliente..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 h-12 text-base"
+        />
+      </div>
+
+      <Select
+        value={selectedUtenteFiscale}
+        onValueChange={setSelectedUtenteFiscale}
+      >
+        <SelectTrigger className="w-full md:w-[200px] h-12">
+          <SelectValue placeholder="Utente Fiscale" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tutti (Fiscale)</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              `${safeString(a.cognome)} ${safeString(a.nome)}`
+                .toLowerCase()
+                .localeCompare(
+                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                )
+            )
+            .map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {safeString(u.nome)} {safeString(u.cognome)}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={selectedUtentePayroll}
+        onValueChange={setSelectedUtentePayroll}
+      >
+        <SelectTrigger className="w-full md:w-[200px] h-12">
+          <SelectValue placeholder="Utente Payroll" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Tutti (Payroll)</SelectItem>
+          {utenti
+            .slice()
+            .sort((a, b) =>
+              `${safeString(a.cognome)} ${safeString(a.nome)}`
+                .toLowerCase()
+                .localeCompare(
+                  `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                )
+            )
+            .map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {safeString(u.nome)} {safeString(u.cognome)}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant={selectedLetter === "Tutti" ? "default" : "outline"}
+        size="sm"
+        onClick={() => setSelectedLetter("Tutti")}
+        className="px-4"
+      >
+        Tutti
+      </Button>
+
+      {alphabet.map((letter) => (
+        <Button
+          key={letter}
+          variant={selectedLetter === letter ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedLetter(letter)}
+          className="w-10 h-10 p-0"
+        >
+          {letter}
+        </Button>
+      ))}
+    </div>
+  </CardContent>
+</Card>
+
+{/* TABELLA */}
+<Card>
+  <CardContent className="p-0">
+    {filteredClienti.length === 0 ? (
+      <div className="text-center py-12">
+        <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+        <p className="text-muted-foreground mb-6">
+          {searchTerm ||
+          selectedLetter !== "Tutti" ||
+          selectedUtenteFiscale !== "all" ||
+          selectedUtentePayroll !== "all"
+            ? "Prova a modificare i filtri di ricerca"
+            : "Inizia aggiungendo il tuo primo cliente"}
+        </p>
+        <Button onClick={handleAddNew}>
+          <Plus className="mr-2 h-4 w-4" />
+          Aggiungi Cliente
+        </Button>
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        {vistaClienti === "clienti" ? (
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+              <TableRow>
+                <TableHead className="sticky top-0 left-0 bg-background z-30 w-[120px] border-r">
+                  Cod. Cliente
+                </TableHead>
+
+                <TableHead className="sticky top-0 left-[120px] bg-background z-30 w-[150px] border-r pr-2">
+                  Ragione Sociale
+                </TableHead>
+
+                <TableHead className="min-w-[150px] pl-2 pr-2 text-left">
+                  Utente Fiscale
+                </TableHead>
+
+                <TableHead className="min-w-[140px] px-2 text-left">
+                  Utente Payroll
+                </TableHead>
+
+                <TableHead className="min-w-[80px] text-left">Stato</TableHead>
+
+                <TableHead className="min-w-[90px] text-center">
+                  Scadenzari
+                </TableHead>
+
+                <TableHead className="sticky right-0 bg-background z-20 w-[120px] text-right">
+                  Azioni
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {filteredClienti.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell
+                    className="sticky left-0 bg-background z-10 font-mono text-sm w-[120px] truncate border-r"
+                    title={cliente.cod_cliente || cliente.id}
+                  >
+                    {cliente.cod_cliente ||
+                      cliente.id.substring(0, 8).toUpperCase()}
+                  </TableCell>
+
+                  <TableCell
+                    className="sticky left-[120px] bg-background z-20 font-medium w-[150px] truncate border-r pr-2"
+                    title={cliente.ragione_sociale || ""}
+                  >
+                    {cliente.ragione_sociale}
+                  </TableCell>
+
+                  <TableCell className="min-w-[150px] pl-2 pr-2 text-left align-middle">
+                    <div className="w-full whitespace-nowrap text-left">
+                      {getUtenteNome(cliente.utente_operatore_id) ?? "-"}
                     </div>
+                  </TableCell>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="settore-lavoro"
-                        checked={formData.settore_lavoro}
-                        onCheckedChange={(checked) =>
-                          setFormData({
-                            ...formData,
-                            settore_lavoro: checked as boolean,
-                          })
-                        }
-                      />
-                      <Label
-                        htmlFor="settore-lavoro"
-                        className="font-medium cursor-pointer"
-                      >
-                        Settore Lavoro
-                      </Label>
-                    </div>
+                  <TableCell className="min-w-[140px] px-2 text-left align-middle">
+                    {getUtenteNome(cliente.utente_payroll_id) ?? "-"}
+                  </TableCell>
 
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="settore-consulenza"
-                        checked={formData.settore_consulenza}
-                        onCheckedChange={(checked) =>
-                          setFormData({
-                            ...formData,
-                            settore_consulenza: checked as boolean,
-                          })
-                        }
-                      />
-                      <Label
-                        htmlFor="settore-consulenza"
-                        className="font-medium cursor-pointer"
-                      >
-                        Settore Consulenza
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="ragione_sociale">
-                    Ragione Sociale <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="ragione_sociale"
-                    value={formData.ragione_sociale}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        ragione_sociale: e.target.value,
-                      })
-                    }
-                    placeholder="Ragione sociale..."
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="partita_iva">P.IVA</Label>
-                  <div className="relative">
-                    <Input
-                      id="partita_iva"
-                      value={formData.partita_iva}
-                      onChange={(e) =>
-                        setFormData({ ...formData, partita_iva: e.target.value })
-                      }
-                      placeholder="01234567890"
-                    />
-                    {encryptionEnabled && encryptionLocked && formData.partita_iva && (
-                      <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      </div>
+                  <TableCell className="min-w-[80px]">
+                    {cliente.attivo ? (
+                      <Badge variant="default" className="bg-green-600">
+                        Attivo
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Inattivo</Badge>
                     )}
-                  </div>
-                </div>
+                  </TableCell>
 
-                <div>
-                  <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
-                  <div className="relative">
-                    <Input
-                      id="codice_fiscale"
-                      value={formData.codice_fiscale}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          codice_fiscale: e.target.value,
-                        })
-                      }
-                      placeholder="RSSMRA80A01H501U"
-                    />
-                    {encryptionEnabled &&
-                      encryptionLocked &&
-                      formData.codice_fiscale && (
-                        <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
-                          <Lock className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                  </div>
-                </div>
+                  <TableCell className="min-w-[90px] text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleInsertIntoScadenzari(cliente)}
+                      title="Inserisci negli Scadenzari"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
 
-                <div className="md:col-span-2">
-                  <Label htmlFor="indirizzo">Indirizzo</Label>
-                  <Input
-                    id="indirizzo"
-                    value={formData.indirizzo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, indirizzo: e.target.value })
-                    }
-                    placeholder="Via Roma, 123"
-                  />
-                </div>
-                </TabsContent>
+                  <TableCell className="sticky right-0 bg-background z-10 w-[120px] text-right">
+                    <div className="flex justify-end gap-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(cliente)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(cliente.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
+              <TableRow>
+                <TableHead className="sticky left-0 bg-background z-20 w-[350px]">
+                  Cliente
+                </TableHead>
+                <TableHead className="min-w-[220px] text-left">
+                  Utente Fiscale
+                </TableHead>
+                <TableHead className="text-center min-w-[90px]">IVA</TableHead>
+                <TableHead className="text-center min-w-[90px]">LIPE</TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  Bilancio
+                </TableHead>
+                <TableHead className="text-center min-w-[90px]">770</TableHead>
+                <TableHead className="text-center min-w-[90px]">IMU</TableHead>
+                <TableHead className="text-center min-w-[90px]">CU</TableHead>
+                <TableHead className="text-center min-w-[110px]">
+                  Fiscali
+                </TableHead>
+                <TableHead className="text-center min-w-[130px]">
+                  Esterometro
+                </TableHead>
+                <TableHead className="text-center min-w-[100px]">
+                  CCGG
+                </TableHead>
+              </TableRow>
+            </TableHeader>
 
-{/* Riga città / provincia / cap */}
-<div className="mt-4 grid grid-cols-12 gap-4">
-  <div className="col-span-12 md:col-span-8">
-    <Label htmlFor="citta">Città</Label>
-    <Input
-      id="citta"
-      name="citta"
-      value={formData.citta || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, citta: e.target.value }))
-      }
-    />
-  </div>
-
-  <div className="col-span-6 md:col-span-2">
-    <Label htmlFor="provincia">Provincia</Label>
-    <Input
-      id="provincia"
-      name="provincia"
-      value={formData.provincia || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, provincia: e.target.value }))
-      }
-    />
-  </div>
-
-  <div className="col-span-6 md:col-span-2">
-    <Label htmlFor="cap">CAP</Label>
-    <Input
-      id="cap"
-      name="cap"
-      value={formData.cap || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, cap: e.target.value }))
-      }
-    />
-  </div>
-</div>
-
-{/* Riga rappresentante legale + email */}
-<div className="mt-4 grid grid-cols-12 gap-4">
-  <div className="col-span-12 md:col-span-6">
-    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-    <Select
-      value={formData.rapp_legale_id || "none"}
-      onValueChange={(value) =>
-        setFormData((prev) => ({
-          ...prev,
-          rapp_legale_id: value === "none" ? "" : value,
-        }))
-      }
-    >
-      <SelectTrigger id="rapp_legale_id">
-        <SelectValue placeholder="Seleziona rappresentante legale" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="none">Seleziona rappresentante legale</SelectItem>
-        {rappLegali.map((r) => (
-          <SelectItem key={r.id} value={r.id}>
-            {r.nome_cognome}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-
-  <div className="col-span-12 md:col-span-6">
-    <Label htmlFor="email">Email *</Label>
-    <Input
-      id="email"
-      name="email"
-      type="email"
-      value={formData.email || ""}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, email: e.target.value }))
-      }
-    />
-  </div>
-</div>
-
-{/* Note */}
-<div className="mt-4">
-  <Label htmlFor="note">Note</Label>
-  <Textarea
-    id="note"
-    value={formData.note}
-    onChange={(e) =>
-      setFormData((prev) => ({ ...prev, note: e.target.value }))
-    }
-    placeholder="Note aggiuntive..."
-    rows={4}
-  />
-</div>
-            {/* RIFERIMENTI */}
-            <TabsContent value="riferimenti" className="space-y-6 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
-                  <Select
-                    value={formData.utente_operatore_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        utente_operatore_id: value === "none" ? "" : value,
-                      })
-                    }
+            <TableBody>
+              {filteredClienti.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell
+                    className="sticky left-0 bg-background z-20 font-medium w-[350px] truncate border-r pr-4"
+                    title={cliente.ragione_sociale || ""}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona utente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti
-                        .slice()
-                        .sort((a, b) =>
-                          `${safeString(a.cognome)} ${safeString(a.nome)}`
-                            .toLowerCase()
-                            .localeCompare(
-                              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                            )
-                        )
-                        .map((utente) => (
-                          <SelectItem key={utente.id} value={utente.id}>
-                            {safeString(utente.nome)} {safeString(utente.cognome)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {cliente.ragione_sociale}
+                  </TableCell>
 
-                <div>
-                  <Label htmlFor="utente_professionista_id">Professionista Fiscale</Label>
-                  <Select
-                    value={formData.utente_professionista_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        utente_professionista_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona professionista" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti
-                        .slice()
-                        .sort((a, b) =>
-                          `${safeString(a.cognome)} ${safeString(a.nome)}`
-                            .toLowerCase()
-                            .localeCompare(
-                              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                            )
-                        )
-                        .map((utente) => (
-                          <SelectItem key={utente.id} value={utente.id}>
-                            {safeString(utente.nome)} {safeString(utente.cognome)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <TableCell className="min-w-[220px] text-left">
+                    {getUtenteNome(cliente.utente_operatore_id)}
+                  </TableCell>
 
-                <div>
-                  <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
-                  <Select
-                    value={formData.utente_payroll_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        utente_payroll_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona utente payroll" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti
-                        .slice()
-                        .sort((a, b) =>
-                          `${safeString(a.cognome)} ${safeString(a.nome)}`
-                            .toLowerCase()
-                            .localeCompare(
-                              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                            )
-                        )
-                        .map((utente) => (
-                          <SelectItem key={utente.id} value={utente.id}>
-                            {safeString(utente.nome)} {safeString(utente.cognome)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="professionista_payroll_id">Professionista Payroll</Label>
-                  <Select
-                    value={formData.professionista_payroll_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        professionista_payroll_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona professionista payroll" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {utenti
-                        .slice()
-                        .sort((a, b) =>
-                          `${safeString(a.cognome)} ${safeString(a.nome)}`
-                            .toLowerCase()
-                            .localeCompare(
-                              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                            )
-                        )
-                        .map((utente) => (
-                          <SelectItem key={utente.id} value={utente.id}>
-                            {safeString(utente.nome)} {safeString(utente.cognome)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="contatto1_id">Contatto 1</Label>
-                  <Select
-                    value={formData.contatto1_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        contatto1_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona contatto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {contatti
-                        .slice()
-                        .sort((a, b) =>
-                          `${safeString(a.cognome)} ${safeString(a.nome)}`
-                            .toLowerCase()
-                            .localeCompare(
-                              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-                            )
-                        )
-                        .map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {safeString(c.nome)} {safeString(c.cognome)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="referente_esterno">Referente esterno</Label>
-                  <Input
-                    id="referente_esterno"
-                    value={formData.referente_esterno}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        referente_esterno: e.target.value,
-                      })
-                    }
-                    placeholder="Nome referente esterno"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
-                  <Select
-                    value={formData.tipo_prestazione_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        tipo_prestazione_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona prestazione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {prestazioni.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {safeString(p.descrizione)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
-                  <Select
-                    value={formData.tipo_redditi || undefined}
-                    onValueChange={(value: string) =>
-                      setFormData({
-                        ...formData,
-                        tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USC">USC</SelectItem>
-                      <SelectItem value="USP">USP</SelectItem>
-                      <SelectItem value="ENC">ENC</SelectItem>
-                      <SelectItem value="UPF">UPF</SelectItem>
-                      <SelectItem value="730">730</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
-                  <Select
-                    value={formData.cassetto_fiscale_id || "none"}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        cassetto_fiscale_id: value === "none" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona referente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nessuno</SelectItem>
-                      {cassettiFiscali.map((cassetto) => (
-                        <SelectItem key={cassetto.id} value={cassetto.id}>
-                          {safeString(cassetto.nominativo)} ({safeString(cassetto.username)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* COMUNICAZIONI */}
-            <TabsContent value="comunicazioni" className="pt-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border rounded-md p-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="flag_mail_attivo" className="font-medium">
-                      Email Attive
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Abilita l’invio delle comunicazioni email al cliente
-                    </p>
-                  </div>
-                  <Switch
-                    id="flag_mail_attivo"
-                    checked={formData.flag_mail_attivo}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, flag_mail_attivo: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between border rounded-md p-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="flag_mail_scadenze" className="font-medium">
-                      Email Scadenze
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Invia notifiche email per le scadenze fiscali
-                    </p>
-                  </div>
-                  <Switch
-                    id="flag_mail_scadenze"
-                    checked={formData.flag_mail_scadenze}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, flag_mail_scadenze: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between border rounded-md p-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="flag_mail_newsletter" className="font-medium">
-                      Newsletter
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Abilita l’invio di newsletter e comunicazioni informative
-                    </p>
-                  </div>
-                  <Switch
-                    id="flag_mail_newsletter"
-                    checked={formData.flag_mail_newsletter}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, flag_mail_newsletter: checked })
-                    }
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* ALTRI DATI */}
-            <TabsContent value="altri_dati" className="space-y-4 pt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <Label htmlFor="matricola_inps">Matricola INPS</Label>
-                  <Textarea
-                    id="matricola_inps"
-                    value={formData.matricola_inps}
-                    onChange={(e) =>
-                      setFormData({ ...formData, matricola_inps: e.target.value })
-                    }
-                    placeholder="Inserisci matricola INPS..."
-                    rows={2}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="pat_inail">Pat INAIL</Label>
-                  <Textarea
-                    id="pat_inail"
-                    value={formData.pat_inail}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pat_inail: e.target.value })
-                    }
-                    placeholder="Inserisci Pat INAIL..."
-                    rows={2}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
-                  <Textarea
-                    id="codice_ditta_ce"
-                    value={formData.codice_ditta_ce}
-                    onChange={(e) =>
-                      setFormData({ ...formData, codice_ditta_ce: e.target.value })
-                    }
-                    placeholder="Inserisci codice ditta CE..."
-                    rows={2}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* SCADENZARI */}
-            <TabsContent value="scadenzari" className="space-y-4 pt-4">
-              <p className="text-sm text-muted-foreground">
-                Seleziona gli scadenzari attivi per questo cliente
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {SCADENZARI_OPTIONS.map(({ key, label }) => (
-                  <div key={key} className="flex items-center space-x-2">
+                  <TableCell className="text-center">
                     <Checkbox
-                      checked={!!scadenzari[key]}
-                      onCheckedChange={(checked) =>
-                        setScadenzari((s) => ({ ...s, [key]: checked === true }))
+                      checked={!!cliente.flag_iva}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_iva", v === true)
                       }
                     />
-                    <Label>{label}</Label>
-                  </div>
-                ))}
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_lipe}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_lipe", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_bilancio}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_bilancio", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_770}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_770", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_imu}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_imu", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_cu}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_cu", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_fiscali}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_fiscali", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_esterometro}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_esterometro", v === true)
+                      }
+                    />
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Checkbox
+                      checked={!!cliente.flag_ccgg}
+                      onCheckedChange={(v) =>
+                        toggleClienteFlag(cliente.id, "flag_ccgg", v === true)
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+{/* DIALOG CREAZIONE/MODIFICA */}
+<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {editingCliente ? "Modifica Cliente" : "Nuovo Cliente"}
+      </DialogTitle>
+    </DialogHeader>
+
+    <Tabs defaultValue="anagrafica" className="w-full">
+      <TabsList className="grid w-full grid-cols-5 overflow-x-auto">
+        <TabsTrigger value="anagrafica">Anagrafica</TabsTrigger>
+        <TabsTrigger value="riferimenti">Riferimenti</TabsTrigger>
+        <TabsTrigger value="comunicazioni">Comunicazioni</TabsTrigger>
+        <TabsTrigger value="altri_dati">Altri Dati</TabsTrigger>
+        <TabsTrigger value="scadenzari">Scadenzari</TabsTrigger>
+      </TabsList>
+
+      {/* ANAGRAFICA */}
+      <TabsContent value="anagrafica" className="space-y-4 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="cod_cliente">Codice Cliente</Label>
+            <Input
+              id="cod_cliente"
+              value={formData.cod_cliente}
+              onChange={(e) =>
+                setFormData({ ...formData, cod_cliente: e.target.value })
+              }
+              disabled
+              placeholder="Generato automaticamente"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="tipo_cliente">Tipo Cliente</Label>
+            <Select
+              value={formData.tipo_cliente}
+              onValueChange={(value) =>
+                setFormData({ ...formData, tipo_cliente: value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Persona fisica">Persona fisica</SelectItem>
+                <SelectItem value="Altro">Altro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+            {/* Tipologia Cliente */}
+            <div>
+              <Label htmlFor="tipologia_cliente">Tipologia Cliente</Label>
+              <Select
+                value={formData.tipologia_cliente || ""}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    tipologia_cliente: value as "Interno" | "Esterno",
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona tipologia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Interno">Interno</SelectItem>
+                  <SelectItem value="Esterno">Esterno</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cliente Attivo */}
+            <div className="flex items-end justify-start md:justify-end">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="attivo"
+                  checked={formData.attivo}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      attivo: checked,
+                    }))
+                  }
+                />
+                <Label htmlFor="attivo">Cliente Attivo</Label>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
 
-         <div className="flex items-center justify-between gap-3 pt-6 border-t">
-  <div>
-    <button
-      type="button"
-      onClick={() => fileInputRef.current?.click()}
-      disabled={importingVisura}
-      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {importingVisura ? "Importazione..." : "Importa visura"}
-    </button>
+          <div className="md:col-span-2 space-y-2">
+            <Label>Settori *</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border rounded-md p-4 bg-muted/20">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="settore-fiscale"
+                  checked={formData.settore_fiscale}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      settore_fiscale: checked as boolean,
+                    })
+                  }
+                />
+                <Label
+                  htmlFor="settore-fiscale"
+                  className="font-medium cursor-pointer"
+                >
+                  Settore Fiscale
+                </Label>
+              </div>
 
-    <input
-      type="file"
-      accept=".pdf,.txt"
-      ref={fileInputRef}
-      style={{ display: "none" }}
-      onChange={handleImportVisura}
-      disabled={importingVisura}
-    />
-  </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="settore-lavoro"
+                  checked={formData.settore_lavoro}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      settore_lavoro: checked as boolean,
+                    })
+                  }
+                />
+                <Label
+                  htmlFor="settore-lavoro"
+                  className="font-medium cursor-pointer"
+                >
+                  Settore Lavoro
+                </Label>
+              </div>
 
-  <div className="flex items-center gap-3">
-    <button
-      type="button"
-      onClick={() => {
-        setIsDialogOpen(false);
-        resetForm();
-      }}
-      className="rounded-md border border-red-500 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-    >
-      Annulla
-    </button>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="settore-consulenza"
+                  checked={formData.settore_consulenza}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      settore_consulenza: checked as boolean,
+                    })
+                  }
+                />
+                <Label
+                  htmlFor="settore-consulenza"
+                  className="font-medium cursor-pointer"
+                >
+                  Settore Consulenza
+                </Label>
+              </div>
+            </div>
+          </div>
 
-    <button
-      type="button"
-      onClick={handleSave}
-      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
-    >
-      {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
-    </button>
-  </div>
-</div>
+          <div className="md:col-span-2">
+            <Label htmlFor="ragione_sociale">
+              Ragione Sociale <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="ragione_sociale"
+              value={formData.ragione_sociale}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  ragione_sociale: e.target.value,
+                })
+              }
+              placeholder="Ragione sociale..."
+            />
+          </div>
 
-      {/* DIALOG SBLOCCO */}
-      <Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Inserisci la password principale dello studio per visualizzare e
-              modificare i dati sensibili (CF, P.IVA, ecc).
-            </p>
-
-            <div className="space-y-2">
-              <Label htmlFor="unlock-password">Password Principale</Label>
+          <div>
+            <Label htmlFor="partita_iva">P.IVA</Label>
+            <div className="relative">
               <Input
-                id="unlock-password"
-                type="password"
-                value={unlockPassword}
-                onChange={(e) => setUnlockPassword(e.target.value)}
-                placeholder="Inserisci password..."
+                id="partita_iva"
+                value={formData.partita_iva}
+                onChange={(e) =>
+                  setFormData({ ...formData, partita_iva: e.target.value })
+                }
+                placeholder="01234567890"
+              />
+              {encryptionEnabled && encryptionLocked && formData.partita_iva && (
+                <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
+            <div className="relative">
+              <Input
+                id="codice_fiscale"
+                value={formData.codice_fiscale}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    codice_fiscale: e.target.value,
+                  })
+                }
+                placeholder="RSSMRA80A01H501U"
+              />
+              {encryptionEnabled &&
+                encryptionLocked &&
+                formData.codice_fiscale && (
+                  <div className="absolute inset-0 bg-muted/50 backdrop-blur-sm flex items-center justify-center rounded-md">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <Label htmlFor="indirizzo">Indirizzo</Label>
+            <Input
+              id="indirizzo"
+              value={formData.indirizzo}
+              onChange={(e) =>
+                setFormData({ ...formData, indirizzo: e.target.value })
+              }
+              placeholder="Via Roma, 123"
+            />
+          </div>
+
+          {/* Riga città / provincia / cap */}
+          <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
+            <div className="col-span-12 md:col-span-8">
+              <Label htmlFor="citta">Città</Label>
+              <Input
+                id="citta"
+                name="citta"
+                value={formData.citta || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, citta: e.target.value }))
+                }
               />
             </div>
-          
-        
+
+            <div className="col-span-6 md:col-span-2">
+              <Label htmlFor="provincia">Provincia</Label>
+              <Input
+                id="provincia"
+                name="provincia"
+                value={formData.provincia || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    provincia: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="col-span-6 md:col-span-2">
+              <Label htmlFor="cap">CAP</Label>
+              <Input
+                id="cap"
+                name="cap"
+                value={formData.cap || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, cap: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          {/* Riga rappresentante legale + email */}
+          <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
+            <div className="col-span-12 md:col-span-6">
+              <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+              <Select
+                value={formData.rapp_legale_id || "none"}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    rapp_legale_id: value === "none" ? "" : value,
+                  }))
+                }
+              >
+                <SelectTrigger id="rapp_legale_id">
+                  <SelectValue placeholder="Seleziona rappresentante legale" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    Seleziona rappresentante legale
+                  </SelectItem>
+                  {rappLegali.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.nome_cognome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="col-span-12 md:col-span-6">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email || ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          {/* Note */}
+          <div className="md:col-span-2 mt-4">
+            <Label htmlFor="note">Note</Label>
+            <Textarea
+              id="note"
+              value={formData.note}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, note: e.target.value }))
+              }
+              placeholder="Note aggiuntive..."
+              rows={4}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* RIFERIMENTI */}
+      <TabsContent value="riferimenti" className="space-y-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
+            <Select
+              value={formData.utente_operatore_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  utente_operatore_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona utente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {utenti
+                  .slice()
+                  .sort((a, b) =>
+                    `${safeString(a.cognome)} ${safeString(a.nome)}`
+                      .toLowerCase()
+                      .localeCompare(
+                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                      )
+                  )
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {safeString(utente.nome)} {safeString(utente.cognome)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="utente_professionista_id">
+              Professionista Fiscale
+            </Label>
+            <Select
+              value={formData.utente_professionista_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  utente_professionista_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona professionista" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {utenti
+                  .slice()
+                  .sort((a, b) =>
+                    `${safeString(a.cognome)} ${safeString(a.nome)}`
+                      .toLowerCase()
+                      .localeCompare(
+                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                      )
+                  )
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {safeString(utente.nome)} {safeString(utente.cognome)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="utente_payroll_id">Utente Payroll</Label>
+            <Select
+              value={formData.utente_payroll_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  utente_payroll_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona utente payroll" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {utenti
+                  .slice()
+                  .sort((a, b) =>
+                    `${safeString(a.cognome)} ${safeString(a.nome)}`
+                      .toLowerCase()
+                      .localeCompare(
+                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                      )
+                  )
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {safeString(utente.nome)} {safeString(utente.cognome)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="professionista_payroll_id">
+              Professionista Payroll
+            </Label>
+            <Select
+              value={formData.professionista_payroll_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  professionista_payroll_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona professionista payroll" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {utenti
+                  .slice()
+                  .sort((a, b) =>
+                    `${safeString(a.cognome)} ${safeString(a.nome)}`
+                      .toLowerCase()
+                      .localeCompare(
+                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                      )
+                  )
+                  .map((utente) => (
+                    <SelectItem key={utente.id} value={utente.id}>
+                      {safeString(utente.nome)} {safeString(utente.cognome)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="contatto1_id">Contatto 1</Label>
+            <Select
+              value={formData.contatto1_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  contatto1_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona contatto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {contatti
+                  .slice()
+                  .sort((a, b) =>
+                    `${safeString(a.cognome)} ${safeString(a.nome)}`
+                      .toLowerCase()
+                      .localeCompare(
+                        `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+                      )
+                  )
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {safeString(c.nome)} {safeString(c.cognome)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="referente_esterno">Referente esterno</Label>
+            <Input
+              id="referente_esterno"
+              value={formData.referente_esterno}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  referente_esterno: e.target.value,
+                })
+              }
+              placeholder="Nome referente esterno"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+            <Select
+              value={formData.tipo_prestazione_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  tipo_prestazione_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona prestazione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {prestazioni.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {safeString(p.descrizione)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+            <Select
+              value={formData.tipo_redditi || undefined}
+              onValueChange={(value: string) =>
+                setFormData({
+                  ...formData,
+                  tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USC">USC</SelectItem>
+                <SelectItem value="USP">USP</SelectItem>
+                <SelectItem value="ENC">ENC</SelectItem>
+                <SelectItem value="UPF">UPF</SelectItem>
+                <SelectItem value="730">730</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="md:col-span-2">
+            <Label htmlFor="cassetto_fiscale_id">
+              Referente Cassetto fiscale
+            </Label>
+            <Select
+              value={formData.cassetto_fiscale_id || "none"}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  cassetto_fiscale_id: value === "none" ? "" : value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona referente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nessuno</SelectItem>
+                {cassettiFiscali.map((cassetto) => (
+                  <SelectItem key={cassetto.id} value={cassetto.id}>
+                    {safeString(cassetto.nominativo)} (
+                    {safeString(cassetto.username)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* COMUNICAZIONI */}
+      <TabsContent value="comunicazioni" className="pt-4">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border rounded-md p-4">
+            <div className="space-y-1">
+              <Label htmlFor="flag_mail_attivo" className="font-medium">
+                Email Attive
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Abilita l’invio delle comunicazioni email al cliente
+              </p>
+            </div>
+            <Switch
+              id="flag_mail_attivo"
+              checked={formData.flag_mail_attivo}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, flag_mail_attivo: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between border rounded-md p-4">
+            <div className="space-y-1">
+              <Label htmlFor="flag_mail_scadenze" className="font-medium">
+                Email Scadenze
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Invia notifiche email per le scadenze fiscali
+              </p>
+            </div>
+            <Switch
+              id="flag_mail_scadenze"
+              checked={formData.flag_mail_scadenze}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, flag_mail_scadenze: checked })
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between border rounded-md p-4">
+            <div className="space-y-1">
+              <Label htmlFor="flag_mail_newsletter" className="font-medium">
+                Newsletter
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Abilita l’invio di newsletter e comunicazioni informative
+              </p>
+            </div>
+            <Switch
+              id="flag_mail_newsletter"
+              checked={formData.flag_mail_newsletter}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, flag_mail_newsletter: checked })
+              }
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* ALTRI DATI */}
+      <TabsContent value="altri_dati" className="space-y-4 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <Label htmlFor="matricola_inps">Matricola INPS</Label>
+            <Textarea
+              id="matricola_inps"
+              value={formData.matricola_inps}
+              onChange={(e) =>
+                setFormData({ ...formData, matricola_inps: e.target.value })
+              }
+              placeholder="Inserisci matricola INPS..."
+              rows={2}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label htmlFor="pat_inail">Pat INAIL</Label>
+            <Textarea
+              id="pat_inail"
+              value={formData.pat_inail}
+              onChange={(e) =>
+                setFormData({ ...formData, pat_inail: e.target.value })
+              }
+              placeholder="Inserisci Pat INAIL..."
+              rows={2}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label htmlFor="codice_ditta_ce">Codice Ditta CE</Label>
+            <Textarea
+              id="codice_ditta_ce"
+              value={formData.codice_ditta_ce}
+              onChange={(e) =>
+                setFormData({ ...formData, codice_ditta_ce: e.target.value })
+              }
+              placeholder="Inserisci codice ditta CE..."
+              rows={2}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* SCADENZARI */}
+      <TabsContent value="scadenzari" className="space-y-4 pt-4">
+        <p className="text-sm text-muted-foreground">
+          Seleziona gli scadenzari attivi per questo cliente
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {SCADENZARI_OPTIONS.map(({ key, label }) => (
+            <div key={key} className="flex items-center space-x-2">
+              <Checkbox
+                checked={!!scadenzari[key]}
+                onCheckedChange={(checked) =>
+                  setScadenzari((s) => ({ ...s, [key]: checked === true }))
+                }
+              />
+              <Label>{label}</Label>
+            </div>
+          ))}
+        </div>
+      </TabsContent>
+    </Tabs>
+
+    <div className="flex items-center justify-between gap-3 pt-6 border-t">
+      <div>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importingVisura}
+          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {importingVisura ? "Importazione..." : "Importa visura"}
+        </button>
+
+        <input
+          type="file"
+          accept=".pdf,.txt"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleImportVisura}
+          disabled={importingVisura}
+        />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setIsDialogOpen(false);
+            resetForm();
+          }}
+          className="rounded-md border border-red-500 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+        >
+          Annulla
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800"
+        >
+          {editingCliente ? "Salva Modifiche" : "Crea Cliente"}
+        </button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
+{/* DIALOG SBLOCCO */}
+<Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4 py-4">
+      <p className="text-sm text-muted-foreground">
+        Inserisci la password principale dello studio per visualizzare e
+        modificare i dati sensibili (CF, P.IVA, ecc).
+      </p>
+
+      <div className="space-y-2">
+        <Label htmlFor="unlock-password">Password Principale</Label>
+        <Input
+          id="unlock-password"
+          type="password"
+          value={unlockPassword}
+          onChange={(e) => setUnlockPassword(e.target.value)}
+          placeholder="Inserisci password..."
+        />
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
