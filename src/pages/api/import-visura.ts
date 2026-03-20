@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const clienteCF = mapped.cliente.codice_fiscale?.trim();
     const clientePI = mapped.cliente.partita_iva?.trim();
-    const rappCF = mapped.rappresentante.codice_fiscale?.trim();
+    const rappCF = mapped.rappresentante?.codice_fiscale?.trim();
 
     let existingCliente: any = null;
     if (clienteCF || clientePI) {
@@ -72,13 +72,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .insert([
             {
               studio_id,
-              nome_cognome: mapped.rappresentante.nome_cognome || null,
-              codice_fiscale: mapped.rappresentante.codice_fiscale || null,
-              luogo_nascita: mapped.rappresentante.luogo_nascita || null,
-              data_nascita: mapped.rappresentante.data_nascita || null,
-              citta_residenza: mapped.rappresentante.citta_residenza || null,
-              indirizzo_residenza: mapped.rappresentante.indirizzo_residenza || null,
-              CAP: mapped.rappresentante.CAP || null,
+              nome_cognome: mapped.rappresentante?.nome_cognome || null,
+              codice_fiscale: mapped.rappresentante?.codice_fiscale || null,
+              luogo_nascita: mapped.rappresentante?.luogo_nascita || null,
+              data_nascita: mapped.rappresentante?.data_nascita || null,
+              citta_residenza: mapped.rappresentante?.citta_residenza || null,
+              indirizzo_residenza: mapped.rappresentante?.indirizzo_residenza || null,
+              CAP: mapped.rappresentante?.CAP || null,
             },
           ])
           .select("id")
