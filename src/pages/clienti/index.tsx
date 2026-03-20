@@ -1894,7 +1894,7 @@ setRappLegali(rappLegaliData);
     <label className="mb-1 block text-sm font-medium">Rappresentante legale</label>
     <select
       name="rapp_legale_id"
-      value={form.rapp_legale_id || ""}
+      value={formData.rapp_legale_id || ""}
       onChange={handleChange}
       className="w-full rounded-md border px-3 py-2"
     >
