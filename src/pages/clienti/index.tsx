@@ -405,14 +405,20 @@ const [searchTerm, setSearchTerm] = useState("");
       if (utentiRes.error) throw utentiRes.error;
       if (cassettiRes.error) throw cassettiRes.error;
       if (prestazioniRes.error) throw prestazioniRes.error;
-      if (rappLegaliRes.error) throw rappLegaliRes.error;
+   if ((rappLegaliRes as any).error) throw (rappLegaliRes as any).error;
 
-      setClienti(clientiRes.data ?? []);
-      setContatti(contattiRes.data ?? []);
-      setUtenti(utentiRes.data ?? []);
-      setCassettiFiscali(cassettiRes.data ?? []);
-      setPrestazioni(prestazioniRes.data ?? []);
-      setRappLegali(rappLegaliRes.data || []);
+setClienti(clientiRes.data ?? []);
+setContatti(contattiRes.data ?? []);
+setUtenti(utentiRes.data ?? []);
+setCassettiFiscali(cassettiRes.data ?? []);
+setPrestazioni(prestazioniRes.data ?? []);
+
+const rappLegaliData = ((rappLegaliRes as any).data ?? []) as {
+  id: string;
+  nome_cognome: string;
+}[];
+
+setRappLegali(rappLegaliData);
     } catch (error) {
       console.error("Errore caricamento dati:", error);
       toast({
