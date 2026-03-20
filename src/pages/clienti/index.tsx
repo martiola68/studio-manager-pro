@@ -240,8 +240,8 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        studio_id: form.studio_id,
-        text,
+      studio_id: studioId,
+      text,
       }),
     });
 
