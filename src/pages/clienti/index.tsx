@@ -256,18 +256,17 @@ async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
       return;
     }
 
-    setForm((prev: any) => ({
-      ...prev,
-      ragione_sociale: result.cliente_prefill.ragione_sociale || prev.ragione_sociale,
-      codice_fiscale: result.cliente_prefill.codice_fiscale || prev.codice_fiscale,
-      partita_iva: result.cliente_prefill.partita_iva || prev.partita_iva,
-      indirizzo: result.cliente_prefill.indirizzo || prev.indirizzo,
-      cap: result.cliente_prefill.cap || prev.cap,
-      citta: result.cliente_prefill.citta || prev.citta,
-      provincia: result.cliente_prefill.provincia || prev.provincia,
-      rapp_legale_id: result.cliente_prefill.rapp_legale_id || prev.rapp_legale_id,
-    }));
-
+  setFormData((prev: any) => ({
+  ...prev,
+  ragione_sociale: result.cliente_prefill.ragione_sociale || prev.ragione_sociale,
+  codice_fiscale: result.cliente_prefill.codice_fiscale || prev.codice_fiscale,
+  partita_iva: result.cliente_prefill.partita_iva || prev.partita_iva,
+  indirizzo: result.cliente_prefill.indirizzo || prev.indirizzo,
+  cap: result.cliente_prefill.cap || prev.cap,
+  citta: result.cliente_prefill.citta || prev.citta,
+  provincia: result.cliente_prefill.provincia || prev.provincia,
+  rapp_legale_id: result.cliente_prefill.rapp_legale_id || prev.rapp_legale_id,
+}));
     await loadRappresentanti?.();
 
     alert(
