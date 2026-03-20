@@ -30,6 +30,8 @@ function getTurboRules() {
 const nextConfig = {
   reactStrictMode: true,
 
+   serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
