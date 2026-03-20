@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
+import * as pdfjsLib from "pdfjs-dist";
 
 export const config = {
   api: {
@@ -17,7 +17,7 @@ async function getRawBody(req: any): Promise<Buffer> {
 }
 
 async function extractTextFromPDF(buffer: Buffer) {
-  const loadingTask = pdfjsLib.getDocument({ data: buffer });
+  const loadingTask = (pdfjsLib as any).getDocument({ data: buffer });
   const pdf = await loadingTask.promise;
 
   let fullText = "";
