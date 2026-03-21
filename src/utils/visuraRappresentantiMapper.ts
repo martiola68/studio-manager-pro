@@ -33,7 +33,7 @@ function extractSoci(text: string): VisuraRappresentante[] {
   const results: VisuraRappresentante[] = [];
 
   const socioRegex =
-    /Proprieta'\s+([A-ZÀ-Ü' ]+?)\s+Quota di nominali:.*?Codice fiscale:\s*([A-Z0-9]{16}).*?(?:Domicilio del titolare o rappresentante|domicilio del titolare o rappresentante)\s+comune\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gms;
+    /Proprieta'\s+([A-ZÀ-Ü' ]+?)\s+Quota di nominali:[\s\S]*?Codice fiscale:\s*([A-Z0-9]{16})[\s\S]*?(?:Domicilio del titolare o rappresentante|domicilio del titolare o rappresentante)\s+comune\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gm;
 
   let match: RegExpExecArray | null;
 
@@ -66,7 +66,7 @@ function extractAmministratori(text: string): VisuraRappresentante[] {
   const results: VisuraRappresentante[] = [];
 
   const adminRegex =
-    /Amministratore\s+([A-ZÀ-Ü' ]+?)\s+Rappresentante dell'impresa\s+Nato a\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+il\s+(\d{2}\/\d{2}\/\d{4})\s+Codice fiscale:\s*([A-Z0-9]{16})\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gms;
+    /Amministratore\s+([A-ZÀ-Ü' ]+?)\s+Rappresentante dell'impresa\s+Nato a\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+il\s+(\d{2}\/\d{2}\/\d{4})\s+Codice fiscale:\s*([A-Z0-9]{16})\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gm;
 
   let match: RegExpExecArray | null;
 
@@ -99,26 +99,17 @@ function extractAmministratori(text: string): VisuraRappresentante[] {
 
 function normalizeName(value: string | null | undefined): string | null {
   if (!value) return null;
-
-  return value
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function normalizeCity(value: string | null | undefined): string | null {
   if (!value) return null;
-
-  return value
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function normalizeAddress(value: string | null | undefined): string | null {
   if (!value) return null;
-
-  return value
-    .replace(/\s+/g, " ")
-    .trim();
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function toIsoDate(value: string | null | undefined): string | null {
