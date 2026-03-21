@@ -111,9 +111,12 @@ function decodeBirthDateFromCodiceFiscale(
 ): string | null {
   if (!codiceFiscale) return null;
 
-  const cf = codiceFiscale.toUpperCase().trim();
+  const cf = codiceFiscale
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .trim();
 
-  if (!/^[A-Z0-9]{16}$/.test(cf)) return null;
+  if (cf.length !== 16) return null;
 
   const yearPart = cf.slice(6, 8);
   const monthPart = cf.slice(8, 9);
@@ -149,10 +152,6 @@ function decodeBirthDateFromCodiceFiscale(
   if (dayNum < 1 || dayNum > 31) return null;
 
   const currentYear = new Date().getFullYear() % 100;
-
-  // regola pratica:
-  // se le ultime due cifre sono <= anno corrente -> 2000+
-  // altrimenti -> 1900+
   const fullYear = yearNum <= currentYear ? 2000 + yearNum : 1900 + yearNum;
 
   const yyyy = String(fullYear);
@@ -161,7 +160,6 @@ function decodeBirthDateFromCodiceFiscale(
 
   return `${dd}/${mm}/${yyyy}`;
 }
-
 function cleanPersonName(name: string): string {
   return name
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
@@ -268,7 +266,7 @@ function parseSubjectBlock(
     qualifica: qualificaMatch ? qualificaMatch[1] : tipo === "socio" ? "socio" : null,
     tipo_soggetto: tipo,
     luogo_nascita: birth.luogo_nascita,
-    data_nascita: birth.data_nascita || decodeBirthDateFromCodiceFiscale(codiceFiscale),
+   data_nascita: birth.data_nascita || decodeBirthDateFromCodiceFiscale(codiceFiscale),
     citta_residenza: residence.citta_residenza,
     indirizzo_residenza: residence.indirizzo_residenza,
     CAP: residence.CAP,
@@ -345,7 +343,7 @@ function parseFallbackNameByCf(rawText: string): VisuraRappresentante[] {
       qualifica: null,
       tipo_soggetto: "socio",
       luogo_nascita: null,
-      data_nascita: null,
+      data_nascita: decodeBirthDateFromCodiceFiscale(cf),
       citta_residenza: null,
       indirizzo_residenza: null,
       CAP: null,
