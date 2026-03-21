@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { mapVisuraRappresentanti } from "@/utils/visuraRappresentantiMapper";
 
@@ -12,8 +12,9 @@ export const config = {
 };
 
 async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
-  const data = await pdfParse(buffer);
-  return data.text || "";
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text || "";
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
