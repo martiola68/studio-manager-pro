@@ -211,15 +211,47 @@ function parseSubjectBlock(
 
   if (!codiceFiscale) return null;
 
-  const cleanedLines = blockLines.map((l) => cleanPersonName(l)).filter(Boolean);
+  const cleanedLines = blockLines
+    .map((l) => cleanPersonName(l))
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
 
-  const nomeLine =
-    cleanedLines.find((l) => isLikelyPersonName(l)) ||
-    cleanPersonName(
-      (blockText.match(/\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3})\b/) || [])[1] || ""
-    );
+  let nomeLine: string | null =
+    cleanedLines.find((l) => isLikelyPersonName(l)) || null;
 
-  if (!nomeLine || !isLikelyPersonName(nomeLine)) return null;
+  // fallback più robusto: cerca nome vicino al CF
+  if (!nomeLine) {
+    const cfIndex = blockText.toUpperCase().indexOf(codiceFiscale.toUpperCase());
+
+    if (cfIndex >= 0) {
+      const beforeCf = blockText.slice(Math.max(0, cfIndex - 120), cfIndex);
+      const beforeCfClean = cleanPersonName(beforeCf);
+
+      const matches =
+        beforeCfClean.match(
+          /\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3})\b/g
+        ) || [];
+
+      const reversed = [...matches].reverse();
+
+      nomeLine =
+        reversed.find((m) => isLikelyPersonName(m)) ||
+        null;
+    }
+  }
+
+  // fallback specifico soci: cerca un nominativo in maiuscolo da 2-4 parole
+  if (!nomeLine && tipo === "socio") {
+    const upperMatches =
+      blockText.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
+
+    nomeLine =
+      upperMatches
+        .map((m) => cleanPersonName(m))
+        .find((m) => isLikelyPersonName(m)) || null;
+  }
+
+  if (!nomeLine) return null;
 
   const qualificaMatch = blockText.match(
     /\b(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)\b/i
@@ -231,7 +263,7 @@ function parseSubjectBlock(
   return {
     nome_cognome: nomeLine,
     codice_fiscale: codiceFiscale,
-    qualifica: qualificaMatch ? qualificaMatch[1] : null,
+    qualifica: qualificaMatch ? qualificaMatch[1] : tipo === "socio" ? "socio" : null,
     tipo_soggetto: tipo,
     luogo_nascita: birth.luogo_nascita,
     data_nascita: birth.data_nascita,
