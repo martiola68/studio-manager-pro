@@ -12,110 +12,121 @@ export type VisuraRappresentante = {
 
 export function mapVisuraRappresentanti(text: string): VisuraRappresentante[] {
   const cleanText = normalizeText(text);
-  const blocks = splitIntoBlocks(cleanText);
 
-  const parsed: VisuraRappresentante[] = [];
+  const soci = extractSoci(cleanText);
+  const amministratori = extractAmministratori(cleanText);
 
-  for (const block of blocks) {
-    const role = detectRole(block);
-    if (!role) continue;
-
-    const subject = parseSubjectBlock(block, role);
-    if (!subject) continue;
-
-    // con questo schema possiamo tenere solo soggetti con CF
-    if (!subject.nome_cognome || !subject.codice_fiscale) continue;
-
-    parsed.push(subject);
-  }
-
-  return dedupeByCf(parsed);
+  return dedupeByCf([...soci, ...amministratori]);
 }
 
 function normalizeText(text: string): string {
   return text
     .replace(/\r/g, "\n")
+    .replace(/\u00A0/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{2,}/g, "\n")
+    .replace(/[’`]/g, "'")
     .trim();
 }
 
-function splitIntoBlocks(text: string): string[] {
-  return text
-    .split(/\n(?=[A-ZÀ-Ü][A-ZÀ-Ü' ]{5,}(?:\n|$))/g)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+function extractSoci(text: string): VisuraRappresentante[] {
+  const results: VisuraRappresentante[] = [];
 
-function detectRole(block: string): "amministratore" | "socio" | null {
-  const lower = block.toLowerCase();
+  const socioRegex =
+    /Proprieta'\s+([A-ZÀ-Ü' ]+?)\s+Quota di nominali:.*?Codice fiscale:\s*([A-Z0-9]{16}).*?(?:Domicilio del titolare o rappresentante|domicilio del titolare o rappresentante)\s+comune\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gms;
 
-  if (
-    lower.includes("amministratore") ||
-    lower.includes("legale rappresentante") ||
-    lower.includes("consigliere") ||
-    lower.includes("presidente")
-  ) {
-    return "amministratore";
+  let match: RegExpExecArray | null;
+
+  while ((match = socioRegex.exec(text)) !== null) {
+    const nome = normalizeName(match[1]);
+    const codiceFiscale = (match[2] || "").trim().toUpperCase();
+    const citta = normalizeCity(match[3]);
+    const indirizzo = normalizeAddress(match[4]);
+    const cap = (match[5] || "").trim();
+
+    if (!nome || !codiceFiscale) continue;
+
+    results.push({
+      nome_cognome: nome,
+      codice_fiscale: codiceFiscale,
+      luogo_nascita: null,
+      data_nascita: null,
+      citta_residenza: citta,
+      indirizzo_residenza: indirizzo,
+      nazionalita: null,
+      CAP: cap || null,
+      ruolo: "socio",
+    });
   }
 
-  if (
-    lower.includes(" socio ") ||
-    lower.startsWith("socio") ||
-    lower.includes("quota") ||
-    lower.includes("partecipazione")
-  ) {
-    return "socio";
+  return results;
+}
+
+function extractAmministratori(text: string): VisuraRappresentante[] {
+  const results: VisuraRappresentante[] = [];
+
+  const adminRegex =
+    /Amministratore\s+([A-ZÀ-Ü' ]+?)\s+Rappresentante dell'impresa\s+Nato a\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+il\s+(\d{2}\/\d{2}\/\d{4})\s+Codice fiscale:\s*([A-Z0-9]{16})\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gms;
+
+  let match: RegExpExecArray | null;
+
+  while ((match = adminRegex.exec(text)) !== null) {
+    const nome = normalizeName(match[1]);
+    const luogoNascita = normalizeCity(match[2]);
+    const dataNascita = toIsoDate(match[3]);
+    const codiceFiscale = (match[4] || "").trim().toUpperCase();
+    const cittaResidenza = normalizeCity(match[5]);
+    const indirizzo = normalizeAddress(match[6]);
+    const cap = (match[7] || "").trim();
+
+    if (!nome || !codiceFiscale) continue;
+
+    results.push({
+      nome_cognome: nome,
+      codice_fiscale: codiceFiscale,
+      luogo_nascita: luogoNascita,
+      data_nascita: dataNascita,
+      citta_residenza: cittaResidenza,
+      indirizzo_residenza: indirizzo,
+      nazionalita: null,
+      CAP: cap || null,
+      ruolo: "amministratore",
+    });
   }
 
-  return null;
+  return results;
 }
 
-function parseSubjectBlock(
-  block: string,
-  ruolo: "amministratore" | "socio"
-): VisuraRappresentante | null {
-  const nomeMatch =
-    block.match(/^([A-ZÀ-Ü][A-ZÀ-Ü' ]{4,})/m);
+function normalizeName(value: string | null | undefined): string | null {
+  if (!value) return null;
 
-  const cfMatch =
-    block.match(/codice fiscale[: ]+([A-Z0-9]{16})/i) ||
-    block.match(/\b([A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z])\b/i);
-
-  const nascitaMatch =
-    block.match(/nato(?:\/a)? a ([^,\n]+).*?il ([0-9]{2}\/[0-9]{2}\/[0-9]{4})/i);
-
-  const residenzaMatch =
-    block.match(/residen(?:te|za) (?:in|a)?\s*([^,\n;]+)(?:[,;]\s*([^,\n;]+))?/i);
-
-  const capMatch = block.match(/\b(\d{5})\b/);
-
-  const nome_cognome = nomeMatch?.[1]?.trim() ?? null;
-  const codice_fiscale = cfMatch?.[1]?.trim().toUpperCase() ?? null;
-  const luogo_nascita = nascitaMatch?.[1]?.trim() ?? null;
-  const data_nascita = nascitaMatch?.[2] ? toIsoDate(nascitaMatch[2]) : null;
-  const citta_residenza = residenzaMatch?.[1]?.trim() ?? null;
-  const indirizzo_residenza = residenzaMatch?.[2]?.trim() ?? null;
-  const CAP = capMatch?.[1] ?? null;
-
-  if (!nome_cognome || !codice_fiscale) return null;
-
-  return {
-    nome_cognome,
-    codice_fiscale,
-    luogo_nascita,
-    data_nascita,
-    citta_residenza,
-    indirizzo_residenza,
-    nazionalita: null,
-    CAP,
-    ruolo,
-  };
+  return value
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function toIsoDate(value: string): string | null {
+function normalizeCity(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  return value
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeAddress(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  return value
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toIsoDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+
   const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return null;
+
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
@@ -123,9 +134,11 @@ function dedupeByCf(items: VisuraRappresentante[]): VisuraRappresentante[] {
   const map = new Map<string, VisuraRappresentante>();
 
   for (const item of items) {
-    if (!item.codice_fiscale) continue;
-    if (!map.has(item.codice_fiscale)) {
-      map.set(item.codice_fiscale, item);
+    const cf = item.codice_fiscale?.trim().toUpperCase();
+    if (!cf) continue;
+
+    if (!map.has(cf)) {
+      map.set(cf, item);
     }
   }
 
