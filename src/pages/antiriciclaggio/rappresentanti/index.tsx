@@ -132,12 +132,12 @@ export default function RappresentantiIndexPage() {
 
       const raw = await response.text();
 
-let result: any;
-try {
-  result = JSON.parse(raw);
-} catch {
-  throw new Error(`La API non ha restituito JSON. Risposta: ${raw.slice(0, 300)}`);
-}
+      let result: any;
+      try {
+        result = JSON.parse(raw);
+      } catch {
+        throw new Error(`La API non ha restituito JSON. Risposta: ${raw.slice(0, 300)}`);
+      }
 
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "Errore apertura documento");
@@ -204,9 +204,24 @@ try {
 
       await loadRappresentanti();
 
-      alert(
-        `Import completato.\nInseriti: ${result.inserted ?? 0}\nDuplicati: ${result.duplicates ?? 0}\nScartati: ${result.skipped ?? 0}`
-      );
+      const stats = result?.stats;
+
+      if (stats) {
+        alert(
+          `Import completato.\n` +
+            `Trovati nel PDF: ${stats.trovatiNelPdf ?? 0}\n` +
+            `Validi con codice fiscale: ${stats.validiConCodiceFiscale ?? 0}\n` +
+            `Unici per codice fiscale: ${stats.uniciPerCodiceFiscale ?? 0}\n` +
+            `Duplicati interni PDF: ${stats.duplicatiInterniPdf ?? 0}\n` +
+            `Già presenti in archivio: ${stats.giaPresentiInArchivio ?? 0}\n` +
+            `Inseriti: ${stats.inseriti ?? 0}\n` +
+            `Scartati senza codice fiscale: ${stats.scartatiSenzaCodiceFiscale ?? 0}`
+        );
+      } else {
+        alert(
+          `Import completato.\nInseriti: ${result.inserted ?? 0}\nDuplicati: ${result.duplicates ?? 0}\nScartati: ${result.skipped ?? 0}`
+        );
+      }
     } catch (error: any) {
       alert(error?.message || "Errore durante importazione visura");
     } finally {
@@ -216,12 +231,12 @@ try {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-3">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between px-4 py-4">
-          <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
+        <CardHeader className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="text-base">Antiriciclaggio • Rappresentanti</CardTitle>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -234,13 +249,15 @@ try {
               type="button"
               variant="outline"
               disabled={importingVisura || !studioId}
+              className="h-8 px-3 text-xs"
               onClick={() => fileInputRef.current?.click()}
             >
-              {importingVisura ? "Importazione in corso..." : "Importa visura"}
+              {importingVisura ? "Importazione..." : "Importa visura"}
             </Button>
 
             <Button
               type="button"
+              className="h-8 px-3 text-xs"
               onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}
             >
               Nuovo rappresentante
@@ -248,67 +265,71 @@ try {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-3 px-4 pb-4 pt-0">
+        <CardContent className="space-y-2 px-3 pb-3 pt-0">
           <Input
             placeholder="Cerca per cognome e nome, CF, tipo documento..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            className="h-8 text-sm"
           />
 
           {loading ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               Caricamento elenco...
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               Nessun rappresentante trovato.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {filtered.map((r) => (
-                <div key={r.id} className="rounded-md border px-3 py-2">
-                  <div className="grid grid-cols-1 items-center gap-2 md:grid-cols-[2fr_1.4fr_1.2fr_1.2fr_1.2fr_auto]">
-                    <div>
-                      <div className="mb-0.5 text-xs text-muted-foreground">
+                <div
+                  key={r.id}
+                  className="rounded-md border px-2.5 py-2 transition-colors hover:bg-muted/30"
+                >
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[1.8fr_1.25fr_1fr_1fr_1fr_auto] md:items-center">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
                         Cognome e nome
                       </div>
-                      <div className="text-sm font-medium leading-tight">
+                      <div className="truncate text-sm font-medium leading-tight">
                         {r.nome_cognome || "-"}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="mb-0.5 text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
                         Codice fiscale
                       </div>
-                      <div className="text-sm leading-tight">
+                      <div className="truncate text-sm leading-tight">
                         {r.codice_fiscale || "-"}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="mb-0.5 text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
                         Tipo documento
                       </div>
-                      <div className="text-sm leading-tight">
+                      <div className="truncate text-sm leading-tight">
                         {r.tipo_doc || "-"}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="mb-0.5 text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
                         Scadenza documento
                       </div>
-                      <div className="text-sm leading-tight">
+                      <div className="truncate text-sm leading-tight">
                         {formatDateEU(r.scadenza_doc)}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="mb-0.5 text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
                         Documento allegato
                       </div>
-                      <div className="text-sm leading-tight">
+                      <div className="truncate text-sm leading-tight">
                         {r.allegato_doc ? "Presente" : "-"}
                       </div>
                     </div>
@@ -320,14 +341,14 @@ try {
                         size="icon"
                         title="Apri documento"
                         disabled={!r.allegato_doc}
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() => {
                           if (r.allegato_doc) {
                             void handleOpenDoc(r.allegato_doc);
                           }
                         }}
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5" />
                       </Button>
 
                       <Button
@@ -335,12 +356,12 @@ try {
                         variant="secondary"
                         size="icon"
                         title="Modifica"
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() =>
                           router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
                         }
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
 
                       <Button
@@ -348,12 +369,12 @@ try {
                         variant="destructive"
                         size="icon"
                         title="Elimina"
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0"
                         onClick={() => {
                           void handleDelete(r.id);
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
