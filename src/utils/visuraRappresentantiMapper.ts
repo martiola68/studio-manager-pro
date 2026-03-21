@@ -53,7 +53,11 @@ function cleanPersonName(name: string): string {
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
     .replace(/\b(rappresentante dell['’]impresa)\b/gi, "")
     .replace(/\b(titolare|socio|consigliere|presidente|procuratore|liquidatore|revisore)\b/gi, "")
-    .replace(/\b(carica|qualifica)\b/gi, "")
+    .replace(/\b(carica|qualifica|quota|quote|percentuale|diritti|propriet[aà])\b/gi, "")
+    .replace(/\b([0-9]{1,3}(?:[.,][0-9]{1,2})?\s*%)\b/g, "")
+    .replace(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/gi, "")
+    .replace(/^['`’"\s]+/, "")
+    .replace(/['`’"]+$/g, "")
     .replace(/\s{2,}/g, " ")
     .replace(/^[,;.\- ]+|[,;.\- ]+$/g, "")
     .trim();
@@ -197,7 +201,7 @@ function extractBirthData(block: string): {
 
   return {
     luogo_nascita: natoMatch ? natoMatch[1].trim() : null,
-    data_nascita: natoMatch ? natoMatch[2].trim() : extractDate(normalized),
+    data_nascita: natoMatch ? natoMatch[2].trim() : null,
     nazionalita: nazionalitaMatch ? nazionalitaMatch[2].trim() : null,
   };
 }
@@ -335,10 +339,7 @@ function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
     const index = match.index ?? -1;
     if (!cf || index < 0) continue;
 
-    const start = Math.max(0, index - 220);
-    const end = Math.min(normalized.length, index + 220);
-    const context = normalized.slice(start, end);
-
+    const start = Math.max(0, index - 120);
     const beforeCf = normalized.slice(start, index);
     const cleanedBefore = cleanPersonName(beforeCf);
 
@@ -353,29 +354,21 @@ function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
 
     if (!candidateName) continue;
 
-    const birth = extractBirthData(context);
-    const residence = extractResidence(context);
-
-    const tipo: "amministratore" | "socio" = looksLikeSocioContext(context)
-      ? "socio"
-      : "amministratore";
-
     results.push({
       nome_cognome: candidateName,
       codice_fiscale: cf,
-      qualifica: tipo === "socio" ? "socio" : null,
-      tipo_soggetto: tipo,
-      luogo_nascita: birth.luogo_nascita,
-      data_nascita: birth.data_nascita,
-      citta_residenza: residence.citta_residenza,
-      indirizzo_residenza: residence.indirizzo_residenza,
-      CAP: residence.CAP,
-      nazionalita: birth.nazionalita,
+      qualifica: null,
+      tipo_soggetto: "socio",
+      luogo_nascita: null,
+      data_nascita: null,
+      citta_residenza: null,
+      indirizzo_residenza: null,
+      CAP: null,
+      nazionalita: null,
     });
   }
 
   return dedupeByCodiceFiscale(results);
-}
 
 function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
   const map = new Map<string, VisuraRappresentante>();
@@ -428,26 +421,32 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
 
   const soci = sections.SOCI ? parsePeopleFromSection(sections.SOCI, "socio") : [];
 
+  const merged = [...amministratori, ...soci];
   const fallbackGlobal = parseFallbackGlobalByCf(rawText);
 
-  const merged = [...amministratori, ...soci];
-
-  for (const item of fallbackGlobal) {
-    const cf = (item.codice_fiscale || "").toUpperCase().trim();
+  for (const fallbackItem of fallbackGlobal) {
+    const cf = (fallbackItem.codice_fiscale || "").toUpperCase().trim();
     if (!cf) continue;
 
-    const exists = merged.some(
+    const existingIndex = merged.findIndex(
       (x) => (x.codice_fiscale || "").toUpperCase().trim() === cf
     );
 
-    if (!exists) {
-      merged.push(item);
+    if (existingIndex === -1) {
+      merged.push(fallbackItem);
+      continue;
     }
+
+    const existing = merged[existingIndex];
+
+    merged[existingIndex] = {
+      ...existing,
+      nome_cognome:
+        existing.nome_cognome && existing.nome_cognome.trim()
+          ? existing.nome_cognome
+          : fallbackItem.nome_cognome,
+    };
   }
 
   return dedupeRappresentanti(merged);
-}
-
-export function mapVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
-  return parseVisuraRappresentanti(rawText);
 }
