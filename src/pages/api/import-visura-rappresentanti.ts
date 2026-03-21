@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const text = await extractTextFromPdfBuffer(buffer);
     const subjects = mapVisuraRappresentanti(text);
 
-    const supabase = getSupabaseClient();
+   const supabase = getSupabaseClient() as any;
 
     let inserted = 0;
     let duplicates = 0;
