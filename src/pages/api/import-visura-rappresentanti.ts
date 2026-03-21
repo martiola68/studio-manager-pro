@@ -90,6 +90,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const parsed = parseVisuraRappresentanti(text);
 
+    console.log(
+  "=== DATE PARSER DEBUG ===",
+      parsed.map((x) => ({
+    nome: x.nome_cognome,
+    cf: x.codice_fiscale,
+    data_nascita: x.data_nascita,
+      }))
+      );
+
     console.log("=== SOGGETTI PARSATI RAW ===");
     console.log(JSON.stringify(parsed, null, 2));
 
