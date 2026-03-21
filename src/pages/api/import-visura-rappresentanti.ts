@@ -3,7 +3,10 @@ import formidable from "formidable";
 import fs from "fs";
 import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
-import { mapVisuraRappresentanti } from "@/utils/visuraRappresentantiMapper";
+import {
+  mapVisuraRappresentanti,
+  dedupeByCodiceFiscale,
+} from "@/utils/visuraRappresentantiMapper";
 
 export const config = {
   api: {
@@ -36,7 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { fields, files } = await new Promise<any>((resolve, reject) => {
+    const { fields, files } = await new Promise<{
+      fields: formidable.Fields;
+      files: formidable.Files;
+    }>((resolve, reject) => {
       const form = formidable({ multiples: false });
 
       form.parse(req, (err, fields, files) => {
@@ -48,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const studioId = Array.isArray(fields.studioId) ? fields.studioId[0] : fields.studioId;
     const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
 
-    if (!studioId) {
+    if (!studioId || typeof studioId !== "string") {
       return res.status(400).json({ error: "studioId mancante" });
     }
 
@@ -60,61 +66,126 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const text = await extractTextFromPdfBuffer(buffer);
 
     console.log("=== TESTO ESTRATTO INIZIO ===");
-    console.log(text?.slice(0, 4000));
+    console.log(text?.slice(0, 12000));
     console.log("=== TESTO ESTRATTO FINE ===");
 
-    const subjects = mapVisuraRappresentanti(text);
+    const parsed = mapVisuraRappresentanti(text);
 
-    console.log("=== SOGGETTI ESTRATTI ===");
-    console.log(JSON.stringify(subjects, null, 2));
+    console.log("=== SOGGETTI PARSATI RAW ===");
+    console.log(JSON.stringify(parsed, null, 2));
 
     const supabase = getServerSupabase() as any;
 
-    let inserted = 0;
-    let duplicates = 0;
-    let skipped = 0;
+    // 1) Scartati senza codice fiscale
+    const scartatiSenzaCf = parsed.filter(
+      (item) => !item.codice_fiscale || !item.codice_fiscale.trim()
+    );
 
-    for (const subject of subjects) {
-      if (!subject.nome_cognome || !subject.codice_fiscale) {
-        skipped++;
-        continue;
-      }
+    // 2) Validi con codice fiscale
+    const validi = parsed.filter(
+      (item) => !!item.codice_fiscale && !!item.codice_fiscale.trim()
+    );
 
-      const { data: existing, error: existingError } = await supabase
+    // 3) Deduplica interna al PDF SOLO per codice fiscale
+    const unici = dedupeByCodiceFiscale(validi);
+    const duplicatiInterniPdf = validi.length - unici.length;
+
+    console.log("=== SOGGETTI VALIDI ===");
+    console.log(JSON.stringify(validi, null, 2));
+
+    console.log("=== SOGGETTI UNICI PER CF ===");
+    console.log(JSON.stringify(unici, null, 2));
+
+    const cfList = unici
+      .map((item) => item.codice_fiscale?.toUpperCase().trim())
+      .filter((cf): cf is string => !!cf);
+
+    let existingSet = new Set<string>();
+
+    if (cfList.length > 0) {
+      const { data: existingRows, error: existingError } = await supabase
         .from("rapp_legali")
-        .select("id")
-        .eq("codice_fiscale", subject.codice_fiscale)
-        .maybeSingle();
+        .select("codice_fiscale")
+        .in("codice_fiscale", cfList);
 
-      if (existingError) throw existingError;
-
-      if (existing) {
-        duplicates++;
-        continue;
+      if (existingError) {
+        throw existingError;
       }
 
-      const { error: insertError } = await supabase.from("rapp_legali").insert({
-        studio_id: studioId,
-        nome_cognome: subject.nome_cognome,
-        codice_fiscale: subject.codice_fiscale,
-        luogo_nascita: subject.luogo_nascita,
-        data_nascita: subject.data_nascita,
-        citta_residenza: subject.citta_residenza,
-        indirizzo_residenza: subject.indirizzo_residenza,
-        nazionalita: subject.nazionalita,
-        CAP: subject.CAP,
-      });
+      existingSet = new Set(
+        (existingRows || [])
+          .map((row: { codice_fiscale?: string | null }) =>
+            (row.codice_fiscale || "").toUpperCase().trim()
+          )
+          .filter(Boolean)
+      );
+    }
 
-      if (insertError) throw insertError;
+    const giaPresenti = unici.filter((item) =>
+      existingSet.has(item.codice_fiscale!.toUpperCase().trim())
+    );
 
-      inserted++;
+    const daInserire = unici.filter(
+      (item) => !existingSet.has(item.codice_fiscale!.toUpperCase().trim())
+    );
+
+    console.log("=== GIA PRESENTI ===");
+    console.log(JSON.stringify(giaPresenti, null, 2));
+
+    console.log("=== DA INSERIRE ===");
+    console.log(JSON.stringify(daInserire, null, 2));
+
+    const rowsToInsert = daInserire.map((subject) => ({
+      studio_id: studioId,
+      nome_cognome: subject.nome_cognome || null,
+      codice_fiscale: subject.codice_fiscale || null,
+      luogo_nascita: subject.luogo_nascita || null,
+      data_nascita: subject.data_nascita || null,
+      citta_residenza: subject.citta_residenza || null,
+      indirizzo_residenza: subject.indirizzo_residenza || null,
+      nazionalita: subject.nazionalita || null,
+      CAP: subject.CAP || null,
+    }));
+
+    let inserted = 0;
+
+    if (rowsToInsert.length > 0) {
+      const { data: insertedRows, error: insertError } = await supabase
+        .from("rapp_legali")
+        .insert(rowsToInsert)
+        .select("id");
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      inserted = insertedRows?.length || rowsToInsert.length;
     }
 
     return res.status(200).json({
+      ok: true,
+      message: "Import completato",
       inserted,
-      duplicates,
-      skipped,
-      totalFound: subjects.length,
+      duplicates: giaPresenti.length,
+      skipped: scartatiSenzaCf.length,
+      totalFound: parsed.length,
+      stats: {
+        trovatiNelPdf: parsed.length,
+        validiConCodiceFiscale: validi.length,
+        uniciPerCodiceFiscale: unici.length,
+        duplicatiInterniPdf,
+        giaPresentiInArchivio: giaPresenti.length,
+        inseriti: inserted,
+        scartatiSenzaCodiceFiscale: scartatiSenzaCf.length,
+      },
+      debug: {
+        parsed,
+        validi,
+        unici,
+        giaPresenti,
+        daInserire,
+        scartatiSenzaCf,
+      },
     });
   } catch (error: any) {
     console.error("Errore import visura rappresentanti:", error);
