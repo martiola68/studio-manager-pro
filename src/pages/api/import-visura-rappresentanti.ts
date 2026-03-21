@@ -31,6 +31,25 @@ async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
   return result.text || "";
 }
 
+function toIsoDate(date: string | null | undefined): string | null {
+  if (!date) return null;
+
+  const trimmed = date.trim();
+
+  const itaMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (itaMatch) {
+    const [, day, month, year] = itaMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("API import-visura-rappresentanti chiamata:", req.method);
 
@@ -76,17 +95,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = getServerSupabase() as any;
 
-    // 1) Scartati senza codice fiscale
     const scartatiSenzaCf = parsed.filter(
       (item) => !item.codice_fiscale || !item.codice_fiscale.trim()
     );
 
-    // 2) Validi con codice fiscale
     const validi = parsed.filter(
       (item) => !!item.codice_fiscale && !!item.codice_fiscale.trim()
     );
 
-    // 3) Deduplica interna al PDF SOLO per codice fiscale
     const unici = dedupeByCodiceFiscale(validi);
     const duplicatiInterniPdf = validi.length - unici.length;
 
@@ -135,12 +151,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log("=== DA INSERIRE ===");
     console.log(JSON.stringify(daInserire, null, 2));
 
+    console.log(
+      "=== DATE DEBUG ===",
+      daInserire.map((x) => ({
+        nome: x.nome_cognome,
+        originale: x.data_nascita,
+        convertita: toIsoDate(x.data_nascita),
+      }))
+    );
+
     const rowsToInsert = daInserire.map((subject) => ({
       studio_id: studioId,
       nome_cognome: subject.nome_cognome || null,
       codice_fiscale: subject.codice_fiscale || null,
       luogo_nascita: subject.luogo_nascita || null,
-      data_nascita: subject.data_nascita || null,
+      data_nascita: toIsoDate(subject.data_nascita),
       citta_residenza: subject.citta_residenza || null,
       indirizzo_residenza: subject.indirizzo_residenza || null,
       nazionalita: subject.nazionalita || null,
