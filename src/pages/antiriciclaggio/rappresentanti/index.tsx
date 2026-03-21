@@ -11,6 +11,7 @@ type Rapp = {
   studio_id: string;
   nome_cognome: string | null;
   codice_fiscale: string | null;
+  email: string | null;
   tipo_doc: string | null;
   scadenza_doc: string | null;
   allegato_doc: string | null;
@@ -24,7 +25,9 @@ function formatDateEU(value: string | null | undefined) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-function getScadenzaStatus(value: string | null | undefined): "missing" | "valid" | "expired" {
+function getScadenzaStatus(
+  value: string | null | undefined
+): "missing" | "valid" | "expired" {
   if (!value) return "missing";
 
   const date = new Date(`${value}T00:00:00`);
@@ -133,7 +136,7 @@ export default function RappresentantiIndexPage() {
       const { data, error } = await supabase
         .from("rapp_legali")
         .select(
-          "id, studio_id, nome_cognome, codice_fiscale, tipo_doc, scadenza_doc, allegato_doc, created_at"
+          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, created_at"
         )
         .eq("studio_id", studioId)
         .order("nome_cognome", { ascending: true });
@@ -161,6 +164,7 @@ export default function RappresentantiIndexPage() {
       (r) =>
         (r.nome_cognome || "").toLowerCase().includes(s) ||
         (r.codice_fiscale || "").toLowerCase().includes(s) ||
+        (r.email || "").toLowerCase().includes(s) ||
         (r.tipo_doc || "").toLowerCase().includes(s)
     );
   }, [rows, q]);
@@ -312,7 +316,7 @@ export default function RappresentantiIndexPage() {
 
         <CardContent className="space-y-3 px-3 pb-3 pt-0">
           <Input
-            placeholder="Cerca per cognome e nome, CF, tipo documento..."
+            placeholder="Cerca per cognome e nome, CF, email, tipo documento..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="h-9 text-sm"
@@ -328,10 +332,11 @@ export default function RappresentantiIndexPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1180px]">
-                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+              <div className="min-w-[1380px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.5fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div>Codice fiscale</div>
+                  <div>Email</div>
                   <div>Tipo documento</div>
                   <div>Scadenza documento</div>
                   <div>Documento allegato</div>
@@ -342,10 +347,11 @@ export default function RappresentantiIndexPage() {
                   {filtered.map((r) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-[2fr_1.4fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                      className="grid grid-cols-[2fr_1.4fr_1.5fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
+                      <div className="truncate">{r.email || "-"}</div>
                       <div className="truncate">{r.tipo_doc || "-"}</div>
                       <div className="truncate">
                         <ScadenzaIndicator value={r.scadenza_doc} />
