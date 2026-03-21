@@ -82,11 +82,6 @@ function extractCodiceFiscale(text: string): string | null {
   return match ? match[0].toUpperCase() : null;
 }
 
-function extractDate(text: string): string | null {
-  const m = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
-  return m ? m[1] : null;
-}
-
 function normalizeCap(value: string | null | undefined): string | null {
   if (!value) return null;
   const m = value.match(/\b\d{5}\b/);
@@ -223,7 +218,6 @@ function parseSubjectBlock(
   let nomeLine: string | null =
     cleanedLines.find((l) => isLikelyPersonName(l)) || null;
 
-  // fallback più robusto: cerca nome vicino al CF
   if (!nomeLine) {
     const cfIndex = blockText.toUpperCase().indexOf(codiceFiscale.toUpperCase());
 
@@ -244,7 +238,6 @@ function parseSubjectBlock(
     }
   }
 
-  // fallback specifico soci: cerca un nominativo in maiuscolo da 2-4 parole
   if (!nomeLine && tipo === "socio") {
     const upperMatches =
       blockText.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
@@ -309,7 +302,7 @@ function parsePeopleFromSection(
       const alreadyExists = results.some(
         (r) =>
           (r.codice_fiscale || "").toUpperCase().trim() ===
-          (parsedSubject!.codice_fiscale || "").toUpperCase().trim()
+          (parsedSubject.codice_fiscale || "").toUpperCase().trim()
       );
 
       if (!alreadyExists) {
@@ -323,8 +316,39 @@ function parsePeopleFromSection(
   return results;
 }
 
-function looksLikeSocioContext(text: string): boolean {
-  return /\b(socio|soci|quota|quote|percentuale|partecipazione|titolar[ei])\b/i.test(text);
+function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
+  const map = new Map<string, VisuraRappresentante>();
+
+  for (const item of items) {
+    const key = [
+      item.nome_cognome.toUpperCase().replace(/\s+/g, " ").trim(),
+      (item.codice_fiscale || "").toUpperCase().trim(),
+      item.tipo_soggetto,
+    ].join("|");
+
+    if (!map.has(key)) {
+      map.set(key, item);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+export function dedupeByCodiceFiscale(
+  items: VisuraRappresentante[]
+): VisuraRappresentante[] {
+  const map = new Map<string, VisuraRappresentante>();
+
+  for (const item of items) {
+    const cf = (item.codice_fiscale || "").toUpperCase().trim();
+    if (!cf) continue;
+
+    if (!map.has(cf)) {
+      map.set(cf, item);
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
@@ -369,40 +393,6 @@ function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
   }
 
   return dedupeByCodiceFiscale(results);
-
-function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
-  const map = new Map<string, VisuraRappresentante>();
-
-  for (const item of items) {
-    const key = [
-      item.nome_cognome.toUpperCase().replace(/\s+/g, " ").trim(),
-      (item.codice_fiscale || "").toUpperCase().trim(),
-      item.tipo_soggetto,
-    ].join("|");
-
-    if (!map.has(key)) {
-      map.set(key, item);
-    }
-  }
-
-  return Array.from(map.values());
-}
-
-export function dedupeByCodiceFiscale(
-  items: VisuraRappresentante[]
-): VisuraRappresentante[] {
-  const map = new Map<string, VisuraRappresentante>();
-
-  for (const item of items) {
-    const cf = (item.codice_fiscale || "").toUpperCase().trim();
-    if (!cf) continue;
-
-    if (!map.has(cf)) {
-      map.set(cf, item);
-    }
-  }
-
-  return Array.from(map.values());
 }
 
 export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
