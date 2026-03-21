@@ -251,7 +251,7 @@ text = data.text || "";
   return;
 }
 
-  const { cliente, rappresentante, sociPersoneFisiche } = mapVisuraText(text);
+const { cliente, rappresentanti, sociPersoneFisiche } = mapVisuraText(text);
 
 console.log("VISURA_TEXT_START");
 console.log(text);
@@ -270,7 +270,7 @@ console.log("VISURA_CLIENTE", cliente);
 }));
 
     // 👇 INCOLLA QUI
-if (rappresentante?.codice_fiscale) {
+if (rappresentanti?.codice_fiscale) {
   console.log("RAPPRESENTANTE TROVATO:", rappresentante);
 }
 
