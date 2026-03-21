@@ -317,10 +317,26 @@ const upsertPersonaFisica = async (persona: any) => {
 // =========================
 // RAPPRESENTANTE LEGALE
 // =========================
-if (rappresentante) {
-  rappresentanteId = await upsertPersonaFisica(rappresentante);
+let rappresentanteId = "";
+
+if (rappresentanti?.length) {
+  for (const rapp of rappresentanti) {
+    const id = await upsertPersonaFisica(rapp);
+
+    // prendi il primo come rappresentante principale
+    if (!rappresentanteId && id) {
+      rappresentanteId = id;
+    }
+  }
 }
 
+    if (rappresentanteId) {
+  setFormData((prev) => ({
+    ...prev,
+    rapp_legale_id: rappresentanteId,
+  }));
+}
+    
 // =========================
 // SOCI PERSONE FISICHE
 // =========================
