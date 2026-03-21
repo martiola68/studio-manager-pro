@@ -26,11 +26,13 @@ function formatDateEU(value: string | null | undefined) {
 
 export default function RappresentantiIndexPage() {
   const router = useRouter();
+
   const [studioId, setStudioId] = useState<string>("");
   const [rows, setRows] = useState<Rapp[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [importingVisura, setImportingVisura] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function RappresentantiIndexPage() {
         const sid = data?.studio_id ? String((data as any).studio_id) : "";
         if (sid) {
           setStudioId(sid);
+
           if (typeof window !== "undefined") {
             localStorage.setItem("studio_id", sid);
           }
@@ -91,7 +94,10 @@ export default function RappresentantiIndexPage() {
         .order("nome_cognome", { ascending: true });
 
       if (error) throw error;
+
       setRows((data || []) as Rapp[]);
+    } catch (error: any) {
+      alert(error?.message || "Errore caricamento rappresentanti");
     } finally {
       setLoading(false);
     }
