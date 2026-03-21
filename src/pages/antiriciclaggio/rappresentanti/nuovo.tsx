@@ -581,7 +581,7 @@ export default function NuovoRappresentantePage() {
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, luogo_nascita: e.target.value }))
                     }
-                    placeholder="Roma"
+                    placeholder=""
                   />
                 </div>
 
@@ -608,7 +608,7 @@ export default function NuovoRappresentantePage() {
                         citta_residenza: e.target.value,
                       }))
                     }
-                    placeholder="Milano"
+                    placeholder=""
                   />
                 </div>
 
@@ -623,7 +623,7 @@ export default function NuovoRappresentantePage() {
                         indirizzo_residenza: e.target.value,
                       }))
                     }
-                    placeholder="Via Roma 10"
+                    placeholder=""
                   />
                 </div>
 
@@ -638,7 +638,7 @@ export default function NuovoRappresentantePage() {
         cap: e.target.value.replace(/\D/g, "").slice(0, 5),
       }))
     }
-    placeholder="00000"
+    placeholder=""
     maxLength={5}
   />
 </div>
@@ -675,7 +675,7 @@ export default function NuovoRappresentantePage() {
         num_doc: e.target.value,
       }))
     }
-    placeholder="AB1234567"
+    placeholder=""
   />
 </div>
 
