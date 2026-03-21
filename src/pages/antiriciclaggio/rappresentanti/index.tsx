@@ -4,7 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Check, X } from "lucide-react";
 
 type Rapp = {
   id: string;
@@ -22,6 +22,51 @@ function formatDateEU(value: string | null | undefined) {
   const parts = value.split("-");
   if (parts.length !== 3) return value;
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function getScadenzaStatus(value: string | null | undefined): "missing" | "valid" | "expired" {
+  if (!value) return "missing";
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "missing";
+
+  const today = new Date();
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  return date < todayOnly ? "expired" : "valid";
+}
+
+function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
+  const status = getScadenzaStatus(value);
+
+  if (status === "missing") {
+    return <span className="text-sm">-</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className={`inline-block h-2.5 w-2.5 rounded-full ${
+          status === "valid" ? "bg-green-500" : "bg-red-500"
+        }`}
+      />
+      <span className="truncate text-sm">{formatDateEU(value)}</span>
+    </div>
+  );
+}
+
+function AllegatoIndicator({ present }: { present: boolean }) {
+  return present ? (
+    <div className="flex items-center gap-2 text-green-600">
+      <Check className="h-4 w-4" />
+      <span className="text-sm">Presente</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2 text-red-600">
+      <X className="h-4 w-4" />
+      <span className="text-sm">Mancante</span>
+    </div>
+  );
 }
 
 export default function RappresentantiIndexPage() {
@@ -283,8 +328,8 @@ export default function RappresentantiIndexPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1100px]">
-                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.2fr_1.1fr_1.2fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+              <div className="min-w-[1180px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div>Codice fiscale</div>
                   <div>Tipo documento</div>
@@ -297,13 +342,17 @@ export default function RappresentantiIndexPage() {
                   {filtered.map((r) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-[2fr_1.4fr_1.2fr_1.1fr_1.2fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                      className="grid grid-cols-[2fr_1.4fr_1.2fr_1.3fr_1.3fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
                       <div className="truncate">{r.tipo_doc || "-"}</div>
-                      <div className="truncate">{formatDateEU(r.scadenza_doc)}</div>
-                      <div className="truncate">{r.allegato_doc ? "Presente" : "-"}</div>
+                      <div className="truncate">
+                        <ScadenzaIndicator value={r.scadenza_doc} />
+                      </div>
+                      <div className="truncate">
+                        <AllegatoIndicator present={!!r.allegato_doc} />
+                      </div>
 
                       <div className="flex items-center justify-end gap-1">
                         <Button
