@@ -10,6 +10,7 @@ export type VisuraRappresentante = {
   CAP?: string | null;
   nazionalita?: string | null;
 };
+
 function normalizeTextForParsing(input: string): string {
   return input
     .replace(/\r/g, "\n")
@@ -49,6 +50,10 @@ function isLikelySectionHeader(line: string): boolean {
 
 function cleanPersonName(name: string): string {
   return name
+    .replace(/\b(amministratore|amministratrice)\b/gi, "")
+    .replace(/\b(rappresentante dell['’]impresa)\b/gi, "")
+    .replace(/\b(titolare|socio|consigliere|presidente|procuratore|liquidatore|revisore)\b/gi, "")
+    .replace(/\b(carica|qualifica)\b/gi, "")
     .replace(/\s{2,}/g, " ")
     .replace(/^[,;.\- ]+|[,;.\- ]+$/g, "")
     .trim();
@@ -59,18 +64,29 @@ function isLikelyPersonName(value: string): boolean {
 
   if (!v) return false;
   if (v.length < 5) return false;
-  if (/\d{3,}/.test(v)) return false;
+  if (/\d{2,}/.test(v)) return false;
+  if (/[|]/.test(v)) return false;
 
   const words = v.split(" ").filter(Boolean);
-  if (words.length < 2) return false;
+  if (words.length < 2 || words.length > 4) return false;
 
-  const validWords = words.filter((w) => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
-  return validWords.length >= 2;
+  return words.every((w) => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
 }
 
 function extractCodiceFiscale(text: string): string | null {
   const match = text.match(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/i);
   return match ? match[0].toUpperCase() : null;
+}
+
+function extractDate(text: string): string | null {
+  const m = text.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+  return m ? m[1] : null;
+}
+
+function normalizeCap(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const m = value.match(/\b\d{5}\b/);
+  return m ? m[0] : null;
 }
 
 function splitUsefulLines(text: string): string[] {
@@ -127,6 +143,105 @@ function getSections(lines: string[]): Record<string, string[]> {
   return sections;
 }
 
+function extractResidence(block: string): {
+  citta_residenza: string | null;
+  indirizzo_residenza: string | null;
+  CAP: string | null;
+} {
+  const normalized = block.replace(/\s+/g, " ").trim();
+
+  const viaMatch = normalized.match(
+    /\b(via|viale|piazza|corso|largo|vicolo|contrada|strada)\s+([^,;]+?)(?=(\s+\d{5}\b)|,|;|$)/i
+  );
+
+  const capMatch = normalized.match(/\b\d{5}\b/);
+
+  let citta: string | null = null;
+
+  if (capMatch?.index != null) {
+    const afterCap = normalized.slice(capMatch.index + 5).trim();
+    const cityMatch = afterCap.match(/^([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})/);
+    if (cityMatch) citta = cityMatch[1].trim();
+  }
+
+  if (!citta) {
+    const resMatch = normalized.match(
+      /\bresidenza(?:\s*[:\-])?\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})/i
+    );
+    if (resMatch) citta = resMatch[1].trim();
+  }
+
+  return {
+    citta_residenza: citta,
+    indirizzo_residenza: viaMatch
+      ? `${viaMatch[1]} ${viaMatch[2]}`.replace(/\s+/g, " ").trim()
+      : null,
+    CAP: normalizeCap(capMatch?.[0] || null),
+  };
+}
+
+function extractBirthData(block: string): {
+  luogo_nascita: string | null;
+  data_nascita: string | null;
+  nazionalita: string | null;
+} {
+  const normalized = block.replace(/\s+/g, " ").trim();
+
+  const natoMatch = normalized.match(
+    /\bnat[oa]\s+a\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})\s+il\s+(\d{2}\/\d{2}\/\d{4})/i
+  );
+
+  const nazionalitaMatch = normalized.match(
+    /\b(cittadinanza|nazionalità)\s*[:\-]?\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{2,30})/i
+  );
+
+  return {
+    luogo_nascita: natoMatch ? natoMatch[1].trim() : null,
+    data_nascita: natoMatch ? natoMatch[2].trim() : extractDate(normalized),
+    nazionalita: nazionalitaMatch ? nazionalitaMatch[2].trim() : null,
+  };
+}
+
+function parseSubjectBlock(
+  blockLines: string[],
+  tipo: "amministratore" | "socio"
+): VisuraRappresentante | null {
+  const blockText = blockLines.join(" ").replace(/\s+/g, " ").trim();
+  const codiceFiscale = extractCodiceFiscale(blockText);
+
+  if (!codiceFiscale) return null;
+
+  const cleanedLines = blockLines.map((l) => cleanPersonName(l)).filter(Boolean);
+
+  const nomeLine =
+    cleanedLines.find((l) => isLikelyPersonName(l)) ||
+    cleanPersonName(
+      (blockText.match(/\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3})\b/) || [])[1] || ""
+    );
+
+  if (!nomeLine || !isLikelyPersonName(nomeLine)) return null;
+
+  const qualificaMatch = blockText.match(
+    /\b(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)\b/i
+  );
+
+  const birth = extractBirthData(blockText);
+  const residence = extractResidence(blockText);
+
+  return {
+    nome_cognome: nomeLine,
+    codice_fiscale: codiceFiscale,
+    qualifica: qualificaMatch ? qualificaMatch[1] : null,
+    tipo_soggetto: tipo,
+    luogo_nascita: birth.luogo_nascita,
+    data_nascita: birth.data_nascita,
+    citta_residenza: residence.citta_residenza,
+    indirizzo_residenza: residence.indirizzo_residenza,
+    CAP: residence.CAP,
+    nazionalita: birth.nazionalita,
+  };
+}
+
 function parsePeopleFromSection(
   lines: string[],
   tipo: "amministratore" | "socio"
@@ -138,88 +253,19 @@ function parsePeopleFromSection(
     const next = lines[i + 1] || "";
     const next2 = lines[i + 2] || "";
     const next3 = lines[i + 3] || "";
+    const next4 = lines[i + 4] || "";
+    const next5 = lines[i + 5] || "";
 
-    const windowText = [current, next, next2, next3].filter(Boolean).join(" | ");
-    const cf = extractCodiceFiscale(windowText);
+    const blockLines = [current, next, next2, next3, next4, next5].filter(Boolean);
+    const blockText = blockLines.join(" | ");
 
-    if (isLikelyPersonName(current)) {
-      const nome = cleanPersonName(current);
+    const cf = extractCodiceFiscale(blockText);
+    if (!cf) continue;
 
-      let qualifica: string | null = null;
-      const qualificaCandidate = [next, next2]
-        .map(normalizeLine)
-        .find((l) =>
-          /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
-        );
-
-      if (qualificaCandidate) qualifica = qualificaCandidate;
-
-      results.push({
-        nome_cognome: nome,
-        codice_fiscale: cf,
-        qualifica,
-        tipo_soggetto: tipo,
-        luogo_nascita: null,
-        data_nascita: null,
-        citta_residenza: null,
-        indirizzo_residenza: null,
-        CAP: null,
-        nazionalita: null,
-      });
-
-      continue;
-    }
-
-    const mergedName = cleanPersonName(`${current} ${next}`);
-    if (isLikelyPersonName(mergedName)) {
-      let qualifica: string | null = null;
-
-      const qualificaCandidate = [next2, next3]
-        .map(normalizeLine)
-        .find((l) =>
-          /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
-        );
-
-      if (qualificaCandidate) qualifica = qualificaCandidate;
-
-      results.push({
-        nome_cognome: mergedName,
-        codice_fiscale: cf,
-        qualifica,
-        tipo_soggetto: tipo,
-        luogo_nascita: null,
-        data_nascita: null,
-        citta_residenza: null,
-        indirizzo_residenza: null,
-        CAP: null,
-        nazionalita: null,
-      });
-
-      i += 1;
-      continue;
-    }
-
-    const inlineMatch = windowText.match(
-      /\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,4})\b.*?\b([A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z])\b/i
-    );
-
-    if (inlineMatch) {
-      const nome = cleanPersonName(inlineMatch[1]);
-
-      if (isLikelyPersonName(nome)) {
-        results.push({
-          nome_cognome: nome,
-          codice_fiscale: inlineMatch[2].toUpperCase(),
-          qualifica: null,
-          tipo_soggetto: tipo,
-          luogo_nascita: null,
-          data_nascita: null,
-          citta_residenza: null,
-          indirizzo_residenza: null,
-          CAP: null,
-          nazionalita: null,
-        });
-      }
+    const parsed = parseSubjectBlock(blockLines, tipo);
+    if (parsed) {
+      results.push(parsed);
+      i += 4;
     }
   }
 
@@ -238,6 +284,23 @@ function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentan
 
     if (!map.has(key)) {
       map.set(key, item);
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+export function dedupeByCodiceFiscale(
+  items: VisuraRappresentante[]
+): VisuraRappresentante[] {
+  const map = new Map<string, VisuraRappresentante>();
+
+  for (const item of items) {
+    const cf = (item.codice_fiscale || "").toUpperCase().trim();
+    if (!cf) continue;
+
+    if (!map.has(cf)) {
+      map.set(cf, item);
     }
   }
 
