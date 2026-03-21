@@ -269,80 +269,6 @@ console.log("VISURA_CLIENTE", cliente);
   provincia: cliente.provincia || "",
 }));
 
-if (rappresentanti?.length) {
-  console.log("RAPPRESENTANTI TROVATI:", rappresentanti);
-}
-
-const supabase = getSupabaseClient();
-
-
-// =========================
-// HELPER UPSERT PERSONA
-// =========================
-const upsertPersonaFisica = async (persona: any) => {
-  if (!persona?.nome_cognome) return null;
-
-  if (persona.codice_fiscale) {
-    const { data: existing } = await (supabase as any)
-      .from("rapp_legali")
-      .select("id")
-      .eq("codice_fiscale", persona.codice_fiscale)
-      .maybeSingle();
-
-    if (existing?.id) return existing.id as string;
-  }
-
-  const { data: inserted, error } = await (supabase as any)
-    .from("rapp_legali")
-    .insert({
-      studio_id: studioId,
-      nome_cognome: persona.nome_cognome,
-      codice_fiscale: persona.codice_fiscale || null,
-      luogo_nascita: persona.luogo_nascita || null,
-      data_nascita: persona.data_nascita || null,
-      indirizzo_residenza: persona.indirizzo_residenza || null,
-      citta_residenza: persona.citta_residenza || null,
-      CAP: persona.CAP || null,
-      nazionalita: persona.nazionalita || null,
-    })
-    .select("id")
-    .single();
-
-    if (error) throw error;
-
-    return inserted?.id as string;
-};
-
-// =========================
-// RAPPRESENTANTE LEGALE
-// =========================
-let rappresentanteId = "";
-
-if (rappresentanti?.length) {
-  for (const rapp of rappresentanti) {
-    const id = await upsertPersonaFisica(rapp);
-
-    // prendi il primo come rappresentante principale
-    if (!rappresentanteId && id) {
-      rappresentanteId = id;
-    }
-  }
-}
-
-    if (rappresentanteId) {
-  setFormData((prev) => ({
-    ...prev,
-    rapp_legale_id: rappresentanteId,
-  }));
-}
-    
-// =========================
-// SOCI PERSONE FISICHE
-// =========================
-for (const socio of sociPersoneFisiche || []) {
-  await upsertPersonaFisica(socio);
-}
-
 // =========================
 // POPOLA FORM (NO RESET)
 // =========================
@@ -355,10 +281,9 @@ setFormData((prev) => ({
   cap: cliente.cap || "",
   citta: cliente.citta || "",
   provincia: cliente.provincia || "",
-  rapp_legale_id: rappresentanteId || prev.rapp_legale_id,
 }));
     
-   alert("Dati cliente, rappresentante legale ed eventuali soci persone fisiche importati correttamente.");
+   alert("Dati anagrafici cliente importati correttamente.");
     
   } catch (error: any) {
     alert(error?.message || "Errore import visura");
