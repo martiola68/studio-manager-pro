@@ -154,18 +154,18 @@ function parsePeopleFromSection(
 
       if (qualificaCandidate) qualifica = qualificaCandidate;
 
-     results.push({
-  nome_cognome: nome,
-  codice_fiscale: cf,
-  qualifica,
-  tipo_soggetto: tipo,
-  luogo_nascita: null,
-  data_nascita: null,
-  citta_residenza: null,
-  indirizzo_residenza: null,
-  CAP: null,
-  nazionalita: null,
-});
+      results.push({
+        nome_cognome: nome,
+        codice_fiscale: cf,
+        qualifica,
+        tipo_soggetto: tipo,
+        luogo_nascita: null,
+        data_nascita: null,
+        citta_residenza: null,
+        indirizzo_residenza: null,
+        CAP: null,
+        nazionalita: null,
+      });
 
       continue;
     }
@@ -182,18 +182,19 @@ function parsePeopleFromSection(
 
       if (qualificaCandidate) qualifica = qualificaCandidate;
 
-    results.push({
-  nome_cognome: mergedName,
-  codice_fiscale: cf,
-  qualifica,
-  tipo_soggetto: tipo,
-  luogo_nascita: null,
-  data_nascita: null,
-  citta_residenza: null,
-  indirizzo_residenza: null,
-  CAP: null,
-  nazionalita: null,
-});
+      results.push({
+        nome_cognome: mergedName,
+        codice_fiscale: cf,
+        qualifica,
+        tipo_soggetto: tipo,
+        luogo_nascita: null,
+        data_nascita: null,
+        citta_residenza: null,
+        indirizzo_residenza: null,
+        CAP: null,
+        nazionalita: null,
+      });
+
       i += 1;
       continue;
     }
@@ -205,18 +206,19 @@ function parsePeopleFromSection(
     if (inlineMatch) {
       const nome = cleanPersonName(inlineMatch[1]);
 
-      results.push({
-  nome_cognome: nome,
-  codice_fiscale: inlineMatch[2].toUpperCase(),
-  qualifica: null,
-  tipo_soggetto: tipo,
-  luogo_nascita: null,
-  data_nascita: null,
-  citta_residenza: null,
-  indirizzo_residenza: null,
-  CAP: null,
-  nazionalita: null,
-});
+      if (isLikelyPersonName(nome)) {
+        results.push({
+          nome_cognome: nome,
+          codice_fiscale: inlineMatch[2].toUpperCase(),
+          qualifica: null,
+          tipo_soggetto: tipo,
+          luogo_nascita: null,
+          data_nascita: null,
+          citta_residenza: null,
+          indirizzo_residenza: null,
+          CAP: null,
+          nazionalita: null,
+        });
       }
     }
   }
