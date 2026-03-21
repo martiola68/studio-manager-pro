@@ -34,6 +34,7 @@ type FormState = {
   indirizzo_residenza: string;
   cap: string;
   nazionalita: string;
+  email: string;
   tipo_doc: TipoDocumento;
   num_doc: string;
   scadenza_doc: string;
@@ -51,6 +52,7 @@ type RappLegaleRow = {
   indirizzo_residenza?: string | null;
   CAP?: string | null;
   nazionalita?: string | null;
+  email?: string | null;
   tipo_doc?: string | null;
   NumDoc?: string | null;
   scadenza_doc?: string | null;
@@ -66,6 +68,7 @@ const initialFormState: FormState = {
   indirizzo_residenza: "",
   cap: "",
   nazionalita: "",
+  email: "",
   tipo_doc: "",
   num_doc: "",
   scadenza_doc: "",
@@ -102,20 +105,25 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     indirizzo_residenza: row?.indirizzo_residenza ?? "",
     cap: row?.CAP ?? "",
     nazionalita: row?.nazionalita ?? "",
+    email: row?.email ?? "",
     tipo_doc: safeTipo,
     num_doc: row?.NumDoc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
   };
 }
+
 export default function NuovoRappresentantePage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const isEditMode = router.isReady && typeof router.query.id === "string" && !!router.query.id;
-  const recordId = router.isReady && typeof router.query.id === "string" ? router.query.id : "";
+  const isEditMode =
+    router.isReady && typeof router.query.id === "string" && !!router.query.id;
+  const recordId =
+    router.isReady && typeof router.query.id === "string" ? router.query.id : "";
 
-  const from = router.isReady && typeof router.query.from === "string" ? router.query.from : "";
+  const from =
+    router.isReady && typeof router.query.from === "string" ? router.query.from : "";
   const clienteIdFromQuery =
     router.isReady && typeof router.query.cliente_id === "string"
       ? router.query.cliente_id
@@ -135,7 +143,8 @@ export default function NuovoRappresentantePage() {
 
   const [studioId, setStudioId] = useState<string>("");
   const [form, setForm] = useState<FormState>(initialFormState);
-  const [initialLoadedForm, setInitialLoadedForm] = useState<FormState>(initialFormState);
+  const [initialLoadedForm, setInitialLoadedForm] =
+    useState<FormState>(initialFormState);
 
   const [pageLoading, setPageLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -218,7 +227,9 @@ export default function NuovoRappresentantePage() {
         let row: RappLegaleRow | null = null;
 
         try {
-          const response = await fetch(`/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`);
+          const response = await fetch(
+            `/api/rapp-legali/get-by-id?id=${encodeURIComponent(recordId)}`
+          );
           const contentType = response.headers.get("content-type") || "";
 
           let result: any = null;
@@ -238,7 +249,7 @@ export default function NuovoRappresentantePage() {
           const { data, error } = await supabase
             .from("rapp_legali")
             .select(
-              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, tipo_doc, NumDoc, scadenza_doc, allegato_doc"
+              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc"
             )
             .eq("id", recordId)
             .single();
@@ -401,29 +412,32 @@ export default function NuovoRappresentantePage() {
     }
 
     if (!canSave) {
-      setErrMsg("Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri).");
+      setErrMsg(
+        "Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri)."
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-     const payload = {
-  ...(isEditMode ? { id: recordId } : {}),
-  studio_id: studioId,
-  nome_cognome: form.nome_cognome.trim(),
-  codice_fiscale: cf,
-  luogo_nascita: form.luogo_nascita.trim() || null,
-  data_nascita: form.data_nascita || null,
-  citta_residenza: form.citta_residenza.trim() || null,
-  CAP: form.cap.trim() || null,
-  indirizzo_residenza: form.indirizzo_residenza.trim() || null,
-  nazionalita: form.nazionalita.trim() || null,
-  tipo_doc: form.tipo_doc || null,
-  NumDoc: form.num_doc.trim() || null,
-  scadenza_doc: form.scadenza_doc || null,
-  allegato_doc: form.allegato_doc || null,
-};
+      const payload = {
+        ...(isEditMode ? { id: recordId } : {}),
+        studio_id: studioId,
+        nome_cognome: form.nome_cognome.trim(),
+        codice_fiscale: cf,
+        luogo_nascita: form.luogo_nascita.trim() || null,
+        data_nascita: form.data_nascita || null,
+        citta_residenza: form.citta_residenza.trim() || null,
+        indirizzo_residenza: form.indirizzo_residenza.trim() || null,
+        CAP: form.cap.trim() || null,
+        nazionalita: form.nazionalita.trim() || null,
+        email: form.email.trim() || null,
+        tipo_doc: form.tipo_doc || null,
+        NumDoc: form.num_doc.trim() || null,
+        scadenza_doc: form.scadenza_doc || null,
+        allegato_doc: form.allegato_doc || null,
+      };
 
       const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
 
@@ -529,7 +543,7 @@ export default function NuovoRappresentantePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <Label htmlFor="nome_cognome">Cognome e nome *</Label>
                   <Input
@@ -556,9 +570,24 @@ export default function NuovoRappresentantePage() {
                     placeholder="RSSMRA80A01H501U"
                     maxLength={16}
                   />
-                 {cf.length === 16 && !cfOk && (
-                  <p className="mt-1 text-sm text-red-500">Codice fiscale non valido</p>
-                    )}
+                  {cf.length === 16 && !cfOk && (
+                    <p className="mt-1 text-sm text-red-500">
+                      Codice fiscale non valido
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
+                    placeholder="nome@dominio.it"
+                  />
                 </div>
 
                 <div>
@@ -628,20 +657,20 @@ export default function NuovoRappresentantePage() {
                 </div>
 
                 <div>
-  <Label htmlFor="cap">CAP</Label>
-  <Input
-    id="cap"
-    value={form.cap}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        cap: e.target.value.replace(/\D/g, "").slice(0, 5),
-      }))
-    }
-    placeholder=""
-    maxLength={5}
-  />
-</div>
+                  <Label htmlFor="cap">CAP</Label>
+                  <Input
+                    id="cap"
+                    value={form.cap}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        cap: e.target.value.replace(/\D/g, "").slice(0, 5),
+                      }))
+                    }
+                    placeholder=""
+                    maxLength={5}
+                  />
+                </div>
 
                 <div>
                   <Label htmlFor="tipo_doc">Tipo documento</Label>
@@ -658,26 +687,28 @@ export default function NuovoRappresentantePage() {
                       <SelectValue placeholder="Seleziona..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Carta di identità">Carta di identità</SelectItem>
+                      <SelectItem value="Carta di identità">
+                        Carta di identità
+                      </SelectItem>
                       <SelectItem value="Passaporto">Passaporto</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
- <div>
-  <Label htmlFor="num_doc">Numero documento</Label>
-  <Input
-    id="num_doc"
-    value={form.num_doc}
-    onChange={(e) =>
-      setForm((prev) => ({
-        ...prev,
-        num_doc: e.target.value,
-      }))
-    }
-    placeholder=""
-  />
-</div>
+                <div>
+                  <Label htmlFor="num_doc">Numero documento</Label>
+                  <Input
+                    id="num_doc"
+                    value={form.num_doc}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        num_doc: e.target.value,
+                      }))
+                    }
+                    placeholder=""
+                  />
+                </div>
 
                 <div>
                   <Label htmlFor="scadenza_doc">Scadenza documento</Label>
@@ -708,7 +739,7 @@ export default function NuovoRappresentantePage() {
                     }}
                   />
 
-                  <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <Input
                       id="allegato_doc"
                       type="text"
@@ -755,8 +786,8 @@ export default function NuovoRappresentantePage() {
 
               <p className="text-xs text-muted-foreground">
                 Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME} | Mode:{" "}
-                {isEditMode ? `edit (${recordId})` : "create"} | From: {from || "-"} | Cliente:{" "}
-                {clienteIdFromQuery || "-"}
+                {isEditMode ? `edit (${recordId})` : "create"} | From: {from || "-"} |
+                Cliente: {clienteIdFromQuery || "-"}
               </p>
 
               <div className="flex gap-2">
