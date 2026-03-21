@@ -450,3 +450,7 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
 
   return dedupeRappresentanti(merged);
 }
+
+export function mapVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
+  return parseVisuraRappresentanti(rawText);
+}
