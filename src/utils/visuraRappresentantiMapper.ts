@@ -249,23 +249,38 @@ function parsePeopleFromSection(
   const results: VisuraRappresentante[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const current = lines[i] || "";
-    const next = lines[i + 1] || "";
-    const next2 = lines[i + 2] || "";
-    const next3 = lines[i + 3] || "";
-    const next4 = lines[i + 4] || "";
-    const next5 = lines[i + 5] || "";
+    const windowSizes = tipo === "socio" ? [10, 8, 6] : [8, 6];
 
-    const blockLines = [current, next, next2, next3, next4, next5].filter(Boolean);
-    const blockText = blockLines.join(" | ");
+    let parsedSubject: VisuraRappresentante | null = null;
+    let usedWindow = 0;
 
-    const cf = extractCodiceFiscale(blockText);
-    if (!cf) continue;
+    for (const size of windowSizes) {
+      const blockLines = lines.slice(i, i + size).filter(Boolean);
+      const blockText = blockLines.join(" | ");
 
-    const parsed = parseSubjectBlock(blockLines, tipo);
-    if (parsed) {
-      results.push(parsed);
-      i += 4;
+      const cf = extractCodiceFiscale(blockText);
+      if (!cf) continue;
+
+      const parsed = parseSubjectBlock(blockLines, tipo);
+      if (parsed) {
+        parsedSubject = parsed;
+        usedWindow = size;
+        break;
+      }
+    }
+
+    if (parsedSubject) {
+      const alreadyExists = results.some(
+        (r) =>
+          (r.codice_fiscale || "").toUpperCase().trim() ===
+          (parsedSubject!.codice_fiscale || "").toUpperCase().trim()
+      );
+
+      if (!alreadyExists) {
+        results.push(parsedSubject);
+      }
+
+      i += Math.max(1, usedWindow - 3);
     }
   }
 
