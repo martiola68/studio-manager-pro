@@ -4,7 +4,7 @@ import fs from "fs";
 import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
 import {
-  mapVisuraRappresentanti,
+  parseVisuraRappresentanti,
   dedupeByCodiceFiscale,
 } from "@/utils/visuraRappresentantiMapper";
 
