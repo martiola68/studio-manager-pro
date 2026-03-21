@@ -20,87 +20,71 @@ export default async function handler(
   res: NextApiResponse<ResponseData>
 ) {
   if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    return res.status(405).json({ ok: false, error: "Metodo non consentito" });
   }
 
   try {
-    if (!supabaseUrl) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "NEXT_PUBLIC_SUPABASE_URL mancante" });
-    }
-
-    if (!serviceRoleKey) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "SUPABASE_SERVICE_ROLE_KEY mancante" });
-    }
-
-  const {
-  studio_id,
-  nome_cognome,
-  codice_fiscale,
-  luogo_nascita,
-  data_nascita,
-  citta_residenza,
-  indirizzo_residenza,
-  CAP,
-  nazionalita,
-  email,
-  tipo_doc,
-  NumDoc,
-  scadenza_doc,
-  allegato_doc,
-} = req.body ?? {};
+    const {
+      studio_id,
+      nome_cognome,
+      codice_fiscale,
+      luogo_nascita,
+      data_nascita,
+      citta_residenza,
+      indirizzo_residenza,
+      CAP,
+      nazionalita,
+      email,
+      tipo_doc,
+      NumDoc,
+      scadenza_doc,
+      allegato_doc,
+    } = req.body ?? {};
 
     if (!studio_id) {
       return res.status(400).json({ ok: false, error: "studio_id obbligatorio" });
     }
 
     if (!nome_cognome || !String(nome_cognome).trim()) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "nome_cognome obbligatorio" });
+      return res.status(400).json({ ok: false, error: "nome_cognome obbligatorio" });
     }
 
-    if (!codice_fiscale || !String(codice_fiscale).trim()) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "codice_fiscale obbligatorio" });
-    }
+    const payload = {
+      studio_id,
+      nome_cognome: String(nome_cognome).trim(),
+      codice_fiscale: codice_fiscale
+        ? String(codice_fiscale).trim().toUpperCase()
+        : null,
+      luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
+      data_nascita: data_nascita || null,
+      citta_residenza: citta_residenza ? String(citta_residenza).trim() : null,
+      indirizzo_residenza: indirizzo_residenza
+        ? String(indirizzo_residenza).trim()
+        : null,
+      CAP: CAP ? String(CAP).trim() : null,
+      nazionalita: nazionalita ? String(nazionalita).trim() : null,
+      email: email ? String(email).trim() : null,
+      tipo_doc: tipo_doc ? String(tipo_doc).trim() : null,
+      NumDoc: NumDoc ? String(NumDoc).trim() : null,
+      scadenza_doc: scadenza_doc || null,
+      allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
+    };
 
-  const payload = {
-  studio_id,
-  nome_cognome: String(nome_cognome).trim(),
-  codice_fiscale: codice_fiscale ? String(codice_fiscale).trim().toUpperCase() : null,
-  luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
-  data_nascita: data_nascita || null,
-  citta_residenza: citta_residenza ? String(citta_residenza).trim() : null,
-  indirizzo_residenza: indirizzo_residenza ? String(indirizzo_residenza).trim() : null,
-  CAP: CAP ? String(CAP).trim() : null,
-  nazionalita: nazionalita ? String(nazionalita).trim() : null,
-  email: email ? String(email).trim() : null,
-  tipo_doc: tipo_doc ? String(tipo_doc).trim() : null,
-  NumDoc: NumDoc ? String(NumDoc).trim() : null,
-  scadenza_doc: scadenza_doc || null,
-  allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
-};
+    const { data, error } = await supabaseAdmin
+      .from("rapp_legali")
+      .insert([payload])
+      .select()
+      .single();
 
-   const { data, error } = await supabase
-  .from("rapp_legali")
-  .insert([payload])
-  .select()
-  .single();
-    
     if (error) {
-      return res.status(400).json({ ok: false, error: error.message });
+      return res.status(500).json({ ok: false, error: error.message });
     }
 
     return res.status(200).json({ ok: true, data });
   } catch (e: any) {
     return res.status(500).json({
       ok: false,
-      error: e?.message || "Errore salvataggio rappresentante legale",
+      error: e?.message || "Errore salvataggio rappresentante",
     });
   }
 }
