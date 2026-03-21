@@ -319,6 +319,64 @@ function parsePeopleFromSection(
   return results;
 }
 
+function looksLikeSocioContext(text: string): boolean {
+  return /\b(socio|soci|quota|quote|percentuale|partecipazione|titolar[ei])\b/i.test(text);
+}
+
+function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
+  const results: VisuraRappresentante[] = [];
+  const normalized = normalizeTextForParsing(rawText).replace(/\n/g, " ");
+
+  const cfRegex = /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/gi;
+  const matches = [...normalized.matchAll(cfRegex)];
+
+  for (const match of matches) {
+    const cf = (match[0] || "").toUpperCase().trim();
+    const index = match.index ?? -1;
+    if (!cf || index < 0) continue;
+
+    const start = Math.max(0, index - 220);
+    const end = Math.min(normalized.length, index + 220);
+    const context = normalized.slice(start, end);
+
+    const beforeCf = normalized.slice(start, index);
+    const cleanedBefore = cleanPersonName(beforeCf);
+
+    const candidateMatches =
+      cleanedBefore.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
+
+    const candidateName =
+      [...candidateMatches]
+        .reverse()
+        .map((x) => cleanPersonName(x))
+        .find((x) => isLikelyPersonName(x)) || null;
+
+    if (!candidateName) continue;
+
+    const birth = extractBirthData(context);
+    const residence = extractResidence(context);
+
+    const tipo: "amministratore" | "socio" = looksLikeSocioContext(context)
+      ? "socio"
+      : "amministratore";
+
+    results.push({
+      nome_cognome: candidateName,
+      codice_fiscale: cf,
+      qualifica: tipo === "socio" ? "socio" : null,
+      tipo_soggetto: tipo,
+      luogo_nascita: birth.luogo_nascita,
+      data_nascita: birth.data_nascita,
+      citta_residenza: residence.citta_residenza,
+      indirizzo_residenza: residence.indirizzo_residenza,
+      CAP: residence.CAP,
+      nazionalita: birth.nazionalita,
+    });
+  }
+
+  return dedupeByCodiceFiscale(results);
+}
+
 function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
   const map = new Map<string, VisuraRappresentante>();
 
@@ -370,7 +428,24 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
 
   const soci = sections.SOCI ? parsePeopleFromSection(sections.SOCI, "socio") : [];
 
-  return dedupeRappresentanti([...amministratori, ...soci]);
+  const fallbackGlobal = parseFallbackGlobalByCf(rawText);
+
+  const merged = [...amministratori, ...soci];
+
+  for (const item of fallbackGlobal) {
+    const cf = (item.codice_fiscale || "").toUpperCase().trim();
+    if (!cf) continue;
+
+    const exists = merged.some(
+      (x) => (x.codice_fiscale || "").toUpperCase().trim() === cf
+    );
+
+    if (!exists) {
+      merged.push(item);
+    }
+  }
+
+  return dedupeRappresentanti(merged);
 }
 
 export function mapVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
