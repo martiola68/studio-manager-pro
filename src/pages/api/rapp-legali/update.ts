@@ -23,8 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data_nascita,
       citta_residenza,
       indirizzo_residenza,
+      CAP,
       nazionalita,
+      email,
       tipo_doc,
+      NumDoc,
       scadenza_doc,
       allegato_doc,
     } = req.body || {};
@@ -37,16 +40,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const payload = {
-      nome_cognome: nome_cognome || null,
-      codice_fiscale: codice_fiscale || null,
-      luogo_nascita: luogo_nascita || null,
+      nome_cognome: nome_cognome ? String(nome_cognome).trim() : null,
+      codice_fiscale: codice_fiscale
+        ? String(codice_fiscale).trim().toUpperCase()
+        : null,
+      luogo_nascita: luogo_nascita ? String(luogo_nascita).trim() : null,
       data_nascita: data_nascita || null,
-      citta_residenza: citta_residenza || null,
-      indirizzo_residenza: indirizzo_residenza || null,
-      nazionalita: nazionalita || null,
-      tipo_doc: tipo_doc || null,
+      citta_residenza: citta_residenza ? String(citta_residenza).trim() : null,
+      indirizzo_residenza: indirizzo_residenza
+        ? String(indirizzo_residenza).trim()
+        : null,
+      CAP: CAP ? String(CAP).trim() : null,
+      nazionalita: nazionalita ? String(nazionalita).trim() : null,
+      email: email ? String(email).trim() : null,
+      tipo_doc: tipo_doc ? String(tipo_doc).trim() : null,
+      NumDoc: NumDoc ? String(NumDoc).trim() : null,
       scadenza_doc: scadenza_doc || null,
-      allegato_doc: allegato_doc || null,
+      allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
     };
 
     const { data, error } = await supabase
