@@ -249,7 +249,7 @@ export default function RappresentantiIndexPage() {
               type="button"
               variant="outline"
               disabled={importingVisura || !studioId}
-              className="h-8 px-3 text-xs"
+              className="h-9 px-3 text-sm"
               onClick={() => fileInputRef.current?.click()}
             >
               {importingVisura ? "Importazione..." : "Importa visura"}
@@ -257,7 +257,7 @@ export default function RappresentantiIndexPage() {
 
             <Button
               type="button"
-              className="h-8 px-3 text-xs"
+              className="h-9 px-3 text-sm"
               onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}
             >
               Nuovo rappresentante
@@ -265,12 +265,12 @@ export default function RappresentantiIndexPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2 px-3 pb-3 pt-0">
+        <CardContent className="space-y-3 px-3 pb-3 pt-0">
           <Input
             placeholder="Cerca per cognome e nome, CF, tipo documento..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="h-8 text-sm"
+            className="h-9 text-sm"
           />
 
           {loading ? (
@@ -282,104 +282,76 @@ export default function RappresentantiIndexPage() {
               Nessun rappresentante trovato.
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {filtered.map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-md border px-2.5 py-2 transition-colors hover:bg-muted/30"
-                >
-                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[1.8fr_1.25fr_1fr_1fr_1fr_auto] md:items-center">
-                    <div className="min-w-0">
-                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
-                        Cognome e nome
-                      </div>
-                      <div className="truncate text-sm font-medium leading-tight">
-                        {r.nome_cognome || "-"}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
-                        Codice fiscale
-                      </div>
-                      <div className="truncate text-sm leading-tight">
-                        {r.codice_fiscale || "-"}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
-                        Tipo documento
-                      </div>
-                      <div className="truncate text-sm leading-tight">
-                        {r.tipo_doc || "-"}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
-                        Scadenza documento
-                      </div>
-                      <div className="truncate text-sm leading-tight">
-                        {formatDateEU(r.scadenza_doc)}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="mb-0.5 text-[11px] leading-none text-muted-foreground">
-                        Documento allegato
-                      </div>
-                      <div className="truncate text-sm leading-tight">
-                        {r.allegato_doc ? "Presente" : "-"}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 md:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        title="Apri documento"
-                        disabled={!r.allegato_doc}
-                        className="h-7 w-7 p-0"
-                        onClick={() => {
-                          if (r.allegato_doc) {
-                            void handleOpenDoc(r.allegato_doc);
-                          }
-                        }}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        title="Modifica"
-                        className="h-7 w-7 p-0"
-                        onClick={() =>
-                          router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
-                        }
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        title="Elimina"
-                        className="h-7 w-7 p-0"
-                        onClick={() => {
-                          void handleDelete(r.id);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
+            <div className="overflow-x-auto rounded-md border">
+              <div className="min-w-[1100px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.2fr_1.1fr_1.2fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+                  <div>Cognome e nome</div>
+                  <div>Codice fiscale</div>
+                  <div>Tipo documento</div>
+                  <div>Scadenza documento</div>
+                  <div>Documento allegato</div>
+                  <div className="text-right">Azioni</div>
                 </div>
-              ))}
+
+                <div>
+                  {filtered.map((r) => (
+                    <div
+                      key={r.id}
+                      className="grid grid-cols-[2fr_1.4fr_1.2fr_1.1fr_1.2fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                    >
+                      <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
+                      <div className="truncate">{r.codice_fiscale || "-"}</div>
+                      <div className="truncate">{r.tipo_doc || "-"}</div>
+                      <div className="truncate">{formatDateEU(r.scadenza_doc)}</div>
+                      <div className="truncate">{r.allegato_doc ? "Presente" : "-"}</div>
+
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          title="Apri documento"
+                          disabled={!r.allegato_doc}
+                          className="h-8 w-8 p-0"
+                          onClick={() => {
+                            if (r.allegato_doc) {
+                              void handleOpenDoc(r.allegato_doc);
+                            }
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          title="Modifica"
+                          className="h-8 w-8 p-0"
+                          onClick={() =>
+                            router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
+                          }
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          title="Elimina"
+                          className="h-8 w-8 p-0"
+                          onClick={() => {
+                            void handleDelete(r.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
