@@ -106,6 +106,62 @@ function extractCodiceFiscale(text: string): string | null {
   return match ? match[0].toUpperCase() : null;
 }
 
+function decodeBirthDateFromCodiceFiscale(
+  codiceFiscale?: string | null
+): string | null {
+  if (!codiceFiscale) return null;
+
+  const cf = codiceFiscale.toUpperCase().trim();
+
+  if (!/^[A-Z0-9]{16}$/.test(cf)) return null;
+
+  const yearPart = cf.slice(6, 8);
+  const monthPart = cf.slice(8, 9);
+  const dayPart = cf.slice(9, 11);
+
+  const yearNum = Number(yearPart);
+  let dayNum = Number(dayPart);
+
+  if (Number.isNaN(yearNum) || Number.isNaN(dayNum)) return null;
+
+  const monthMap: Record<string, number> = {
+    A: 1,
+    B: 2,
+    C: 3,
+    D: 4,
+    E: 5,
+    H: 6,
+    L: 7,
+    M: 8,
+    P: 9,
+    R: 10,
+    S: 11,
+    T: 12,
+  };
+
+  const monthNum = monthMap[monthPart];
+  if (!monthNum) return null;
+
+  if (dayNum > 40) {
+    dayNum -= 40;
+  }
+
+  if (dayNum < 1 || dayNum > 31) return null;
+
+  const currentYear = new Date().getFullYear() % 100;
+
+  // regola pratica:
+  // se le ultime due cifre sono <= anno corrente -> 2000+
+  // altrimenti -> 1900+
+  const fullYear = yearNum <= currentYear ? 2000 + yearNum : 1900 + yearNum;
+
+  const yyyy = String(fullYear);
+  const mm = String(monthNum).padStart(2, "0");
+  const dd = String(dayNum).padStart(2, "0");
+
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 function cleanPersonName(name: string): string {
   return name
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
@@ -212,7 +268,7 @@ function parseSubjectBlock(
     qualifica: qualificaMatch ? qualificaMatch[1] : tipo === "socio" ? "socio" : null,
     tipo_soggetto: tipo,
     luogo_nascita: birth.luogo_nascita,
-    data_nascita: birth.data_nascita,
+    data_nascita: birth.data_nascita || decodeBirthDateFromCodiceFiscale(codiceFiscale),
     citta_residenza: residence.citta_residenza,
     indirizzo_residenza: residence.indirizzo_residenza,
     CAP: residence.CAP,
