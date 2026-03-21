@@ -49,25 +49,29 @@ function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
   return (
     <div className="flex items-center gap-2 whitespace-nowrap">
       <span
-        className={`inline-block h-2.5 w-2.5 rounded-full ${
+        className={`h-2.5 w-2.5 rounded-full shrink-0 ${
           status === "valid" ? "bg-green-500" : "bg-red-500"
         }`}
       />
-      <span className="text-sm">{formatDateEU(value)}</span>
+      <span className="text-sm shrink-0">{formatDateEU(value)}</span>
     </div>
   );
 }
 
 function AllegatoIndicator({ present }: { present: boolean }) {
-  return present ? (
-    <div className="flex items-center gap-2 whitespace-nowrap text-green-600">
-      <Check className="h-4 w-4 shrink-0" />
-      <span className="text-sm">Presente</span>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2 whitespace-nowrap text-red-600">
+  if (present) {
+    return (
+      <div className="flex min-w-[140px] items-center gap-2 whitespace-nowrap text-green-600">
+        <Check className="h-4 w-4 shrink-0" />
+        <span className="text-sm font-medium shrink-0">Presente</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-[140px] items-center gap-2 whitespace-nowrap text-red-600">
       <X className="h-4 w-4 shrink-0" />
-      <span className="text-sm">Mancante</span>
+      <span className="text-sm font-medium shrink-0">Mancante</span>
     </div>
   );
 }
@@ -332,8 +336,8 @@ export default function RappresentantiIndexPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1480px]">
-                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.5fr_1.2fr_1.35fr_1.5fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+              <div className="min-w-[1560px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div>Codice fiscale</div>
                   <div>Email</div>
@@ -347,16 +351,16 @@ export default function RappresentantiIndexPage() {
                   {filtered.map((r) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-[2fr_1.4fr_1.5fr_1.2fr_1.35fr_1.5fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                      className="grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
                       <div className="truncate">{r.email || "-"}</div>
                       <div className="truncate">{r.tipo_doc || "-"}</div>
-                      <div>
+                      <div className="min-w-[120px]">
                         <ScadenzaIndicator value={r.scadenza_doc} />
                       </div>
-                      <div>
+                      <div className="min-w-[160px]">
                         <AllegatoIndicator present={!!r.allegato_doc} />
                       </div>
 
