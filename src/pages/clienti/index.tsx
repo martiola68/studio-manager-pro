@@ -275,7 +275,6 @@ if (rappresentanti?.length) {
 
 const supabase = getSupabaseClient();
 
-let rappresentanteId: string | null = null;
 
 // =========================
 // HELPER UPSERT PERSONA
