@@ -59,8 +59,8 @@ function isLikelyPersonName(value: string): boolean {
   const words = v.split(" ").filter(Boolean);
   if (words.length < 2) return false;
 
-  const upperWords = words.filter(w => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
-  return upperWords.length >= 2;
+  const validWords = words.filter((w) => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
+  return validWords.length >= 2;
 }
 
 function extractCodiceFiscale(text: string): string | null {
@@ -73,13 +73,13 @@ function splitUsefulLines(text: string): string[] {
     .split("\n")
     .map(normalizeLine)
     .filter(Boolean)
-    .filter(line => !/^Pag\.?\s*\d+/i.test(line))
-    .filter(line => !/^Visura/i.test(line))
-    .filter(line => !/^Documento n\./i.test(line))
-    .filter(line => !/^Camera di Commercio/i.test(line));
+    .filter((line) => !/^Pag\.?\s*\d+/i.test(line))
+    .filter((line) => !/^Visura/i.test(line))
+    .filter((line) => !/^Documento n\./i.test(line))
+    .filter((line) => !/^Camera di Commercio/i.test(line));
 }
 
-function getSections(lines: string[]) {
+function getSections(lines: string[]): Record<string, string[]> {
   const sections: Record<string, string[]> = {};
   let currentSection = "ROOT";
   sections[currentSection] = [];
@@ -87,18 +87,13 @@ function getSections(lines: string[]) {
   for (const line of lines) {
     const upper = line.toUpperCase();
 
-    if (
-      upper.includes("AMMINISTRATORI") ||
-      upper.includes("ORGANI AMMINISTRATIVI")
-    ) {
+    if (upper.includes("AMMINISTRATORI") || upper.includes("ORGANI AMMINISTRATIVI")) {
       currentSection = "AMMINISTRATORI";
       if (!sections[currentSection]) sections[currentSection] = [];
       continue;
     }
 
-    if (
-      upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")
-    ) {
+    if (upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")) {
       currentSection = "ALTRE_CARICHE";
       if (!sections[currentSection]) sections[currentSection] = [];
       continue;
@@ -129,33 +124,26 @@ function getSections(lines: string[]) {
 
 function parsePeopleFromSection(
   lines: string[],
-  tipo: "amministratore" | "socio",
+  tipo: "amministratore" | "socio"
 ): VisuraRappresentante[] {
   const results: VisuraRappresentante[] = [];
 
-  // Unisco anche finestre di righe vicine, perché spesso nome/CF/qualifica
-  // sono distribuiti su 2-4 righe.
   for (let i = 0; i < lines.length; i++) {
     const current = lines[i] || "";
     const next = lines[i + 1] || "";
     const next2 = lines[i + 2] || "";
     const next3 = lines[i + 3] || "";
 
-    const windowText = [current, next, next2, next3]
-      .filter(Boolean)
-      .join(" | ");
-
+    const windowText = [current, next, next2, next3].filter(Boolean).join(" | ");
     const cf = extractCodiceFiscale(windowText);
 
-    // Caso 1: il nome è tutto in una riga
     if (isLikelyPersonName(current)) {
       const nome = cleanPersonName(current);
 
       let qualifica: string | null = null;
-
       const qualificaCandidate = [next, next2]
         .map(normalizeLine)
-        .find(l =>
+        .find((l) =>
           /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
         );
 
@@ -171,14 +159,13 @@ function parsePeopleFromSection(
       continue;
     }
 
-    // Caso 2: nome spezzato su due righe
     const mergedName = cleanPersonName(`${current} ${next}`);
     if (isLikelyPersonName(mergedName)) {
       let qualifica: string | null = null;
 
       const qualificaCandidate = [next2, next3]
         .map(normalizeLine)
-        .find(l =>
+        .find((l) =>
           /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
         );
 
@@ -195,7 +182,6 @@ function parsePeopleFromSection(
       continue;
     }
 
-    // Caso 3: righe con pattern tipo "ROSSI MARIO ... RSSMRA..."
     const inlineMatch = windowText.match(
       /\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,4})\b.*?\b([A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z])\b/i
     );
@@ -249,9 +235,11 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
       : []),
   ];
 
-  const soci = sections.SOCI
-    ? parsePeopleFromSection(sections.SOCI, "socio")
-    : [];
+  const soci = sections.SOCI ? parsePeopleFromSection(sections.SOCI, "socio") : [];
 
   return dedupeRappresentanti([...amministratori, ...soci]);
+}
+
+export function mapVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
+  return parseVisuraRappresentanti(rawText);
 }
