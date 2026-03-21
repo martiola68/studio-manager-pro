@@ -269,9 +269,8 @@ console.log("VISURA_CLIENTE", cliente);
   provincia: cliente.provincia || "",
 }));
 
-    // 👇 INCOLLA QUI
-if (rappresentanti?.codice_fiscale) {
-  console.log("RAPPRESENTANTE TROVATO:", rappresentante);
+if (rappresentanti?.length) {
+  console.log("RAPPRESENTANTI TROVATI:", rappresentanti);
 }
 
 const supabase = getSupabaseClient();
