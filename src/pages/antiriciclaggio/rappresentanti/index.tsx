@@ -130,7 +130,14 @@ export default function RappresentantiIndexPage() {
         body: JSON.stringify({ path }),
       });
 
-      const result = await response.json();
+      const raw = await response.text();
+
+let result: any;
+try {
+  result = JSON.parse(raw);
+} catch {
+  throw new Error(`La API non ha restituito JSON. Risposta: ${raw.slice(0, 300)}`);
+}
 
       if (!response.ok || !result.ok) {
         throw new Error(result.error || "Errore apertura documento");
