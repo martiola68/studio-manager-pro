@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(text?.slice(0, 12000));
     console.log("=== TESTO ESTRATTO FINE ===");
 
-    const parsed = mapVisuraRappresentanti(text);
+    const parsed = parseVisuraRappresentanti(text);
 
     console.log("=== SOGGETTI PARSATI RAW ===");
     console.log(JSON.stringify(parsed, null, 2));
