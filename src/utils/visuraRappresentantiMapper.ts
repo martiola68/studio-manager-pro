@@ -1,137 +1,257 @@
 export type VisuraRappresentante = {
-  nome_cognome: string | null;
-  codice_fiscale: string | null;
-  luogo_nascita: string | null;
-  data_nascita: string | null;
-  citta_residenza: string | null;
-  indirizzo_residenza: string | null;
-  nazionalita: string | null;
-  CAP: string | null;
-  ruolo: "amministratore" | "socio" | null;
+  nome_cognome: string;
+  codice_fiscale?: string | null;
+  qualifica?: string | null;
+  tipo_soggetto: "amministratore" | "socio";
 };
 
-export function mapVisuraRappresentanti(text: string): VisuraRappresentante[] {
-  const cleanText = normalizeText(text);
-
-  const soci = extractSoci(cleanText);
-  const amministratori = extractAmministratori(cleanText);
-
-  return dedupeByCf([...soci, ...amministratori]);
-}
-
-function normalizeText(text: string): string {
-  return text
+function normalizeTextForParsing(input: string): string {
+  return input
     .replace(/\r/g, "\n")
-    .replace(/\u00A0/g, " ")
+    .replace(/\u00a0/g, " ")
     .replace(/[ \t]+/g, " ")
-    .replace(/\n{2,}/g, "\n")
-    .replace(/[’`]/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-function extractSoci(text: string): VisuraRappresentante[] {
+function normalizeLine(line: string): string {
+  return line
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+}
+
+function isLikelySectionHeader(line: string): boolean {
+  const l = normalizeLine(line).toUpperCase();
+
+  if (!l) return false;
+
+  return [
+    "AMMINISTRATORI",
+    "ORGANI AMMINISTRATIVI",
+    "TITOLARI DI ALTRE CARICHE O QUALIFICHE",
+    "SOCI",
+    "ELENCO SOCI",
+    "SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE",
+    "TRASFERIMENTI D'AZIENDA, FUSIONI, SCISSIONI, SUBENTRI",
+    "ATTIVITA",
+    "SEDI SECONDARIE",
+    "STORIA DELLE MODIFICHE",
+    "INFORMAZIONI PATRIMONIALI",
+    "CAPITALE SOCIALE",
+  ].some((h) => l.includes(h));
+}
+
+function cleanPersonName(name: string): string {
+  return name
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[,;.\- ]+|[,;.\- ]+$/g, "")
+    .trim();
+}
+
+function isLikelyPersonName(value: string): boolean {
+  const v = cleanPersonName(value);
+
+  if (!v) return false;
+  if (v.length < 5) return false;
+  if (/\d{3,}/.test(v)) return false;
+
+  const words = v.split(" ").filter(Boolean);
+  if (words.length < 2) return false;
+
+  const upperWords = words.filter(w => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
+  return upperWords.length >= 2;
+}
+
+function extractCodiceFiscale(text: string): string | null {
+  const match = text.match(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/i);
+  return match ? match[0].toUpperCase() : null;
+}
+
+function splitUsefulLines(text: string): string[] {
+  return normalizeTextForParsing(text)
+    .split("\n")
+    .map(normalizeLine)
+    .filter(Boolean)
+    .filter(line => !/^Pag\.?\s*\d+/i.test(line))
+    .filter(line => !/^Visura/i.test(line))
+    .filter(line => !/^Documento n\./i.test(line))
+    .filter(line => !/^Camera di Commercio/i.test(line));
+}
+
+function getSections(lines: string[]) {
+  const sections: Record<string, string[]> = {};
+  let currentSection = "ROOT";
+  sections[currentSection] = [];
+
+  for (const line of lines) {
+    const upper = line.toUpperCase();
+
+    if (
+      upper.includes("AMMINISTRATORI") ||
+      upper.includes("ORGANI AMMINISTRATIVI")
+    ) {
+      currentSection = "AMMINISTRATORI";
+      if (!sections[currentSection]) sections[currentSection] = [];
+      continue;
+    }
+
+    if (
+      upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")
+    ) {
+      currentSection = "ALTRE_CARICHE";
+      if (!sections[currentSection]) sections[currentSection] = [];
+      continue;
+    }
+
+    if (
+      upper === "SOCI" ||
+      upper.includes("ELENCO SOCI") ||
+      upper.includes("SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE")
+    ) {
+      currentSection = "SOCI";
+      if (!sections[currentSection]) sections[currentSection] = [];
+      continue;
+    }
+
+    if (isLikelySectionHeader(line)) {
+      currentSection = "OTHER";
+      if (!sections[currentSection]) sections[currentSection] = [];
+      continue;
+    }
+
+    sections[currentSection] ??= [];
+    sections[currentSection].push(line);
+  }
+
+  return sections;
+}
+
+function parsePeopleFromSection(
+  lines: string[],
+  tipo: "amministratore" | "socio",
+): VisuraRappresentante[] {
   const results: VisuraRappresentante[] = [];
 
-  const socioRegex =
-    /Proprieta'\s+([A-ZÀ-Ü' ]+?)\s+Quota di nominali:[\s\S]*?Codice fiscale:\s*([A-Z0-9]{16})[\s\S]*?(?:Domicilio del titolare o rappresentante|domicilio del titolare o rappresentante)\s+comune\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gm;
+  // Unisco anche finestre di righe vicine, perché spesso nome/CF/qualifica
+  // sono distribuiti su 2-4 righe.
+  for (let i = 0; i < lines.length; i++) {
+    const current = lines[i] || "";
+    const next = lines[i + 1] || "";
+    const next2 = lines[i + 2] || "";
+    const next3 = lines[i + 3] || "";
 
-  let match: RegExpExecArray | null;
+    const windowText = [current, next, next2, next3]
+      .filter(Boolean)
+      .join(" | ");
 
-  while ((match = socioRegex.exec(text)) !== null) {
-    const nome = normalizeName(match[1]);
-    const codiceFiscale = (match[2] || "").trim().toUpperCase();
-    const citta = normalizeCity(match[3]);
-    const indirizzo = normalizeAddress(match[4]);
-    const cap = (match[5] || "").trim();
+    const cf = extractCodiceFiscale(windowText);
 
-    if (!nome || !codiceFiscale) continue;
+    // Caso 1: il nome è tutto in una riga
+    if (isLikelyPersonName(current)) {
+      const nome = cleanPersonName(current);
 
-    results.push({
-      nome_cognome: nome,
-      codice_fiscale: codiceFiscale,
-      luogo_nascita: null,
-      data_nascita: null,
-      citta_residenza: citta,
-      indirizzo_residenza: indirizzo,
-      nazionalita: null,
-      CAP: cap || null,
-      ruolo: "socio",
-    });
+      let qualifica: string | null = null;
+
+      const qualificaCandidate = [next, next2]
+        .map(normalizeLine)
+        .find(l =>
+          /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
+        );
+
+      if (qualificaCandidate) qualifica = qualificaCandidate;
+
+      results.push({
+        nome_cognome: nome,
+        codice_fiscale: cf,
+        qualifica,
+        tipo_soggetto: tipo,
+      });
+
+      continue;
+    }
+
+    // Caso 2: nome spezzato su due righe
+    const mergedName = cleanPersonName(`${current} ${next}`);
+    if (isLikelyPersonName(mergedName)) {
+      let qualifica: string | null = null;
+
+      const qualificaCandidate = [next2, next3]
+        .map(normalizeLine)
+        .find(l =>
+          /(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)/i.test(l)
+        );
+
+      if (qualificaCandidate) qualifica = qualificaCandidate;
+
+      results.push({
+        nome_cognome: mergedName,
+        codice_fiscale: cf,
+        qualifica,
+        tipo_soggetto: tipo,
+      });
+
+      i += 1;
+      continue;
+    }
+
+    // Caso 3: righe con pattern tipo "ROSSI MARIO ... RSSMRA..."
+    const inlineMatch = windowText.match(
+      /\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,4})\b.*?\b([A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z])\b/i
+    );
+
+    if (inlineMatch) {
+      const nome = cleanPersonName(inlineMatch[1]);
+
+      if (isLikelyPersonName(nome)) {
+        results.push({
+          nome_cognome: nome,
+          codice_fiscale: inlineMatch[2].toUpperCase(),
+          qualifica: null,
+          tipo_soggetto: tipo,
+        });
+      }
+    }
   }
 
   return results;
 }
 
-function extractAmministratori(text: string): VisuraRappresentante[] {
-  const results: VisuraRappresentante[] = [];
-
-  const adminRegex =
-    /Amministratore\s+([A-ZÀ-Ü' ]+?)\s+Rappresentante dell'impresa\s+Nato a\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+il\s+(\d{2}\/\d{2}\/\d{4})\s+Codice fiscale:\s*([A-Z0-9]{16})\s+([A-ZÀ-Ü' ]+?)\s+\([A-Z]{2}\)\s+(.+?)\s+CAP\s+(\d{5})/gm;
-
-  let match: RegExpExecArray | null;
-
-  while ((match = adminRegex.exec(text)) !== null) {
-    const nome = normalizeName(match[1]);
-    const luogoNascita = normalizeCity(match[2]);
-    const dataNascita = toIsoDate(match[3]);
-    const codiceFiscale = (match[4] || "").trim().toUpperCase();
-    const cittaResidenza = normalizeCity(match[5]);
-    const indirizzo = normalizeAddress(match[6]);
-    const cap = (match[7] || "").trim();
-
-    if (!nome || !codiceFiscale) continue;
-
-    results.push({
-      nome_cognome: nome,
-      codice_fiscale: codiceFiscale,
-      luogo_nascita: luogoNascita,
-      data_nascita: dataNascita,
-      citta_residenza: cittaResidenza,
-      indirizzo_residenza: indirizzo,
-      nazionalita: null,
-      CAP: cap || null,
-      ruolo: "amministratore",
-    });
-  }
-
-  return results;
-}
-
-function normalizeName(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function normalizeCity(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function normalizeAddress(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function toIsoDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-
-  const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return null;
-
-  return `${m[3]}-${m[2]}-${m[1]}`;
-}
-
-function dedupeByCf(items: VisuraRappresentante[]): VisuraRappresentante[] {
+function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
   const map = new Map<string, VisuraRappresentante>();
 
   for (const item of items) {
-    const cf = item.codice_fiscale?.trim().toUpperCase();
-    if (!cf) continue;
+    const key = [
+      item.nome_cognome.toUpperCase().replace(/\s+/g, " ").trim(),
+      (item.codice_fiscale || "").toUpperCase().trim(),
+      item.tipo_soggetto,
+    ].join("|");
 
-    if (!map.has(cf)) {
-      map.set(cf, item);
+    if (!map.has(key)) {
+      map.set(key, item);
     }
   }
 
   return Array.from(map.values());
+}
+
+export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
+  const text = normalizeTextForParsing(rawText);
+  const lines = splitUsefulLines(text);
+  const sections = getSections(lines);
+
+  const amministratori = [
+    ...(sections.AMMINISTRATORI
+      ? parsePeopleFromSection(sections.AMMINISTRATORI, "amministratore")
+      : []),
+    ...(sections.ALTRE_CARICHE
+      ? parsePeopleFromSection(sections.ALTRE_CARICHE, "amministratore")
+      : []),
+  ];
+
+  const soci = sections.SOCI
+    ? parsePeopleFromSection(sections.SOCI, "socio")
+    : [];
+
+  return dedupeRappresentanti([...amministratori, ...soci]);
 }
