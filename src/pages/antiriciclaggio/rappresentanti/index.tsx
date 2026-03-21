@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,8 @@ export default function RappresentantiIndexPage() {
   const [rows, setRows] = useState<Rapp[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [importingVisura, setImportingVisura] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (router.query.saved === "1") {
@@ -73,31 +75,32 @@ export default function RappresentantiIndexPage() {
     void run();
   }, []);
 
-  useEffect(() => {
+  const loadRappresentanti = useCallback(async () => {
     if (!studioId) return;
 
-    const load = async () => {
-      const supabase = getSupabaseClient() as any;
-      setLoading(true);
+    const supabase = getSupabaseClient() as any;
+    setLoading(true);
 
-      try {
-        const { data, error } = await supabase
-          .from("rapp_legali")
-          .select(
-            "id, studio_id, nome_cognome, codice_fiscale, tipo_doc, scadenza_doc, allegato_doc, created_at"
-          )
-          .eq("studio_id", studioId)
-          .order("nome_cognome", { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from("rapp_legali")
+        .select(
+          "id, studio_id, nome_cognome, codice_fiscale, tipo_doc, scadenza_doc, allegato_doc, created_at"
+        )
+        .eq("studio_id", studioId)
+        .order("nome_cognome", { ascending: true });
 
-        if (error) throw error;
-        setRows((data || []) as Rapp[]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+      if (error) throw error;
+      setRows((data || []) as Rapp[]);
+    } finally {
+      setLoading(false);
+    }
   }, [studioId]);
+
+  useEffect(() => {
+    if (!studioId) return;
+    void loadRappresentanti();
+  }, [studioId, loadRappresentanti]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -158,6 +161,47 @@ export default function RappresentantiIndexPage() {
     }
   }
 
+  async function handleImportVisura(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!studioId) {
+      alert("Studio non disponibile");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      setImportingVisura(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("studioId", studioId);
+
+      const response = await fetch("/api/import-visura-rappresentanti", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Errore durante importazione visura");
+      }
+
+      await loadRappresentanti();
+
+      alert(
+        `Import completato.\nInseriti: ${result.inserted ?? 0}\nDuplicati: ${result.duplicates ?? 0}\nScartati: ${result.skipped ?? 0}`
+      );
+    } catch (error: any) {
+      alert(error?.message || "Errore durante importazione visura");
+    } finally {
+      setImportingVisura(false);
+      e.target.value = "";
+    }
+  }
+
   return (
     <div className="p-4 space-y-4">
       <Card>
@@ -165,6 +209,23 @@ export default function RappresentantiIndexPage() {
           <CardTitle>Anticiclaggio • Rappresentanti</CardTitle>
 
           <div className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={handleImportVisura}
+            />
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={importingVisura || !studioId}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {importingVisura ? "Importazione in corso..." : "Importa visura"}
+            </Button>
+
             <Button
               type="button"
               onClick={() => router.push("/antiriciclaggio/rappresentanti/nuovo")}
