@@ -27,9 +27,19 @@ function normalizeLine(line: string): string {
     .trim();
 }
 
+function splitUsefulLines(text: string): string[] {
+  return normalizeTextForParsing(text)
+    .split("\n")
+    .map(normalizeLine)
+    .filter(Boolean)
+    .filter((line) => !/^Pag\.?\s*\d+/i.test(line))
+    .filter((line) => !/^Visura/i.test(line))
+    .filter((line) => !/^Documento n\./i.test(line))
+    .filter((line) => !/^Camera di Commercio/i.test(line));
+}
+
 function isLikelySectionHeader(line: string): boolean {
   const l = normalizeLine(line).toUpperCase();
-
   if (!l) return false;
 
   return [
@@ -48,14 +58,64 @@ function isLikelySectionHeader(line: string): boolean {
   ].some((h) => l.includes(h));
 }
 
+function getSections(lines: string[]): Record<string, string[]> {
+  const sections: Record<string, string[]> = {};
+  let currentSection = "ROOT";
+  sections[currentSection] = [];
+
+  for (const line of lines) {
+    const upper = line.toUpperCase();
+
+    if (upper.includes("AMMINISTRATORI") || upper.includes("ORGANI AMMINISTRATIVI")) {
+      currentSection = "AMMINISTRATORI";
+      sections[currentSection] ??= [];
+      continue;
+    }
+
+    if (upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")) {
+      currentSection = "ALTRE_CARICHE";
+      sections[currentSection] ??= [];
+      continue;
+    }
+
+    if (
+      upper === "SOCI" ||
+      upper.includes("ELENCO SOCI") ||
+      upper.includes("SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE")
+    ) {
+      currentSection = "SOCI";
+      sections[currentSection] ??= [];
+      continue;
+    }
+
+    if (isLikelySectionHeader(line)) {
+      currentSection = "OTHER";
+      sections[currentSection] ??= [];
+      continue;
+    }
+
+    sections[currentSection] ??= [];
+    sections[currentSection].push(line);
+  }
+
+  return sections;
+}
+
+function extractCodiceFiscale(text: string): string | null {
+  const match = text.match(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/i);
+  return match ? match[0].toUpperCase() : null;
+}
+
 function cleanPersonName(name: string): string {
   return name
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
     .replace(/\b(rappresentante dell['’]impresa)\b/gi, "")
+    .replace(/\b(responsabile tecnico)\b/gi, "")
     .replace(/\b(titolare|socio|consigliere|presidente|procuratore|liquidatore|revisore)\b/gi, "")
-    .replace(/\b(carica|qualifica|quota|quote|percentuale|diritti|propriet[aà])\b/gi, "")
-    .replace(/\b([0-9]{1,3}(?:[.,][0-9]{1,2})?\s*%)\b/g, "")
+    .replace(/\b(del documento|documento allegato|documento|allegato)\b/gi, "")
+    .replace(/\b(quota|quote|percentuale|diritti|propriet[aà]|capitale sociale)\b/gi, "")
     .replace(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/gi, "")
+    .replace(/\b\d{1,3}(?:[.,]\d{1,2})?\s*%\b/g, "")
     .replace(/^['`’"\s]+/, "")
     .replace(/['`’"]+$/g, "")
     .replace(/\s{2,}/g, " ")
@@ -77,128 +137,37 @@ function isLikelyPersonName(value: string): boolean {
   return words.every((w) => /^[A-ZÀ-ÖØ-Ý'`.-]+$/i.test(w));
 }
 
-function extractCodiceFiscale(text: string): string | null {
-  const match = text.match(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/i);
-  return match ? match[0].toUpperCase() : null;
-}
-
-function normalizeCap(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const m = value.match(/\b\d{5}\b/);
-  return m ? m[0] : null;
-}
-
-function splitUsefulLines(text: string): string[] {
-  return normalizeTextForParsing(text)
-    .split("\n")
-    .map(normalizeLine)
-    .filter(Boolean)
-    .filter((line) => !/^Pag\.?\s*\d+/i.test(line))
-    .filter((line) => !/^Visura/i.test(line))
-    .filter((line) => !/^Documento n\./i.test(line))
-    .filter((line) => !/^Camera di Commercio/i.test(line));
-}
-
-function getSections(lines: string[]): Record<string, string[]> {
-  const sections: Record<string, string[]> = {};
-  let currentSection = "ROOT";
-  sections[currentSection] = [];
-
-  for (const line of lines) {
-    const upper = line.toUpperCase();
-
-    if (upper.includes("AMMINISTRATORI") || upper.includes("ORGANI AMMINISTRATIVI")) {
-      currentSection = "AMMINISTRATORI";
-      if (!sections[currentSection]) sections[currentSection] = [];
-      continue;
-    }
-
-    if (upper.includes("TITOLARI DI ALTRE CARICHE O QUALIFICHE")) {
-      currentSection = "ALTRE_CARICHE";
-      if (!sections[currentSection]) sections[currentSection] = [];
-      continue;
-    }
-
-    if (
-      upper === "SOCI" ||
-      upper.includes("ELENCO SOCI") ||
-      upper.includes("SOCI E TITOLARI DI DIRITTI SU AZIONI E QUOTE")
-    ) {
-      currentSection = "SOCI";
-      if (!sections[currentSection]) sections[currentSection] = [];
-      continue;
-    }
-
-    if (isLikelySectionHeader(line)) {
-      currentSection = "OTHER";
-      if (!sections[currentSection]) sections[currentSection] = [];
-      continue;
-    }
-
-    sections[currentSection] ??= [];
-    sections[currentSection].push(line);
-  }
-
-  return sections;
-}
-
-function extractResidence(block: string): {
-  citta_residenza: string | null;
-  indirizzo_residenza: string | null;
-  CAP: string | null;
-} {
-  const normalized = block.replace(/\s+/g, " ").trim();
-
-  const viaMatch = normalized.match(
-    /\b(via|viale|piazza|corso|largo|vicolo|contrada|strada)\s+([^,;]+?)(?=(\s+\d{5}\b)|,|;|$)/i
-  );
-
-  const capMatch = normalized.match(/\b\d{5}\b/);
-
-  let citta: string | null = null;
-
-  if (capMatch?.index != null) {
-    const afterCap = normalized.slice(capMatch.index + 5).trim();
-    const cityMatch = afterCap.match(/^([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})/);
-    if (cityMatch) citta = cityMatch[1].trim();
-  }
-
-  if (!citta) {
-    const resMatch = normalized.match(
-      /\bresidenza(?:\s*[:\-])?\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})/i
-    );
-    if (resMatch) citta = resMatch[1].trim();
-  }
-
-  return {
-    citta_residenza: citta,
-    indirizzo_residenza: viaMatch
-      ? `${viaMatch[1]} ${viaMatch[2]}`.replace(/\s+/g, " ").trim()
-      : null,
-    CAP: normalizeCap(capMatch?.[0] || null),
-  };
-}
-
-function extractBirthData(block: string): {
+function extractBirthDataStrict(_block: string): {
   luogo_nascita: string | null;
   data_nascita: string | null;
   nazionalita: string | null;
 } {
-  const normalized = block.replace(/\s+/g, " ").trim();
-
-  const natoMatch = normalized.match(
-    /\bnat[oa]\s+a\s+([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{1,40})\s+il\s+(\d{2}\/\d{2}\/\d{4})/i
-  );
-
-  const nazionalitaMatch = normalized.match(
-    /\b(cittadinanza|nazionalità)\s*[:\-]?\s*([A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ'`\- ]{2,30})/i
-  );
-
   return {
-    luogo_nascita: natoMatch ? natoMatch[1].trim() : null,
-    data_nascita: natoMatch ? natoMatch[2].trim() : null,
-    nazionalita: nazionalitaMatch ? nazionalitaMatch[2].trim() : null,
+    luogo_nascita: null,
+    data_nascita: null,
+    nazionalita: null,
   };
+}
+
+function extractResidenceStrict(_block: string): {
+  citta_residenza: string | null;
+  indirizzo_residenza: string | null;
+  CAP: string | null;
+} {
+  return {
+    citta_residenza: null,
+    indirizzo_residenza: null,
+    CAP: null,
+  };
+}
+
+function candidateNamesFromText(text: string): string[] {
+  const matches =
+    text.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
+
+  return matches
+    .map((m) => cleanPersonName(m))
+    .filter((m) => isLikelyPersonName(m));
 }
 
 function parseSubjectBlock(
@@ -212,40 +181,20 @@ function parseSubjectBlock(
 
   const cleanedLines = blockLines
     .map((l) => cleanPersonName(l))
-    .map((l) => l.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  let nomeLine: string | null =
-    cleanedLines.find((l) => isLikelyPersonName(l)) || null;
+  let nomeLine =
+    cleanedLines.find((l) => isLikelyPersonName(l)) ||
+    null;
 
   if (!nomeLine) {
     const cfIndex = blockText.toUpperCase().indexOf(codiceFiscale.toUpperCase());
 
     if (cfIndex >= 0) {
       const beforeCf = blockText.slice(Math.max(0, cfIndex - 120), cfIndex);
-      const beforeCfClean = cleanPersonName(beforeCf);
-
-      const matches =
-        beforeCfClean.match(
-          /\b([A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3})\b/g
-        ) || [];
-
-      const reversed = [...matches].reverse();
-
-      nomeLine =
-        reversed.find((m) => isLikelyPersonName(m)) ||
-        null;
+      const candidates = candidateNamesFromText(beforeCf);
+      nomeLine = candidates.length ? candidates[candidates.length - 1] : null;
     }
-  }
-
-  if (!nomeLine && tipo === "socio") {
-    const upperMatches =
-      blockText.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
-
-    nomeLine =
-      upperMatches
-        .map((m) => cleanPersonName(m))
-        .find((m) => isLikelyPersonName(m)) || null;
   }
 
   if (!nomeLine) return null;
@@ -254,8 +203,8 @@ function parseSubjectBlock(
     /\b(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)\b/i
   );
 
-  const birth = extractBirthData(blockText);
-  const residence = extractResidence(blockText);
+  const birth = extractBirthDataStrict(blockText);
+  const residence = extractResidenceStrict(blockText);
 
   return {
     nome_cognome: nomeLine,
@@ -278,7 +227,7 @@ function parsePeopleFromSection(
   const results: VisuraRappresentante[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const windowSizes = tipo === "socio" ? [10, 8, 6] : [8, 6];
+    const windowSizes = tipo === "socio" ? [12, 10, 8, 6] : [8, 6];
 
     let parsedSubject: VisuraRappresentante | null = null;
     let usedWindow = 0;
@@ -286,8 +235,8 @@ function parsePeopleFromSection(
     for (const size of windowSizes) {
       const blockLines = lines.slice(i, i + size).filter(Boolean);
       const blockText = blockLines.join(" | ");
-
       const cf = extractCodiceFiscale(blockText);
+
       if (!cf) continue;
 
       const parsed = parseSubjectBlock(blockLines, tipo);
@@ -302,18 +251,53 @@ function parsePeopleFromSection(
       const alreadyExists = results.some(
         (r) =>
           (r.codice_fiscale || "").toUpperCase().trim() ===
-          (parsedSubject.codice_fiscale || "").toUpperCase().trim()
+          (parsedSubject!.codice_fiscale || "").toUpperCase().trim()
       );
 
       if (!alreadyExists) {
         results.push(parsedSubject);
       }
 
-      i += Math.max(1, usedWindow - 3);
+      i += Math.max(1, usedWindow - 4);
     }
   }
 
   return results;
+}
+
+function parseFallbackNameByCf(rawText: string): VisuraRappresentante[] {
+  const results: VisuraRappresentante[] = [];
+  const normalized = normalizeTextForParsing(rawText).replace(/\n/g, " ");
+  const cfRegex = /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/gi;
+  const matches = [...normalized.matchAll(cfRegex)];
+
+  for (const match of matches) {
+    const cf = (match[0] || "").toUpperCase().trim();
+    const index = match.index ?? -1;
+    if (!cf || index < 0) continue;
+
+    const start = Math.max(0, index - 100);
+    const beforeCf = normalized.slice(start, index);
+    const candidates = candidateNamesFromText(beforeCf);
+    const candidateName = candidates.length ? candidates[candidates.length - 1] : null;
+
+    if (!candidateName) continue;
+
+    results.push({
+      nome_cognome: candidateName,
+      codice_fiscale: cf,
+      qualifica: null,
+      tipo_soggetto: "socio",
+      luogo_nascita: null,
+      data_nascita: null,
+      citta_residenza: null,
+      indirizzo_residenza: null,
+      CAP: null,
+      nazionalita: null,
+    });
+  }
+
+  return dedupeByCodiceFiscale(results);
 }
 
 function dedupeRappresentanti(items: VisuraRappresentante[]): VisuraRappresentante[] {
@@ -351,50 +335,6 @@ export function dedupeByCodiceFiscale(
   return Array.from(map.values());
 }
 
-function parseFallbackGlobalByCf(rawText: string): VisuraRappresentante[] {
-  const results: VisuraRappresentante[] = [];
-  const normalized = normalizeTextForParsing(rawText).replace(/\n/g, " ");
-
-  const cfRegex = /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/gi;
-  const matches = [...normalized.matchAll(cfRegex)];
-
-  for (const match of matches) {
-    const cf = (match[0] || "").toUpperCase().trim();
-    const index = match.index ?? -1;
-    if (!cf || index < 0) continue;
-
-    const start = Math.max(0, index - 120);
-    const beforeCf = normalized.slice(start, index);
-    const cleanedBefore = cleanPersonName(beforeCf);
-
-    const candidateMatches =
-      cleanedBefore.match(/\b[A-ZÀ-ÖØ-Ý'`.-]+(?:\s+[A-ZÀ-ÖØ-Ý'`.-]+){1,3}\b/g) || [];
-
-    const candidateName =
-      [...candidateMatches]
-        .reverse()
-        .map((x) => cleanPersonName(x))
-        .find((x) => isLikelyPersonName(x)) || null;
-
-    if (!candidateName) continue;
-
-    results.push({
-      nome_cognome: candidateName,
-      codice_fiscale: cf,
-      qualifica: null,
-      tipo_soggetto: "socio",
-      luogo_nascita: null,
-      data_nascita: null,
-      citta_residenza: null,
-      indirizzo_residenza: null,
-      CAP: null,
-      nazionalita: null,
-    });
-  }
-
-  return dedupeByCodiceFiscale(results);
-}
-
 export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante[] {
   const text = normalizeTextForParsing(rawText);
   const lines = splitUsefulLines(text);
@@ -412,9 +352,9 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
   const soci = sections.SOCI ? parsePeopleFromSection(sections.SOCI, "socio") : [];
 
   const merged = [...amministratori, ...soci];
-  const fallbackGlobal = parseFallbackGlobalByCf(rawText);
+  const fallback = parseFallbackNameByCf(rawText);
 
-  for (const fallbackItem of fallbackGlobal) {
+  for (const fallbackItem of fallback) {
     const cf = (fallbackItem.codice_fiscale || "").toUpperCase().trim();
     if (!cf) continue;
 
