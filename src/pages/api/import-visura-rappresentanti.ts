@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs";
 import { PDFParse } from "pdf-parse";
-import { getSupabaseClient } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import { mapVisuraRappresentanti } from "@/utils/visuraRappresentantiMapper";
 
 export const config = {
@@ -10,6 +10,17 @@ export const config = {
     bodyParser: false,
   },
 };
+
+function getServerSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Variabili Supabase server mancanti");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: buffer });
@@ -47,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const text = await extractTextFromPdfBuffer(buffer);
     const subjects = mapVisuraRappresentanti(text);
 
-   const supabase = getSupabaseClient() as any;
+    const supabase = getServerSupabase() as any;
 
     let inserted = 0;
     let duplicates = 0;
