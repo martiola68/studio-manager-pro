@@ -880,14 +880,15 @@ async function handleInviaRichiestaDocumento() {
                       </Button>
 
                         <div className="mt-4">
-  <Button
-    type="button"
-    onClick={handleInviaRichiestaDocumento}
-    disabled={sendingPublicDoc || !recordId}
-    className="bg-sky-600 text-white hover:bg-sky-700"
-  >
-    {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
-  </Button>
+ <Button
+  type="button"
+  onClick={handleInviaRichiestaDocumento}
+  disabled={sendingPublicDoc || !recordId}
+  variant="outline"
+  className="border-red-600 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+>
+  {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
+</Button>
 
   {publicDocUrl && (
     <div className="mt-2">
