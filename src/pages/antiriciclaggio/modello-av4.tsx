@@ -964,14 +964,22 @@ function isDuplicateTitolare(
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
-      <FormStickyHeader
-        title="Modello AV4"
-        subtitle="Dichiarazione del Cliente"
-        onSave={salvaAV4}
-        onPrint={handlePrint}
-        onClose={handleChiudiModello}
-        saving={loading}
-      />
+     <FormStickyHeader
+  title="Modello AV4"
+  subtitle="Dichiarazione del Cliente"
+  onSave={salvaAV4}
+  onPrint={handlePrint}
+  onClose={handleChiudiModello}
+  saving={loading}
+  extraActions={[
+    {
+      label: "Invia AV4 al cliente",
+      onClick: handleInvioPubblico,
+      disabled: !av4Id || loading,
+      variant: "sky",
+    },
+  ]}
+/>
 
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
@@ -1660,18 +1668,7 @@ function isDuplicateTitolare(
                     </div>
                   )}
 
-                  <div className="md:col-span-2 flex flex-wrap gap-3">
-                  <button
-                  type="button"
-                    onClick={handleInvioPubblico}
-                      disabled={!av4Id || loading}
-                      className="rounded bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 disabled:bg-gray-400"
-                      >
-                      {loading ? "Generazione link..." : "Invia AV4 al cliente"}
-                  </button>
-                      </div>
-
-                      {publicUrl && (
+                     {publicUrl && (
                         <div className="md:col-span-2">
                           <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
                         <input
