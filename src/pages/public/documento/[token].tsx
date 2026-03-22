@@ -16,8 +16,6 @@ type PublicDocumentoFormState = {
   public_doc_submitted_at: string;
 };
 
-const BUCKET_NAME = "allegati";
-
 const emptyForm: PublicDocumentoFormState = {
   id: "",
   nome_cognome: "",
@@ -42,14 +40,6 @@ function normalizeDateForInput(value?: string | null) {
   const month = String(parsed.getMonth() + 1).padStart(2, "0");
   const day = String(parsed.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function sanitizeFileName(fileName: string) {
-  return fileName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9._-]/g, "");
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -94,8 +84,8 @@ export default function PublicDocumentoPage() {
 
   const [form, setForm] = useState<PublicDocumentoFormState>(emptyForm);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [okMsg, setOkMsg] = useState<string>("");
-  const [errMsg, setErrMsg] = useState<string>("");
+  const [okMsg, setOkMsg] = useState("");
+  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
     if (!router.isReady || !token) return;
@@ -104,6 +94,7 @@ export default function PublicDocumentoPage() {
 
     const load = async () => {
       const supabase = getSupabaseClient() as any;
+
       setLoading(true);
       setErrMsg("");
       setOkMsg("");
@@ -186,93 +177,86 @@ export default function PublicDocumentoPage() {
     setOkMsg("");
   }
 
-async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-  const submitToken = form.public_doc_token;
+    const submitToken = form.public_doc_token;
 
-  if (!submitToken || !form.id) {
-    setErrMsg("Link non valido o record non identificato.");
-    return;
+    if (!submitToken || !form.id) {
+      setErrMsg("Link non valido o record non identificato.");
+      return;
+    }
+
+    if (!form.tipo_doc) {
+      setErrMsg("Seleziona il tipo documento.");
+      return;
+    }
+
+    if (!form.num_doc.trim()) {
+      setErrMsg("Inserisci il numero documento.");
+      return;
+    }
+
+    if (!form.scadenza_doc) {
+      setErrMsg("Inserisci la scadenza documento.");
+      return;
+    }
+
+    if (!selectedFile) {
+      setErrMsg("Allega il documento prima di continuare.");
+      return;
+    }
+
+    setSaving(true);
+    setErrMsg("");
+    setOkMsg("");
+
+    try {
+      const fileBase64 = await fileToBase64(selectedFile);
+
+      const res = await fetch("/api/public/documento/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: submitToken,
+          tipo_doc: form.tipo_doc,
+          num_doc: form.num_doc.trim(),
+          scadenza_doc: form.scadenza_doc,
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileBase64,
+        }),
+      });
+
+      const responseData = await res.json();
+
+      if (!res.ok || !responseData?.ok) {
+        throw new Error(
+          responseData?.error || "Errore durante il salvataggio del documento."
+        );
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        allegato_doc: responseData?.path || prev.allegato_doc,
+        public_doc_enabled: false,
+        public_doc_submitted_at:
+          responseData?.submittedAt || new Date().toISOString(),
+      }));
+
+      setSelectedFile(null);
+      setCompleted(true);
+      setDisabledLink(true);
+      setOkMsg("Documento aggiornato correttamente.");
+    } catch (error: any) {
+      console.error("Errore salvataggio documento pubblico:", error);
+      setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
+    } finally {
+      setSaving(false);
+    }
   }
-
-  if (!form.tipo_doc) {
-    setErrMsg("Seleziona il tipo documento.");
-    return;
-  }
-
-  if (!form.num_doc.trim()) {
-    setErrMsg("Inserisci il numero documento.");
-    return;
-  }
-
-  if (!form.scadenza_doc) {
-    setErrMsg("Inserisci la scadenza documento.");
-    return;
-  }
-
-  if (!selectedFile) {
-    setErrMsg("Allega il documento prima di continuare.");
-    return;
-  }
-
-  setSaving(true);
-  setErrMsg("");
-  setOkMsg("");
-
-  try {
-    const fileBase64 = await fileToBase64(selectedFile);
-
-const res = await fetch("/api/public/documento/submit", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    token: submitToken,
-    tipo_doc: form.tipo_doc,
-    num_doc: form.num_doc.trim(),
-    scadenza_doc: form.scadenza_doc,
-    fileName: selectedFile.name,
-    fileType: selectedFile.type,
-    fileBase64,
-  }),
-});
-
-const responseData = await res.json();
-
-if (!res.ok || !responseData?.ok) {
-  throw new Error(
-    responseData?.error || "Errore durante il salvataggio del documento."
-  );
-}
-
-setForm((prev) => ({
-  ...prev,
-  allegato_doc: responseData?.path || prev.allegato_doc,
-  public_doc_enabled: false,
-  public_doc_submitted_at:
-    responseData?.submittedAt || new Date().toISOString(),
-}));
-
-    setForm((prev) => ({
-      ...prev,
-      allegato_doc: result?.path || prev.allegato_doc,
-      public_doc_enabled: false,
-      public_doc_submitted_at: new Date().toISOString(),
-    }));
-
-    setSelectedFile(null);
-    setCompleted(true);
-    setDisabledLink(true);
-    setOkMsg("Documento aggiornato correttamente.");
-  } catch (error: any) {
-    console.error("Errore salvataggio documento pubblico:", error);
-    setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
-  } finally {
-    setSaving(false);
-  }
-}
 
   if (loading) {
     return (
@@ -314,12 +298,8 @@ setForm((prev) => ({
               <CardTitle>Documento aggiornato</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-slate-700">
-              <p>
-                Il documento di riconoscimento è stato caricato correttamente.
-              </p>
-              <p>
-                Il collegamento è stato chiuso e non è più riutilizzabile.
-              </p>
+              <p>Il documento di riconoscimento è stato caricato correttamente.</p>
+              <p>Il collegamento è stato chiuso e non è più riutilizzabile.</p>
             </CardContent>
           </Card>
         </div>
