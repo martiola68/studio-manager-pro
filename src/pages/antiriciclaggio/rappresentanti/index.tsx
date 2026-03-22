@@ -39,6 +39,20 @@ function getScadenzaStatus(
   return date < todayOnly ? "expired" : "valid";
 }
 
+function EmailIndicator({ present }: { present: boolean }) {
+  return present ? (
+    <div className="flex items-center gap-2 text-green-600">
+      <Check className="h-4 w-4" />
+      <span className="text-sm">Presente</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-2 text-red-600">
+      <X className="h-4 w-4" />
+      <span className="text-sm">Mancante</span>
+    </div>
+  );
+}
+
 function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
   const status = getScadenzaStatus(value);
 
@@ -355,7 +369,9 @@ export default function RappresentantiIndexPage() {
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
-                      <div className="truncate">{r.email || "-"}</div>
+                      <div>
+                      <EmailIndicator present={!!r.email} />
+                      </div>
                       <div className="truncate">{r.tipo_doc || "-"}</div>
                       <div className="min-w-[120px]">
                         <ScadenzaIndicator value={r.scadenza_doc} />
