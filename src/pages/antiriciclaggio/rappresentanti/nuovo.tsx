@@ -160,12 +160,12 @@ export default function NuovoRappresentantePage() {
 
 async function handleInviaRichiestaDocumento() {
   try {
-    if (!formData?.id) {
+    if (!recordId) {
       alert("Salva prima il rappresentante.");
       return;
     }
 
-    if (!formData?.email || !String(formData.email).trim()) {
+    if (!form.email || !String(form.email).trim()) {
       alert("Il rappresentante non ha un indirizzo email valorizzato.");
       return;
     }
@@ -187,7 +187,7 @@ async function handleInviaRichiestaDocumento() {
         public_doc_opened_at: null,
         public_doc_submitted_at: null,
       })
-      .eq("id", formData.id);
+      .eq("id", recordId);
 
     if (updateError) {
       console.error("Errore aggiornamento link pubblico documento:", updateError);
@@ -205,12 +205,14 @@ async function handleInviaRichiestaDocumento() {
     const userId = session?.user?.id;
 
     if (!userId) {
-      alert(`Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`);
+      alert(
+        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+      );
       return;
     }
 
-    const nomeDestinatario = formData.nome_cognome || "Cliente";
-    const destinatario = String(formData.email).trim();
+    const nomeDestinatario = form.nome_cognome || "Cliente";
+    const destinatario = String(form.email).trim();
 
     await sendEmailViaMicrosoft(userId, {
       to: destinatario,
