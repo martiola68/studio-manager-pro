@@ -1,13 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
+const BUCKET_NAME = "allegati";
+
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: "15mb",
+    },
   },
 };
-
-const BUCKET_NAME = "allegati";
 
 function sanitizeFileName(fileName: string) {
   return fileName
@@ -15,18 +17,6 @@ function sanitizeFileName(fileName: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "_")
     .replace(/[^a-zA-Z0-9._-]/g, "");
-}
-
-function parseForm(req: NextApiRequest): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const formidable = require("formidable");
-    const form = formidable({ multiples: false });
-
-    form.parse(req, (err: any, fields: any, files: any) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
 }
 
 export default async function handler(
@@ -38,28 +28,27 @@ export default async function handler(
   }
 
   try {
-    const fs = require("fs");
-
-    const { fields, files } = await parseForm(req);
-
-    const token = Array.isArray(fields.token) ? String(fields.token[0] || "") : String(fields.token || "");
-    const tipo_doc = Array.isArray(fields.tipo_doc) ? String(fields.tipo_doc[0] || "") : String(fields.tipo_doc || "");
-    const num_doc = Array.isArray(fields.num_doc) ? String(fields.num_doc[0] || "") : String(fields.num_doc || "");
-    const scadenza_doc = Array.isArray(fields.scadenza_doc)
-      ? String(fields.scadenza_doc[0] || "")
-      : String(fields.scadenza_doc || "");
-
-    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
+    const {
+      token,
+      tipo_doc,
+      num_doc,
+      scadenza_doc,
+      fileName,
+      fileType,
+      fileBase64,
+    } = req.body || {};
 
     if (!token) {
       return res.status(400).json({ ok: false, error: "Token mancante" });
     }
 
     if (!tipo_doc || !num_doc || !scadenza_doc) {
-      return res.status(400).json({ ok: false, error: "Campi obbligatori mancanti" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "Campi obbligatori mancanti" });
     }
 
-    if (!uploadedFile) {
+    if (!fileName || !fileBase64) {
       return res.status(400).json({ ok: false, error: "File mancante" });
     }
 
@@ -86,16 +75,19 @@ export default async function handler(
       return res.status(400).json({ ok: false, error: "Link non più attivo" });
     }
 
-    const tempPath = uploadedFile.filepath;
-    const fileBuffer = fs.readFileSync(tempPath);
-
-    const safeName = sanitizeFileName(uploadedFile.originalFilename || "documento");
+    const safeName = sanitizeFileName(String(fileName || "documento"));
     const filePath = `documenti_pubblici/${rapp.id}/${Date.now()}-${safeName}`;
+
+    const cleanBase64 = String(fileBase64).includes(",")
+      ? String(fileBase64).split(",")[1]
+      : String(fileBase64);
+
+    const fileBuffer = Buffer.from(cleanBase64, "base64");
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, fileBuffer, {
-        contentType: uploadedFile.mimetype || undefined,
+        contentType: fileType || "application/octet-stream",
         upsert: true,
       });
 
@@ -103,14 +95,16 @@ export default async function handler(
       return res.status(500).json({ ok: false, error: uploadError.message });
     }
 
+    const submittedAt = new Date().toISOString();
+
     const { error: updateError } = await supabase
       .from("rapp_legali")
       .update({
         tipo_doc,
-        NumDoc: num_doc,
+        NumDoc: String(num_doc).trim(),
         scadenza_doc,
         allegato_doc: filePath,
-        public_doc_submitted_at: new Date().toISOString(),
+        public_doc_submitted_at: submittedAt,
         public_doc_enabled: false,
         public_doc_token: null,
       })
@@ -124,6 +118,7 @@ export default async function handler(
     return res.status(200).json({
       ok: true,
       path: filePath,
+      submittedAt,
       message: "Documento salvato correttamente",
     });
   } catch (error: any) {
