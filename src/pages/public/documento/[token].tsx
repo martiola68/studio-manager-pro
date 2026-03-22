@@ -239,30 +239,37 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
       }),
     });
 
-    const result = await response.json();
+  const response = await fetch("/api/public/documento/submit", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    token: submitToken,
+    tipo_doc: form.tipo_doc,
+    num_doc: form.num_doc.trim(),
+    scadenza_doc: form.scadenza_doc,
+    fileName: selectedFile.name,
+    fileType: selectedFile.type,
+    fileBase64,
+  }),
+});
 
-    if (!response.ok || !result?.ok) {
-      throw new Error(result?.error || "Errore durante il salvataggio del documento.");
-    }
+const responseData = await response.json();
 
-    setForm((prev) => ({
-      ...prev,
-      allegato_doc: result?.path || prev.allegato_doc,
-      public_doc_enabled: false,
-      public_doc_submitted_at: result?.submittedAt || new Date().toISOString(),
-    }));
-
-    setSelectedFile(null);
-    setCompleted(true);
-    setDisabledLink(true);
-    setOkMsg("Documento aggiornato correttamente.");
-  } catch (error: any) {
-    console.error("Errore salvataggio documento pubblico:", error);
-    setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
-  } finally {
-    setSaving(false);
-  }
+if (!response.ok || !responseData?.ok) {
+  throw new Error(
+    responseData?.error || "Errore durante il salvataggio del documento."
+  );
 }
+
+setForm((prev) => ({
+  ...prev,
+  allegato_doc: responseData?.path || prev.allegato_doc,
+  public_doc_enabled: false,
+  public_doc_submitted_at:
+    responseData?.submittedAt || new Date().toISOString(),
+}));
 
     setForm((prev) => ({
       ...prev,
