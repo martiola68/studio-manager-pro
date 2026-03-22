@@ -28,43 +28,52 @@ export default async function handler(
   }
 
   try {
-  const body = req.body || {};
+ const rawBody =
+      typeof req.body === "string"
+        ? JSON.parse(req.body || "{}")
+        : req.body || {};
 
-const token =
-  typeof body.token === "string"
-    ? body.token.trim()
-    : "";
+    const token =
+      typeof rawBody.token === "string"
+        ? rawBody.token.trim()
+        : "";
 
-const tipo_doc =
-  typeof body.tipo_doc === "string"
-    ? body.tipo_doc.trim()
-    : "";
+    const tipo_doc =
+      typeof rawBody.tipo_doc === "string"
+        ? rawBody.tipo_doc.trim()
+        : "";
 
-const num_doc =
-  typeof body.num_doc === "string"
-    ? body.num_doc.trim()
-    : "";
+    const num_doc =
+      typeof rawBody.num_doc === "string"
+        ? rawBody.num_doc.trim()
+        : "";
 
-const scadenza_doc =
-  typeof body.scadenza_doc === "string"
-    ? body.scadenza_doc.trim()
-    : "";
+    const scadenza_doc =
+      typeof rawBody.scadenza_doc === "string"
+        ? rawBody.scadenza_doc.trim()
+        : "";
 
-const fileName =
-  typeof body.fileName === "string"
-    ? body.fileName.trim()
-    : "";
+    const fileName =
+      typeof rawBody.fileName === "string"
+        ? rawBody.fileName.trim()
+        : "";
 
-const fileType =
-  typeof body.fileType === "string"
-    ? body.fileType.trim()
-    : "";
+    const fileType =
+      typeof rawBody.fileType === "string"
+        ? rawBody.fileType.trim()
+        : "";
 
-const fileBase64 =
-  typeof body.fileBase64 === "string"
-    ? body.fileBase64
-    : "";
-    
+    const fileBase64 =
+      typeof rawBody.fileBase64 === "string"
+        ? rawBody.fileBase64
+        : "";
+
+    console.log("PUBLIC DOCUMENT SUBMIT BODY", {
+      hasBody: !!rawBody,
+      keys: Object.keys(rawBody || {}),
+      tokenPreview: token ? token.slice(0, 8) : "",
+    });
+
     if (!token) {
       return res.status(400).json({ ok: false, error: "Token mancante" });
     }
