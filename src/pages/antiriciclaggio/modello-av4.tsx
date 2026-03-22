@@ -4,6 +4,7 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
+import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
 type FormState = {
   studio_id: string;
@@ -747,7 +748,57 @@ export default function ModelloAV4() {
     const url = `${window.location.origin}/public/av4/${token}`;
     setPublicUrl(url);
 
-    alert(`Link pubblico generato correttamente:\n${url}`);
+    const { data: rappRow, error: rappError } = await supabase
+  .from("rapp_legali")
+  .select("email, nome_cognome")
+  .eq("id", form.rapp_legale_id)
+  .single();
+
+if (rappError) {
+  console.error("Errore recupero email rappresentante:", rappError);
+  alert(`Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale.\n${url}`);
+  return;
+}
+
+const destinatario = rappRow?.email?.trim();
+const nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
+
+if (!destinatario) {
+  alert(`Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`);
+  return;
+}
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      alert(`Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`);
+      return;
+    }
+
+    await sendEmailViaMicrosoft(userId, {
+      to: destinatario,
+      subject: "Compilazione Modello AV4",
+     html: `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+    <p>Gentile ${nomeDestinatario},</p>
+    <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
+    <p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer">
+        ${url}
+      </a>
+    </p>
+    <p>Le chiediamo di completare la compilazione accedendo al link sopra indicato.</p>
+    <p>Cordiali saluti,<br />Studio Manager Pro</p>
+  </div>
+`,
+    });
+    
+    alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
+    
   } catch (error) {
     console.error("Errore invio pubblico AV4:", error);
     alert("Errore durante la generazione del link pubblico.");
