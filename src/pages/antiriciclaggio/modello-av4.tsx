@@ -964,21 +964,15 @@ function isDuplicateTitolare(
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
-     <FormStickyHeader
+    <FormStickyHeader
   title="Modello AV4"
   subtitle="Dichiarazione del Cliente"
   onSave={salvaAV4}
   onPrint={handlePrint}
   onClose={handleChiudiModello}
+  onSendToClient={handleInvioPubblico}
+  sendToClientDisabled={!av4Id || loading}
   saving={loading}
-  extraActions={[
-    {
-      label: "Invia AV4 al cliente",
-      onClick: handleInvioPubblico,
-      disabled: !av4Id || loading,
-      variant: "sky",
-    },
-  ]}
 />
 
       <div className="flex-1 overflow-hidden">
