@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
-
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,23 +120,28 @@ export default function NuovoRappresentantePage() {
 
   const isEditMode =
     router.isReady && typeof router.query.id === "string" && !!router.query.id;
+
   const recordId =
     router.isReady && typeof router.query.id === "string" ? router.query.id : "";
 
   const from =
     router.isReady && typeof router.query.from === "string" ? router.query.from : "";
+
   const clienteIdFromQuery =
     router.isReady && typeof router.query.cliente_id === "string"
       ? router.query.cliente_id
       : "";
+
   const av1IdFromQuery =
     router.isReady && typeof router.query.av1_id === "string"
       ? router.query.av1_id
       : "";
+
   const av4IdFromQuery =
     router.isReady && typeof router.query.av4_id === "string"
       ? router.query.av4_id
       : "";
+
   const returnTo =
     router.isReady && typeof router.query.returnTo === "string"
       ? router.query.returnTo
@@ -158,103 +162,6 @@ export default function NuovoRappresentantePage() {
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
-async function handleInviaRichiestaDocumento() {
-  try {
-    if (!recordId) {
-      alert("Salva prima il rappresentante.");
-      return;
-    }
-
-    if (!form.email || !String(form.email).trim()) {
-      alert("Il rappresentante non ha un indirizzo email valorizzato.");
-      return;
-    }
-
-    const supabase = getSupabaseClient() as any;
-    setSendingPublicDoc(true);
-
-    const token =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    const { error: updateError } = await supabase
-      .from("rapp_legali")
-      .update({
-        public_doc_token: token,
-        public_doc_enabled: true,
-        public_doc_sent_at: new Date().toISOString(),
-        public_doc_opened_at: null,
-        public_doc_submitted_at: null,
-      })
-      .eq("id", recordId);
-
-    if (updateError) {
-      console.error("Errore aggiornamento link pubblico documento:", updateError);
-      alert("Errore durante la generazione del link pubblico.");
-      return;
-    }
-
-    const url = `${window.location.origin}/public/documento/${token}`;
-    setPublicDocUrl(url);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      alert(
-        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-      );
-      return;
-    }
-
-    const nomeDestinatario = form.nome_cognome || "Cliente";
-    const destinatario = String(form.email).trim();
-
-    await sendEmailViaMicrosoft(userId, {
-      to: destinatario,
-      subject: "Richiesta aggiornamento documento di riconoscimento",
-      html: `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-          <p>Gentile ${nomeDestinatario},</p>
-
-          <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
-
-          <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
-
-          <p>
-            <a href="${url}" target="_blank" rel="noopener noreferrer">
-              ${url}
-            </a>
-          </p>
-
-          <p><strong>Documenti accettati:</strong></p>
-          <ul style="padding-left: 18px; margin: 8px 0;">
-            <li>Carta di identità</li>
-            <li>Passaporto</li>
-          </ul>
-
-          <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
-
-          <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
-
-          <p>Cordiali saluti,<br />Studio Manager Pro</p>
-        </div>
-      `,
-    });
-
-    alert(`Email inviata correttamente a ${destinatario}.`);
-  } catch (error) {
-    console.error("Errore invio richiesta documento:", error);
-    alert("Errore durante l'invio della richiesta documento.");
-  } finally {
-    setSendingPublicDoc(false);
-  }
-}
-  
   /* =========================================================
      LOAD STUDIO ID
      ========================================================= */
@@ -335,7 +242,6 @@ async function handleInviaRichiestaDocumento() {
           const contentType = response.headers.get("content-type") || "";
 
           let result: any = null;
-
           if (contentType.includes("application/json")) {
             result = await response.json();
           }
@@ -424,6 +330,7 @@ async function handleInviaRichiestaDocumento() {
       setForm(initialLoadedForm);
     } else {
       setForm(initialFormState);
+      setPublicDocUrl("");
     }
   }
 
@@ -500,6 +407,103 @@ async function handleInviaRichiestaDocumento() {
     setForm((prev) => ({ ...prev, allegato_doc: "" }));
     setOkMsg(null);
     setErrMsg(null);
+  }
+
+  async function handleInviaRichiestaDocumento() {
+    try {
+      if (!recordId) {
+        alert("Salva prima il rappresentante.");
+        return;
+      }
+
+      if (!form.email || !String(form.email).trim()) {
+        alert("Il rappresentante non ha un indirizzo email valorizzato.");
+        return;
+      }
+
+      const supabase = getSupabaseClient() as any;
+      setSendingPublicDoc(true);
+
+      const token =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const { error: updateError } = await supabase
+        .from("rapp_legali")
+        .update({
+          public_doc_token: token,
+          public_doc_enabled: true,
+          public_doc_sent_at: new Date().toISOString(),
+          public_doc_opened_at: null,
+          public_doc_submitted_at: null,
+        })
+        .eq("id", recordId);
+
+      if (updateError) {
+        console.error("Errore aggiornamento link pubblico documento:", updateError);
+        alert("Errore durante la generazione del link pubblico.");
+        return;
+      }
+
+      const url = `${window.location.origin}/public/documento/${token}`;
+      setPublicDocUrl(url);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const userId = session?.user?.id;
+
+      if (!userId) {
+        alert(
+          `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+        );
+        return;
+      }
+
+      const nomeDestinatario = form.nome_cognome || "Cliente";
+      const destinatario = String(form.email).trim();
+
+      await sendEmailViaMicrosoft(userId, {
+        to: destinatario,
+        subject: "Richiesta aggiornamento documento di riconoscimento",
+        html: `
+          <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+            <p>Gentile ${nomeDestinatario},</p>
+
+            <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
+
+            <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
+
+            <p>
+              <a href="${url}" target="_blank" rel="noopener noreferrer">
+                ${url}
+              </a>
+            </p>
+
+            <p><strong>Documenti accettati:</strong></p>
+            <ul style="padding-left: 18px; margin: 8px 0;">
+              <li>Carta di identità</li>
+              <li>Passaporto</li>
+            </ul>
+
+            <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+
+            <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+
+            <p>Cordiali saluti,<br />Studio Manager Pro</p>
+          </div>
+        `,
+      });
+
+      alert(`Email inviata correttamente a ${destinatario}.`);
+    } catch (error) {
+      console.error("Errore invio richiesta documento:", error);
+      alert("Errore durante l'invio della richiesta documento.");
+    } finally {
+      setSendingPublicDoc(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -614,11 +618,11 @@ async function handleInviaRichiestaDocumento() {
 
   function handleCancel() {
     if (from === "av4" && returnTo) {
-      router.push(returnTo);
+      void router.push(returnTo);
       return;
     }
 
-    router.push("/antiriciclaggio/rappresentanti");
+    void router.push("/antiriciclaggio/rappresentanti");
   }
 
   return (
@@ -712,7 +716,6 @@ async function handleInviaRichiestaDocumento() {
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, luogo_nascita: e.target.value }))
                     }
-                    placeholder=""
                   />
                 </div>
 
@@ -739,7 +742,6 @@ async function handleInviaRichiestaDocumento() {
                         citta_residenza: e.target.value,
                       }))
                     }
-                    placeholder=""
                   />
                 </div>
 
@@ -754,7 +756,6 @@ async function handleInviaRichiestaDocumento() {
                         indirizzo_residenza: e.target.value,
                       }))
                     }
-                    placeholder=""
                   />
                 </div>
 
@@ -769,62 +770,71 @@ async function handleInviaRichiestaDocumento() {
                         cap: e.target.value.replace(/\D/g, "").slice(0, 5),
                       }))
                     }
-                    placeholder=""
                     maxLength={5}
                   />
                 </div>
+              </div>
 
+              <div className="space-y-4 rounded-lg border p-4">
                 <div>
-                  <Label htmlFor="tipo_doc">Tipo documento</Label>
-                  <Select
-                    value={form.tipo_doc}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        tipo_doc: value as TipoDocumento,
-                      }))
-                    }
-                  >
-                    <SelectTrigger id="tipo_doc">
-                      <SelectValue placeholder="Seleziona..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Carta di identità">
-                        Carta di identità
-                      </SelectItem>
-                      <SelectItem value="Passaporto">Passaporto</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <h3 className="text-sm font-medium">Documento di riconoscimento</h3>
                 </div>
 
-                <div>
-                  <Label htmlFor="num_doc">Numero documento</Label>
-                  <Input
-                    id="num_doc"
-                    value={form.num_doc}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        num_doc: e.target.value,
-                      }))
-                    }
-                    placeholder=""
-                  />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <Label htmlFor="tipo_doc">Tipo documento</Label>
+                    <Select
+                      value={form.tipo_doc}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          tipo_doc: value as TipoDocumento,
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="tipo_doc">
+                        <SelectValue placeholder="Seleziona..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Carta di identità">
+                          Carta di identità
+                        </SelectItem>
+                        <SelectItem value="Passaporto">Passaporto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="num_doc">Numero documento</Label>
+                    <Input
+                      id="num_doc"
+                      value={form.num_doc}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          num_doc: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="scadenza_doc">Scadenza documento</Label>
+                    <Input
+                      id="scadenza_doc"
+                      type="date"
+                      value={form.scadenza_doc}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          scadenza_doc: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="scadenza_doc">Scadenza documento</Label>
-                  <Input
-                    id="scadenza_doc"
-                    type="date"
-                    value={form.scadenza_doc}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, scadenza_doc: e.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="md:col-span-2">
+                <div className="space-y-3">
                   <Label htmlFor="allegato_doc">Allegato documento</Label>
 
                   <input
@@ -841,68 +851,59 @@ async function handleInviaRichiestaDocumento() {
                     }}
                   />
 
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <Input
-                      id="allegato_doc"
-                      type="text"
-                      value={form.allegato_doc ? "Documento allegato" : ""}
-                      readOnly
-                      placeholder="Nessun documento allegato"
-                      className="cursor-default"
-                    />
+                  <Input
+                    id="allegato_doc"
+                    type="text"
+                    value={form.allegato_doc ? "Documento allegato" : ""}
+                    readOnly
+                    placeholder="Nessun documento allegato"
+                    className="cursor-default"
+                  />
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={uploading}
-                        onClick={() => fileRef.current?.click()}
-                      >
-                        {uploading ? "Caricamento..." : "Allega documento"}
-                      </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={uploading}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {uploading ? "Caricamento..." : "Allega documento"}
+                    </Button>
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={!form.allegato_doc}
-                        onClick={handleOpenDoc}
-                      >
-                        Apri
-                      </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!form.allegato_doc}
+                      onClick={handleOpenDoc}
+                    >
+                      Apri
+                    </Button>
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        disabled={!form.allegato_doc || uploading}
-                        onClick={handleRemoveDoc}
-                      >
-                        Rimuovi
-                      </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={!form.allegato_doc || uploading}
+                      onClick={handleRemoveDoc}
+                    >
+                      Rimuovi
+                    </Button>
 
-                        <div className="mt-4">
-<Button
-  type="button"
-  onClick={handleInviaRichiestaDocumento}
-  disabled={sendingPublicDoc || !recordId}
-  variant="outline"
-  className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
->
-  {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
-</Button>
-
-  {publicDocUrl && (
-    <div className="mt-2">
-      <Input
-        value={publicDocUrl}
-        readOnly
-        className="bg-gray-50 text-sm"
-      />
-    </div>
-  )}
-</div>
-                      
-                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleInviaRichiestaDocumento}
+                      disabled={sendingPublicDoc || !recordId}
+                      variant="outline"
+                      className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                    >
+                      {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
+                    </Button>
                   </div>
+
+                  {publicDocUrl && (
+                    <div className="pt-1">
+                      <Input value={publicDocUrl} readOnly className="bg-gray-50 text-sm" />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -924,7 +925,6 @@ async function handleInviaRichiestaDocumento() {
                   {isEditMode ? "Ripristina dati" : "Pulisci"}
                 </Button>
               </div>
-              
             </form>
           )}
         </CardContent>
