@@ -883,7 +883,7 @@ async function handleInviaRichiestaDocumento() {
   <Button
     type="button"
     onClick={handleInviaRichiestaDocumento}
-    disabled={sendingPublicDoc || !formData?.id}
+    disabled={sendingPublicDoc || !recordId}
     className="bg-sky-600 text-white hover:bg-sky-700"
   >
     {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
