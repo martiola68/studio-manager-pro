@@ -178,10 +178,12 @@ export default function PublicDocumentoPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
-  if (!token || !form.id) {
-    setErrMsg("Link non valido o record non identificato.");
-    return;
-  }
+ const submitToken = form.public_doc_token || token;
+
+if (!submitToken || !form.id) {
+  setErrMsg("Link non valido o record non identificato.");
+  return;
+}
 
   if (!form.tipo_doc) {
     setErrMsg("Seleziona il tipo documento.");
