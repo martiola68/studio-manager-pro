@@ -69,6 +69,8 @@ type PublicAv4FormState = {
   luogo_firma_bis: string;
   data_firma_bis: string;
 
+  pdf_firmato_cliente: string;
+
   compilato_da_cliente: boolean;
   public_opened_at: string;
   public_submitted_at: string;
@@ -139,6 +141,8 @@ const emptyForm: PublicAv4FormState = {
   data_firma: "",
   luogo_firma_bis: "",
   data_firma_bis: "",
+
+  pdf_firmato_cliente: "",
 
   compilato_da_cliente: false,
   public_opened_at: "",
@@ -225,6 +229,8 @@ function mapRowToForm(row: any): PublicAv4FormState {
     luogo_firma_bis: row?.luogo_firma_bis ?? "",
     data_firma_bis: normalizeDateForInput(row?.data_firma_bis),
 
+    pdf_firmato_cliente: row?.pdf_firmato_cliente ?? "",
+
     compilato_da_cliente: !!row?.compilato_da_cliente,
     public_opened_at: row?.public_opened_at ?? "",
     public_submitted_at: row?.public_submitted_at ?? "",
@@ -240,9 +246,11 @@ export default function PublicAV4Page() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [disabledLink, setDisabledLink] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  const [signedPdfUrl, setSignedPdfUrl] = useState("");
   const [form, setForm] = useState<PublicAv4FormState>(emptyForm);
 
   useEffect(() => {
@@ -277,6 +285,7 @@ export default function PublicAV4Page() {
 
         const mapped = mapRowToForm(data);
         setForm(mapped);
+        setSignedPdfUrl(mapped.pdf_firmato_cliente || "");
 
         if (mapped.compilato_da_cliente) {
           setAlreadySubmitted(true);
@@ -358,6 +367,73 @@ export default function PublicAV4Page() {
     });
   }
 
+  function handlePrintPdf() {
+    window.print();
+  }
+
+  async function handleUploadSignedPdf(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0];
+    if (!file || !form.id) return;
+
+    if (file.type !== "application/pdf") {
+      alert("Seleziona un file PDF.");
+      return;
+    }
+
+    const supabase = getSupabaseClient() as any;
+
+    try {
+      setUploadingPdf(true);
+
+      const filePath = `av4-firmati/${form.id}/${Date.now()}-${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("documenti")
+        .upload(filePath, file, {
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Errore upload PDF firmato:", uploadError);
+        alert("Errore durante il caricamento del PDF firmato.");
+        return;
+      }
+
+      const { data } = supabase.storage.from("documenti").getPublicUrl(filePath);
+      const publicUrl = data?.publicUrl || "";
+
+      const { error: updateError } = await supabase
+        .from("tbAV4")
+        .update({
+          pdf_firmato_cliente: publicUrl,
+        })
+        .eq("id", form.id)
+        .eq("public_token", token);
+
+      if (updateError) {
+        console.error("Errore salvataggio URL PDF firmato:", updateError);
+        alert("PDF caricato ma non salvato correttamente.");
+        return;
+      }
+
+      setSignedPdfUrl(publicUrl);
+      setForm((prev) => ({
+        ...prev,
+        pdf_firmato_cliente: publicUrl,
+      }));
+
+      alert("PDF firmato caricato correttamente.");
+    } catch (error) {
+      console.error("Errore upload PDF firmato:", error);
+      alert("Errore durante il caricamento del PDF firmato.");
+    } finally {
+      setUploadingPdf(false);
+      e.target.value = "";
+    }
+  }
+
   async function handleSubmit() {
     if (!form.id) {
       alert("AV4 non trovato.");
@@ -399,6 +475,7 @@ export default function PublicAV4Page() {
 
         compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),
+        public_enabled: false,
       };
 
       const { error } = await supabase
@@ -414,7 +491,8 @@ export default function PublicAV4Page() {
       }
 
       setAlreadySubmitted(true);
-      alert("AV4 inviato correttamente.");
+      setDisabledLink(true);
+      alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
     } catch (err) {
       console.error("Errore imprevisto salvataggio pubblico:", err);
       alert("Errore durante il salvataggio.");
@@ -454,7 +532,7 @@ export default function PublicAV4Page() {
     );
   }
 
-  if (disabledLink) {
+  if (disabledLink && !alreadySubmitted) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-4xl">
@@ -485,11 +563,11 @@ export default function PublicAV4Page() {
           <CardContent>
             {alreadySubmitted && (
               <div className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                Questo AV4 risulta già compilato dal cliente. È comunque visibile in sola revisione fino a nuovo aggiornamento del flusso.
+                Questo AV4 risulta già completato. Il link non è più riutilizzabile.
               </div>
             )}
 
-            <div className="space-y-6">
+            <div id="print-area" className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Cognome e nome</label>
@@ -563,6 +641,7 @@ export default function PublicAV4Page() {
                   onChange={handleChange}
                   rows={4}
                   className="w-full rounded-md border px-3 py-2"
+                  disabled={alreadySubmitted}
                 />
               </div>
 
@@ -575,6 +654,7 @@ export default function PublicAV4Page() {
                     name="domanda1"
                     checked={form.domanda1}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Dati di nascita e residenza come da documento di identificazione allegato
                 </label>
@@ -585,6 +665,7 @@ export default function PublicAV4Page() {
                     name="domanda2"
                     checked={form.domanda2}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Domicilio diverso rispetto al documento di identificazione allegato
                 </label>
@@ -599,6 +680,7 @@ export default function PublicAV4Page() {
                     name="domanda3"
                     checked={form.domanda3}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Non costituisce persona politicamente esposta
                 </label>
@@ -609,6 +691,7 @@ export default function PublicAV4Page() {
                     name="domanda4"
                     checked={form.domanda4}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Non riveste lo status di PPE da più di un anno
                 </label>
@@ -619,6 +702,7 @@ export default function PublicAV4Page() {
                     name="domanda5"
                     checked={form.domanda5}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Costituisce persona politicamente esposta
                 </label>
@@ -634,6 +718,7 @@ export default function PublicAV4Page() {
                       onChange={handleChange}
                       rows={3}
                       className="w-full rounded-md border px-3 py-2"
+                      disabled={alreadySubmitted}
                     />
                   </div>
                 )}
@@ -648,6 +733,7 @@ export default function PublicAV4Page() {
                     name="domanda10"
                     checked={form.domanda10}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Il titolare effettivo non è persona politicamente esposta
                 </label>
@@ -658,6 +744,7 @@ export default function PublicAV4Page() {
                     name="domanda11"
                     checked={form.domanda11}
                     onChange={handleChange}
+                    disabled={alreadySubmitted}
                   />
                   Il titolare effettivo è persona politicamente esposta
                 </label>
@@ -673,6 +760,7 @@ export default function PublicAV4Page() {
                       onChange={handleChange}
                       rows={3}
                       className="w-full rounded-md border px-3 py-2"
+                      disabled={alreadySubmitted}
                     />
                   </div>
                 )}
@@ -688,6 +776,7 @@ export default function PublicAV4Page() {
                   onChange={handleChange}
                   rows={3}
                   className="w-full rounded-md border px-3 py-2"
+                  disabled={alreadySubmitted}
                 />
               </div>
 
@@ -701,6 +790,7 @@ export default function PublicAV4Page() {
                   onChange={handleChange}
                   rows={3}
                   className="w-full rounded-md border px-3 py-2"
+                  disabled={alreadySubmitted}
                 />
               </div>
 
@@ -714,6 +804,7 @@ export default function PublicAV4Page() {
                   onChange={handleChange}
                   rows={3}
                   className="w-full rounded-md border px-3 py-2"
+                  disabled={alreadySubmitted}
                 />
               </div>
 
@@ -727,6 +818,7 @@ export default function PublicAV4Page() {
                     value={form.specifica10d}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
 
@@ -739,6 +831,7 @@ export default function PublicAV4Page() {
                     value={form.specifica10e}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
 
@@ -751,6 +844,7 @@ export default function PublicAV4Page() {
                     value={form.specifica10f}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
               </div>
@@ -763,6 +857,7 @@ export default function PublicAV4Page() {
                     value={form.luogo_firma}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
 
@@ -774,6 +869,7 @@ export default function PublicAV4Page() {
                     value={form.data_firma}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
 
@@ -784,6 +880,7 @@ export default function PublicAV4Page() {
                     value={form.luogo_firma_bis}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
 
@@ -795,24 +892,87 @@ export default function PublicAV4Page() {
                     value={form.data_firma_bis}
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
+                    disabled={alreadySubmitted}
                   />
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Carica PDF firmato</label>
+
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleUploadSignedPdf}
+                  disabled={alreadySubmitted}
+                  className="block w-full rounded-md border px-3 py-2"
+                />
+
+                {uploadingPdf && (
+                  <p className="text-sm text-slate-600">Caricamento PDF firmato...</p>
+                )}
+
+                {signedPdfUrl && (
+                  <a
+                    href={signedPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-sky-700 underline"
+                  >
+                    Apri PDF firmato caricato
+                  </a>
+                )}
+              </div>
+
+              <div className="pt-2 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrintPdf}
+                  className="rounded-md border border-slate-300 bg-white px-5 py-3 text-slate-700 shadow hover:bg-slate-50"
+                >
+                  Stampa / Salva PDF
+                </button>
+
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={saving}
+                  disabled={saving || alreadySubmitted}
                   className="rounded-md bg-sky-600 px-5 py-3 text-white shadow hover:bg-sky-700 disabled:opacity-50"
                 >
-                  {saving ? "Salvataggio..." : "Invia dichiarazione"}
+                  {saving ? "Salvataggio..." : "Salva e chiudi"}
                 </button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          body {
+            background: white !important;
+          }
+
+          button,
+          input[type="file"] {
+            display: none !important;
+          }
+
+          .shadow,
+          .shadow-sm {
+            box-shadow: none !important;
+          }
+
+          .bg-slate-50,
+          .bg-white {
+            background: white !important;
+          }
+
+          .border {
+            border-color: #d1d5db !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
