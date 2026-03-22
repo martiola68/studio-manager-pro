@@ -782,17 +782,31 @@ if (!destinatario) {
     await sendEmailViaMicrosoft(userId, {
       to: destinatario,
       subject: "Compilazione Modello AV4",
-     html: `
+    html: `
   <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
     <p>Gentile ${nomeDestinatario},</p>
+
     <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
+
     <p>
-      <a href="${url}" target="_blank" rel="noopener noreferrer">
+      <a href="${url}" target="_blank">
         ${url}
       </a>
     </p>
-    <p>Le chiediamo di completare la compilazione accedendo al link sopra indicato.</p>
-    <p>Cordiali saluti,<br />Studio Manager Pro</p>
+
+    <p><strong>Istruzioni rapide:</strong></p>
+    <ol style="padding-left: 18px;">
+      <li>apra il link;</li>
+      <li>compili i dati richiesti;</li>
+      <li>salvi o stampi il PDF;</li>
+      <li>firmi il documento;</li>
+      <li>ricarichi il PDF firmato;</li>
+      <li>clicchi su "Salva e chiudi".</li>
+    </ol>
+
+    <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
+
+    <p>Cordiali saluti,<br/>Studio Manager Pro</p>
   </div>
 `,
     });
