@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import formidable from "formidable";
-import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 
 export const config = {
@@ -19,14 +17,12 @@ function sanitizeFileName(fileName: string) {
     .replace(/[^a-zA-Z0-9._-]/g, "");
 }
 
-function parseForm(req: NextApiRequest): Promise<{
-  fields: formidable.Fields;
-  files: formidable.Files;
-}> {
-  const form = formidable({ multiples: false });
-
+function parseForm(req: NextApiRequest): Promise<any> {
   return new Promise((resolve, reject) => {
-    form.parse(req, (err, fields, files) => {
+    const formidable = require("formidable");
+    const form = formidable({ multiples: false });
+
+    form.parse(req, (err: any, fields: any, files: any) => {
       if (err) reject(err);
       else resolve({ fields, files });
     });
@@ -42,12 +38,16 @@ export default async function handler(
   }
 
   try {
+    const fs = require("fs");
+
     const { fields, files } = await parseForm(req);
 
-    const token = String(fields.token || "");
-    const tipo_doc = String(fields.tipo_doc || "");
-    const num_doc = String(fields.num_doc || "");
-    const scadenza_doc = String(fields.scadenza_doc || "");
+    const token = Array.isArray(fields.token) ? String(fields.token[0] || "") : String(fields.token || "");
+    const tipo_doc = Array.isArray(fields.tipo_doc) ? String(fields.tipo_doc[0] || "") : String(fields.tipo_doc || "");
+    const num_doc = Array.isArray(fields.num_doc) ? String(fields.num_doc[0] || "") : String(fields.num_doc || "");
+    const scadenza_doc = Array.isArray(fields.scadenza_doc)
+      ? String(fields.scadenza_doc[0] || "")
+      : String(fields.scadenza_doc || "");
 
     const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
 
@@ -112,6 +112,7 @@ export default async function handler(
         allegato_doc: filePath,
         public_doc_submitted_at: new Date().toISOString(),
         public_doc_enabled: false,
+        public_doc_token: null,
       })
       .eq("id", rapp.id)
       .eq("public_doc_token", token);
