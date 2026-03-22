@@ -28,16 +28,43 @@ export default async function handler(
   }
 
   try {
-    const {
-      token,
-      tipo_doc,
-      num_doc,
-      scadenza_doc,
-      fileName,
-      fileType,
-      fileBase64,
-    } = req.body || {};
+  const body = req.body || {};
 
+const token =
+  typeof body.token === "string"
+    ? body.token.trim()
+    : "";
+
+const tipo_doc =
+  typeof body.tipo_doc === "string"
+    ? body.tipo_doc.trim()
+    : "";
+
+const num_doc =
+  typeof body.num_doc === "string"
+    ? body.num_doc.trim()
+    : "";
+
+const scadenza_doc =
+  typeof body.scadenza_doc === "string"
+    ? body.scadenza_doc.trim()
+    : "";
+
+const fileName =
+  typeof body.fileName === "string"
+    ? body.fileName.trim()
+    : "";
+
+const fileType =
+  typeof body.fileType === "string"
+    ? body.fileType.trim()
+    : "";
+
+const fileBase64 =
+  typeof body.fileBase64 === "string"
+    ? body.fileBase64
+    : "";
+    
     if (!token) {
       return res.status(400).json({ ok: false, error: "Token mancante" });
     }
