@@ -223,23 +223,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   try {
     const fileBase64 = await fileToBase64(selectedFile);
 
-    const response = await fetch("/api/public/documento/submit", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token: submitToken,
-        tipo_doc: form.tipo_doc,
-        num_doc: form.num_doc.trim(),
-        scadenza_doc: form.scadenza_doc,
-        fileName: selectedFile.name,
-        fileType: selectedFile.type,
-        fileBase64,
-      }),
-    });
-
-  const response = await fetch("/api/public/documento/submit", {
+const res = await fetch("/api/public/documento/submit", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -255,9 +239,9 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   }),
 });
 
-const responseData = await response.json();
+const responseData = await res.json();
 
-if (!response.ok || !responseData?.ok) {
+if (!res.ok || !responseData?.ok) {
   throw new Error(
     responseData?.error || "Errore durante il salvataggio del documento."
   );
