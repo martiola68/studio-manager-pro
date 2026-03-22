@@ -266,6 +266,8 @@ export default function ModelloAV4() {
   const [av4Id, setAv4Id] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  const [publicUrl, setPublicUrl] = useState("");
+
   const [form, setForm] = useState<FormState>(initialFormState());
 
   function clearRappresentanteFields() {
@@ -709,6 +711,50 @@ export default function ModelloAV4() {
     }
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
+
+  async function handleInvioPubblico() {
+  if (!av4Id) {
+    alert("Salva prima l'AV4.");
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+
+  try {
+    setLoading(true);
+
+    const token =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const { error } = await supabase
+      .from("tbAV4")
+      .update({
+        public_token: token,
+        public_enabled: true,
+        public_sent_at: new Date().toISOString(),
+        compilato_da_cliente: false,
+      })
+      .eq("id", av4Id);
+
+    if (error) {
+      console.error("Errore aggiornamento AV4 pubblico:", error);
+      alert("Errore durante la generazione del link pubblico.");
+      return;
+    }
+
+    const url = `${window.location.origin}/public/av4/${token}`;
+    setPublicUrl(url);
+
+    alert(`Link pubblico generato correttamente:\n${url}`);
+  } catch (error) {
+    console.error("Errore invio pubblico AV4:", error);
+    alert("Errore durante la generazione del link pubblico.");
+  } finally {
+    setLoading(false);
+  }
+}
 
 function normalizeCf(value: string) {
   return (value || "").trim().toUpperCase();
@@ -1613,6 +1659,28 @@ function isDuplicateTitolare(
                       </p>
                     </div>
                   )}
+
+                  <div className="md:col-span-2 flex flex-wrap gap-3">
+                  <button
+                  type="button"
+                    onClick={handleInvioPubblico}
+                      disabled={!av4Id || loading}
+                      className="rounded bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 disabled:bg-gray-400"
+                      >
+                      {loading ? "Generazione link..." : "Invia AV4 al cliente"}
+                  </button>
+                      </div>
+
+                      {publicUrl && (
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
+                        <input
+                    value={publicUrl}
+                        readOnly
+                      className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+                                />
+                        </div>
+                      )}
 
                   <div className="md:col-span-2">
                     <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
