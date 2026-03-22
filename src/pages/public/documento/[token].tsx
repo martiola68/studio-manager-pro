@@ -176,90 +176,74 @@ export default function PublicDocumentoPage() {
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!token || !form.id) {
-      setErrMsg("Link non valido o record non identificato.");
-      return;
-    }
-
-    if (!form.tipo_doc) {
-      setErrMsg("Seleziona il tipo documento.");
-      return;
-    }
-
-    if (!form.num_doc.trim()) {
-      setErrMsg("Inserisci il numero documento.");
-      return;
-    }
-
-    if (!form.scadenza_doc) {
-      setErrMsg("Inserisci la scadenza documento.");
-      return;
-    }
-
-    if (!selectedFile) {
-      setErrMsg("Allega il documento prima di continuare.");
-      return;
-    }
-
-    setSaving(true);
-    setErrMsg("");
-    setOkMsg("");
-
-    const supabase = getSupabaseClient() as any;
-
-    try {
-      const safeName = sanitizeFileName(selectedFile.name);
-      const filePath = `documenti_pubblici/${form.id}/${Date.now()}-${safeName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, selectedFile, {
-          upsert: true,
-          contentType: selectedFile.type || undefined,
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message || "Errore upload documento.");
-      }
-
-      const { error: updateError } = await supabase
-        .from("rapp_legali")
-        .update({
-          tipo_doc: form.tipo_doc,
-          NumDoc: form.num_doc.trim(),
-          scadenza_doc: form.scadenza_doc || null,
-          allegato_doc: filePath,
-          public_doc_submitted_at: new Date().toISOString(),
-          public_doc_enabled: false,
-        })
-        .eq("id", form.id)
-        .eq("public_doc_token", token)
-        .eq("public_doc_enabled", true);
-
-      if (updateError) {
-        throw new Error(updateError.message || "Errore salvataggio documento.");
-      }
-
-      setForm((prev) => ({
-        ...prev,
-        allegato_doc: filePath,
-        public_doc_enabled: false,
-        public_doc_submitted_at: new Date().toISOString(),
-      }));
-
-      setSelectedFile(null);
-      setCompleted(true);
-      setDisabledLink(true);
-      setOkMsg("Documento aggiornato correttamente.");
-    } catch (error: any) {
-      console.error("Errore salvataggio documento pubblico:", error);
-      setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
-    } finally {
-      setSaving(false);
-    }
+  if (!token || !form.id) {
+    setErrMsg("Link non valido o record non identificato.");
+    return;
   }
+
+  if (!form.tipo_doc) {
+    setErrMsg("Seleziona il tipo documento.");
+    return;
+  }
+
+  if (!form.num_doc.trim()) {
+    setErrMsg("Inserisci il numero documento.");
+    return;
+  }
+
+  if (!form.scadenza_doc) {
+    setErrMsg("Inserisci la scadenza documento.");
+    return;
+  }
+
+  if (!selectedFile) {
+    setErrMsg("Allega il documento prima di continuare.");
+    return;
+  }
+
+  setSaving(true);
+  setErrMsg("");
+  setOkMsg("");
+
+  try {
+    const body = new FormData();
+    body.append("token", token);
+    body.append("tipo_doc", form.tipo_doc);
+    body.append("num_doc", form.num_doc.trim());
+    body.append("scadenza_doc", form.scadenza_doc);
+    body.append("file", selectedFile);
+
+    const response = await fetch("/api/public/documento/submit", {
+      method: "POST",
+      body,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result?.ok) {
+      throw new Error(result?.error || "Errore durante il salvataggio del documento.");
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      allegato_doc: result?.path || prev.allegato_doc,
+      public_doc_enabled: false,
+      public_doc_submitted_at: new Date().toISOString(),
+    }));
+
+    setSelectedFile(null);
+    setCompleted(true);
+    setDisabledLink(true);
+    setOkMsg("Documento aggiornato correttamente.");
+  } catch (error: any) {
+    console.error("Errore salvataggio documento pubblico:", error);
+    setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
+  } finally {
+    setSaving(false);
+  }
+}
 
   if (loading) {
     return (
