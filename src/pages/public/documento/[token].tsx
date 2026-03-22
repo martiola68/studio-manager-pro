@@ -52,6 +52,17 @@ function sanitizeFileName(fileName: string) {
     .replace(/[^a-zA-Z0-9._-]/g, "");
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
+
 function mapRowToForm(row: any): PublicDocumentoFormState {
   return {
     id: String(row?.id ?? ""),
@@ -175,15 +186,15 @@ export default function PublicDocumentoPage() {
     setOkMsg("");
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
- const submitToken = form.public_doc_token || token;
+  const submitToken = form.public_doc_token;
 
-if (!submitToken || !form.id) {
-  setErrMsg("Link non valido o record non identificato.");
-  return;
-}
+  if (!submitToken || !form.id) {
+    setErrMsg("Link non valido o record non identificato.");
+    return;
+  }
 
   if (!form.tipo_doc) {
     setErrMsg("Seleziona il tipo documento.");
@@ -210,16 +221,22 @@ if (!submitToken || !form.id) {
   setOkMsg("");
 
   try {
-    const body = new FormData();
-    body.append("token", token);
-    body.append("tipo_doc", form.tipo_doc);
-    body.append("num_doc", form.num_doc.trim());
-    body.append("scadenza_doc", form.scadenza_doc);
-    body.append("file", selectedFile);
+    const fileBase64 = await fileToBase64(selectedFile);
 
     const response = await fetch("/api/public/documento/submit", {
       method: "POST",
-      body,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        token: submitToken,
+        tipo_doc: form.tipo_doc,
+        num_doc: form.num_doc.trim(),
+        scadenza_doc: form.scadenza_doc,
+        fileName: selectedFile.name,
+        fileType: selectedFile.type,
+        fileBase64,
+      }),
     });
 
     const result = await response.json();
@@ -227,6 +244,25 @@ if (!submitToken || !form.id) {
     if (!response.ok || !result?.ok) {
       throw new Error(result?.error || "Errore durante il salvataggio del documento.");
     }
+
+    setForm((prev) => ({
+      ...prev,
+      allegato_doc: result?.path || prev.allegato_doc,
+      public_doc_enabled: false,
+      public_doc_submitted_at: result?.submittedAt || new Date().toISOString(),
+    }));
+
+    setSelectedFile(null);
+    setCompleted(true);
+    setDisabledLink(true);
+    setOkMsg("Documento aggiornato correttamente.");
+  } catch (error: any) {
+    console.error("Errore salvataggio documento pubblico:", error);
+    setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
+  } finally {
+    setSaving(false);
+  }
+}
 
     setForm((prev) => ({
       ...prev,
