@@ -16,6 +16,8 @@ type PublicDocumentoFormState = {
   public_doc_submitted_at: string;
 };
 
+const BUCKET_NAME = "allegati";
+
 const emptyForm: PublicDocumentoFormState = {
   id: "",
   nome_cognome: "",
@@ -42,12 +44,20 @@ function normalizeDateForInput(value?: string | null) {
   return `${year}-${month}-${day}`;
 }
 
+function sanitizeFileName(fileName: string) {
+  return fileName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
 function mapRowToForm(row: any): PublicDocumentoFormState {
   return {
     id: String(row?.id ?? ""),
     nome_cognome: row?.nome_cognome ?? "",
     tipo_doc: row?.tipo_doc ?? "",
-    num_doc: row?.num_doc ?? "",
+    num_doc: row?.NumDoc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
     public_doc_token: row?.public_doc_token ?? "",
@@ -59,22 +69,33 @@ function mapRowToForm(row: any): PublicDocumentoFormState {
 
 export default function PublicDocumentoPage() {
   const router = useRouter();
+
   const token = useMemo(
     () => (typeof router.query.token === "string" ? router.query.token : ""),
     [router.query.token]
   );
 
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [disabledLink, setDisabledLink] = useState(false);
+
   const [form, setForm] = useState<PublicDocumentoFormState>(emptyForm);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [okMsg, setOkMsg] = useState<string>("");
+  const [errMsg, setErrMsg] = useState<string>("");
 
   useEffect(() => {
     if (!router.isReady || !token) return;
 
+    let cancelled = false;
+
     const load = async () => {
       const supabase = getSupabaseClient() as any;
       setLoading(true);
+      setErrMsg("");
+      setOkMsg("");
 
       try {
         const { data, error } = await supabase
@@ -85,22 +106,29 @@ export default function PublicDocumentoPage() {
 
         if (error) {
           console.error("Errore caricamento pagina pubblica documento:", error);
-          setNotFound(true);
+          if (!cancelled) setNotFound(true);
           return;
         }
 
         if (!data) {
-          setNotFound(true);
+          if (!cancelled) setNotFound(true);
           return;
         }
 
         if (!data.public_doc_enabled) {
-          setDisabledLink(true);
+          if (!cancelled) setDisabledLink(true);
           return;
         }
 
         const mapped = mapRowToForm(data);
+
+        if (cancelled) return;
+
         setForm(mapped);
+
+        if (mapped.public_doc_submitted_at) {
+          setCompleted(true);
+        }
 
         if (!mapped.public_doc_opened_at) {
           await supabase
@@ -108,17 +136,22 @@ export default function PublicDocumentoPage() {
             .update({
               public_doc_opened_at: new Date().toISOString(),
             })
-            .eq("id", mapped.id);
+            .eq("id", mapped.id)
+            .eq("public_doc_token", token);
         }
       } catch (err) {
         console.error("Errore imprevisto pagina pubblica documento:", err);
-        setNotFound(true);
+        if (!cancelled) setNotFound(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router.isReady, token]);
 
   function handleChange(
@@ -130,6 +163,102 @@ export default function PublicDocumentoPage() {
       ...prev,
       [name]: value,
     }));
+
+    setErrMsg("");
+    setOkMsg("");
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setSelectedFile(file);
+    setErrMsg("");
+    setOkMsg("");
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!token || !form.id) {
+      setErrMsg("Link non valido o record non identificato.");
+      return;
+    }
+
+    if (!form.tipo_doc) {
+      setErrMsg("Seleziona il tipo documento.");
+      return;
+    }
+
+    if (!form.num_doc.trim()) {
+      setErrMsg("Inserisci il numero documento.");
+      return;
+    }
+
+    if (!form.scadenza_doc) {
+      setErrMsg("Inserisci la scadenza documento.");
+      return;
+    }
+
+    if (!selectedFile) {
+      setErrMsg("Allega il documento prima di continuare.");
+      return;
+    }
+
+    setSaving(true);
+    setErrMsg("");
+    setOkMsg("");
+
+    const supabase = getSupabaseClient() as any;
+
+    try {
+      const safeName = sanitizeFileName(selectedFile.name);
+      const filePath = `documenti_pubblici/${form.id}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, selectedFile, {
+          upsert: true,
+          contentType: selectedFile.type || undefined,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Errore upload documento.");
+      }
+
+      const { error: updateError } = await supabase
+        .from("rapp_legali")
+        .update({
+          tipo_doc: form.tipo_doc,
+          NumDoc: form.num_doc.trim(),
+          scadenza_doc: form.scadenza_doc || null,
+          allegato_doc: filePath,
+          public_doc_submitted_at: new Date().toISOString(),
+          public_doc_enabled: false,
+        })
+        .eq("id", form.id)
+        .eq("public_doc_token", token)
+        .eq("public_doc_enabled", true);
+
+      if (updateError) {
+        throw new Error(updateError.message || "Errore salvataggio documento.");
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        allegato_doc: filePath,
+        public_doc_enabled: false,
+        public_doc_submitted_at: new Date().toISOString(),
+      }));
+
+      setSelectedFile(null);
+      setCompleted(true);
+      setDisabledLink(true);
+      setOkMsg("Documento aggiornato correttamente.");
+    } catch (error: any) {
+      console.error("Errore salvataggio documento pubblico:", error);
+      setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -156,6 +285,28 @@ export default function PublicDocumentoPage() {
             </CardHeader>
             <CardContent className="text-slate-700">
               Il collegamento richiesto non esiste oppure non è più disponibile.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (completed) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-4xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documento aggiornato</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-slate-700">
+              <p>
+                Il documento di riconoscimento è stato caricato correttamente.
+              </p>
+              <p>
+                Il collegamento è stato chiuso e non è più riutilizzabile.
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -196,61 +347,83 @@ export default function PublicDocumentoPage() {
               Intestatario richiesta: <strong>{form.nome_cognome || "—"}</strong>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Tipo documento</label>
-                <select
-                  name="tipo_doc"
-                  value={form.tipo_doc}
-                  onChange={handleChange}
-                  className="w-full rounded-md border px-3 py-2"
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Tipo documento *
+                  </label>
+                  <select
+                    name="tipo_doc"
+                    value={form.tipo_doc}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  >
+                    <option value="">Seleziona...</option>
+                    <option value="Carta di identità">Carta di identità</option>
+                    <option value="Passaporto">Passaporto</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Numero documento *
+                  </label>
+                  <input
+                    name="num_doc"
+                    value={form.num_doc}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Scadenza documento *
+                  </label>
+                  <input
+                    type="date"
+                    name="scadenza_doc"
+                    value={form.scadenza_doc}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Allegato documento *
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                    className="w-full rounded-md border bg-white px-3 py-2"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Formati ammessi: PDF, JPG, JPEG, PNG
+                  </p>
+                  {selectedFile && (
+                    <p className="mt-1 text-sm text-slate-700">
+                      File selezionato: <strong>{selectedFile.name}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {!!okMsg && <p className="text-sm text-green-600">{okMsg}</p>}
+              {!!errMsg && <p className="text-sm text-red-600">{errMsg}</p>}
+
+              <div className="mt-6">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-md bg-sky-600 px-5 py-3 text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Seleziona...</option>
-                  <option value="Carta di identità">Carta di identità</option>
-                  <option value="Passaporto">Passaporto</option>
-                </select>
+                  {saving ? "Salvataggio..." : "Salva e chiudi"}
+                </button>
               </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium">Numero documento</label>
-                <input
-                  name="num_doc"
-                  value={form.num_doc}
-                  onChange={handleChange}
-                  className="w-full rounded-md border px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium">Scadenza documento</label>
-                <input
-                  type="date"
-                  name="scadenza_doc"
-                  value={form.scadenza_doc}
-                  onChange={handleChange}
-                  className="w-full rounded-md border px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium">Allegato documento</label>
-                <input
-                  value={form.allegato_doc ? "Documento già presente" : ""}
-                  readOnly
-                  className="w-full rounded-md border bg-slate-50 px-3 py-2"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                type="button"
-                disabled
-                className="rounded-md bg-sky-600 px-5 py-3 text-white opacity-50"
-              >
-                Salva e chiudi
-              </button>
-            </div>
+            </form>
           </CardContent>
         </Card>
       </div>
