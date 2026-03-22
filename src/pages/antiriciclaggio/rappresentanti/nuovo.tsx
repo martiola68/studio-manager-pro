@@ -851,7 +851,7 @@ async function handleInviaRichiestaDocumento() {
                       className="cursor-default"
                     />
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         variant="secondary"
@@ -880,12 +880,12 @@ async function handleInviaRichiestaDocumento() {
                       </Button>
 
                         <div className="mt-4">
- <Button
+<Button
   type="button"
   onClick={handleInviaRichiestaDocumento}
   disabled={sendingPublicDoc || !recordId}
   variant="outline"
-  className="border-red-600 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+  className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
 >
   {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
 </Button>
