@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
 
+import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,9 +152,107 @@ export default function NuovoRappresentantePage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const [publicDocUrl, setPublicDocUrl] = useState("");
+  const [sendingPublicDoc, setSendingPublicDoc] = useState(false);
+
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
+async function handleInviaRichiestaDocumento() {
+  try {
+    if (!formData?.id) {
+      alert("Salva prima il rappresentante.");
+      return;
+    }
+
+    if (!formData?.email || !String(formData.email).trim()) {
+      alert("Il rappresentante non ha un indirizzo email valorizzato.");
+      return;
+    }
+
+    const supabase = getSupabaseClient() as any;
+    setSendingPublicDoc(true);
+
+    const token =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const { error: updateError } = await supabase
+      .from("rapp_legali")
+      .update({
+        public_doc_token: token,
+        public_doc_enabled: true,
+        public_doc_sent_at: new Date().toISOString(),
+        public_doc_opened_at: null,
+        public_doc_submitted_at: null,
+      })
+      .eq("id", formData.id);
+
+    if (updateError) {
+      console.error("Errore aggiornamento link pubblico documento:", updateError);
+      alert("Errore durante la generazione del link pubblico.");
+      return;
+    }
+
+    const url = `${window.location.origin}/public/documento/${token}`;
+    setPublicDocUrl(url);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      alert(`Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`);
+      return;
+    }
+
+    const nomeDestinatario = formData.nome_cognome || "Cliente";
+    const destinatario = String(formData.email).trim();
+
+    await sendEmailViaMicrosoft(userId, {
+      to: destinatario,
+      subject: "Richiesta aggiornamento documento di riconoscimento",
+      html: `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+          <p>Gentile ${nomeDestinatario},</p>
+
+          <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
+
+          <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
+
+          <p>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">
+              ${url}
+            </a>
+          </p>
+
+          <p><strong>Documenti accettati:</strong></p>
+          <ul style="padding-left: 18px; margin: 8px 0;">
+            <li>Carta di identità</li>
+            <li>Passaporto</li>
+          </ul>
+
+          <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+
+          <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+
+          <p>Cordiali saluti,<br />Studio Manager Pro</p>
+        </div>
+      `,
+    });
+
+    alert(`Email inviata correttamente a ${destinatario}.`);
+  } catch (error) {
+    console.error("Errore invio richiesta documento:", error);
+    alert("Errore durante l'invio della richiesta documento.");
+  } finally {
+    setSendingPublicDoc(false);
+  }
+}
+  
   /* =========================================================
      LOAD STUDIO ID
      ========================================================= */
@@ -776,6 +876,28 @@ export default function NuovoRappresentantePage() {
                       >
                         Rimuovi
                       </Button>
+
+                        <div className="mt-4">
+  <Button
+    type="button"
+    onClick={handleInviaRichiestaDocumento}
+    disabled={sendingPublicDoc || !formData?.id}
+    className="bg-sky-600 text-white hover:bg-sky-700"
+  >
+    {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
+  </Button>
+
+  {publicDocUrl && (
+    <div className="mt-2">
+      <Input
+        value={publicDocUrl}
+        readOnly
+        className="bg-gray-50 text-sm"
+      />
+    </div>
+  )}
+</div>
+                      
                     </div>
                   </div>
                 </div>
@@ -799,6 +921,7 @@ export default function NuovoRappresentantePage() {
                   {isEditMode ? "Ripristina dati" : "Pulisci"}
                 </Button>
               </div>
+              
             </form>
           )}
         </CardContent>
