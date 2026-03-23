@@ -43,13 +43,13 @@ type AV1Row = {
   AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
-  responsabile?: ResponsabileAV | ResponsabileAV[] | null;
 };
 
 export default function AntiriciclaggioPage() {
   const router = useRouter();
 
   const [rows, setRows] = useState<AV1Row[]>([]);
+  const [responsabili, setResponsabili] = useState<ResponsabileAV[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
 
@@ -110,9 +110,9 @@ export default function AntiriciclaggioPage() {
     return Array.isArray(row.tbclienti) ? row.tbclienti[0] : row.tbclienti;
   };
 
-  const getResponsabile = (row: AV1Row): ResponsabileAV | null => {
-    if (!row.responsabile) return null;
-    return Array.isArray(row.responsabile) ? row.responsabile[0] : row.responsabile;
+  const getResponsabileById = (id?: string | null) => {
+    if (!id) return null;
+    return responsabili.find((r) => r.id === id) || null;
   };
 
   const getRowClassName = (row: AV1Row) => {
@@ -213,6 +213,27 @@ export default function AntiriciclaggioPage() {
     }
   };
 
+  const loadResponsabili = async () => {
+    try {
+      const studioId = await getStudioId();
+      if (!studioId) return;
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase
+        .from("tbRespAV")
+        .select("id, cognome_nome, societa_id")
+        .eq("studio_id", studioId);
+
+      if (error) throw new Error(error.message);
+
+      setResponsabili(data || []);
+    } catch (err: any) {
+      console.error("Errore caricamento responsabili:", err?.message || err);
+      setResponsabili([]);
+    }
+  };
+
   const loadRows = async () => {
     try {
       setLoading(true);
@@ -244,11 +265,6 @@ export default function AntiriciclaggioPage() {
             Av4InviatoCL,
             public_sent_at,
             compilato_da_cliente
-          ),
-          responsabile:tbRespAV (
-            id,
-            cognome_nome,
-            societa_id
           )
         `)
         .order("DataVerifica", { ascending: false });
@@ -272,6 +288,7 @@ export default function AntiriciclaggioPage() {
 
   useEffect(() => {
     void loadSocietaOptions();
+    void loadResponsabili();
     void loadRows();
   }, []);
 
@@ -279,10 +296,12 @@ export default function AntiriciclaggioPage() {
     if (!societaFilter) return rows;
 
     return rows.filter((row) => {
-      const responsabile = getResponsabile(row);
+      const responsabile = getResponsabileById(
+        row.incaricato_adeguata_verifica_id
+      );
       return responsabile?.societa_id === societaFilter;
     });
-  }, [rows, societaFilter]);
+  }, [rows, responsabili, societaFilter]);
 
   const handleNuovoAV1 = () => {
     router.push("/antiriciclaggio/modello-av1");
@@ -465,9 +484,7 @@ export default function AntiriciclaggioPage() {
   return (
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
-        </div>
+        <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
 
         <button
           type="button"
