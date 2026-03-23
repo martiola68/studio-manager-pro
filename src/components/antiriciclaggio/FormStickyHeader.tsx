@@ -8,6 +8,7 @@ type FormStickyHeaderProps = {
   saving?: boolean;
   beforeSaveSlot?: React.ReactNode;
   showSendToClient?: boolean;
+  sendToClientDisabled?: boolean;
 };
 
 export default function FormStickyHeader({
@@ -20,6 +21,7 @@ export default function FormStickyHeader({
   saving = false,
   beforeSaveSlot,
   showSendToClient = false,
+  sendToClientDisabled = false,
 }: FormStickyHeaderProps) {
   return (
     <div className="sticky top-0 z-30 border-b bg-background">
@@ -32,15 +34,16 @@ export default function FormStickyHeader({
         <div className="flex items-center gap-3">
           {beforeSaveSlot}
 
-          {showSendToClient && onSendToClient && (
-            <button
-              type="button"
-              onClick={onSendToClient}
-              className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700"
-            >
-              Invia AV4 al cliente
-            </button>
-          )}
+        {showSendToClient && onSendToClient && (
+  <button
+    type="button"
+    onClick={onSendToClient}
+    disabled={sendToClientDisabled}
+    className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    Invia AV4 al cliente
+  </button>
+)}
 
           {onSave && (
             <button
