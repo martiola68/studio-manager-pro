@@ -293,15 +293,15 @@ export default function AntiriciclaggioPage() {
   }, []);
 
   const filteredRows = useMemo(() => {
-    if (!societaFilter) return rows;
+  if (!societaFilter) return [];
 
-    return rows.filter((row) => {
-      const responsabile = getResponsabileById(
-        row.incaricato_adeguata_verifica_id
-      );
-      return responsabile?.societa_id === societaFilter;
-    });
-  }, [rows, responsabili, societaFilter]);
+  return rows.filter((row) => {
+    const responsabile = getResponsabileById(
+      row.incaricato_adeguata_verifica_id
+    );
+    return responsabile?.societa_id === societaFilter;
+  });
+}, [rows, responsabili, societaFilter]);
 
   const handleNuovoAV1 = () => {
     router.push("/antiriciclaggio/modello-av1");
@@ -499,17 +499,20 @@ export default function AntiriciclaggioPage() {
         <label className="mb-1 block text-sm font-medium">
           Filtra per società
         </label>
-        <select
-          className="w-full rounded-md border px-3 py-2"
-          value={societaFilter}
-          onChange={(e) => setSocietaFilter(e.target.value)}
-        >
-          {societaOptions.map((soc) => (
-            <option key={soc.id} value={soc.id}>
-              {soc.Denominazione}
-            </option>
-          ))}
-        </select>
+        
+       <select
+  className="w-full rounded-md border px-3 py-2"
+  value={societaFilter}
+  onChange={(e) => setSocietaFilter(e.target.value)}
+>
+  <option value="">Seleziona società</option>
+  {societaOptions.map((soc) => (
+    <option key={soc.id} value={soc.id}>
+      {soc.Denominazione}
+    </option>
+  ))}
+</select>
+        
       </div>
 
       {loading ? (
@@ -541,7 +544,7 @@ export default function AntiriciclaggioPage() {
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="p-4 text-center">
-                    Nessuna pratica presente
+                    Seleziona una società per visualizzare le pratiche
                   </td>
                 </tr>
               ) : (
