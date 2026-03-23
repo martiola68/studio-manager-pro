@@ -12,6 +12,7 @@ type FormDataType = {
   cognome_nome: string;
   codice_fiscale: string;
   TipoSoggetto: string;
+  Societa: string;
 };
 
 const TIPO_SOGGETTO_OPTIONS = [
@@ -31,6 +32,7 @@ export default function NuovoResponsabileAVPage() {
     cognome_nome: "",
     codice_fiscale: "",
     TipoSoggetto: "Professionista",
+    Societa: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -70,6 +72,7 @@ export default function NuovoResponsabileAVPage() {
         cognome_nome: data.cognome_nome || "",
         codice_fiscale: data.codice_fiscale || "",
         TipoSoggetto: data.TipoSoggetto || "Professionista",
+        Societa: data.Societa || "",
       });
     } catch (err: any) {
       setError(err?.message || "Errore caricamento responsabile.");
@@ -160,6 +163,7 @@ export default function NuovoResponsabileAVPage() {
         cognome_nome: cognomeNome,
         codice_fiscale: codiceFiscale,
         TipoSoggetto: tipoSoggetto,
+        Societa: formData.Societa || null,
       };
 
       if (isEdit && typeof id === "string") {
@@ -259,6 +263,19 @@ export default function NuovoResponsabileAVPage() {
                     ))}
                   </select>
                 </div>
+
+                <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">
+                Società
+                </label>
+                <Input
+                  type="text"
+                  value={formData.Societa}
+                onChange={(e) => updateField("Societa", e.target.value)}
+                  placeholder="Nome società (se presente)"
+                  />
+                  </div>
+                
               </div>
 
               {error && (
