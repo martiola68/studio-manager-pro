@@ -409,7 +409,12 @@ export default function NuovoRappresentantePage() {
     setErrMsg(null);
   }
 
- async function handleInviaRichiestaDocumento() {
+async function handleInviaRichiestaDocumento() {
+  const supabase = getSupabaseClient() as any;
+  let token = "";
+  let url = "";
+  let userId: string | null = null;
+
   try {
     if (!recordId) {
       alert("Salva prima il rappresentante.");
@@ -426,10 +431,9 @@ export default function NuovoRappresentantePage() {
       return;
     }
 
-    const supabase = getSupabaseClient() as any;
     setSendingPublicDoc(true);
 
-    const token =
+    token =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -453,14 +457,14 @@ export default function NuovoRappresentantePage() {
       return;
     }
 
-    const url = `${window.location.origin}/public/documento/${token}`;
+    url = `${window.location.origin}/public/documento/${token}`;
     setPublicDocUrl(url);
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
-    const userId = session?.user?.id;
+    userId = session?.user?.id ?? null;
 
     if (!userId) {
       alert(
@@ -535,8 +539,33 @@ export default function NuovoRappresentantePage() {
     }
 
     alert(`Email inviata correttamente a ${destinatario}.`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Errore invio richiesta documento:", error);
+
+    try {
+      if (studioId && recordId && form.email?.trim()) {
+        await supabase.from("tbAMLComunicazioni").insert({
+          studio_id: studioId,
+          tipo_comunicazione: "richiesta_documento",
+          cliente_id: clienteIdFromQuery || null,
+          rapp_legale_id: recordId,
+          av4_id: av4IdFromQuery || null,
+          destinatario_email: String(form.email).trim(),
+          oggetto: "Richiesta aggiornamento documento di riconoscimento",
+          body_preview: `Errore invio richiesta documento a ${String(form.email).trim()}.`,
+          stato_invio: "errore",
+          data_invio: new Date().toISOString(),
+          utente_id: userId,
+          public_token: token || null,
+          note:
+            error?.message ||
+            "Errore durante l'invio della richiesta documento.",
+        });
+      }
+    } catch (logCatchError) {
+      console.error("Errore salvataggio log AML di errore:", logCatchError);
+    }
+
     alert("Errore durante l'invio della richiesta documento.");
   } finally {
     setSendingPublicDoc(false);
