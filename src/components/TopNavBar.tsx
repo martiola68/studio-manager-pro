@@ -271,6 +271,7 @@ export function TopNavBar() {
         { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
         { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
         { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
+        { label: "Responsabili adeguata verifica", href: "/antiriciclaggio/responsabili-av",}
       ],
     },
     { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
