@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +21,6 @@ const TIPO_SOGGETTO_OPTIONS = [
   "Altri operatori non finanziari",
 ];
 
-function normalizeCF(value: string) {
-  return (value || "").toUpperCase().replace(/\s+/g, "");
-}
-
-function isValidCodiceFiscale(cf: string) {
-  const value = normalizeCF(cf);
-  return /^[A-Z0-9]{16}$/.test(value);
-}
-
 export default function NuovoResponsabileAVPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -44,6 +36,12 @@ export default function NuovoResponsabileAVPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const cf = useMemo(() => normalizeCF(formData.codice_fiscale), [formData.codice_fiscale]);
+
+  const cfOk = useMemo(() => {
+    return cf.length === 16 ? isValidCF(cf) : false;
+  }, [cf]);
 
   const updateField = <K extends keyof FormDataType>(field: K, value: FormDataType[K]) => {
     setFormData((prev) => ({
@@ -119,7 +117,7 @@ export default function NuovoResponsabileAVPage() {
       }
 
       const cognomeNome = formData.cognome_nome.trim();
-      const codiceFiscale = normalizeCF(formData.codice_fiscale);
+      const codiceFiscale = cf;
       const tipoSoggetto = formData.TipoSoggetto;
 
       if (!cognomeNome) {
@@ -132,7 +130,7 @@ export default function NuovoResponsabileAVPage() {
         return;
       }
 
-      if (!isValidCodiceFiscale(codiceFiscale)) {
+      if (!cfOk) {
         alert("Il codice fiscale non è valido.");
         return;
       }
@@ -233,9 +231,16 @@ export default function NuovoResponsabileAVPage() {
                     type="text"
                     maxLength={16}
                     value={formData.codice_fiscale}
-                    onChange={(e) => updateField("codice_fiscale", normalizeCF(e.target.value))}
+                    onChange={(e) =>
+                      updateField("codice_fiscale", e.target.value.toUpperCase())
+                    }
                     placeholder="Codice fiscale"
                   />
+                  {cf.length === 16 && !cfOk && (
+                    <p className="mt-1 text-sm text-red-500">
+                      Codice fiscale non valido
+                    </p>
+                  )}
                 </div>
 
                 <div>
