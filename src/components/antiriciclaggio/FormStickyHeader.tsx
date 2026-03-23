@@ -1,17 +1,13 @@
-import type { ReactNode } from "react";
-import { Save, Printer, LogOut, Send } from "lucide-react";
-
-type Props = {
+type FormStickyHeaderProps = {
   title: string;
   subtitle?: string;
   onSave?: () => void;
   onPrint?: () => void;
   onClose?: () => void;
   onSendToClient?: () => void;
-  sendToClientDisabled?: boolean;
-  showSendToClient?: boolean;
   saving?: boolean;
-  beforeSaveSlot?: ReactNode;
+  beforeSaveSlot?: React.ReactNode;
+  showSendToClient?: boolean;
 };
 
 export default function FormStickyHeader({
@@ -21,63 +17,61 @@ export default function FormStickyHeader({
   onPrint,
   onClose,
   onSendToClient,
-  sendToClientDisabled = false,
-  showSendToClient = false,
   saving = false,
   beforeSaveSlot,
-}: Props) {
+  showSendToClient = false,
+}: FormStickyHeaderProps) {
   return (
-    <div className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/90">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 md:px-8 md:py-5">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
-          {subtitle ? (
-            <p className="mt-1 text-sm text-slate-600 md:text-base">{subtitle}</p>
-          ) : null}
+    <div className="sticky top-0 z-30 border-b bg-background">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-6">
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900">{title}</h1>
+          {subtitle ? <p className="mt-2 text-slate-600">{subtitle}</p> : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
-          {beforeSaveSlot ? <div className="mr-1">{beforeSaveSlot}</div> : null}
+        <div className="flex items-center gap-3">
+          {beforeSaveSlot}
 
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-400 bg-emerald-100 text-emerald-700 shadow-sm transition hover:bg-emerald-200 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-            title="Salva"
-          >
-            <Save className="h-5 w-5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={onPrint}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-sky-400 bg-sky-100 text-sky-700 shadow-sm transition hover:bg-sky-200 hover:text-sky-800"
-            title="Stampa"
-          >
-            <Printer className="h-5 w-5" />
-          </button>
-
-          {showSendToClient && (
+          {showSendToClient && onSendToClient && (
             <button
               type="button"
               onClick={onSendToClient}
-              disabled={sendToClientDisabled}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-sky-400 bg-white text-sky-700 shadow-sm transition hover:bg-sky-50 hover:text-sky-800 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Invia AV4 al cliente"
+              className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700"
             >
-              <Send className="h-5 w-5" />
+              Invia AV4 al cliente
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-rose-400 bg-rose-100 text-rose-700 shadow-sm transition hover:bg-rose-200 hover:text-rose-800"
-            title="Chiudi"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
+          {onSave && (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="rounded-2xl border border-emerald-400 bg-emerald-50 p-4"
+            >
+              Salva
+            </button>
+          )}
+
+          {onPrint && (
+            <button
+              type="button"
+              onClick={onPrint}
+              className="rounded-2xl border border-sky-400 bg-sky-50 p-4"
+            >
+              Stampa
+            </button>
+          )}
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-rose-400 bg-rose-50 p-4"
+            >
+              Chiudi
+            </button>
+          )}
         </div>
       </div>
     </div>
