@@ -13,8 +13,8 @@ type RespAVRow = {
   cognome_nome: string;
   codice_fiscale: string;
   TipoSoggetto: string;
-  created_at?: string;
-  updated_at?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export default function ResponsabiliAVPage() {
@@ -41,19 +41,40 @@ export default function ResponsabiliAVPage() {
 
       const { data, error } = await supabase
         .from("tbRespAV")
-        .select("*")
+        .select("id, studio_id, cognome_nome, codice_fiscale, TipoSoggetto, created_at, updated_at")
         .eq("studio_id", studioId)
         .order("cognome_nome", { ascending: true });
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new Error(error.message || "Errore caricamento responsabili.");
+      }
 
       setRows((data || []) as RespAVRow[]);
     } catch (err: any) {
       setError(err?.message || "Errore durante il caricamento dei responsabili.");
+      setRows([]);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadRows();
+  }, []);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    if (!q) return rows;
+
+    return rows.filter((row) => {
+      const values = [row.cognome_nome, row.codice_fiscale, row.TipoSoggetto]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+
+      return values.some((v) => v.includes(q));
+    });
+  }, [rows, search]);
 
   const handleDelete = async (id: string) => {
     const ok = window.confirm("Vuoi eliminare questo responsabile adeguata verifica?");
@@ -67,30 +88,17 @@ export default function ResponsabiliAVPage() {
 
       const { error } = await supabase.from("tbRespAV").delete().eq("id", id);
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new Error(error.message || "Errore eliminazione responsabile.");
+      }
 
-      setRows((prev) => prev.filter((r) => r.id !== id));
+      setRows((prev) => prev.filter((row) => row.id !== id));
     } catch (err: any) {
       setError(err?.message || "Errore durante l'eliminazione.");
     } finally {
       setDeletingId(null);
     }
   };
-
-  useEffect(() => {
-    void loadRows();
-  }, []);
-
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-
-    return rows.filter((r) =>
-      [r.cognome_nome, r.codice_fiscale, r.TipoSoggetto]
-        .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(q))
-    );
-  }, [rows, search]);
 
   return (
     <div className="p-6">
@@ -120,7 +128,7 @@ export default function ResponsabiliAVPage() {
             />
           </div>
 
-          {error && (
+          {!!error && (
             <p className="text-sm text-red-600">
               Errore: {error}
             </p>
@@ -140,13 +148,19 @@ export default function ResponsabiliAVPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                    <td
+                      colSpan={4}
+                      className="px-4 py-6 text-center text-muted-foreground"
+                    >
                       Caricamento...
                     </td>
                   </tr>
                 ) : filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                    <td
+                      colSpan={4}
+                      className="px-4 py-6 text-center text-muted-foreground"
+                    >
                       Nessun responsabile trovato.
                     </td>
                   </tr>
@@ -162,7 +176,9 @@ export default function ResponsabiliAVPage() {
                             type="button"
                             variant="outline"
                             onClick={() =>
-                              void router.push(`/antiriciclaggio/responsabili-av/nuovo?id=${row.id}`)
+                              void router.push(
+                                `/antiriciclaggio/responsabili-av/nuovo?id=${row.id}`
+                              )
                             }
                           >
                             Modifica
