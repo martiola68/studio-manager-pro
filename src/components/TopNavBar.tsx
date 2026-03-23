@@ -273,6 +273,7 @@ export function TopNavBar() {
         { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
         { label: "Responsabili AV", href: "/antiriciclaggio/responsabili-av", icon: null },
         { label: "Società Responsabili AV", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
+        { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
       ],
     },
     { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
