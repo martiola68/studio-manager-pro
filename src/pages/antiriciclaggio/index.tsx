@@ -500,18 +500,16 @@ export default function AntiriciclaggioPage() {
           Filtra per società
         </label>
         <select
-          className="w-full rounded-md border px-3 py-2"
-          value={societaFilter}
-          onChange={(e) => setSocietaFilter(e.target.value)}
-        >
-          <option value="">Tutte le società</option>
-          {societaOptions.map((soc) => (
-            <option key={soc.id} value={soc.id}>
-              {soc.Denominazione}
-            </option>
-          ))}
-        </select>
-      </div>
+  className="w-full rounded-md border px-3 py-2"
+  value={societaFilter}
+  onChange={(e) => setSocietaFilter(e.target.value)}
+>
+  {societaOptions.map((soc) => (
+    <option key={soc.id} value={soc.id}>
+      {soc.Denominazione}
+    </option>
+  ))}
+</select>
 
       {loading ? (
         <div>Caricamento...</div>
