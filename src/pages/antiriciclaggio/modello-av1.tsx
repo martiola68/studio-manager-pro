@@ -25,6 +25,13 @@ type PrestazioneAR = {
   PunteggioPrestAR: number;
 };
 
+type ResponsabileAV = {
+  id: string;
+  cognome_nome: string;
+  codice_fiscale?: string | null;
+  TipoSoggetto?: string | null;
+};
+
 type FormDataType = {
   id?: string;
   studio_id: string;
@@ -36,6 +43,7 @@ type FormDataType = {
   AV1Conferma?: boolean;
   AV4Generato?: boolean;
   allegato_av1_firmato?: string;
+  incaricato_adeguata_verifica_id?: string;
 
   A1: number;
   A2: number;
@@ -161,6 +169,7 @@ const initialFormData: FormDataType = {
   AV1Conferma: false,
   AV4Generato: false,
   allegato_av1_firmato: "",
+  incaricato_adeguata_verifica_id: "",
   ...defaultSectionScores,
 };
 
@@ -265,6 +274,7 @@ export default function ModelloAV1Page() {
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
+  const [responsabiliAV, setResponsabiliAV] = useState<ResponsabileAV[]>([]);
   const [formData, setFormData] = useState<FormDataType>(initialFormData);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -322,6 +332,17 @@ export default function ModelloAV1Page() {
     );
   };
 
+  const getResponsabileAVLabel = (responsabile: ResponsabileAV) => {
+    const nome = responsabile.cognome_nome || "";
+    const tipo = responsabile.TipoSoggetto || "";
+    const cf = responsabile.codice_fiscale || "";
+
+    if (tipo && cf) return `${nome} - ${tipo} - ${cf}`;
+    if (tipo) return `${nome} - ${tipo}`;
+    if (cf) return `${nome} - ${cf}`;
+    return nome || responsabile.id;
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -333,19 +354,29 @@ export default function ModelloAV1Page() {
       const [
         { data: clientiData, error: clientiError },
         { data: prestazioniData, error: prestazioniError },
+        { data: responsabiliData, error: responsabiliError },
       ] = await Promise.all([
         supabase.from("tbclienti").select("*"),
         supabase
           .from("tbElencoPrestAR")
           .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
           .order("TipoPrestazioneAR", { ascending: true }),
+        studioId
+          ? supabase
+              .from("tbRespAV")
+              .select("id, cognome_nome, codice_fiscale, TipoSoggetto")
+              .eq("studio_id", studioId)
+              .order("cognome_nome", { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (clientiError) throw new Error(clientiError.message);
       if (prestazioniError) throw new Error(prestazioniError.message);
+      if (responsabiliError) throw new Error(responsabiliError.message);
 
       setClienti((clientiData || []) as Cliente[]);
       setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
+      setResponsabiliAV((responsabiliData || []) as ResponsabileAV[]);
 
       setFormData((prev) => ({
         ...prev,
@@ -382,6 +413,7 @@ export default function ModelloAV1Page() {
         AV1Conferma: normalizeBoolean(data.AV1Conferma),
         AV4Generato: normalizeBoolean(data.AV4Generato),
         allegato_av1_firmato: data.allegato_av1_firmato ?? "",
+        incaricato_adeguata_verifica_id: data.incaricato_adeguata_verifica_id ?? "",
         A1: normalizeScore(data.A1),
         A2: normalizeScore(data.A2),
         A3: normalizeScore(data.A3),
@@ -606,6 +638,7 @@ export default function ModelloAV1Page() {
         DataVerifica: formData.DataVerifica,
         ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
         allegato_av1_firmato: formData.allegato_av1_firmato || null,
+        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
         A1: normalizeScore(formData.A1),
         A2: normalizeScore(formData.A2),
         A3: normalizeScore(formData.A3),
@@ -859,6 +892,42 @@ export default function ModelloAV1Page() {
                       </div>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Incaricato adeguata verifica</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">
+                      Responsabile adeguata verifica
+                    </label>
+                    <select
+                      className="w-full rounded-md border px-3 py-2"
+                      value={formData.incaricato_adeguata_verifica_id || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          incaricato_adeguata_verifica_id: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Seleziona responsabile</option>
+                      {responsabiliAV.map((responsabile) => (
+                        <option key={responsabile.id} value={responsabile.id}>
+                          {getResponsabileAVLabel(responsabile)}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Campo collegato alla tabella dei responsabili adeguata verifica.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
