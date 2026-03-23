@@ -322,48 +322,47 @@ export default function ModelloAV1Page() {
     );
   };
 
- const loadData = async () => {
-  setLoading(true);
-  setError(null);
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
 
-  try {
-    const supabase = getSupabaseClient();
-    const supabaseAny = supabase as any;
-    const studioId = await getStudioId();
+    try {
+      const supabase = getSupabaseClient() as any;
+      const studioId = await getStudioId();
 
-    const [
-      { data: clientiData, error: clientiError },
-      { data: prestazioniData, error: prestazioniError },
-    ] = await Promise.all([
-      supabase.from("tbclienti").select("*"),
-      supabaseAny
-        .from("tbElencoPrestAR")
-        .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
-        .order("TipoPrestazioneAR", { ascending: true }),
-    ]);
+      const [
+        { data: clientiData, error: clientiError },
+        { data: prestazioniData, error: prestazioniError },
+      ] = await Promise.all([
+        supabase.from("tbclienti").select("*"),
+        supabase
+          .from("tbElencoPrestAR")
+          .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+          .order("TipoPrestazioneAR", { ascending: true }),
+      ]);
 
-    if (clientiError) throw new Error(clientiError.message);
-    if (prestazioniError) throw new Error(prestazioniError.message);
+      if (clientiError) throw new Error(clientiError.message);
+      if (prestazioniError) throw new Error(prestazioniError.message);
 
-    setClienti((clientiData || []) as Cliente[]);
-    setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
+      setClienti((clientiData || []) as Cliente[]);
+      setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
 
-    setFormData((prev) => ({
-      ...prev,
-      studio_id: prev.studio_id || studioId || "",
-    }));
-  } catch (err: any) {
-    setError(err?.message || "Errore caricamento dati.");
-  } finally {
-    setLoading(false);
-  }
-};
+      setFormData((prev) => ({
+        ...prev,
+        studio_id: prev.studio_id || studioId || "",
+      }));
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento dati.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadRecordById = async (recordId: string) => {
     setError(null);
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const { data, error } = await supabase.from("tbAV1").select("*").eq("id", recordId).single();
 
@@ -461,7 +460,7 @@ export default function ModelloAV1Page() {
       setUploadingFirmato(true);
       setError(null);
 
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
@@ -488,7 +487,7 @@ export default function ModelloAV1Page() {
     try {
       if (!formData.allegato_av1_firmato) return;
 
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
@@ -517,6 +516,8 @@ export default function ModelloAV1Page() {
 
   const handleRinnovoVerifica = async () => {
     const today = new Date().toISOString().split("T")[0];
+    const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
+    const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
 
     setFormData((prev) => ({
       ...prev,
@@ -532,7 +533,7 @@ export default function ModelloAV1Page() {
       setSaving(true);
       setError(null);
 
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const payload = {
         DataVerifica: today,
@@ -551,11 +552,11 @@ export default function ModelloAV1Page() {
         TotA: 0,
         TotB: 0,
         MediaPunteggio: 0,
-        LivelloRischio: "",
-        RisInerentePonderato: Number((punteggioPrestazione * 0.3).toFixed(2)),
+        LivelloRischio: "Non significativo",
+        RisInerentePonderato: rischioInerentePonderatoReset,
         RisSpecificoPonderato: 0,
-        RischioEffettivo: Number((punteggioPrestazione * 0.3).toFixed(2)),
-        AdeguataVerifica: calcolaAdeguataVerifica(Number((punteggioPrestazione * 0.3).toFixed(2))),
+        RischioEffettivo: rischioInerentePonderatoReset,
+        AdeguataVerifica: adeguataReset,
       };
 
       const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
@@ -595,7 +596,7 @@ export default function ModelloAV1Page() {
     setError(null);
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const payload = {
         studio_id: formData.studio_id,
@@ -633,12 +634,7 @@ export default function ModelloAV1Page() {
         const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
         if (error) throw new Error(error.message);
       } else {
-        const { data, error } = await supabase
-          .from("tbAV1")
-          .insert([payload])
-          .select("id")
-          .single();
-
+        const { data, error } = await supabase.from("tbAV1").insert([payload]).select("id").single();
         if (error) throw new Error(error.message);
         savedId = String(data.id);
       }
