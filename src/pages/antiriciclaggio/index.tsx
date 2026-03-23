@@ -500,7 +500,7 @@ export default function AntiriciclaggioPage() {
                           av4Info?.Av4InviatoCL ? "text-green-600" : "text-red-600"
                         }`}
                       >
-                        {av4Info?.Av4InviatoCL ? "✔" : "✖"}
+                        {av4Info?.Av4InviatoCL ? "Sì" : "No"}
                       </td>
 
                       <td className="p-3 text-center">
