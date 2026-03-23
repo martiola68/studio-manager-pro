@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { getStudioId } from "@/services/getStudioId";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type RespAVRow = {
   id: string;
@@ -20,22 +24,20 @@ export default function ResponsabiliAVPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  async function getStudioId() {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("studio_id");
-  }
-
-  async function loadRows() {
+  const loadRows = async () => {
     setLoading(true);
+    setError(null);
+
     try {
+      const supabase = getSupabaseClient() as any;
       const studioId = await getStudioId();
+
       if (!studioId) {
         setRows([]);
-        return;
+        throw new Error("Studio non disponibile.");
       }
-
-      const supabase = getSupabaseClient();
 
       const { data, error } = await supabase
         .from("tbRespAV")
@@ -43,38 +45,40 @@ export default function ResponsabiliAVPage() {
         .eq("studio_id", studioId)
         .order("cognome_nome", { ascending: true });
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
+
       setRows((data || []) as RespAVRow[]);
-    } catch (err) {
-      console.error("Errore caricamento responsabili AV:", err);
-      alert("Errore durante il caricamento dei responsabili adeguata verifica.");
+    } catch (err: any) {
+      setError(err?.message || "Errore durante il caricamento dei responsabili.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleDelete(id: string) {
-    const ok = window.confirm("Vuoi eliminare questo responsabile?");
+  const handleDelete = async (id: string) => {
+    const ok = window.confirm("Vuoi eliminare questo responsabile adeguata verifica?");
     if (!ok) return;
 
     setDeletingId(id);
+    setError(null);
+
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const { error } = await supabase.from("tbRespAV").delete().eq("id", id);
-      if (error) throw error;
 
-      await loadRows();
-    } catch (err) {
-      console.error("Errore eliminazione responsabile:", err);
-      alert("Errore durante l'eliminazione del responsabile.");
+      if (error) throw new Error(error.message);
+
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    } catch (err: any) {
+      setError(err?.message || "Errore durante l'eliminazione.");
     } finally {
       setDeletingId(null);
     }
-  }
+  };
 
   useEffect(() => {
-    loadRows();
+    void loadRows();
   }, []);
 
   const filteredRows = useMemo(() => {
@@ -90,88 +94,98 @@ export default function ResponsabiliAVPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Responsabili adeguata verifica</h1>
-          <p className="text-sm text-gray-500">
-            Elenco dei soggetti incaricati dell’adeguata verifica.
-          </p>
-        </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Responsabili adeguata verifica</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Elenco dei soggetti incaricati dell’adeguata verifica.
+            </p>
+          </div>
 
-        <Link
-          href="/antiriciclaggio/responsabili-av/nuovo"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Nuovo responsabile
-        </Link>
-      </div>
+          <Button asChild>
+            <Link href="/antiriciclaggio/responsabili-av/nuovo">
+              Nuovo responsabile
+            </Link>
+          </Button>
+        </CardHeader>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Cerca per nome, codice fiscale o tipo soggetto..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
-        />
-      </div>
+        <CardContent className="space-y-4">
+          <div>
+            <Input
+              type="text"
+              placeholder="Cerca per nominativo, codice fiscale o tipo soggetto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-gray-50">
-            <tr className="text-left text-sm">
-              <th className="px-4 py-3 font-semibold">Cognome e nome</th>
-              <th className="px-4 py-3 font-semibold">Codice fiscale</th>
-              <th className="px-4 py-3 font-semibold">Tipo soggetto</th>
-              <th className="px-4 py-3 font-semibold text-right">Azioni</th>
-            </tr>
-          </thead>
+          {error && (
+            <p className="text-sm text-red-600">
+              Errore: {error}
+            </p>
+          )}
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">
-                  Caricamento in corso...
-                </td>
-              </tr>
-            ) : filteredRows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">
-                  Nessun responsabile trovato.
-                </td>
-              </tr>
-            ) : (
-              filteredRows.map((row) => (
-                <tr key={row.id} className="border-t border-gray-200 text-sm">
-                  <td className="px-4 py-3">{row.cognome_nome}</td>
-                  <td className="px-4 py-3">{row.codice_fiscale}</td>
-                  <td className="px-4 py-3">{row.TipoSoggetto}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() =>
-                          router.push(`/antiriciclaggio/responsabili-av/nuovo?id=${row.id}`)
-                        }
-                        className="rounded-md border border-gray-300 px-3 py-1.5 hover:bg-gray-50"
-                      >
-                        Modifica
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        disabled={deletingId === row.id}
-                        className="rounded-md border border-red-300 px-3 py-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {deletingId === row.id ? "Eliminazione..." : "Elimina"}
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-hidden rounded-md border">
+            <table className="min-w-full border-collapse text-sm">
+              <thead className="bg-muted/40">
+                <tr className="text-left">
+                  <th className="px-4 py-3 font-medium">Cognome e nome</th>
+                  <th className="px-4 py-3 font-medium">Codice fiscale</th>
+                  <th className="px-4 py-3 font-medium">Tipo soggetto</th>
+                  <th className="px-4 py-3 text-right font-medium">Azioni</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                      Caricamento...
+                    </td>
+                  </tr>
+                ) : filteredRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                      Nessun responsabile trovato.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map((row) => (
+                    <tr key={row.id} className="border-t">
+                      <td className="px-4 py-3">{row.cognome_nome}</td>
+                      <td className="px-4 py-3">{row.codice_fiscale}</td>
+                      <td className="px-4 py-3">{row.TipoSoggetto}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              void router.push(`/antiriciclaggio/responsabili-av/nuovo?id=${row.id}`)
+                            }
+                          >
+                            Modifica
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => void handleDelete(row.id)}
+                            disabled={deletingId === row.id}
+                          >
+                            {deletingId === row.id ? "Eliminazione..." : "Elimina"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
