@@ -481,7 +481,7 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  return (
+    return (
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
@@ -500,16 +500,17 @@ export default function AntiriciclaggioPage() {
           Filtra per società
         </label>
         <select
-  className="w-full rounded-md border px-3 py-2"
-  value={societaFilter}
-  onChange={(e) => setSocietaFilter(e.target.value)}
->
-  {societaOptions.map((soc) => (
-    <option key={soc.id} value={soc.id}>
-      {soc.Denominazione}
-    </option>
-  ))}
-</select>
+          className="w-full rounded-md border px-3 py-2"
+          value={societaFilter}
+          onChange={(e) => setSocietaFilter(e.target.value)}
+        >
+          {societaOptions.map((soc) => (
+            <option key={soc.id} value={soc.id}>
+              {soc.Denominazione}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {loading ? (
         <div>Caricamento...</div>
