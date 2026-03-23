@@ -143,7 +143,7 @@ export default function AntiriciclaggioPage() {
       };
     }
 
-    if (!row.AV4Generato) {
+    if (!getAV4Info(row)?.Av4InviatoCL) {
       return {
         dotClass: "bg-red-500",
         text: "AV4 da generare",
@@ -430,7 +430,6 @@ export default function AntiriciclaggioPage() {
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
                 <th className="p-3 text-center">AV2 generato</th>
-                <th className="p-3 text-center">AV4 generato</th>
                 <th className="p-3 text-center">AV4 inviato a CL</th>
                 <th className="p-3 text-center">Data invio AV4</th>
                 <th className="p-3 text-center">AV4 confermato</th>
@@ -441,7 +440,7 @@ export default function AntiriciclaggioPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="p-4 text-center">
+                  <td colSpan={11} className="p-4 text-center">
                     Nessuna pratica presente
                   </td>
                 </tr>
@@ -492,14 +491,6 @@ export default function AntiriciclaggioPage() {
                         }`}
                       >
                         {row.AV2Generato ? "Sì" : "No"}
-                      </td>
-
-                      <td
-                        className={`p-3 text-center font-semibold ${
-                          row.AV4Generato ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {row.AV4Generato ? "Sì" : "No"}
                       </td>
 
                       <td
