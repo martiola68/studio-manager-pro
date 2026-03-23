@@ -1,164 +1,150 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router";
+import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { getStudioId } from "@/services/getStudioId";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-
-type Societa = {
+type SocietaRow = {
   id: string;
   Denominazione: string;
   codice_fiscale: string;
 };
 
-export default function ResponsabiliAVSocietaIndex() {
-  const router = useRouter();
-  const supabase = getSupabaseClient();
-
-  const [societa, setSocieta] = useState<Societa[]>([]);
+export default function ResponsabiliAVSocietaIndexPage() {
+  const [rows, setRows] = useState<SocietaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [studioId, setStudioId] = useState<string | null>(null);
-
-  // 🔹 Recupero studio_id (stessa logica usata nel progetto)
-  const loadStudio = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const userId = session?.user?.id;
-
-    if (!userId) return;
-
-    const { data } = await supabase
-      .from("tb_studi") // ⚠️ usa lo stesso nome tabella che già utilizzi nel progetto
-      .select("id")
-      .eq("user_id", userId)
-      .single();
-
-    if (data) {
-      setStudioId(data.id);
-      loadSocieta(data.id);
-    }
-  };
-
-  // 🔹 Caricamento elenco società
-  const loadSocieta = async (studio_id: string) => {
+  const loadRows = async () => {
     setLoading(true);
+    setError(null);
 
-    const { data, error } = await supabase
-      .from("tbRespAVSocieta")
-      .select("id, Denominazione, codice_fiscale")
-      .eq("studio_id", studio_id)
-      .order("Denominazione", { ascending: true });
+    try {
+      const studioId = await getStudioId();
 
-    if (error) {
-      alert("Errore caricamento società");
-      console.error(error);
-    } else {
-      setSocieta(data || []);
+      if (!studioId) {
+        throw new Error("Studio non disponibile.");
+      }
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase
+        .from("tbRespAVSocieta")
+        .select("id, Denominazione, codice_fiscale")
+        .eq("studio_id", studioId)
+        .order("Denominazione", { ascending: true });
+
+      if (error) throw new Error(error.message);
+
+      setRows(data || []);
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento società.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
-  // 🔹 Elimina società
   const handleDelete = async (id: string) => {
-    if (!confirm("Vuoi eliminare questa società?")) return;
+    const conferma = window.confirm("Vuoi eliminare questa società?");
+    if (!conferma) return;
 
-    const { error } = await supabase
-      .from("tbRespAVSocieta")
-      .delete()
-      .eq("id", id);
+    setError(null);
 
-    if (error) {
-      toast.error("Errore eliminazione");
-      console.error(error);
-    } else {
-      alert("Società eliminata");
-      if (studioId) loadSocieta(studioId);
+    try {
+      const supabase = getSupabaseClient() as any;
+
+      const { error } = await supabase
+        .from("tbRespAVSocieta")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw new Error(error.message);
+
+      await loadRows();
+    } catch (err: any) {
+      setError(err?.message || "Errore eliminazione società.");
     }
   };
 
   useEffect(() => {
-    loadStudio();
+    void loadRows();
   }, []);
 
   return (
     <div className="p-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">
-          Società Responsabili Adeguata Verifica
-        </h1>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Società responsabili adeguata verifica</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Elenco delle società collegate ai responsabili dell’adeguata verifica.
+            </p>
+          </div>
 
-        <Button
-          onClick={() =>
-            router.push(
-              "/antiriciclaggio/responsabili-av-societa/nuovo"
-            )
-          }
-        >
-          + Nuova società
-        </Button>
-      </div>
+          <Button asChild>
+            <Link href="/antiriciclaggio/responsabili-av-societa/nuovo">
+              Nuova società
+            </Link>
+          </Button>
+        </CardHeader>
 
-      {/* TABELLA */}
-      <div className="bg-white rounded-xl shadow border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="text-left p-3">Denominazione</th>
-              <th className="text-left p-3">Codice Fiscale</th>
-              <th className="text-right p-3">Azioni</th>
-            </tr>
-          </thead>
+        <CardContent>
+          {loading ? (
+            <p>Caricamento...</p>
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nessuna società presente.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-left">
+                    <th className="px-4 py-3 text-sm font-medium">Denominazione</th>
+                    <th className="px-4 py-3 text-sm font-medium">Codice fiscale</th>
+                    <th className="px-4 py-3 text-sm font-medium text-right">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} className="border-b">
+                      <td className="px-4 py-3 text-sm">{row.Denominazione}</td>
+                      <td className="px-4 py-3 text-sm">{row.codice_fiscale}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <Button asChild type="button" variant="outline" size="sm">
+                            <Link
+                              href={`/antiriciclaggio/responsabili-av-societa/nuovo?id=${row.id}`}
+                            >
+                              Modifica
+                            </Link>
+                          </Button>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3} className="p-4 text-center">
-                  Caricamento...
-                </td>
-              </tr>
-            ) : societa.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="p-4 text-center">
-                  Nessuna società presente
-                </td>
-              </tr>
-            ) : (
-              societa.map((s) => (
-                <tr key={s.id} className="border-t">
-                  <td className="p-3">{s.Denominazione}</td>
-                  <td className="p-3">{s.codice_fiscale}</td>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => void handleDelete(row.id)}
+                          >
+                            Elimina
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-                  <td className="p-3 text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        router.push(
-                          `/antiriciclaggio/responsabili-av-societa/nuovo?id=${s.id}`
-                        )
-                      }
-                    >
-                      Modifica
-                    </Button>
-
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDelete(s.id)}
-                    >
-                      Elimina
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          {error && (
+            <p className="mt-4 text-sm text-red-600">
+              Errore: {error}
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
