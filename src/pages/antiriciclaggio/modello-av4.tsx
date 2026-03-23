@@ -730,14 +730,15 @@ export default function ModelloAV4() {
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const { error } = await supabase
-      .from("tbAV4")
-      .update({
-        public_token: token,
-        public_enabled: true,
-        public_sent_at: new Date().toISOString(),
-        compilato_da_cliente: false,
-      })
-      .eq("id", av4Id);
+  .from("tbAV4")
+  .update({
+    public_token: token,
+    public_enabled: true,
+    public_sent_at: new Date().toISOString(),
+    compilato_da_cliente: false,
+    Av4InviatoCL: true,
+  })
+  .eq("id", av4Id);;
 
     if (error) {
       console.error("Errore aggiornamento AV4 pubblico:", error);
