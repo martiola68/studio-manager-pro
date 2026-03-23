@@ -909,13 +909,15 @@ function isDuplicateTitolare(
   });
 }
   
-  async function salvaAV4() {
-    if (!validateBeforeSave()) return;
+ async function salvaAV4() {
+  if (!validateBeforeSave()) return;
 
-    const supabase = getSupabaseClient() as any;
+  const supabase = getSupabaseClient() as any;
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
+
+    await validaTitolariPrimaDelSalvataggio();
 
       const payload = {
         studio_id: form.studio_id,
@@ -1032,7 +1034,7 @@ function isDuplicateTitolare(
 <FormStickyHeader
   title="Modello AV4"
   subtitle="Dichiarazione del Cliente"
-  onSave={handleSave}
+  onSave={salvaAV4}
   onPrint={handlePrint}
   onClose={handleChiudiModello}
   onSendToClient={handleInvioPubblico}
