@@ -22,9 +22,13 @@ function validateCodiceFiscaleGiuridico(value: string): boolean {
   for (let i = 0; i < 11; i++) {
     let n = parseInt(cf.charAt(i), 10);
 
+    if (Number.isNaN(n)) return false;
+
     if (i % 2 === 0) {
+      // posizione 1,3,5... lato umano
       n = n;
     } else {
+      // posizione 2,4,6...
       n = n * 2;
       if (n > 9) n -= 9;
     }
@@ -39,6 +43,8 @@ export default function NuovaSocietaRespAVPage() {
   const router = useRouter();
   const { id } = router.query;
 
+  const isEdit = typeof id === "string" && id.length > 0;
+
   const [formData, setFormData] = useState<FormDataType>({
     Denominazione: "",
     codice_fiscale: "",
@@ -48,9 +54,10 @@ export default function NuovaSocietaRespAVPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isEdit = typeof id === "string" && id.length > 0;
-
-  const updateField = <K extends keyof FormDataType>(field: K, value: FormDataType[K]) => {
+  const updateField = <K extends keyof FormDataType>(
+    field: K,
+    value: FormDataType[K]
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -66,7 +73,7 @@ export default function NuovaSocietaRespAVPage() {
 
       const { data, error } = await supabase
         .from("tbRespAVSocieta")
-        .select("*")
+        .select("id, Denominazione, codice_fiscale")
         .eq("id", recordId)
         .single();
 
@@ -86,10 +93,10 @@ export default function NuovaSocietaRespAVPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (!id || typeof id !== "string") return;
+    if (!isEdit) return;
 
-    void loadRecord(id);
-  }, [router.isReady, id]);
+    void loadRecord(id as string);
+  }, [router.isReady, isEdit, id]);
 
   const checkDuplicate = async (
     studioId: string,
@@ -112,7 +119,7 @@ export default function NuovaSocietaRespAVPage() {
 
     if (error) throw new Error(error.message);
 
-    return !!data && data.length > 0;
+    return Array.isArray(data) && data.length > 0;
   };
 
   const handleSave = async () => {
@@ -180,7 +187,7 @@ export default function NuovaSocietaRespAVPage() {
         if (error) throw new Error(error.message);
       }
 
-      void router.push("/antiriciclaggio/responsabili-av-societa");
+      await router.push("/antiriciclaggio/responsabili-av-societa");
     } catch (err: any) {
       setError(err?.message || "Errore salvataggio società.");
     } finally {
@@ -197,7 +204,8 @@ export default function NuovaSocietaRespAVPage() {
               {isEdit ? "Modifica società" : "Nuova società"}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Inserimento della società collegata ai responsabili dell’adeguata verifica.
+              Inserimento della società collegata ai responsabili
+              dell’adeguata verifica.
             </p>
           </div>
 
@@ -221,7 +229,9 @@ export default function NuovaSocietaRespAVPage() {
                   <Input
                     type="text"
                     value={formData.Denominazione}
-                    onChange={(e) => updateField("Denominazione", e.target.value)}
+                    onChange={(e) =>
+                      updateField("Denominazione", e.target.value)
+                    }
                     placeholder="Es. Studio Rossi SRL"
                   />
                 </div>
@@ -234,7 +244,12 @@ export default function NuovaSocietaRespAVPage() {
                     type="text"
                     maxLength={11}
                     value={formData.codice_fiscale}
-                    onChange={(e) => updateField("codice_fiscale", e.target.value)}
+                    onChange={(e) =>
+                      updateField(
+                        "codice_fiscale",
+                        e.target.value.replace(/\D/g, "")
+                      )
+                    }
                     placeholder="Codice fiscale società"
                   />
                 </div>
