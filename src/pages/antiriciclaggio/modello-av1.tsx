@@ -913,7 +913,6 @@ export default function ModelloAV1Page() {
                       Responsabile adeguata verifica
                     </label>
                     <select
-                      <select
                       className="w-full rounded-md border-2 border-red-500 px-3 py-2 focus:border-red-600 focus:outline-none"
                       value={formData.incaricato_adeguata_verifica_id || ""}
                       onChange={(e) =>
