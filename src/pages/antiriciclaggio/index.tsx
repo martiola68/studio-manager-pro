@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { getStudioId } from "@/services/getStudioId";
 import { Trash2 } from "lucide-react";
 
 type Cliente = {
@@ -18,10 +19,23 @@ type AV4Info = {
   compilato_da_cliente?: boolean | null;
 };
 
+type ResponsabileAV = {
+  id: string;
+  cognome_nome?: string | null;
+  societa_id?: string | null;
+};
+
+type SocietaOption = {
+  id: string;
+  Denominazione: string;
+  codice_fiscale?: string | null;
+};
+
 type AV1Row = {
   id: string;
   studio_id?: string | null;
   cliente_id?: string | null;
+  incaricato_adeguata_verifica_id?: string | null;
   DataVerifica?: string | null;
   ScadenzaVerifica?: string | null;
   AV1Conferma?: boolean | null;
@@ -29,6 +43,7 @@ type AV1Row = {
   AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
   av4_info?: AV4Info | AV4Info[] | null;
+  responsabile?: ResponsabileAV | ResponsabileAV[] | null;
 };
 
 export default function AntiriciclaggioPage() {
@@ -37,6 +52,9 @@ export default function AntiriciclaggioPage() {
   const [rows, setRows] = useState<AV1Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState<string | null>(null);
+
+  const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
+  const [societaFilter, setSocietaFilter] = useState("");
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -87,6 +105,16 @@ export default function AntiriciclaggioPage() {
     return Array.isArray(row.av4_info) ? row.av4_info[0] : row.av4_info;
   };
 
+  const getCliente = (row: AV1Row): Cliente | null => {
+    if (!row.tbclienti) return null;
+    return Array.isArray(row.tbclienti) ? row.tbclienti[0] : row.tbclienti;
+  };
+
+  const getResponsabile = (row: AV1Row): ResponsabileAV | null => {
+    if (!row.responsabile) return null;
+    return Array.isArray(row.responsabile) ? row.responsabile[0] : row.responsabile;
+  };
+
   const getRowClassName = (row: AV1Row) => {
     const scadenzaStatus = getScadenzaStatus(row.ScadenzaVerifica);
 
@@ -102,8 +130,8 @@ export default function AntiriciclaggioPage() {
   const getScadenzaCellClassName = (dateString?: string | null) => {
     const status = getScadenzaStatus(dateString);
 
-    if (status === "expired") return "text-red-700 font-bold";
-    if (status === "warning") return "text-orange-600 font-semibold";
+    if (status === "expired") return "font-bold text-red-700";
+    if (status === "warning") return "font-semibold text-orange-600";
 
     return "";
   };
@@ -115,7 +143,7 @@ export default function AntiriciclaggioPage() {
       return {
         dotClass: "bg-red-500",
         text: "Scaduta",
-        className: "text-red-700 font-bold",
+        className: "font-bold text-red-700",
       };
     }
 
@@ -123,7 +151,7 @@ export default function AntiriciclaggioPage() {
       return {
         dotClass: "bg-orange-500",
         text: "In scadenza",
-        className: "text-orange-600 font-semibold",
+        className: "font-semibold text-orange-600",
       };
     }
 
@@ -131,7 +159,7 @@ export default function AntiriciclaggioPage() {
       return {
         dotClass: "bg-orange-500",
         text: "AV1 da confermare",
-        className: "text-orange-700 font-semibold",
+        className: "font-semibold text-orange-700",
       };
     }
 
@@ -139,7 +167,7 @@ export default function AntiriciclaggioPage() {
       return {
         dotClass: "bg-red-500",
         text: "AV2 da generare",
-        className: "text-red-700 font-semibold",
+        className: "font-semibold text-red-700",
       };
     }
 
@@ -147,14 +175,14 @@ export default function AntiriciclaggioPage() {
       return {
         dotClass: "bg-red-500",
         text: "AV4 da generare",
-        className: "text-red-700 font-semibold",
+        className: "font-semibold text-red-700",
       };
     }
 
     return {
       dotClass: "bg-green-500",
       text: "Completa",
-      className: "text-green-700 font-semibold",
+      className: "font-semibold text-green-700",
     };
   };
 
@@ -162,6 +190,27 @@ export default function AntiriciclaggioPage() {
     return enabled
       ? "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]"
       : "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
+  };
+
+  const loadSocietaOptions = async () => {
+    try {
+      const studioId = await getStudioId();
+      if (!studioId) return;
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase
+        .from("tbRespAVSocieta")
+        .select("id, Denominazione, codice_fiscale")
+        .eq("studio_id", studioId)
+        .order("Denominazione", { ascending: true });
+
+      if (error) throw new Error(error.message);
+
+      setSocietaOptions(data || []);
+    } catch (err: any) {
+      console.error("Errore caricamento società:", err?.message || err);
+    }
   };
 
   const loadRows = async () => {
@@ -177,6 +226,7 @@ export default function AntiriciclaggioPage() {
           id,
           studio_id,
           cliente_id,
+          incaricato_adeguata_verifica_id,
           DataVerifica,
           ScadenzaVerifica,
           AV1Conferma,
@@ -194,6 +244,11 @@ export default function AntiriciclaggioPage() {
             Av4InviatoCL,
             public_sent_at,
             compilato_da_cliente
+          ),
+          responsabile:tbRespAV (
+            id,
+            cognome_nome,
+            societa_id
           )
         `)
         .order("DataVerifica", { ascending: false });
@@ -216,13 +271,18 @@ export default function AntiriciclaggioPage() {
   };
 
   useEffect(() => {
-    loadRows();
+    void loadSocietaOptions();
+    void loadRows();
   }, []);
 
-  const getCliente = (row: AV1Row): Cliente | null => {
-    if (!row.tbclienti) return null;
-    return Array.isArray(row.tbclienti) ? row.tbclienti[0] : row.tbclienti;
-  };
+  const filteredRows = useMemo(() => {
+    if (!societaFilter) return rows;
+
+    return rows.filter((row) => {
+      const responsabile = getResponsabile(row);
+      return responsabile?.societa_id === societaFilter;
+    });
+  }, [rows, societaFilter]);
 
   const handleNuovoAV1 = () => {
     router.push("/antiriciclaggio/modello-av1");
@@ -404,8 +464,10 @@ export default function AntiriciclaggioPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
+        </div>
 
         <button
           type="button"
@@ -414,6 +476,24 @@ export default function AntiriciclaggioPage() {
         >
           Nuova pratica
         </button>
+      </div>
+
+      <div className="mb-4 max-w-md">
+        <label className="mb-1 block text-sm font-medium">
+          Filtra per società
+        </label>
+        <select
+          className="w-full rounded-md border px-3 py-2"
+          value={societaFilter}
+          onChange={(e) => setSocietaFilter(e.target.value)}
+        >
+          <option value="">Tutte le società</option>
+          {societaOptions.map((soc) => (
+            <option key={soc.id} value={soc.id}>
+              {soc.Denominazione}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -430,9 +510,11 @@ export default function AntiriciclaggioPage() {
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
                 <th className="p-3 text-center">AV2 generato</th>
-                <th className="p-2 text-center w-[90px] leading-tight">
-  AV4<br />inviato
-</th>
+                <th className="w-[90px] p-2 text-center leading-tight">
+                  AV4
+                  <br />
+                  inviato
+                </th>
                 <th className="p-3 text-center">Data invio AV4</th>
                 <th className="p-3 text-center">AV4 confermato</th>
                 <th className="p-3 text-center">Azioni</th>
@@ -440,14 +522,14 @@ export default function AntiriciclaggioPage() {
             </thead>
 
             <tbody>
-              {rows.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="p-4 text-center">
                     Nessuna pratica presente
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                filteredRows.map((row) => {
                   const cliente = getCliente(row);
                   const av4Info = getAV4Info(row);
                   const nomeCliente =
@@ -480,7 +562,7 @@ export default function AntiriciclaggioPage() {
                       </td>
 
                       <td
-                          className={`p-2 text-center text-xs font-semibold ${
+                        className={`p-2 text-center text-xs font-semibold ${
                           row.AV1Conferma ? "text-green-600" : "text-red-600"
                         }`}
                       >
@@ -525,7 +607,7 @@ export default function AntiriciclaggioPage() {
                             )}`}
                             title="Apri AV1"
                           >
-                            <span className="text-blue-600 text-xs font-semibold">
+                            <span className="text-xs font-semibold text-blue-600">
                               AV1
                             </span>
                           </button>
@@ -539,7 +621,7 @@ export default function AntiriciclaggioPage() {
                             )}`}
                             title="Apri AV2"
                           >
-                            <span className="text-blue-600 text-xs font-semibold">
+                            <span className="text-xs font-semibold text-blue-600">
                               AV2
                             </span>
                           </button>
@@ -553,18 +635,21 @@ export default function AntiriciclaggioPage() {
                             )}`}
                             title="Apri AV4"
                           >
-                            <span className="text-blue-600 text-xs font-semibold">
+                            <span className="text-xs font-semibold text-blue-600">
                               AV4
                             </span>
                           </button>
 
                           <button
-  type="button"
-  onClick={() => handleEliminaCompleto(row.id)}
-  className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105 ml-2"
-  title="Elimina record completo"
->
-                            <Trash2 className="h-4 w-4 text-red-500" strokeWidth={2.2} />
+                            type="button"
+                            onClick={() => handleEliminaCompleto(row.id)}
+                            className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
+                            title="Elimina record completo"
+                          >
+                            <Trash2
+                              className="h-4 w-4 text-red-500"
+                              strokeWidth={2.2}
+                            />
                           </button>
                         </div>
                       </td>
