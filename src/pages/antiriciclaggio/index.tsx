@@ -10,6 +10,14 @@ type Cliente = {
   codice_fiscale?: string | null;
 };
 
+type AV4Info = {
+  id?: string;
+  av1_id?: string | null;
+  Av4InviatoCL?: boolean | null;
+  public_sent_at?: string | null;
+  compilato_da_cliente?: boolean | null;
+};
+
 type AV1Row = {
   id: string;
   studio_id?: string | null;
@@ -20,6 +28,7 @@ type AV1Row = {
   AV2Generato?: boolean | null;
   AV4Generato?: boolean | null;
   tbclienti?: Cliente | Cliente[] | null;
+  av4_info?: AV4Info | AV4Info[] | null;
 };
 
 export default function AntiriciclaggioPage() {
@@ -42,6 +51,15 @@ export default function AntiriciclaggioPage() {
     return `${d}/${m}/${y}`;
   };
 
+  const formatDateTime = (dateString?: string | null) => {
+    if (!dateString) return "-";
+
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return date.toLocaleString("it-IT");
+  };
+
   const getScadenzaStatus = (dateString?: string | null) => {
     if (!dateString) return "none";
 
@@ -62,6 +80,11 @@ export default function AntiriciclaggioPage() {
     if (diffDays < 0) return "expired";
     if (diffDays <= 90) return "warning";
     return "ok";
+  };
+
+  const getAV4Info = (row: AV1Row): AV4Info | null => {
+    if (!row.av4_info) return null;
+    return Array.isArray(row.av4_info) ? row.av4_info[0] : row.av4_info;
   };
 
   const getRowClassName = (row: AV1Row) => {
@@ -106,9 +129,9 @@ export default function AntiriciclaggioPage() {
 
     if (!row.AV1Conferma) {
       return {
-        dotClass: "bg-red-500",
+        dotClass: "bg-orange-500",
         text: "AV1 da confermare",
-        className: "text-red-700 font-semibold",
+        className: "text-orange-700 font-semibold",
       };
     }
 
@@ -164,6 +187,13 @@ export default function AntiriciclaggioPage() {
             cod_cliente,
             ragione_sociale,
             codice_fiscale
+          ),
+          av4_info:tbAV4 (
+            id,
+            av1_id,
+            Av4InviatoCL,
+            public_sent_at,
+            compilato_da_cliente
           )
         `)
         .order("DataVerifica", { ascending: false });
@@ -401,6 +431,9 @@ export default function AntiriciclaggioPage() {
                 <th className="p-3 text-center">AV1 conferma</th>
                 <th className="p-3 text-center">AV2 generato</th>
                 <th className="p-3 text-center">AV4 generato</th>
+                <th className="p-3 text-center">AV4 inviato a CL</th>
+                <th className="p-3 text-center">Data invio AV4</th>
+                <th className="p-3 text-center">AV4 confermato</th>
                 <th className="p-3 text-center">Azioni</th>
               </tr>
             </thead>
@@ -408,13 +441,14 @@ export default function AntiriciclaggioPage() {
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-4 text-center">
+                  <td colSpan={12} className="p-4 text-center">
                     Nessuna pratica presente
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => {
                   const cliente = getCliente(row);
+                  const av4Info = getAV4Info(row);
                   const nomeCliente =
                     cliente?.ragione_sociale || cliente?.cod_cliente || "-";
                   const statoInfo = getStatoInfo(row);
@@ -468,59 +502,79 @@ export default function AntiriciclaggioPage() {
                         {row.AV4Generato ? "Sì" : "No"}
                       </td>
 
-                     <td className="p-3">
-  <div className="flex flex-wrap items-center justify-center gap-3">
+                      <td
+                        className={`p-3 text-center font-semibold ${
+                          av4Info?.Av4InviatoCL ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {av4Info?.Av4InviatoCL ? "Sì" : "No"}
+                      </td>
 
-    {/* AV1 */}
-    <button
-      type="button"
-      onClick={() => handleApriAV1(row.id)}
-      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
-        !!row.AV1Conferma
-      )}`}
-      title="Apri AV1"
-    >
-      <span className="text-blue-600 text-xs font-semibold">AV1</span>
-    </button>
+                      <td className="p-3 text-center">
+                        {formatDateTime(av4Info?.public_sent_at)}
+                      </td>
 
-    {/* AV2 */}
-    <button
-      type="button"
-      onClick={() => handleApriAV2(row)}
-      disabled={workingId === row.id}
-      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
-        !!row.AV2Generato
-      )}`}
-      title="Apri AV2"
-    >
-      <span className="text-blue-600 text-xs font-semibold">AV2</span>
-    </button>
+                      <td
+                        className={`p-3 text-center font-semibold ${
+                          av4Info?.compilato_da_cliente ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {av4Info?.compilato_da_cliente ? "Sì" : "No"}
+                      </td>
 
-    {/* AV4 */}
-    <button
-      type="button"
-      onClick={() => handleApriAV4(row)}
-      disabled={workingId === row.id}
-      className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
-        !!row.AV4Generato
-      )}`}
-      title="Apri AV4"
-    >
-    <span className="text-blue-600 text-xs font-semibold">AV4</span>
-    </button>
+                      <td className="p-3">
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleApriAV1(row.id)}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 ${getIconBorderClass(
+                              !!row.AV1Conferma
+                            )}`}
+                            title="Apri AV1"
+                          >
+                            <span className="text-blue-600 text-xs font-semibold">
+                              AV1
+                            </span>
+                          </button>
 
-    {/* CESTINO */}
-        <button
-          type="button"
-          onClick={() => handleEliminaCompleto(row.id)}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
-          title="Elimina record completo"
-        >
-          <Trash2 className="h-4 w-4 text-red-500" strokeWidth={2.2} />
-        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApriAV2(row)}
+                            disabled={workingId === row.id}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
+                              !!row.AV2Generato
+                            )}`}
+                            title="Apri AV2"
+                          >
+                            <span className="text-blue-600 text-xs font-semibold">
+                              AV2
+                            </span>
+                          </button>
 
-  </div>
-</td>
+                          <button
+                            type="button"
+                            onClick={() => handleApriAV4(row)}
+                            disabled={workingId === row.id}
+                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
+                              !!row.AV4Generato
+                            )}`}
+                            title="Apri AV4"
+                          >
+                            <span className="text-blue-600 text-xs font-semibold">
+                              AV4
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleEliminaCompleto(row.id)}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
+                            title="Elimina record completo"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" strokeWidth={2.2} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
