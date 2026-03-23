@@ -624,6 +624,11 @@ export default function ModelloAV1Page() {
       return;
     }
 
+    if (!formData.incaricato_adeguata_verifica_id) {
+    alert("Seleziona l'incaricato adeguata verifica.");
+      return;
+        }
+
     setSaving(true);
     setError(null);
 
@@ -748,7 +753,7 @@ export default function ModelloAV1Page() {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-sm font-medium">Cliente</label>
                       <select
-                        className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border-2 border-red-500 px-3 py-2 focus:border-red-600 focus:outline-none"
                         value={formData.cliente_id}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -904,7 +909,7 @@ export default function ModelloAV1Page() {
               <CardContent>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium">
+                    <label className="mb-1 block text-sm font-medium text-red-600">
                       Responsabile adeguata verifica
                     </label>
                     <select
