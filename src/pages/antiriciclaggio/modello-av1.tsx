@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const BUCKET_NAME = "allegati";
 
 type Cliente = {
   id: string;
@@ -31,6 +35,7 @@ type FormDataType = {
   ScadenzaVerifica: string;
   AV1Conferma?: boolean;
   AV4Generato?: boolean;
+  allegato_av1_firmato?: string;
 };
 
 const sectionTitles: Record<string, string> = {
@@ -129,6 +134,7 @@ const initialFormData: FormDataType = {
   ScadenzaVerifica: "",
   AV1Conferma: false,
   AV4Generato: false,
+  allegato_av1_firmato: "",
 };
 
 function addMonths(dateString: string, months: number) {
@@ -242,6 +248,8 @@ const defaultSectionScores = {
 export default function ModelloAV1Page() {
   const router = useRouter();
   const { id } = router.query;
+  const supabase = getSupabaseClient() as any;
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
@@ -251,6 +259,7 @@ export default function ModelloAV1Page() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const punteggioPrestazione = normalizeScore(
@@ -297,11 +306,11 @@ export default function ModelloAV1Page() {
     setLoading(true);
     setError(null);
 
-    const { data: clientiData, error: clientiError } = await (supabase as any)
+    const { data: clientiData, error: clientiError } = await supabase
       .from("tbclienti")
       .select("*");
 
-    const { data: prestazioniData, error: prestazioniError } = await (supabase as any)
+    const { data: prestazioniData, error: prestazioniError } = await supabase
       .from("tbElencoPrestAR")
       .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
       .order("TipoPrestazioneAR", { ascending: true });
@@ -325,7 +334,7 @@ export default function ModelloAV1Page() {
   const loadRecordById = async (recordId: string) => {
     setError(null);
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("tbAV1")
       .select("*")
       .eq("id", recordId)
@@ -350,6 +359,7 @@ export default function ModelloAV1Page() {
       ScadenzaVerifica: normalizeDateValue(data.ScadenzaVerifica),
       AV1Conferma: normalizeBoolean(data.AV1Conferma),
       AV4Generato: normalizeBoolean(data.AV4Generato),
+      allegato_av1_firmato: data.allegato_av1_firmato ?? "",
       A1: normalizeScore(data.A1),
       A2: normalizeScore(data.A2),
       A3: normalizeScore(data.A3),
@@ -364,14 +374,14 @@ export default function ModelloAV1Page() {
   };
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
     if (!id || typeof id !== "string") return;
 
-    loadRecordById(id);
+    void loadRecordById(id);
   }, [router.isReady, id]);
 
   const getClienteLabel = (cliente: Cliente) => {
@@ -413,7 +423,7 @@ export default function ModelloAV1Page() {
   };
 
   const handleChiudiModello = () => {
-    router.push("/antiriciclaggio");
+    void router.push("/antiriciclaggio");
   };
 
   const handlePrint = () => {
@@ -422,7 +432,70 @@ export default function ModelloAV1Page() {
       alert("Salva prima il record AV1, poi potrai stamparlo.");
       return;
     }
-    router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
+    void router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
+  };
+
+  const handleUploadFirmato = async (file: File) => {
+    try {
+      if (!formData.studio_id) {
+        alert("Studio non disponibile.");
+        return;
+      }
+
+      setUploadingFirmato(true);
+      setError(null);
+
+      const safeName = file.name.replace(/\s+/g, "_");
+      const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(path, file, {
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Errore caricamento file firmato.");
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        allegato_av1_firmato: path,
+      }));
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento file firmato.");
+    } finally {
+      setUploadingFirmato(false);
+    }
+  };
+
+  const handleOpenFirmato = async () => {
+    try {
+      if (!formData.allegato_av1_firmato) return;
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(formData.allegato_av1_firmato, 60);
+
+      if (error) {
+        throw new Error(error.message || "Errore apertura file.");
+      }
+
+      if (!data?.signedUrl) {
+        throw new Error("URL firmato non disponibile.");
+      }
+
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      setError(err?.message || "Errore apertura file.");
+    }
+  };
+
+  const handleRemoveFirmato = () => {
+    setFormData((prev) => ({
+      ...prev,
+      allegato_av1_firmato: "",
+    }));
   };
 
   const handleSave = async () => {
@@ -456,6 +529,7 @@ export default function ModelloAV1Page() {
       ValRischioIner: formData.ValRischioIner,
       DataVerifica: formData.DataVerifica,
       ScadenzaVerifica: ScadenzaVerificaCalcolata,
+      allegato_av1_firmato: formData.allegato_av1_firmato || null,
       A1: normalizeScore(formData.A1),
       A2: normalizeScore(formData.A2),
       A3: normalizeScore(formData.A3),
@@ -481,10 +555,7 @@ export default function ModelloAV1Page() {
     let savedId = formData.id || "";
 
     if (formData.id) {
-      const { error } = await (supabase as any)
-        .from("tbAV1")
-        .update(payload)
-        .eq("id", formData.id);
+      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
 
       if (error) {
         setError(error.message);
@@ -492,7 +563,7 @@ export default function ModelloAV1Page() {
         return;
       }
     } else {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("tbAV1")
         .insert([payload])
         .select("id")
@@ -528,7 +599,7 @@ export default function ModelloAV1Page() {
     setSaving(false);
 
     if (savedId) {
-      router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+      void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
     }
   };
 
@@ -825,6 +896,75 @@ export default function ModelloAV1Page() {
                       readOnly
                     />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Allegato AV1 firmato</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium">
+                    File firmato (digitale o autografo)
+                  </label>
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.p7m,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        void handleUploadFirmato(file);
+                      }
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <Input
+                    type="text"
+                    readOnly
+                    value={formData.allegato_av1_firmato ? "File allegato" : ""}
+                    placeholder="Nessun file allegato"
+                    className="cursor-default"
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={uploadingFirmato}
+                    >
+                      {uploadingFirmato ? "Caricamento..." : "Allega file"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleOpenFirmato}
+                      disabled={!formData.allegato_av1_firmato}
+                    >
+                      Apri
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleRemoveFirmato}
+                      disabled={!formData.allegato_av1_firmato || uploadingFirmato}
+                    >
+                      Rimuovi
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Formati consentiti: PDF, P7M, JPG, JPEG, PNG
+                  </p>
                 </div>
               </CardContent>
             </Card>
