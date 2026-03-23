@@ -15,6 +15,12 @@ type FormDataType = {
   societa_id: string;
 };
 
+type SocietaOption = {
+  id: string;
+  Denominazione: string;
+  codice_fiscale: string;
+};
+
 const TIPO_SOGGETTO_OPTIONS = [
   "Professionista",
   "Intermediario bancario e finanziario",
@@ -26,7 +32,10 @@ export default function NuovoResponsabileAVPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const isEdit = useMemo(() => typeof id === "string" && id.length > 0, [id]);
+  const isEdit = useMemo(
+    () => typeof id === "string" && id.length > 0,
+    [id]
+  );
 
   const [formData, setFormData] = useState<FormDataType>({
     cognome_nome: "",
@@ -35,21 +44,50 @@ export default function NuovoResponsabileAVPage() {
     societa_id: "",
   });
 
+  const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cf = useMemo(() => normalizeCF(formData.codice_fiscale), [formData.codice_fiscale]);
+  const cf = useMemo(
+    () => normalizeCF(formData.codice_fiscale),
+    [formData.codice_fiscale]
+  );
 
   const cfOk = useMemo(() => {
     return cf.length === 16 ? isValidCF(cf) : false;
   }, [cf]);
 
-  const updateField = <K extends keyof FormDataType>(field: K, value: FormDataType[K]) => {
+  const updateField = <K extends keyof FormDataType>(
+    field: K,
+    value: FormDataType[K]
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const loadSocietaOptions = async () => {
+    try {
+      const studioId = await getStudioId();
+
+      if (!studioId) return;
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase
+        .from("tbRespAVSocieta")
+        .select("id, Denominazione, codice_fiscale")
+        .eq("studio_id", studioId)
+        .order("Denominazione", { ascending: true });
+
+      if (error) throw new Error(error.message);
+
+      setSocietaOptions(data || []);
+    } catch (err: any) {
+      console.error("Errore caricamento società:", err?.message || err);
+    }
   };
 
   const loadRecord = async (recordId: string) => {
@@ -83,12 +121,19 @@ export default function NuovoResponsabileAVPage() {
 
   useEffect(() => {
     if (!router.isReady) return;
+
+    void loadSocietaOptions();
+
     if (!id || typeof id !== "string") return;
 
     void loadRecord(id);
   }, [router.isReady, id]);
 
-  const checkDuplicate = async (studioId: string, codiceFiscale: string, currentId?: string) => {
+  const checkDuplicate = async (
+    studioId: string,
+    codiceFiscale: string,
+    currentId?: string
+  ) => {
     const supabase = getSupabaseClient() as any;
 
     let query = supabase
@@ -174,12 +219,14 @@ export default function NuovoResponsabileAVPage() {
 
         if (error) throw new Error(error.message);
       } else {
-        const { error } = await supabase.from("tbRespAV").insert([payload]);
+        const { error } = await supabase
+          .from("tbRespAV")
+          .insert([payload]);
 
         if (error) throw new Error(error.message);
       }
 
-      void router.push("/antiriciclaggio/responsabili-av");
+      await router.push("/antiriciclaggio/responsabili-av");
     } catch (err: any) {
       setError(err?.message || "Errore salvataggio responsabile.");
     } finally {
@@ -222,7 +269,9 @@ export default function NuovoResponsabileAVPage() {
                   <Input
                     type="text"
                     value={formData.cognome_nome}
-                    onChange={(e) => updateField("cognome_nome", e.target.value)}
+                    onChange={(e) =>
+                      updateField("cognome_nome", e.target.value)
+                    }
                     placeholder="Es. Mario Rossi"
                   />
                 </div>
@@ -236,7 +285,10 @@ export default function NuovoResponsabileAVPage() {
                     maxLength={16}
                     value={formData.codice_fiscale}
                     onChange={(e) =>
-                      updateField("codice_fiscale", e.target.value.toUpperCase())
+                      updateField(
+                        "codice_fiscale",
+                        e.target.value.toUpperCase()
+                      )
                     }
                     placeholder="Codice fiscale"
                   />
@@ -254,7 +306,9 @@ export default function NuovoResponsabileAVPage() {
                   <select
                     className="w-full rounded-md border px-3 py-2"
                     value={formData.TipoSoggetto}
-                    onChange={(e) => updateField("TipoSoggetto", e.target.value)}
+                    onChange={(e) =>
+                      updateField("TipoSoggetto", e.target.value)
+                    }
                   >
                     {TIPO_SOGGETTO_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>
@@ -265,17 +319,24 @@ export default function NuovoResponsabileAVPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium">
-                Società
-                </label>
-                <Input
-                  type="text"
-                  value={formData.societa_id}
-                onChange={(e) => updateField("societa_id", e.target.value)}
-                  placeholder="Nome società (se presente)"
-                  />
-                  </div>
-                
+                  <label className="mb-1 block text-sm font-medium">
+                    Società
+                  </label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={formData.societa_id}
+                    onChange={(e) =>
+                      updateField("societa_id", e.target.value)
+                    }
+                  >
+                    <option value="">-- Nessuna società --</option>
+                    {societaOptions.map((soc) => (
+                      <option key={soc.id} value={soc.id}>
+                        {soc.Denominazione} - {soc.codice_fiscale}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {error && (
