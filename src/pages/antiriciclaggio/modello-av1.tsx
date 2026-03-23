@@ -322,41 +322,42 @@ export default function ModelloAV1Page() {
     );
   };
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
+ const loadData = async () => {
+  setLoading(true);
+  setError(null);
 
-    try {
-     const supabase = getSupabaseClient();
-const supabaseAny = supabase as any;
+  try {
+    const supabase = getSupabaseClient();
+    const supabaseAny = supabase as any;
+    const studioId = await getStudioId();
 
-const [
-  { data: clientiData, error: clientiError },
-  { data: prestazioniData, error: prestazioniError },
-] = await Promise.all([
-  supabase.from("tbclienti").select("*"),
-  supabaseAny
-    .from("tbElencoPrestAR")
-    .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
-    .order("TipoPrestazioneAR", { ascending: true }),
-]);
+    const [
+      { data: clientiData, error: clientiError },
+      { data: prestazioniData, error: prestazioniError },
+    ] = await Promise.all([
+      supabase.from("tbclienti").select("*"),
+      supabaseAny
+        .from("tbElencoPrestAR")
+        .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+        .order("TipoPrestazioneAR", { ascending: true }),
+    ]);
 
-      if (clientiError) throw new Error(clientiError.message);
-      if (prestazioniError) throw new Error(prestazioniError.message);
+    if (clientiError) throw new Error(clientiError.message);
+    if (prestazioniError) throw new Error(prestazioniError.message);
 
-      setClienti((clientiData || []) as Cliente[]);
-      setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
+    setClienti((clientiData || []) as Cliente[]);
+    setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
 
-      setFormData((prev) => ({
-        ...prev,
-        studio_id: prev.studio_id || studioId || "",
-      }));
-    } catch (err: any) {
-      setError(err?.message || "Errore caricamento dati.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setFormData((prev) => ({
+      ...prev,
+      studio_id: prev.studio_id || studioId || "",
+    }));
+  } catch (err: any) {
+    setError(err?.message || "Errore caricamento dati.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadRecordById = async (recordId: string) => {
     setError(null);
