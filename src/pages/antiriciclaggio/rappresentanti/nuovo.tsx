@@ -409,103 +409,139 @@ export default function NuovoRappresentantePage() {
     setErrMsg(null);
   }
 
-  async function handleInviaRichiestaDocumento() {
-    try {
-      if (!recordId) {
-        alert("Salva prima il rappresentante.");
-        return;
-      }
+ async function handleInviaRichiestaDocumento() {
+  try {
+    if (!recordId) {
+      alert("Salva prima il rappresentante.");
+      return;
+    }
 
-      if (!form.email || !String(form.email).trim()) {
-        alert("Il rappresentante non ha un indirizzo email valorizzato.");
-        return;
-      }
+    if (!studioId) {
+      alert("studio_id non disponibile.");
+      return;
+    }
 
-      const supabase = getSupabaseClient() as any;
-      setSendingPublicDoc(true);
+    if (!form.email || !String(form.email).trim()) {
+      alert("Il rappresentante non ha un indirizzo email valorizzato.");
+      return;
+    }
 
-      const token =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const supabase = getSupabaseClient() as any;
+    setSendingPublicDoc(true);
 
-      const { error: updateError } = await supabase
-        .from("rapp_legali")
-        .update({
-          public_doc_token: token,
-          public_doc_enabled: true,
-          public_doc_sent_at: new Date().toISOString(),
-          public_doc_opened_at: null,
-          public_doc_submitted_at: null,
-        })
-        .eq("id", recordId);
+    const token =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      if (updateError) {
-        console.error("Errore aggiornamento link pubblico documento:", updateError);
-        alert("Errore durante la generazione del link pubblico.");
-        return;
-      }
+    const nowIso = new Date().toISOString();
 
-      const url = `${window.location.origin}/public/documento/${token}`;
-      setPublicDocUrl(url);
+    const { error: updateError } = await supabase
+      .from("rapp_legali")
+      .update({
+        public_doc_token: token,
+        public_doc_enabled: true,
+        public_doc_sent_at: nowIso,
+        public_doc_opened_at: null,
+        public_doc_submitted_at: null,
+      })
+      .eq("id", recordId);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    if (updateError) {
+      console.error("Errore aggiornamento link pubblico documento:", updateError);
+      alert("Errore durante la generazione del link pubblico.");
+      return;
+    }
 
-      const userId = session?.user?.id;
+    const url = `${window.location.origin}/public/documento/${token}`;
+    setPublicDocUrl(url);
 
-      if (!userId) {
-        alert(
-          `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-        );
-        return;
-      }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const nomeDestinatario = form.nome_cognome || "Cliente";
-      const destinatario = String(form.email).trim();
+    const userId = session?.user?.id;
 
-      await sendEmailViaMicrosoft(userId, {
-        to: destinatario,
-        subject: "Richiesta aggiornamento documento di riconoscimento",
-        html: `
-          <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-            <p>Gentile ${nomeDestinatario},</p>
+    if (!userId) {
+      alert(
+        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+      );
+      return;
+    }
 
-            <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
+    const nomeDestinatario = form.nome_cognome || "Cliente";
+    const destinatario = String(form.email).trim();
+    const subject = "Richiesta aggiornamento documento di riconoscimento";
+    const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
 
-            <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
+    const html = `
+      <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+        <p>Gentile ${nomeDestinatario},</p>
 
-            <p>
-              <a href="${url}" target="_blank" rel="noopener noreferrer">
-                ${url}
-              </a>
-            </p>
+        <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
 
-            <p><strong>Documenti accettati:</strong></p>
-            <ul style="padding-left: 18px; margin: 8px 0;">
-              <li>Carta di identità</li>
-              <li>Passaporto</li>
-            </ul>
+        <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
 
-            <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+        <p>
+          <a href="${url}" target="_blank" rel="noopener noreferrer">
+            ${url}
+          </a>
+        </p>
 
-            <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+        <p><strong>Documenti accettati:</strong></p>
+        <ul style="padding-left: 18px; margin: 8px 0;">
+          <li>Carta di identità</li>
+          <li>Passaporto</li>
+        </ul>
 
-            <p>Cordiali saluti,<br />Studio Manager Pro</p>
-          </div>
-        `,
+        <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+
+        <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+
+        <p>Cordiali saluti,<br />Studio Manager Pro</p>
+      </div>
+    `;
+
+    await sendEmailViaMicrosoft(userId, {
+      to: destinatario,
+      subject,
+      html,
+    });
+
+    const { error: logError } = await supabase
+      .from("tbAMLComunicazioni")
+      .insert({
+        studio_id: studioId,
+        tipo_comunicazione: "richiesta_documento",
+        cliente_id: clienteIdFromQuery || null,
+        rapp_legale_id: recordId,
+        av4_id: av4IdFromQuery || null,
+        destinatario_email: destinatario,
+        oggetto: subject,
+        body_preview: bodyPreview,
+        stato_invio: "inviata",
+        data_invio: nowIso,
+        utente_id: userId,
+        public_token: token,
+        note: "Invio richiesta documento da anagrafica rappresentante",
       });
 
-      alert(`Email inviata correttamente a ${destinatario}.`);
-    } catch (error) {
-      console.error("Errore invio richiesta documento:", error);
-      alert("Errore durante l'invio della richiesta documento.");
-    } finally {
-      setSendingPublicDoc(false);
+    if (logError) {
+      console.error("Errore salvataggio log tbAMLComunicazioni:", logError);
+      alert(
+        `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
+      );
+      return;
     }
-  }
 
+    alert(`Email inviata correttamente a ${destinatario}.`);
+  } catch (error) {
+    console.error("Errore invio richiesta documento:", error);
+    alert("Errore durante l'invio della richiesta documento.");
+  } finally {
+    setSendingPublicDoc(false);
+  }
+}
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
