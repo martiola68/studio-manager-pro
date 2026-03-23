@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStudioId } from "@/services/getStudioId";
@@ -36,6 +36,19 @@ type FormDataType = {
   AV1Conferma?: boolean;
   AV4Generato?: boolean;
   allegato_av1_firmato?: string;
+
+  A1: number;
+  A2: number;
+  A3: number;
+  A4: number;
+  B1: number;
+  B2: number;
+  B3: number;
+  B4: number;
+  B5: number;
+  B6: number;
+
+  [key: string]: any;
 };
 
 const sectionTitles: Record<string, string> = {
@@ -124,6 +137,19 @@ export const av1Labels = {
   },
 } as const;
 
+const defaultSectionScores = {
+  A1: 0,
+  A2: 0,
+  A3: 0,
+  A4: 0,
+  B1: 0,
+  B2: 0,
+  B3: 0,
+  B4: 0,
+  B5: 0,
+  B6: 0,
+};
+
 const initialFormData: FormDataType = {
   id: "",
   studio_id: "",
@@ -135,6 +161,7 @@ const initialFormData: FormDataType = {
   AV1Conferma: false,
   AV4Generato: false,
   allegato_av1_firmato: "",
+  ...defaultSectionScores,
 };
 
 function addMonths(dateString: string, months: number) {
@@ -160,7 +187,6 @@ function normalizeScore(value: unknown): number {
   if (value === null || value === undefined || value === "") return 0;
 
   const n = Number(value);
-
   if (!Number.isFinite(n)) return 0;
   if (n < 0) return 0;
   if (n > 4) return 4;
@@ -232,38 +258,25 @@ function getCategoriaRischio(value: number) {
   return "molto";
 }
 
-const defaultSectionScores = {
-  A1: 0,
-  A2: 0,
-  A3: 0,
-  A4: 0,
-  B1: 0,
-  B2: 0,
-  B3: 0,
-  B4: 0,
-  B5: 0,
-  B6: 0,
-};
-
 export default function ModelloAV1Page() {
   const router = useRouter();
   const { id } = router.query;
-  const supabase = getSupabaseClient() as any;
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [prestazioni, setPrestazioni] = useState<PrestazioneAR[]>([]);
-  const [formData, setFormData] = useState<FormDataType & Record<string, any>>({
-    ...initialFormData,
-    ...defaultSectionScores,
-  });
+  const [formData, setFormData] = useState<FormDataType>(initialFormData);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const punteggioPrestazione = normalizeScore(
-    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.PunteggioPrestAR || 0
+  const punteggioPrestazione = useMemo(
+    () =>
+      normalizeScore(
+        prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.PunteggioPrestAR || 0
+      ),
+    [prestazioni, formData.Prestazione]
   );
 
   const TotA =
@@ -287,10 +300,7 @@ export default function ModelloAV1Page() {
   const RischioEffettivo = Number((RisInerentePonderato + RisSpecificoPonderato).toFixed(2));
   const LivelloRischioEffettivo = calcolaLivelloRischio(RischioEffettivo);
   const AdeguataVerifica = calcolaAdeguataVerifica(RischioEffettivo);
-  const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(
-    formData.DataVerifica,
-    AdeguataVerifica
-  );
+  const ScadenzaVerificaCalcolata = calcolaScadenzaFinale(formData.DataVerifica, AdeguataVerifica);
 
   const categoriaInerente = getCategoriaRischio(punteggioPrestazione);
   const categoriaVulnerabilita = getCategoriaRischio(MediaPunteggio);
@@ -302,75 +312,88 @@ export default function ModelloAV1Page() {
     return "";
   };
 
+  const getClienteLabel = (cliente: Cliente) => {
+    return (
+      cliente.ragione_sociale ||
+      cliente.denominazione ||
+      cliente.nominativo ||
+      `${cliente.nome || ""} ${cliente.cognome || ""}`.trim() ||
+      cliente.id
+    );
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
 
-    const { data: clientiData, error: clientiError } = await supabase
-      .from("tbclienti")
-      .select("*");
+    try {
+      const supabase = getSupabaseClient();
+      const studioId = await getStudioId();
 
-    const { data: prestazioniData, error: prestazioniError } = await supabase
-      .from("tbElencoPrestAR")
-      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
-      .order("TipoPrestazioneAR", { ascending: true });
+      const [{ data: clientiData, error: clientiError }, { data: prestazioniData, error: prestazioniError }] =
+        await Promise.all([
+          supabase.from("tbclienti").select("*"),
+          supabase
+            .from("tbElencoPrestAR")
+            .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+            .order("TipoPrestazioneAR", { ascending: true }),
+        ]);
 
-    const studioId = await getStudioId();
+      if (clientiError) throw new Error(clientiError.message);
+      if (prestazioniError) throw new Error(prestazioniError.message);
 
-    if (clientiError) setError(clientiError.message);
-    if (prestazioniError) setError(prestazioniError.message);
+      setClienti((clientiData || []) as Cliente[]);
+      setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
 
-    setClienti((clientiData || []) as Cliente[]);
-    setPrestazioni((prestazioniData || []) as PrestazioneAR[]);
-
-    setFormData((prev) => ({
-      ...prev,
-      studio_id: prev.studio_id || studioId || "",
-    }));
-
-    setLoading(false);
+      setFormData((prev) => ({
+        ...prev,
+        studio_id: prev.studio_id || studioId || "",
+      }));
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento dati.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadRecordById = async (recordId: string) => {
     setError(null);
 
-    const { data, error } = await supabase
-      .from("tbAV1")
-      .select("*")
-      .eq("id", recordId)
-      .single();
+    try {
+      const supabase = getSupabaseClient();
 
-    if (error) {
-      setError(error.message);
-      return;
+      const { data, error } = await supabase.from("tbAV1").select("*").eq("id", recordId).single();
+
+      if (error) throw new Error(error.message);
+      if (!data) return;
+
+      setFormData((prev) => ({
+        ...prev,
+        ...data,
+        id: String(data.id),
+        studio_id: data.studio_id ?? prev.studio_id ?? "",
+        cliente_id: data.cliente_id ?? "",
+        Prestazione: data.Prestazione ?? "",
+        ValRischioIner: data.ValRischioIner ?? "",
+        DataVerifica: normalizeDateValue(data.DataVerifica),
+        ScadenzaVerifica: normalizeDateValue(data.ScadenzaVerifica),
+        AV1Conferma: normalizeBoolean(data.AV1Conferma),
+        AV4Generato: normalizeBoolean(data.AV4Generato),
+        allegato_av1_firmato: data.allegato_av1_firmato ?? "",
+        A1: normalizeScore(data.A1),
+        A2: normalizeScore(data.A2),
+        A3: normalizeScore(data.A3),
+        A4: normalizeScore(data.A4),
+        B1: normalizeScore(data.B1),
+        B2: normalizeScore(data.B2),
+        B3: normalizeScore(data.B3),
+        B4: normalizeScore(data.B4),
+        B5: normalizeScore(data.B5),
+        B6: normalizeScore(data.B6),
+      }));
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento record.");
     }
-
-    if (!data) return;
-
-    setFormData((prev) => ({
-      ...prev,
-      ...data,
-      id: String(data.id),
-      studio_id: data.studio_id ?? prev.studio_id ?? "",
-      cliente_id: data.cliente_id ?? "",
-      Prestazione: data.Prestazione ?? "",
-      ValRischioIner: data.ValRischioIner ?? "",
-      DataVerifica: normalizeDateValue(data.DataVerifica),
-      ScadenzaVerifica: normalizeDateValue(data.ScadenzaVerifica),
-      AV1Conferma: normalizeBoolean(data.AV1Conferma),
-      AV4Generato: normalizeBoolean(data.AV4Generato),
-      allegato_av1_firmato: data.allegato_av1_firmato ?? "",
-      A1: normalizeScore(data.A1),
-      A2: normalizeScore(data.A2),
-      A3: normalizeScore(data.A3),
-      A4: normalizeScore(data.A4),
-      B1: normalizeScore(data.B1),
-      B2: normalizeScore(data.B2),
-      B3: normalizeScore(data.B3),
-      B4: normalizeScore(data.B4),
-      B5: normalizeScore(data.B5),
-      B6: normalizeScore(data.B6),
-    }));
   };
 
   useEffect(() => {
@@ -383,16 +406,6 @@ export default function ModelloAV1Page() {
 
     void loadRecordById(id);
   }, [router.isReady, id]);
-
-  const getClienteLabel = (cliente: Cliente) => {
-    return (
-      cliente.ragione_sociale ||
-      cliente.denominazione ||
-      cliente.nominativo ||
-      `${cliente.nome || ""} ${cliente.cognome || ""}`.trim() ||
-      cliente.id
-    );
-  };
 
   const handlePrestazioneChange = (prestazioneValue: string) => {
     const prestazioneSelezionata = prestazioni.find(
@@ -445,14 +458,13 @@ export default function ModelloAV1Page() {
       setUploadingFirmato(true);
       setError(null);
 
+      const supabase = getSupabaseClient();
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, {
-          upsert: true,
-        });
+      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
+        upsert: true,
+      });
 
       if (uploadError) {
         throw new Error(uploadError.message || "Errore caricamento file firmato.");
@@ -472,6 +484,8 @@ export default function ModelloAV1Page() {
   const handleOpenFirmato = async () => {
     try {
       if (!formData.allegato_av1_firmato) return;
+
+      const supabase = getSupabaseClient();
 
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
@@ -498,6 +512,61 @@ export default function ModelloAV1Page() {
     }));
   };
 
+  const handleRinnovoVerifica = async () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    setFormData((prev) => ({
+      ...prev,
+      DataVerifica: today,
+      ScadenzaVerifica: "",
+      AV1Conferma: false,
+      ...defaultSectionScores,
+    }));
+
+    if (!formData.id) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const supabase = getSupabaseClient();
+
+      const payload = {
+        DataVerifica: today,
+        ScadenzaVerifica: null,
+        AV1Conferma: false,
+        A1: 0,
+        A2: 0,
+        A3: 0,
+        A4: 0,
+        B1: 0,
+        B2: 0,
+        B3: 0,
+        B4: 0,
+        B5: 0,
+        B6: 0,
+        TotA: 0,
+        TotB: 0,
+        MediaPunteggio: 0,
+        LivelloRischio: "",
+        RisInerentePonderato: Number((punteggioPrestazione * 0.3).toFixed(2)),
+        RisSpecificoPonderato: 0,
+        RischioEffettivo: Number((punteggioPrestazione * 0.3).toFixed(2)),
+        AdeguataVerifica: calcolaAdeguataVerifica(Number((punteggioPrestazione * 0.3).toFixed(2))),
+      };
+
+      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+
+      if (error) throw new Error(error.message);
+
+      alert("Rinnovo verifica eseguito correttamente.");
+    } catch (err: any) {
+      setError(err?.message || "Errore durante il rinnovo verifica.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.studio_id) {
       alert("Studio non disponibile.");
@@ -522,84 +591,70 @@ export default function ModelloAV1Page() {
     setSaving(true);
     setError(null);
 
-    const payload = {
-      studio_id: formData.studio_id,
-      cliente_id: formData.cliente_id,
-      Prestazione: formData.Prestazione,
-      ValRischioIner: formData.ValRischioIner,
-      DataVerifica: formData.DataVerifica,
-      ScadenzaVerifica: ScadenzaVerificaCalcolata,
-      allegato_av1_firmato: formData.allegato_av1_firmato || null,
-      A1: normalizeScore(formData.A1),
-      A2: normalizeScore(formData.A2),
-      A3: normalizeScore(formData.A3),
-      A4: normalizeScore(formData.A4),
-      B1: normalizeScore(formData.B1),
-      B2: normalizeScore(formData.B2),
-      B3: normalizeScore(formData.B3),
-      B4: normalizeScore(formData.B4),
-      B5: normalizeScore(formData.B5),
-      B6: normalizeScore(formData.B6),
-      TotA,
-      TotB,
-      MediaPunteggio,
-      LivelloRischio,
-      RisInerentePonderato,
-      RisSpecificoPonderato,
-      RischioEffettivo,
-      AdeguataVerifica,
-      AV1Conferma: true,
-      AV4Generato: normalizeBoolean(formData.AV4Generato),
-    };
+    try {
+      const supabase = getSupabaseClient();
 
-    let savedId = formData.id || "";
+      const payload = {
+        studio_id: formData.studio_id,
+        cliente_id: formData.cliente_id,
+        Prestazione: formData.Prestazione,
+        ValRischioIner: formData.ValRischioIner,
+        DataVerifica: formData.DataVerifica,
+        ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
+        allegato_av1_firmato: formData.allegato_av1_firmato || null,
+        A1: normalizeScore(formData.A1),
+        A2: normalizeScore(formData.A2),
+        A3: normalizeScore(formData.A3),
+        A4: normalizeScore(formData.A4),
+        B1: normalizeScore(formData.B1),
+        B2: normalizeScore(formData.B2),
+        B3: normalizeScore(formData.B3),
+        B4: normalizeScore(formData.B4),
+        B5: normalizeScore(formData.B5),
+        B6: normalizeScore(formData.B6),
+        TotA,
+        TotB,
+        MediaPunteggio,
+        LivelloRischio,
+        RisInerentePonderato,
+        RisSpecificoPonderato,
+        RischioEffettivo,
+        AdeguataVerifica,
+        AV1Conferma: normalizeBoolean(formData.AV1Conferma),
+        AV4Generato: normalizeBoolean(formData.AV4Generato),
+      };
 
-    if (formData.id) {
-      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+      let savedId = formData.id || "";
 
-      if (error) {
-        setError(error.message);
-        setSaving(false);
-        return;
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("tbAV1")
-        .insert([payload])
-        .select("id")
-        .single();
+      if (formData.id) {
+        const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { data, error } = await supabase
+          .from("tbAV1")
+          .insert([payload])
+          .select("id")
+          .single();
 
-      if (error) {
-        setError(error.message);
-        setSaving(false);
-        return;
+        if (error) throw new Error(error.message);
+        savedId = String(data.id);
       }
 
-      savedId = String(data.id);
-    }
+      setFormData((prev) => ({
+        ...prev,
+        id: savedId,
+        ScadenzaVerifica: ScadenzaVerificaCalcolata,
+      }));
 
-    setFormData((prev) => ({
-      ...prev,
-      id: savedId,
-      AV1Conferma: true,
-      AV4Generato: normalizeBoolean(prev.AV4Generato),
-      A1: normalizeScore(prev.A1),
-      A2: normalizeScore(prev.A2),
-      A3: normalizeScore(prev.A3),
-      A4: normalizeScore(prev.A4),
-      B1: normalizeScore(prev.B1),
-      B2: normalizeScore(prev.B2),
-      B3: normalizeScore(prev.B3),
-      B4: normalizeScore(prev.B4),
-      B5: normalizeScore(prev.B5),
-      B6: normalizeScore(prev.B6),
-    }));
+      alert("Record AV1 salvato correttamente.");
 
-    alert("Record AV1 salvato correttamente.");
-    setSaving(false);
-
-    if (savedId) {
-      void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+      if (savedId) {
+        void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Errore salvataggio AV1.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -616,6 +671,33 @@ export default function ModelloAV1Page() {
         onPrint={handlePrint}
         onClose={handleChiudiModello}
         saving={saving}
+        showSendToClient={false}
+        beforeSaveSlot={
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(formData.AV1Conferma)}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    AV1Conferma: e.target.checked,
+                  }))
+                }
+              />
+              <span>Conferma AV1</span>
+            </label>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRinnovoVerifica}
+              disabled={saving || loading}
+            >
+              Rinnovo verifica
+            </Button>
+          </div>
+        }
       />
 
       <div className="flex-1 overflow-hidden">
