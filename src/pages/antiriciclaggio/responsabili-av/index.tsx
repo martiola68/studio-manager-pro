@@ -13,7 +13,7 @@ type RespAVRow = {
   cognome_nome: string;
   codice_fiscale: string;
   TipoSoggetto: string;
-  Societa?: string;
+  societa?: string;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -142,7 +142,7 @@ export default function ResponsabiliAVPage() {
                   <th className="px-4 py-3 font-medium">Cognome e nome</th>
                   <th className="px-4 py-3 font-medium">Codice fiscale</th>
                   <th className="px-4 py-3 font-medium">Tipo soggetto</th>
-                  <th className="px-4 py-3 font-medium">Società</th>
+                  <th className="px-4 py-3 font-medium">società</th>
                   <th className="px-4 py-3 text-right font-medium">Azioni</th>
                 </tr>
               </thead>
@@ -172,7 +172,7 @@ export default function ResponsabiliAVPage() {
                       <td className="px-4 py-3">{row.cognome_nome}</td>
                       <td className="px-4 py-3">{row.codice_fiscale}</td>
                       <td className="px-4 py-3">{row.TipoSoggetto}</td>
-                      <td className="px-4 py-3">{row.Societa || "-"}</td>
+                      <td className="px-4 py-3">{row.societa || "-"}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <Button
