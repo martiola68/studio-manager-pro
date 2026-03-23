@@ -430,7 +430,9 @@ export default function AntiriciclaggioPage() {
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
                 <th className="p-3 text-center">AV2 generato</th>
-                <th className="p-3 text-center">AV4 inviato a CL</th>
+                <th className="p-2 text-center w-[90px] leading-tight">
+  AV4<br />inviato
+</th>
                 <th className="p-3 text-center">Data invio AV4</th>
                 <th className="p-3 text-center">AV4 confermato</th>
                 <th className="p-3 text-center">Azioni</th>
@@ -478,7 +480,7 @@ export default function AntiriciclaggioPage() {
                       </td>
 
                       <td
-                        className={`p-3 text-center font-semibold ${
+                          className={`p-2 text-center text-xs font-semibold ${
                           row.AV1Conferma ? "text-green-600" : "text-red-600"
                         }`}
                       >
@@ -498,7 +500,7 @@ export default function AntiriciclaggioPage() {
                           av4Info?.Av4InviatoCL ? "text-green-600" : "text-red-600"
                         }`}
                       >
-                        {av4Info?.Av4InviatoCL ? "Sì" : "No"}
+                        {av4Info?.Av4InviatoCL ? "✔" : "✖"}
                       </td>
 
                       <td className="p-3 text-center">
@@ -514,7 +516,7 @@ export default function AntiriciclaggioPage() {
                       </td>
 
                       <td className="p-3">
-                        <div className="flex flex-wrap items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-3">
                           <button
                             type="button"
                             onClick={() => handleApriAV1(row.id)}
@@ -557,11 +559,11 @@ export default function AntiriciclaggioPage() {
                           </button>
 
                           <button
-                            type="button"
-                            onClick={() => handleEliminaCompleto(row.id)}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
-                            title="Elimina record completo"
-                          >
+  type="button"
+  onClick={() => handleEliminaCompleto(row.id)}
+  className="flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105 ml-2"
+  title="Elimina record completo"
+>
                             <Trash2 className="h-4 w-4 text-red-500" strokeWidth={2.2} />
                           </button>
                         </div>
