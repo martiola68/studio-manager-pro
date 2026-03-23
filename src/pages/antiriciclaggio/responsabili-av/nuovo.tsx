@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/router";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+import { getStudioId } from "@/services/getStudioId";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type FormDataType = {
   cognome_nome: string;
@@ -31,24 +35,29 @@ export default function NuovoResponsabileAVPage() {
 
   const isEdit = useMemo(() => typeof id === "string" && id.length > 0, [id]);
 
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
   const [formData, setFormData] = useState<FormDataType>({
     cognome_nome: "",
     codice_fiscale: "",
     TipoSoggetto: "Professionista",
   });
 
-  async function getStudioId() {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("studio_id");
-  }
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function loadRecord(recordId: string) {
+  const updateField = <K extends keyof FormDataType>(field: K, value: FormDataType[K]) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const loadRecord = async (recordId: string) => {
     setLoading(true);
+    setError(null);
+
     try {
-      const supabase = getSupabaseClient();
+      const supabase = getSupabaseClient() as any;
 
       const { data, error } = await supabase
         .from("tbRespAV")
@@ -56,7 +65,7 @@ export default function NuovoResponsabileAVPage() {
         .eq("id", recordId)
         .single();
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       if (!data) return;
 
       setFormData({
@@ -64,26 +73,22 @@ export default function NuovoResponsabileAVPage() {
         codice_fiscale: data.codice_fiscale || "",
         TipoSoggetto: data.TipoSoggetto || "Professionista",
       });
-    } catch (err) {
-      console.error("Errore caricamento responsabile:", err);
-      alert("Errore durante il caricamento del responsabile.");
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento responsabile.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (typeof id === "string" && id) {
-      loadRecord(id);
-    }
-  }, [id]);
+    if (!router.isReady) return;
+    if (!id || typeof id !== "string") return;
 
-  function updateField<K extends keyof FormDataType>(field: K, value: FormDataType[K]) {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }
+    void loadRecord(id);
+  }, [router.isReady, id]);
 
-  async function checkDuplicate(studioId: string, codiceFiscale: string, currentId?: string) {
-    const supabase = getSupabaseClient();
+  const checkDuplicate = async (studioId: string, codiceFiscale: string, currentId?: string) => {
+    const supabase = getSupabaseClient() as any;
 
     let query = supabase
       .from("tbRespAV")
@@ -97,19 +102,19 @@ export default function NuovoResponsabileAVPage() {
 
     const { data, error } = await query.limit(1);
 
-    if (error) throw error;
-    return !!data && data.length > 0;
-  }
+    if (error) throw new Error(error.message);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+    return !!data && data.length > 0;
+  };
+
+  const handleSave = async () => {
+    setError(null);
 
     try {
-      setSaving(true);
-
       const studioId = await getStudioId();
+
       if (!studioId) {
-        alert("Studio non trovato. Effettua nuovamente l'accesso.");
+        alert("Studio non disponibile.");
         return;
       }
 
@@ -118,7 +123,7 @@ export default function NuovoResponsabileAVPage() {
       const tipoSoggetto = formData.TipoSoggetto;
 
       if (!cognomeNome) {
-        alert("Inserisci il cognome e nome.");
+        alert("Inserisci cognome e nome.");
         return;
       }
 
@@ -137,6 +142,8 @@ export default function NuovoResponsabileAVPage() {
         return;
       }
 
+      setSaving(true);
+
       const duplicate = await checkDuplicate(
         studioId,
         codiceFiscale,
@@ -148,6 +155,8 @@ export default function NuovoResponsabileAVPage() {
         return;
       }
 
+      const supabase = getSupabaseClient() as any;
+
       const payload = {
         studio_id: studioId,
         cognome_nome: cognomeNome,
@@ -155,111 +164,123 @@ export default function NuovoResponsabileAVPage() {
         TipoSoggetto: tipoSoggetto,
       };
 
-      const supabase = getSupabaseClient();
-
       if (isEdit && typeof id === "string") {
         const { error } = await supabase
           .from("tbRespAV")
           .update(payload)
           .eq("id", id);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
       } else {
-        const { error } = await supabase.from("tbRespAV").insert(payload);
-        if (error) throw error;
+        const { error } = await supabase.from("tbRespAV").insert([payload]);
+
+        if (error) throw new Error(error.message);
       }
 
-      router.push("/antiriciclaggio/responsabili-av");
-    } catch (err) {
-      console.error("Errore salvataggio responsabile:", err);
-      alert("Errore durante il salvataggio del responsabile.");
+      void router.push("/antiriciclaggio/responsabili-av");
+    } catch (err: any) {
+      setError(err?.message || "Errore salvataggio responsabile.");
     } finally {
       setSaving(false);
     }
-  }
+  };
 
   return (
     <div className="p-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {isEdit ? "Modifica responsabile adeguata verifica" : "Nuovo responsabile adeguata verifica"}
-          </h1>
-          <p className="text-sm text-gray-500">
-            Inserimento anagrafica del soggetto incaricato dell’adeguata verifica.
-          </p>
-        </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>
+              {isEdit
+                ? "Modifica responsabile adeguata verifica"
+                : "Nuovo responsabile adeguata verifica"}
+            </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Inserimento del soggetto incaricato dell’adeguata verifica.
+            </p>
+          </div>
 
-        <Link
-          href="/antiriciclaggio/responsabili-av"
-          className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
-        >
-          Torna all’elenco
-        </Link>
-      </div>
+          <Button asChild variant="outline">
+            <Link href="/antiriciclaggio/responsabili-av">
+              Torna all’elenco
+            </Link>
+          </Button>
+        </CardHeader>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        {loading ? (
-          <div className="text-sm text-gray-500">Caricamento in corso...</div>
-        ) : (
-          <form onSubmit={handleSave} className="space-y-5">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Cognome e nome</label>
-              <input
-                type="text"
-                value={formData.cognome_nome}
-                onChange={(e) => updateField("cognome_nome", e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                placeholder="Es. Mario Rossi"
-              />
-            </div>
+        <CardContent className="space-y-5">
+          {loading ? (
+            <p>Caricamento...</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium">
+                    Cognome e nome
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.cognome_nome}
+                    onChange={(e) => updateField("cognome_nome", e.target.value)}
+                    placeholder="Es. Mario Rossi"
+                  />
+                </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
-              <input
-                type="text"
-                value={formData.codice_fiscale}
-                onChange={(e) => updateField("codice_fiscale", normalizeCF(e.target.value))}
-                maxLength={16}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 uppercase"
-                placeholder="Codice fiscale"
-              />
-            </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Codice fiscale
+                  </label>
+                  <Input
+                    type="text"
+                    maxLength={16}
+                    value={formData.codice_fiscale}
+                    onChange={(e) => updateField("codice_fiscale", normalizeCF(e.target.value))}
+                    placeholder="Codice fiscale"
+                  />
+                </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium">Tipo soggetto</label>
-              <select
-                value={formData.TipoSoggetto}
-                onChange={(e) => updateField("TipoSoggetto", e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
-              >
-                {TIPO_SOGGETTO_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Tipo soggetto
+                  </label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={formData.TipoSoggetto}
+                    onChange={(e) => updateField("TipoSoggetto", e.target.value)}
+                  >
+                    {TIPO_SOGGETTO_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-            <div className="flex justify-end gap-3 pt-2">
-              <Link
-                href="/antiriciclaggio/responsabili-av"
-                className="rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
-              >
-                Annulla
-              </Link>
+              {error && (
+                <p className="text-sm text-red-600">
+                  Errore: {error}
+                </p>
+              )}
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? "Salvataggio..." : "Salva"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+              <div className="flex justify-end gap-2">
+                <Button asChild type="button" variant="outline">
+                  <Link href="/antiriciclaggio/responsabili-av">
+                    Annulla
+                  </Link>
+                </Button>
+
+                <Button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? "Salvataggio..." : "Salva"}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
