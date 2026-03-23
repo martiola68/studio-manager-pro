@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+
 
 type Societa = {
   id: string;
@@ -52,7 +52,7 @@ export default function ResponsabiliAVSocietaIndex() {
       .order("Denominazione", { ascending: true });
 
     if (error) {
-      toast.error("Errore caricamento società");
+      alert("Errore caricamento società");
       console.error(error);
     } else {
       setSocieta(data || []);
@@ -74,7 +74,7 @@ export default function ResponsabiliAVSocietaIndex() {
       toast.error("Errore eliminazione");
       console.error(error);
     } else {
-      toast.success("Società eliminata");
+      alert("Società eliminata");
       if (studioId) loadSocieta(studioId);
     }
   };
