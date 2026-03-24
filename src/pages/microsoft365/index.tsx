@@ -60,11 +60,8 @@ function getTabFromQuery(q: unknown): ActiveTab {
 
 export default function Microsoft365Page() {
 
-  const [m365Connected, setM365Connected] = useState<boolean | null>(null)
+const [m365Connected, setM365Connected] = useState<boolean | null>(null)
 const [m365Loading, setM365Loading] = useState(true)
-
-async function loadM365Status() {
-  setM365Loading(true)
 
 const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
 
@@ -77,7 +74,10 @@ const loadConnections = async () => {
 useEffect(() => {
   loadConnections();
 }, [studioId]);
-  
+
+async function loadM365Status() {
+  setM365Loading(true)
+ 
  try {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
   if (sessionErr) throw sessionErr;
