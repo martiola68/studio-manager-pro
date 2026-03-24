@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
-import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -466,13 +465,10 @@ async function handleInviaRichiestaDocumento() {
 
     userId = session?.user?.id ?? null;
 
-    if (!userId) {
-      alert(
-        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-      );
-      return;
-    }
-
+if (!userId) {
+  console.warn("Utente mittente non identificato per il log AML.");
+}
+    
     const nomeDestinatario = form.nome_cognome || "Cliente";
     const destinatario = String(form.email).trim();
     const subject = "Richiesta aggiornamento documento di riconoscimento";
@@ -506,11 +502,23 @@ async function handleInviaRichiestaDocumento() {
       </div>
     `;
 
-    await sendEmailViaMicrosoft(userId, {
-      to: destinatario,
-      subject,
-      html,
-    });
+const emailResponse = await fetch("/api/microsoft/send-email", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    to: destinatario,
+    subject,
+    html,
+  }),
+});
+
+const emailResult = await emailResponse.json();
+
+if (!emailResponse.ok || !emailResult?.ok) {
+  throw new Error(emailResult?.error || "Errore invio email Microsoft");
+}
 
     const { error: logError } = await supabase
       .from("tbAMLComunicazioni")
