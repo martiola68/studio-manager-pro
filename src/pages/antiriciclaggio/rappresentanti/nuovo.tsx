@@ -466,10 +466,13 @@ async function handleInviaRichiestaDocumento() {
 
     userId = session?.user?.id ?? null;
 
-if (!userId) {
-  console.warn("Utente mittente non identificato per il log AML.");
-}
-    
+    if (!userId) {
+      alert(
+        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+      );
+      return;
+    }
+
     const nomeDestinatario = form.nome_cognome || "Cliente";
     const destinatario = String(form.email).trim();
     const subject = "Richiesta aggiornamento documento di riconoscimento";
@@ -503,23 +506,11 @@ if (!userId) {
       </div>
     `;
 
-const emailResponse = await fetch("/api/microsoft365/send-email", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    to: destinatario,
-    subject,
-    html,
-  }),
-});
-
-const emailResult = await emailResponse.json();
-
-if (!emailResponse.ok || !emailResult?.ok) {
-  throw new Error(emailResult?.error || "Errore invio email Microsoft");
-}
+    await sendEmailViaMicrosoft(userId, {
+      to: destinatario,
+      subject,
+      html,
+    });
 
     const { error: logError } = await supabase
       .from("tbAMLComunicazioni")
