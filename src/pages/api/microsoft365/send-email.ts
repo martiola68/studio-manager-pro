@@ -1,139 +1,214 @@
+// pages/api/microsoft365/save-config.ts
+export const config = { runtime: "nodejs" };
+
 import type { NextApiRequest, NextApiResponse } from "next";
+import { z } from "zod";
 
-const TENANT_ID = process.env.MICROSOFT_TENANT_ID;
-const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
-const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
-const SENDER_EMAIL = "noreply@revisionicommerciali.it";
+import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { encrypt } from "@/lib/encryption365";
+import { tokenCache } from "@/services/tokenCacheService";
 
-async function getAppOnlyAccessToken(): Promise<string> {
-  if (!TENANT_ID) {
-    throw new Error("MS365_TENANT_ID non definito");
-  }
+/**
+ * API: Save Microsoft 365 Configuration (Studio-level)
+ * POST /api/microsoft365/save-config
+ *
+ * - Richiede utente autenticato (cookie Supabase).
+ * - Consente salvataggio SOLO per lo studio dell'utente.
+ * - Salva/aggiorna la config con service role (supabaseAdmin).
+ * - Client Secret viene cifrato prima del salvataggio.
+ * - Invalida token cache dello studio.
+ */
 
-  if (!CLIENT_ID) {
-    throw new Error("MS365_CLIENT_ID non definito");
-  }
+const SaveConfigRequestSchema = z.object({
+  studioId: z.string().uuid(),
+  clientId: z.string().min(1),
+  clientSecret: z.string().optional(), // opzionale: update può mantenere esistente
+  tenantId: z.string().min(1),
+  organizerEmail: z.string().email().optional().or(z.literal("")),
+});
 
-  if (!CLIENT_SECRET) {
-    throw new Error("MS365_CLIENT_SECRET non definito");
-  }
+type ApiOk = {
+  success: true;
+  message: string;
+  config: {
+    id: string;
+    studio_id: string;
+    client_id: string;
+    tenant_id: string;
+    organizer_email: string | null;
+    enabled: boolean;
+  };
+};
 
-  const tokenUrl = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
+type ApiErr = {
+  success: false;
+  error: string;
+  details?: any;
+};
 
-  const body = new URLSearchParams({
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    scope: "https://graph.microsoft.com/.default",
-    grant_type: "client_credentials",
-  });
+export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiOk | ApiErr>) {
+  res.setHeader("Content-Type", "application/json");
 
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: body.toString(),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    console.error("❌ Errore token app-only:", data);
-    throw new Error(data?.error_description || "Errore ottenimento token Microsoft");
-  }
-
-  if (!data?.access_token) {
-    throw new Error("Access token Microsoft non ricevuto");
-  }
-
-  return data.access_token;
-}
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
   if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Metodo non consentito" });
+    return res.status(405).json({ success: false, error: "Method not allowed" });
+  }
+
+  // (opzionale) ping rapido per debug routing
+  if (req.query.ping === "1") {
+    return res.status(200).json({ success: true, message: "PING_OK" } as any);
   }
 
   try {
-    console.log("API ENV CHECK");
-console.log("MS365_TENANT_ID =", process.env.MS365_TENANT_ID);
-console.log("MS365_CLIENT_ID =", process.env.MS365_CLIENT_ID);
-console.log(
-  "MS365_CLIENT_SECRET =",
-  process.env.MS365_CLIENT_SECRET ? "OK" : "MANCANTE"
-);
-    const { to, subject, html, cc, bcc } = req.body || {};
+    // 1) Auth (cookie-based) + autorizzazione sullo studio
+    const supabase = createClient(req, res);
+    const {
+      data: { session },
+      error: sessionErr,
+    } = await supabase.auth.getSession();
 
-    if (!to || !subject || !html) {
+    if (sessionErr || !session?.user) {
+      return res.status(401).json({ success: false, error: "Non autenticato. Effettua il login." });
+    }
+
+    const parseResult = SaveConfigRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
       return res.status(400).json({
-        ok: false,
-        error: "Parametri mancanti: to, subject, html",
+        success: false,
+        error: "Invalid request data",
+        details: parseResult.error.flatten(),
       });
     }
 
-    const accessToken = await getAppOnlyAccessToken();
+    const { studioId, clientId, clientSecret, tenantId, organizerEmail } = parseResult.data;
+    const rawSecret = (clientSecret ?? "").toString().trim();
 
-    const toArray = Array.isArray(to) ? to : [to];
-    const ccArray = cc ? (Array.isArray(cc) ? cc : [cc]) : [];
-    const bccArray = bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : [];
+    // Verifica che l'utente appartenga allo studio richiesto
+    const { data: userRow, error: userErr } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", session.user.id)
+      .single();
 
-    const message: any = {
-      subject,
-      body: {
-        contentType: "HTML",
-        content: html,
-      },
-      toRecipients: toArray.map((email: string) => ({
-        emailAddress: { address: email },
-      })),
+    if (userErr || !userRow?.studio_id) {
+      return res.status(403).json({ success: false, error: "Studio utente non valido o non trovato." });
+    }
+
+    if (userRow.studio_id !== studioId) {
+      return res.status(403).json({ success: false, error: "Operazione non autorizzata per questo studio." });
+    }
+
+    // 2) Verifica che lo studio esista (admin, no RLS)
+    const { data: studio, error: studioError } = await supabaseAdmin
+      .from("tbstudio")
+      .select("id")
+      .eq("id", studioId)
+      .maybeSingle();
+
+    if (studioError) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to verify studio",
+        details: studioError.message,
+      });
+    }
+
+    if (!studio) {
+      return res.status(404).json({ success: false, error: "Studio not found" });
+    }
+
+    // 3) Leggi config esistente
+    const { data: existingConfig, error: existingError } = await supabaseAdmin
+      .from("microsoft365_config")
+      .select("id")
+      .eq("studio_id", studioId)
+      .maybeSingle();
+
+    if (existingError) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to read existing configuration",
+        details: existingError.message,
+      });
+    }
+
+    // 4) Payload base
+    const payload: Record<string, any> = {
+      studio_id: studioId,
+      client_id: clientId,
+      tenant_id: tenantId,
+      enabled: true,
+      organizer_email: organizerEmail ? organizerEmail : null,
     };
 
-    if (ccArray.length > 0) {
-      message.ccRecipients = ccArray.map((email: string) => ({
-        emailAddress: { address: email },
-      }));
+    // Secret: salva solo se presente (update può mantenerlo)
+    if (rawSecret.length > 0) {
+      payload.client_secret = encrypt(rawSecret);
     }
 
-    if (bccArray.length > 0) {
-      message.bccRecipients = bccArray.map((email: string) => ({
-        emailAddress: { address: email },
-      }));
-    }
+    // 5) Insert / Update
+    if (existingConfig) {
+      const { error: updateError } = await supabaseAdmin
+        .from("microsoft365_config")
+        .update(payload)
+        .eq("studio_id", studioId);
 
-    const graphResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(SENDER_EMAIL)}/sendMail`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message,
-          saveToSentItems: true,
-        }),
+      if (updateError) {
+        return res.status(500).json({
+          success: false,
+          error: "Failed to update Microsoft 365 configuration",
+          details: updateError.message,
+        });
       }
-    );
+    } else {
+      // New config: secret obbligatorio
+      if (!payload.client_secret) {
+        return res.status(400).json({
+          success: false,
+          error: "Client secret is required for new configuration",
+        });
+      }
 
-    if (!graphResponse.ok) {
-      const errorText = await graphResponse.text();
-      console.error("❌ Errore Graph sendMail:", errorText);
+      const { error: insertError } = await supabaseAdmin.from("microsoft365_config").insert(payload);
 
+      if (insertError) {
+        return res.status(500).json({
+          success: false,
+          error: "Failed to insert Microsoft 365 configuration",
+          details: insertError.message,
+        });
+      }
+    }
+
+    // 6) Read-back (per UI)
+    const { data: savedConfig, error: selectError } = await supabaseAdmin
+      .from("microsoft365_config")
+      .select("id, studio_id, client_id, tenant_id, organizer_email, enabled")
+      .eq("studio_id", studioId)
+      .single();
+
+    if (selectError || !savedConfig) {
       return res.status(500).json({
-        ok: false,
-        error: errorText || "Errore invio email Microsoft",
+        success: false,
+        error: "Failed to retrieve saved configuration",
+        details: selectError?.message || "Unknown select error",
       });
     }
 
-    return res.status(200).json({ ok: true });
-  } catch (error: any) {
-    console.error("❌ API send-email error:", error);
+    // 7) Invalidate cache
+    tokenCache.invalidate(studioId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Microsoft 365 configuration saved successfully",
+      config: savedConfig,
+    });
+  } catch (error: unknown) {
+    console.error("[M365 save-config] Fatal error:", error);
     return res.status(500).json({
-      ok: false,
-      error: error?.message || "Errore interno invio email",
+      success: false,
+      error: "Failed to save Microsoft 365 configuration",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
