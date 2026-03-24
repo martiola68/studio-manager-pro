@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+import type { MicrosoftConnection } from "@/types/microsoftConnection";
+import {
+  getMicrosoftConnections,
+  setDefaultMicrosoftConnection,
+} from "@/services/microsoftConnectionsService";
+
 import {
   Loader2,
   CheckCircle2,
@@ -60,6 +66,18 @@ const [m365Loading, setM365Loading] = useState(true)
 async function loadM365Status() {
   setM365Loading(true)
 
+const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
+
+const loadConnections = async () => {
+  if (!studioId) return;
+  const data = await getMicrosoftConnections(studioId);
+  setConnections(data);
+};
+
+useEffect(() => {
+  loadConnections();
+}, [studioId]);
+  
  try {
   const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
   if (sessionErr) throw sessionErr;
