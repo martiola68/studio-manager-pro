@@ -112,14 +112,14 @@ const message: EmailMessage = {
   from: {
     emailAddress: {
       address: SENDER_EMAIL,
-      name: "Studio Manager Pro"
+      name: "Nome Studio Test"
     }
   },
 
   sender: {
     emailAddress: {
       address: SENDER_EMAIL,
-      name: "Studio Manager Pro"
+      name: "Nome Studio Test"
     }
   }
 };
