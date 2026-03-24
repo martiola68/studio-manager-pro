@@ -1,11 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const TENANT_ID = process.env.NEXT_PUBLIC_MS365_TENANT_ID!;
-const CLIENT_ID = process.env.NEXT_PUBLIC_MS365_CLIENT_ID!;
-const CLIENT_SECRET = process.env.MS365_CLIENT_SECRET!;
+const TENANT_ID = process.env.MS365_TENANT_ID;
+const CLIENT_ID = process.env.MS365_CLIENT_ID;
+const CLIENT_SECRET = process.env.MS365_CLIENT_SECRET;
 const SENDER_EMAIL = "noreply@revisionicommerciali.it";
 
 async function getAppOnlyAccessToken(): Promise<string> {
+  if (!TENANT_ID) {
+    throw new Error("MS365_TENANT_ID non definito");
+  }
+
+  if (!CLIENT_ID) {
+    throw new Error("MS365_CLIENT_ID non definito");
+  }
+
+  if (!CLIENT_SECRET) {
+    throw new Error("MS365_CLIENT_SECRET non definito");
+  }
+
   const tokenUrl = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
 
   const body = new URLSearchParams({
@@ -85,9 +97,7 @@ export default async function handler(
     }
 
     const graphResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(
-        SENDER_EMAIL
-      )}/sendMail`,
+      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(SENDER_EMAIL)}/sendMail`,
       {
         method: "POST",
         headers: {
