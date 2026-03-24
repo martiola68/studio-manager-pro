@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import type { MicrosoftConnection } from "@/types/microsoftConnection";
 import {
+  createMicrosoftConnection,
   getMicrosoftConnections,
   setDefaultMicrosoftConnection,
 } from "@/services/microsoftConnectionsService";
@@ -30,6 +31,7 @@ import {
   UserX,
   Link2,
   RefreshCcw,
+  Plus,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
@@ -65,6 +67,7 @@ export default function Microsoft365Page() {
 
   const [studioId, setStudioId] = useState("");
   const [userId, setUserId] = useState("");
+  const [userMicrosoftConnectionId, setUserMicrosoftConnectionId] = useState("");
 
   const [loading, setLoading] = useState(true);
 
@@ -73,6 +76,7 @@ export default function Microsoft365Page() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [creatingConnection, setCreatingConnection] = useState(false);
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -99,6 +103,14 @@ export default function Microsoft365Page() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [showNewConnectionForm, setShowNewConnectionForm] = useState(false);
+  const [newConnectionName, setNewConnectionName] = useState("");
+  const [newConnectionTenantId, setNewConnectionTenantId] = useState("");
+  const [newConnectionClientId, setNewConnectionClientId] = useState("");
+  const [newConnectionClientSecret, setNewConnectionClientSecret] = useState("");
+  const [newConnectionEnabled, setNewConnectionEnabled] = useState(true);
+  const [newConnectionIsDefault, setNewConnectionIsDefault] = useState(false);
+
   const studioConfigValid = useMemo(() => {
     if (!config) return false;
     return Boolean(config.client_id && config.tenant_id && config.enabled === true);
@@ -111,7 +123,15 @@ export default function Microsoft365Page() {
     setConnections(data);
 
     setSelectedConnectionId((prev) => {
+      if (
+        userMicrosoftConnectionId &&
+        data.some((c) => c.id === userMicrosoftConnectionId)
+      ) {
+        return userMicrosoftConnectionId;
+      }
+
       if (prev && data.some((c) => c.id === prev)) return prev;
+
       const def = data.find((c) => c.is_default);
       return def?.id ?? data[0]?.id ?? "";
     });
@@ -130,7 +150,8 @@ export default function Microsoft365Page() {
   useEffect(() => {
     if (!studioId) return;
     loadConnections();
-  }, [studioId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studioId, userMicrosoftConnectionId]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -185,7 +206,7 @@ export default function Microsoft365Page() {
 
       const { data: user, error: userErr } = await supabase
         .from("tbutenti")
-        .select("studio_id")
+        .select("studio_id, microsoft_connection_id")
         .eq("id", currentUserId)
         .single();
 
@@ -197,6 +218,7 @@ export default function Microsoft365Page() {
       }
 
       setStudioId(user.studio_id);
+      setUserMicrosoftConnectionId(user.microsoft_connection_id || "");
 
       const { data: rawData, error: cfgErr } = await supabase
         .from("microsoft365_config")
@@ -327,6 +349,67 @@ export default function Microsoft365Page() {
     }
   }
 
+  async function handleCreateConnection() {
+    if (!studioId) {
+      setError("Studio ID non trovato");
+      return;
+    }
+
+    if (
+      !newConnectionName.trim() ||
+      !newConnectionTenantId.trim() ||
+      !newConnectionClientId.trim() ||
+      !newConnectionClientSecret.trim()
+    ) {
+      setError("Compila tutti i campi della nuova connessione");
+      return;
+    }
+
+    setCreatingConnection(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const nextSortOrder =
+        connections.length > 0
+          ? Math.max(...connections.map((c: any) => Number(c.sort_order ?? 0))) + 1
+          : 1;
+
+      const created = await createMicrosoftConnection({
+        studio_id: studioId,
+        nome_connessione: newConnectionName.trim(),
+        tenant_id: newConnectionTenantId.trim(),
+        client_id: newConnectionClientId.trim(),
+        client_secret: newConnectionClientSecret.trim(),
+        enabled: newConnectionEnabled,
+        is_default: newConnectionIsDefault,
+        sort_order: nextSortOrder,
+      });
+
+      await loadConnections();
+
+      setSelectedConnectionId(created.id);
+      setSuccessMessage("✅ Nuova connessione Microsoft 365 creata con successo");
+
+      setNewConnectionName("");
+      setNewConnectionTenantId("");
+      setNewConnectionClientId("");
+      setNewConnectionClientSecret("");
+      setNewConnectionEnabled(true);
+      setNewConnectionIsDefault(false);
+      setShowNewConnectionForm(false);
+    } catch (err) {
+      console.error("Create connection error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Errore durante la creazione della connessione"
+      );
+    } finally {
+      setCreatingConnection(false);
+    }
+  }
+
   async function handleTest() {
     if (!studioId) {
       setError("Studio ID non trovato");
@@ -334,7 +417,7 @@ export default function Microsoft365Page() {
     }
 
     if (!selectedConnectionId) {
-      setError("Seleziona una connessione Microsoft 365.");
+      setError("Connessione Microsoft 365 utente non assegnata.");
       return;
     }
 
@@ -395,7 +478,7 @@ export default function Microsoft365Page() {
     }
 
     if (!selectedConnectionId) {
-      setError("Seleziona una connessione Microsoft 365.");
+      setError("Connessione Microsoft 365 utente non assegnata.");
       return;
     }
 
@@ -465,7 +548,7 @@ export default function Microsoft365Page() {
 
   async function handleSyncAgenda() {
     if (!selectedConnectionId) {
-      setSyncError("Seleziona una connessione Microsoft 365.");
+      setSyncError("Connessione Microsoft 365 utente non assegnata.");
       return;
     }
 
@@ -545,49 +628,159 @@ export default function Microsoft365Page() {
         </Button>
       </div>
 
-      {connections.length > 0 && (
+      {selectedConnection && (
         <Card>
           <CardHeader>
-            <CardTitle>Connessione attiva</CardTitle>
+            <CardTitle>Connessione assegnata all&apos;utente</CardTitle>
             <CardDescription>
-              Seleziona il tenant Microsoft 365 da usare in questa pagina
+              Questa connessione Microsoft 365 è associata automaticamente al tuo account
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-3">
-            <select
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={selectedConnectionId}
-              onChange={(e) => setSelectedConnectionId(e.target.value)}
-            >
-              {connections.map((conn) => (
-                <option key={conn.id} value={conn.id}>
-                  {conn.nome_connessione}
-                  {conn.tenant_id ? ` — ${conn.tenant_id}` : ""}
-                  {conn.is_default ? " (predefinita)" : ""}
-                </option>
-              ))}
-            </select>
-
-            {selectedConnection && (
-              <div className="text-sm text-muted-foreground">
-                <div>
-                  <strong>Tenant:</strong> {selectedConnection.tenant_id || "-"}
-                </div>
-                <div>
-                  <strong>Email:</strong>{" "}
-                  {selectedConnection.connected_email ||
-                    selectedConnection.organizer_email ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Stato:</strong> {selectedConnection.enabled ? "Attiva" : "Disattiva"}
-                </div>
-              </div>
-            )}
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <div>
+              <strong>Connessione:</strong> {selectedConnection.nome_connessione}
+            </div>
+            <div>
+              <strong>Tenant:</strong> {selectedConnection.tenant_id || "-"}
+            </div>
+            <div>
+              <strong>Email:</strong>{" "}
+              {selectedConnection.connected_email || selectedConnection.organizer_email || "-"}
+            </div>
+            <div>
+              <strong>Stato:</strong> {selectedConnection.enabled ? "Attiva" : "Disattiva"}
+            </div>
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>Nuova connessione Microsoft 365</CardTitle>
+              <CardDescription>
+                Crea una nuova connessione tenant direttamente da questa pagina
+              </CardDescription>
+            </div>
+
+            <Button
+              type="button"
+              variant={showNewConnectionForm ? "outline" : "default"}
+              onClick={() => setShowNewConnectionForm((prev) => !prev)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {showNewConnectionForm ? "Chiudi" : "Nuova connessione"}
+            </Button>
+          </div>
+        </CardHeader>
+
+        {showNewConnectionForm && (
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newConnectionName">Nome connessione *</Label>
+              <Input
+                id="newConnectionName"
+                placeholder="Es. Tenant Eius Advisory"
+                value={newConnectionName}
+                onChange={(e) => setNewConnectionName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newConnectionTenantId">Tenant ID *</Label>
+              <Input
+                id="newConnectionTenantId"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                value={newConnectionTenantId}
+                onChange={(e) => setNewConnectionTenantId(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newConnectionClientId">Client ID *</Label>
+              <Input
+                id="newConnectionClientId"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                value={newConnectionClientId}
+                onChange={(e) => setNewConnectionClientId(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newConnectionClientSecret">Client Secret *</Label>
+              <Input
+                id="newConnectionClientSecret"
+                type="password"
+                placeholder="Inserisci il client secret"
+                value={newConnectionClientSecret}
+                onChange={(e) => setNewConnectionClientSecret(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-md border p-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={newConnectionEnabled}
+                  onChange={(e) => setNewConnectionEnabled(e.target.checked)}
+                />
+                Connessione attiva
+              </label>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={newConnectionIsDefault}
+                  onChange={(e) => setNewConnectionIsDefault(e.target.checked)}
+                />
+                Imposta come connessione predefinita dello studio
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                onClick={handleCreateConnection}
+                disabled={
+                  creatingConnection ||
+                  !newConnectionName ||
+                  !newConnectionTenantId ||
+                  !newConnectionClientId ||
+                  !newConnectionClientSecret
+                }
+              >
+                {creatingConnection && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Salva nuova connessione
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowNewConnectionForm(false);
+                  setNewConnectionName("");
+                  setNewConnectionTenantId("");
+                  setNewConnectionClientId("");
+                  setNewConnectionClientSecret("");
+                  setNewConnectionEnabled(true);
+                  setNewConnectionIsDefault(false);
+                }}
+                disabled={creatingConnection}
+              >
+                Annulla
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {successMessage && (
         <Alert>
@@ -912,6 +1105,7 @@ export default function Microsoft365Page() {
                   <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
                   <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
                   <div>Default: {conn.is_default ? "Sì" : "No"}</div>
+                  <div>Assegnata utente: {conn.id === userMicrosoftConnectionId ? "Sì" : "No"}</div>
 
                   {!conn.is_default && (
                     <Button
@@ -921,6 +1115,7 @@ export default function Microsoft365Page() {
                       onClick={async () => {
                         await setDefaultMicrosoftConnection(studioId, conn.id);
                         await loadConnections();
+                        setSuccessMessage("✅ Connessione predefinita aggiornata");
                       }}
                     >
                       Imposta come predefinita
@@ -934,4 +1129,4 @@ export default function Microsoft365Page() {
       </Card>
     </div>
   );
-        }
+}
