@@ -5,11 +5,27 @@ type Utente = Database["public"]["Tables"]["tbutenti"]["Row"];
 type UtenteInsert = Database["public"]["Tables"]["tbutenti"]["Insert"];
 type UtenteUpdate = Database["public"]["Tables"]["tbutenti"]["Update"];
 
+const utentiSelect = `
+  id,
+  nome,
+  cognome,
+  email,
+  tipo_utente,
+  ruolo_operatore_id,
+  attivo,
+  created_at,
+  updated_at,
+  responsabile,
+  studio_id,
+  settore,
+  microsoft_connection_id
+`;
+
 export const utenteService = {
-  async getUtenti(studioId?: string | null) {
+  async getUtenti(studioId?: string | null): Promise<Utente[]> {
     let query = supabase
       .from("tbutenti")
-      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, responsabile, studio_id, settore")
+      .select(utentiSelect)
       .order("cognome", { ascending: true });
 
     if (studioId) {
@@ -22,13 +38,13 @@ export const utenteService = {
       throw error;
     }
 
-    return data;
+    return (data ?? []) as Utente[];
   },
 
-  async getUtenteById(id: string) {
+  async getUtenteById(id: string): Promise<Utente | null> {
     const { data, error } = await supabase
       .from("tbutenti")
-      .select("id, nome, cognome, email, tipo_utente, ruolo_operatore_id, attivo, created_at, updated_at, responsabile, studio_id, settore")
+      .select(utentiSelect)
       .eq("id", id)
       .single();
 
@@ -36,7 +52,7 @@ export const utenteService = {
       throw error;
     }
 
-    return data;
+    return data as Utente | null;
   },
 
   async createUtente(utente: UtenteInsert): Promise<Utente | null> {
@@ -50,6 +66,7 @@ export const utenteService = {
       console.error("Error creating utente:", error);
       throw error;
     }
+
     return data;
   },
 
@@ -65,6 +82,7 @@ export const utenteService = {
       console.error("Error updating utente:", error);
       throw error;
     }
+
     return data;
   },
 
@@ -78,15 +96,26 @@ export const utenteService = {
       console.error("Error deleting utente:", error);
       return false;
     }
+
     return true;
   },
 
   async getUtentiStudio(studioId: string): Promise<Utente[]> {
-    return this.getUtenti(studioId);
+    return await this.getUtenti(studioId);
   },
 
   async getUtenteByUserId(userId: string): Promise<Utente | null> {
-    console.warn("getUtenteByUserId non implementato completamente per il nuovo schema");
-    return null; 
-  }
+    const { data, error } = await supabase
+      .from("tbutenti")
+      .select(utentiSelect)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error getting utente by user_id:", error);
+      throw error;
+    }
+
+    return (data as Utente | null) ?? null;
+  },
 };
