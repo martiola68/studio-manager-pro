@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const TENANT_ID = process.env.MS365_TENANT_ID;
-const CLIENT_ID = process.env.MS365_CLIENT_ID;
-const CLIENT_SECRET = process.env.MS365_CLIENT_SECRET;
+const TENANT_ID = process.env.MICROSOFT_TENANT_ID;
+const CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
+const CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
 const SENDER_EMAIL = "noreply@revisionicommerciali.it";
 
 async function getAppOnlyAccessToken(): Promise<string> {
