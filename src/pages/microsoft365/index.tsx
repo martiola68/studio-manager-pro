@@ -59,52 +59,6 @@ function getTabFromQuery(q: unknown): ActiveTab {
 }
 
 export default function Microsoft365Page() {
-
-const [m365Connected, setM365Connected] = useState<boolean | null>(null)
-const [m365Loading, setM365Loading] = useState(true)
-
-const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
-
-const loadConnections = async () => {
-  if (!studioId) return;
-  const data = await getMicrosoftConnections(studioId);
-  setConnections(data);
-};
-
-useEffect(() => {
-  loadConnections();
-}, [studioId]);
-
-async function loadM365Status() {
-  setM365Loading(true)
- 
- try {
-  const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-  if (sessionErr) throw sessionErr;
-
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) {
-    setM365Connected(false);
-    return;
-  }
-
-  const res = await fetch("/api/microsoft365/status", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  const json = await res.json();
-  setM365Connected(json.connected === true);
-} catch (e) {
-  setM365Connected(false);
-} finally {
-  setM365Loading(false);
-}
-  }
-useEffect(() => {
-  loadM365Status()
-}, [])
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("connessioni");
@@ -129,6 +83,8 @@ useEffect(() => {
     isConnected: false,
   });
 
+  const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
+
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -142,6 +98,12 @@ useEffect(() => {
     return Boolean(config.client_id && config.tenant_id && config.enabled === true);
   }, [config]);
 
+  const loadConnections = async () => {
+    if (!studioId) return;
+    const data = await getMicrosoftConnections(studioId);
+    setConnections(data);
+  };
+
   useEffect(() => {
     if (!router.isReady) return;
     setActiveTab(getTabFromQuery(router.query.tab));
@@ -151,6 +113,11 @@ useEffect(() => {
     loadUserAndConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!studioId) return;
+    loadConnections();
+  }, [studioId]);
 
   // query params da callback: /microsoft365?m365=connected oppure error=true&message=...
   useEffect(() => {
@@ -197,16 +164,14 @@ useEffect(() => {
       if (sessionErr) throw sessionErr;
 
       const session = sessionRes?.session;
-if (!session) {
-  router.push("/login");
-  return;
-}
-const bearer = session.access_token;
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
       const currentUserId = session.user.id;
       setUserId(currentUserId);
 
-      // studio_id dell'utente
       const { data: user, error: userErr } = await supabase
         .from("tbutenti")
         .select("studio_id")
@@ -222,7 +187,6 @@ const bearer = session.access_token;
 
       setStudioId(user.studio_id);
 
-      // config studio
       const { data: rawData, error: cfgErr } = await supabase
         .from("microsoft365_config")
         .select("client_id, tenant_id, enabled")
@@ -292,7 +256,6 @@ const bearer = session.access_token;
       return;
     }
 
-    // se config esiste, secret opzionale
     if (config && !clientSecret) {
       const confirmed = window.confirm(
         "Non hai inserito un nuovo Client Secret. Vuoi mantenere quello esistente?"
@@ -300,7 +263,6 @@ const bearer = session.access_token;
       if (!confirmed) return;
     }
 
-    // se config non esiste, secret obbligatorio
     if (!config && !clientSecret) {
       setError("Client Secret è obbligatorio per nuove configurazioni");
       return;
@@ -344,8 +306,8 @@ const bearer = session.access_token;
       setClientSecret("");
       setSuccessMessage("✅ Configurazione salvata con successo!");
 
-      // opzionale: test automatico
       await handleTest();
+      await loadConnections();
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Errore nel salvataggio");
@@ -401,42 +363,39 @@ const bearer = session.access_token;
     }
   }
 
-  // ✅ FLOW: POST /api/microsoft365/connect -> { url } -> redirect browser
- async function handleConnect() {
-  if (!config) {
-    setError(
-      "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
-    );
-    return;
-  }
-
-  if (!config.enabled) {
-    setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
-    return;
-  }
-
-  setConnecting(true);
-  setError(null);
-  setSuccessMessage(null);
-
-  try {
-    const bearer = await getSupabaseBearer();
-
-    if (!bearer) {
-      setError("Sessione non valida. Rifai login.");
+  async function handleConnect() {
+    if (!config) {
+      setError(
+        "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
+      );
       return;
     }
 
-    // 🔥 AVVIO OAUTH CON REDIRECT DIRETTO (niente fetch)
-    window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}`;
+    if (!config.enabled) {
+      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+      return;
+    }
 
-  } catch (e) {
-    console.error("M365 connect fatal", e);
-    setError(e instanceof Error ? e.message : "Errore imprevisto");
-  } finally {
-    setConnecting(false);
+    setConnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const bearer = await getSupabaseBearer();
+
+      if (!bearer) {
+        setError("Sessione non valida. Rifai login.");
+        return;
+      }
+
+      window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}`;
+    } catch (e) {
+      console.error("M365 connect fatal", e);
+      setError(e instanceof Error ? e.message : "Errore imprevisto");
+    } finally {
+      setConnecting(false);
+    }
   }
-}
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
@@ -470,6 +429,7 @@ const bearer = session.access_token;
 
       setUserConnection({ isConnected: false });
       setSuccessMessage("✅ Account Microsoft 365 disconnesso con successo");
+      await loadConnections();
     } catch (err) {
       console.error("Disconnect error:", err);
       setError(err instanceof Error ? err.message : "Errore durante la disconnessione");
@@ -527,7 +487,6 @@ const bearer = session.access_token;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {/* HEADER */}
       <div className="mb-2">
         <h1 className="text-3xl font-bold tracking-tight">Microsoft 365</h1>
         <p className="text-muted-foreground">
@@ -535,7 +494,6 @@ const bearer = session.access_token;
         </p>
       </div>
 
-      {/* TABS */}
       <div className="flex gap-2">
         <Button
           variant={activeTab === "connessioni" ? "default" : "outline"}
@@ -576,7 +534,6 @@ const bearer = session.access_token;
         </Alert>
       )}
 
-      {/* TAB CONNESSIONI */}
       {activeTab === "connessioni" && (
         <>
           <Alert>
@@ -588,7 +545,6 @@ const bearer = session.access_token;
             </AlertDescription>
           </Alert>
 
-          {/* STATO CONFIG STUDIO */}
           {config && (
             <Card>
               <CardHeader>
@@ -610,7 +566,6 @@ const bearer = session.access_token;
             </Card>
           )}
 
-          {/* STATO CONNESSIONE UTENTE */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -694,7 +649,6 @@ const bearer = session.access_token;
             </CardContent>
           </Card>
 
-          {/* RISULTATO TEST */}
           {testResult && (
             <Alert variant={testResult.success ? "default" : "destructive"}>
               {testResult.success ? (
@@ -721,7 +675,6 @@ const bearer = session.access_token;
             </Alert>
           )}
 
-          {/* CONFIG STUDIO */}
           <Card>
             <CardHeader>
               <CardTitle>Credenziali Azure AD (Configurazione Studio)</CardTitle>
@@ -794,7 +747,6 @@ const bearer = session.access_token;
             </CardContent>
           </Card>
 
-          {/* GUIDA */}
           <Card>
             <CardHeader>
               <CardTitle>Guida alla configurazione</CardTitle>
@@ -814,7 +766,6 @@ const bearer = session.access_token;
         </>
       )}
 
-      {/* TAB SYNC */}
       {activeTab === "sync" && (
         <Card>
           <CardHeader>
@@ -854,48 +805,47 @@ const bearer = session.access_token;
           </CardContent>
         </Card>
       )}
-      
-<Card className="mt-6">
-  <CardHeader>
-    <CardTitle>Connessioni Microsoft 365</CardTitle>
-    <CardDescription>
-      Elenco delle connessioni Microsoft disponibili per questo studio
-    </CardDescription>
-  </CardHeader>
 
-  <CardContent>
-    {connections.length === 0 ? (
-      <p>Nessuna connessione presente.</p>
-    ) : (
-      <div className="space-y-3">
-        {connections.map((conn) => (
-          <div key={conn.id} className="rounded border p-3">
-            <div className="font-semibold">{conn.nome_connessione}</div>
-            <div>Tenant: {conn.tenant_id || "-"}</div>
-            <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
-            <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
-            <div>Default: {conn.is_default ? "Sì" : "No"}</div>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Connessioni Microsoft 365</CardTitle>
+          <CardDescription>
+            Elenco delle connessioni Microsoft disponibili per questo studio
+          </CardDescription>
+        </CardHeader>
 
-            {!conn.is_default && (
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3"
-                onClick={async () => {
-                  await setDefaultMicrosoftConnection(studioId, conn.id);
-                  await loadConnections();
-                }}
-              >
-                Imposta come predefinita
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
-    )}
-  </CardContent>
-</Card>
-      
+        <CardContent>
+          {connections.length === 0 ? (
+            <p>Nessuna connessione presente.</p>
+          ) : (
+            <div className="space-y-3">
+              {connections.map((conn) => (
+                <div key={conn.id} className="rounded border p-3">
+                  <div className="font-semibold">{conn.nome_connessione}</div>
+                  <div>Tenant: {conn.tenant_id || "-"}</div>
+                  <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
+                  <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
+                  <div>Default: {conn.is_default ? "Sì" : "No"}</div>
+
+                  {!conn.is_default && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={async () => {
+                        await setDefaultMicrosoftConnection(studioId, conn.id);
+                        await loadConnections();
+                      }}
+                    >
+                      Imposta come predefinita
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
