@@ -1,9 +1,5 @@
 import { graphApiCall, hasMicrosoft365 } from "./microsoftGraphService";
 import { supabase } from "@/lib/supabase/client";
-/**
- * Microsoft Email Service
- * Invia email tramite Microsoft Graph API usando Outlook
- */
 
 const ADMIN_LOGIN_EMAIL = "m.artiola@revisionicommerciali.it";
 const SENDER_EMAIL = "noreply@revisionicommerciali.it";
@@ -38,14 +34,12 @@ interface EmailMessage {
   toRecipients: EmailRecipient[];
   ccRecipients?: EmailRecipient[];
   bccRecipients?: EmailRecipient[];
-
   from?: {
     emailAddress: {
       address: string;
       name?: string;
     };
   };
-
   sender?: {
     emailAddress: {
       address: string;
@@ -60,12 +54,9 @@ interface SendEmailParams {
   html: string;
   cc?: string | string[];
   bcc?: string | string[];
-  from?: string; // Ignorato, usa sempre l'account Microsoft dell'utente
+  from?: string;
 }
 
-/**
- * Converte email string/array in formato Microsoft Graph
- */
 function formatRecipients(emails: string | string[]): EmailRecipient[] {
   const emailArray = Array.isArray(emails) ? emails : [emails];
   return emailArray.map((email) => ({
@@ -73,62 +64,54 @@ function formatRecipients(emails: string | string[]): EmailRecipient[] {
   }));
 }
 
-/**
- * Invia email tramite Microsoft Graph API
- */
 export async function sendEmailViaMicrosoft(
   userId: string,
   params: SendEmailParams
 ): Promise<void> {
- 
- const adminUserId = await getAdminUserId();
+  const adminUserId = await getAdminUserId();
 
-const { data: u, error: uErr } = await supabase
-  .from("tbutenti")
-  .select("studio_id")
-  .eq("id", adminUserId)
-  .single();
-if (uErr || !u?.studio_id) {
-  throw new Error("Studio non trovato per invio email Microsoft.");
-}
+  const { data: u, error: uErr } = await supabase
+    .from("tbutenti")
+    .select("studio_id")
+    .eq("id", adminUserId)
+    .single();
 
-const studioId = u.studio_id as string;
-  
-  // Verifica che l'utente abbia Microsoft 365 configurato
+  if (uErr || !u?.studio_id) {
+    throw new Error("Studio non trovato per invio email Microsoft.");
+  }
+
+  const studioId = u.studio_id as string;
+
   const hasMicrosoft = await hasMicrosoft365(studioId, userId);
   if (!hasMicrosoft) {
     throw new Error("Microsoft 365 non configurato per questo utente");
   }
 
-  // Costruisci messaggio in formato Graph API
-const message: EmailMessage = {
-  subject: params.subject,
-  body: {
-    contentType: "HTML",
-    content: params.html,
-  },
-  toRecipients: formatRecipients(params.to),
+  const message: EmailMessage = {
+    subject: params.subject,
+    body: {
+      contentType: "HTML",
+      content: params.html,
+    },
+    toRecipients: formatRecipients(params.to),
+    from: {
+      emailAddress: {
+        address: SENDER_EMAIL,
+        name: "Nome Studio Test",
+      },
+    },
+    sender: {
+      emailAddress: {
+        address: SENDER_EMAIL,
+        name: "Nome Studio Test",
+      },
+    },
+  };
 
-  from: {
-    emailAddress: {
-      address: SENDER_EMAIL,
-      name: "Nome Studio Test"
-    }
-  },
-
-  sender: {
-    emailAddress: {
-      address: SENDER_EMAIL,
-      name: "Nome Studio Test"
-    }
-  }
-};
-  // Aggiungi CC se presente
   if (params.cc) {
     message.ccRecipients = formatRecipients(params.cc);
   }
 
-  // Aggiungi BCC se presente
   if (params.bcc) {
     message.bccRecipients = formatRecipients(params.bcc);
   }
@@ -138,12 +121,11 @@ const message: EmailMessage = {
   console.log("📧 Oggetto:", params.subject);
 
   try {
-    // Invia email tramite Graph API
     await graphApiCall(adminUserId, "/me/sendMail", {
       method: "POST",
       body: JSON.stringify({
         message,
-        saveToSentItems: true, // Salva in "Posta inviata"
+        saveToSentItems: true,
       }),
     });
 
@@ -154,9 +136,6 @@ const message: EmailMessage = {
   }
 }
 
-/**
- * Verifica se un utente può usare Microsoft per le email
- */
 export async function canUseMicrosoftEmail(userId: string): Promise<boolean> {
-  return await hasMicrosoft365(userId);
+  return await hasMicrosoft365(userId as any);
 }
