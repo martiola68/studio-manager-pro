@@ -336,6 +336,11 @@ export default function Microsoft365Page() {
       return;
     }
 
+    if (!selectedConnectionId) {
+      setError("Seleziona una connessione Microsoft 365.");
+      return;
+    }
+
     setTesting(true);
     setError(null);
     setTestResult(null);
@@ -349,7 +354,9 @@ export default function Microsoft365Page() {
           "Content-Type": "application/json",
           ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          connectionId: selectedConnectionId,
+        }),
       });
 
       const result = await response.json().catch(() => ({}));
@@ -376,7 +383,6 @@ export default function Microsoft365Page() {
       setTesting(false);
     }
   }
-
   async function handleConnect() {
     if (!config) {
       setError(
@@ -387,6 +393,11 @@ export default function Microsoft365Page() {
 
     if (!config.enabled) {
       setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+      return;
+    }
+
+    if (!selectedConnectionId) {
+      setError("Seleziona una connessione Microsoft 365.");
       return;
     }
 
@@ -402,7 +413,9 @@ export default function Microsoft365Page() {
         return;
       }
 
-      window.location.href = `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}`;
+      window.location.href =
+        `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}` +
+        `&connectionId=${encodeURIComponent(selectedConnectionId)}`;
     } catch (e) {
       console.error("M365 connect fatal", e);
       setError(e instanceof Error ? e.message : "Errore imprevisto");
@@ -452,7 +465,12 @@ export default function Microsoft365Page() {
     }
   }
 
-  async function handleSyncAgenda() {
+ async function handleSyncAgenda() {
+    if (!selectedConnectionId) {
+      setSyncError("Seleziona una connessione Microsoft 365.");
+      return;
+    }
+
     setSyncing(true);
     setSyncMessage(null);
     setSyncError(null);
@@ -467,7 +485,9 @@ export default function Microsoft365Page() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${bearer}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          connectionId: selectedConnectionId,
+        }),
         credentials: "include",
       });
 
@@ -695,7 +715,10 @@ export default function Microsoft365Page() {
                   </div>
 
                   <div className="pt-2">
-                    <Button onClick={handleConnect} disabled={!studioConfigValid || connecting}>
+                   <Button
+  onClick={handleConnect}
+  disabled={!studioConfigValid || connecting || !selectedConnectionId}
+>
                       {connecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Connetti Microsoft 365
                     </Button>
@@ -800,7 +823,11 @@ export default function Microsoft365Page() {
                 </Button>
 
                 {config && (
-                  <Button variant="outline" onClick={handleTest} disabled={testing}>
+                  <Button
+  variant="outline"
+  onClick={handleTest}
+  disabled={testing || !selectedConnectionId}
+>
                     {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Testa connessione
                   </Button>
@@ -844,7 +871,7 @@ export default function Microsoft365Page() {
               </Alert>
             ) : (
               <>
-                <Button onClick={handleSyncAgenda} disabled={syncing}>
+                <Button onClick={handleSyncAgenda} disabled={syncing || !selectedConnectionId}>
                   {syncing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sincronizza adesso
                 </Button>
