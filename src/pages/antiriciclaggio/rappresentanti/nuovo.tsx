@@ -502,7 +502,7 @@ if (!userId) {
       </div>
     `;
 
-const emailResponse = await fetch("/api/microsoft/send-email", {
+const emailResponse = await fetch("/api/microsoft365/send-email", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
