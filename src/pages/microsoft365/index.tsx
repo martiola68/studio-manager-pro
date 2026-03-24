@@ -854,6 +854,48 @@ const bearer = session.access_token;
           </CardContent>
         </Card>
       )}
+      
+<Card className="mt-6">
+  <CardHeader>
+    <CardTitle>Connessioni Microsoft 365</CardTitle>
+    <CardDescription>
+      Elenco delle connessioni Microsoft disponibili per questo studio
+    </CardDescription>
+  </CardHeader>
+
+  <CardContent>
+    {connections.length === 0 ? (
+      <p>Nessuna connessione presente.</p>
+    ) : (
+      <div className="space-y-3">
+        {connections.map((conn) => (
+          <div key={conn.id} className="rounded border p-3">
+            <div className="font-semibold">{conn.nome_connessione}</div>
+            <div>Tenant: {conn.tenant_id || "-"}</div>
+            <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
+            <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
+            <div>Default: {conn.is_default ? "Sì" : "No"}</div>
+
+            {!conn.is_default && (
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={async () => {
+                  await setDefaultMicrosoftConnection(studioId, conn.id);
+                  await loadConnections();
+                }}
+              >
+                Imposta come predefinita
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </CardContent>
+</Card>
+      
     </div>
   );
 }
