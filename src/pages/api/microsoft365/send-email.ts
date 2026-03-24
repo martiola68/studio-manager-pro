@@ -58,6 +58,13 @@ export default async function handler(
   }
 
   try {
+    console.log("API ENV CHECK");
+console.log("MS365_TENANT_ID =", process.env.MS365_TENANT_ID);
+console.log("MS365_CLIENT_ID =", process.env.MS365_CLIENT_ID);
+console.log(
+  "MS365_CLIENT_SECRET =",
+  process.env.MS365_CLIENT_SECRET ? "OK" : "MANCANTE"
+);
     const { to, subject, html, cc, bcc } = req.body || {};
 
     if (!to || !subject || !html) {
