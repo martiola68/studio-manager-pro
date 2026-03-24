@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
-import { authService } from "@/services/authService";
 import { utenteService } from "@/services/utenteService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ export default function GestioneUtentiPage() {
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
   const [creating, setCreating] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     nome: "",
     cognome: "",
@@ -39,7 +38,7 @@ export default function GestioneUtentiPage() {
     ruolo_operatore_id: "",
     attivo: true,
     settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
-    responsabile: false
+    responsabile: false,
   });
 
   useEffect(() => {
@@ -48,7 +47,10 @@ export default function GestioneUtentiPage() {
 
   const checkAuthAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session || !session.user.email) {
         router.push("/login");
         return;
@@ -75,31 +77,40 @@ export default function GestioneUtentiPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [utentiData, ruoliData] = await Promise.all([
+
+      const [utentiDataRaw, ruoliData] = await Promise.all([
         utenteService.getUtenti(),
-        loadRuoli()
+        loadRuoli(),
       ]);
-      
-      const sortedData = utentiData.sort((a: Utente, b: Utente) => {
-        const settoreOrder: Record<string, number> = { 'Fiscale': 1, 'Lavoro': 2, 'Fiscale & lavoro': 3 };
+
+      const utentiData = (utentiDataRaw ?? []) as Utente[];
+
+      const sortedData = [...utentiData].sort((a, b) => {
+        const settoreOrder: Record<string, number> = {
+          Fiscale: 1,
+          Lavoro: 2,
+          "Fiscale & lavoro": 3,
+          Consulenza: 4,
+        };
+
         const settoreA = a.settore ? (settoreOrder[a.settore] || 999) : 999;
         const settoreB = b.settore ? (settoreOrder[b.settore] || 999) : 999;
-        
+
         if (settoreA !== settoreB) {
           return settoreA - settoreB;
         }
-        
-        return (a.cognome || '').localeCompare(b.cognome || '');
+
+        return (a.cognome || "").localeCompare(b.cognome || "");
       });
-      
+
       setUtenti(sortedData);
       setRuoli(ruoliData);
     } catch (error) {
-      console.error('Errore caricamento dati:', error);
+      console.error("Errore caricamento dati:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -107,11 +118,8 @@ export default function GestioneUtentiPage() {
   };
 
   const loadRuoli = async (): Promise<RuoloOperatore[]> => {
-    const { data, error } = await supabase
-      .from("tbroperatore")
-      .select("*")
-      .order("ruolo");
-    
+    const { data, error } = await supabase.from("tbroperatore").select("*").order("ruolo");
+
     if (error) throw error;
     return data || [];
   };
@@ -123,7 +131,7 @@ export default function GestioneUtentiPage() {
       toast({
         title: "Errore",
         description: "Compila tutti i campi obbligatori",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -140,26 +148,28 @@ export default function GestioneUtentiPage() {
           ruolo_operatore_id: formData.ruolo_operatore_id || null,
           attivo: formData.attivo,
           settore: formData.settore || null,
-          responsabile: formData.responsabile
+          responsabile: formData.responsabile,
         });
-        
+
         toast({
           title: "✅ Utente aggiornato",
-          description: "Le modifiche sono state salvate con successo"
+          description: "Le modifiche sono state salvate con successo",
         });
-        
+
         setDialogOpen(false);
         resetForm();
         await loadData();
       } else {
-        const utentiEsistenti = await utenteService.getUtenti();
-        const utenteEsistente = utentiEsistenti.find(u => u.email.toLowerCase() === formData.email.toLowerCase());
+        const utentiEsistenti = (await utenteService.getUtenti()) as Utente[];
+        const utenteEsistente = utentiEsistenti.find(
+          (u) => u.email.toLowerCase() === formData.email.toLowerCase()
+        );
 
         if (utenteEsistente) {
           toast({
             title: "⚠️ Utente già esistente",
             description: `Un utente con email ${formData.email} esiste già nel sistema`,
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
@@ -167,7 +177,7 @@ export default function GestioneUtentiPage() {
         const response = await fetch("/api/auth/create-user", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email: formData.email,
@@ -177,8 +187,8 @@ export default function GestioneUtentiPage() {
             ruolo_operatore_id: formData.ruolo_operatore_id || null,
             attivo: formData.attivo,
             settore: formData.settore || null,
-            responsabile: formData.responsabile
-          })
+            responsabile: formData.responsabile,
+          }),
         });
 
         const result = await response.json();
@@ -194,16 +204,16 @@ export default function GestioneUtentiPage() {
             ruolo_operatore_id: formData.ruolo_operatore_id || null,
             attivo: formData.attivo,
             settore: formData.settore || null,
-            responsabile: formData.responsabile
+            responsabile: formData.responsabile,
           })
           .eq("id", result.userId);
-        
+
         toast({
           title: "✅ Utente creato con successo!",
           description: `Email con le credenziali inviata a ${formData.email}`,
-          duration: 5000
+          duration: 5000,
         });
-        
+
         setDialogOpen(false);
         resetForm();
         await loadData();
@@ -213,7 +223,7 @@ export default function GestioneUtentiPage() {
       toast({
         title: "Errore",
         description: error instanceof Error ? error.message : "Impossibile salvare l'utente",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setCreating(false);
@@ -221,13 +231,15 @@ export default function GestioneUtentiPage() {
   };
 
   const handleResetPassword = async (utente: Utente) => {
-    if (!confirm(
-      `🔄 RESET PASSWORD\n\n` +
-      `Utente: ${utente.nome} ${utente.cognome}\n` +
-      `Email: ${utente.email}\n\n` +
-      `Verrà generata una nuova password sicura e inviata via email all'utente.\n\n` +
-      `Confermi?`
-    )) {
+    if (
+      !confirm(
+        `🔄 RESET PASSWORD\n\n` +
+          `Utente: ${utente.nome} ${utente.cognome}\n` +
+          `Email: ${utente.email}\n\n` +
+          `Verrà generata una nuova password sicura e inviata via email all'utente.\n\n` +
+          `Confermi?`
+      )
+    ) {
       return;
     }
 
@@ -237,13 +249,13 @@ export default function GestioneUtentiPage() {
       const response = await fetch("/api/admin/reset-password", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           userId: utente.id,
           email: utente.email,
-          nome: utente.nome
-        })
+          nome: utente.nome,
+        }),
       });
 
       const result = await response.json();
@@ -255,15 +267,14 @@ export default function GestioneUtentiPage() {
       toast({
         title: "✅ Password resettata con successo",
         description: `Email con le nuove credenziali inviata a ${utente.email}`,
-        duration: 5000
+        duration: 5000,
       });
-
     } catch (error: any) {
       console.error("Errore reset password:", error);
       toast({
         title: "Errore",
         description: error.message || "Impossibile resettare la password",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setResettingPassword(null);
@@ -275,12 +286,16 @@ export default function GestioneUtentiPage() {
       toast({
         title: "Operazione non consentita",
         description: "Non è possibile eliminare un amministratore",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    if (!confirm(`⚠️ ELIMINARE UTENTE?\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nQuesta operazione eliminerà:\n- L'account di accesso\n- I dati dell'utente\n\nQuesta azione NON può essere annullata!`)) {
+    if (
+      !confirm(
+        `⚠️ ELIMINARE UTENTE?\n\nUtente: ${utente.nome} ${utente.cognome}\nEmail: ${utente.email}\n\nQuesta operazione eliminerà:\n- L'account di accesso\n- I dati dell'utente\n\nQuesta azione NON può essere annullata!`
+      )
+    ) {
       return;
     }
 
@@ -290,11 +305,11 @@ export default function GestioneUtentiPage() {
       const response = await fetch("/api/admin/delete-user", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: utente.id
-        })
+          userId: utente.id,
+        }),
       });
 
       if (!response.ok) {
@@ -305,7 +320,7 @@ export default function GestioneUtentiPage() {
 
       toast({
         title: "✅ Utente eliminato",
-        description: `${utente.nome} ${utente.cognome} è stato eliminato dal sistema`
+        description: `${utente.nome} ${utente.cognome} è stato eliminato dal sistema`,
       });
 
       await loadData();
@@ -314,7 +329,7 @@ export default function GestioneUtentiPage() {
       toast({
         title: "Errore",
         description: "Impossibile eliminare l'utente",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -324,28 +339,28 @@ export default function GestioneUtentiPage() {
   const handleToggleStatus = async (utente: Utente) => {
     const newStatus = !utente.attivo;
     const action = newStatus ? "riattivare" : "disattivare";
-    
+
     if (!confirm(`Sei sicuro di voler ${action} l'utente ${utente.nome} ${utente.cognome}?`)) {
       return;
     }
 
     try {
       await utenteService.updateUtente(utente.id, { attivo: newStatus });
-      
+
       toast({
         title: newStatus ? "✅ Utente riattivato" : "✅ Utente disattivato",
-        description: newStatus 
+        description: newStatus
           ? `${utente.nome} ${utente.cognome} può nuovamente accedere al sistema`
           : `${utente.nome} ${utente.cognome} non può più accedere al sistema`,
       });
-      
+
       await loadData();
     } catch (error) {
       console.error("Errore cambio stato:", error);
       toast({
         title: "Errore",
         description: "Impossibile modificare lo stato dell'utente",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -360,7 +375,7 @@ export default function GestioneUtentiPage() {
       ruolo_operatore_id: utente.ruolo_operatore_id || "",
       attivo: utente.attivo ?? true,
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
-      responsabile: utente.responsabile ?? false
+      responsabile: utente.responsabile ?? false,
     });
     setDialogOpen(true);
   };
@@ -374,27 +389,29 @@ export default function GestioneUtentiPage() {
       ruolo_operatore_id: "",
       attivo: true,
       settore: "",
-      responsabile: false
+      responsabile: false,
     });
     setEditingUtente(null);
   };
 
-  const filteredUtenti = utenti.filter(u => {
-    const matchSearch = 
+  const filteredUtenti = utenti.filter((u) => {
+    const matchSearch =
       u.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.cognome.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchStatus = 
-      filterStatus === "all" ? true :
-      filterStatus === "active" ? (u.attivo ?? true) :
-      !(u.attivo ?? true);
-    
+
+    const matchStatus =
+      filterStatus === "all"
+        ? true
+        : filterStatus === "active"
+        ? (u.attivo ?? true)
+        : !(u.attivo ?? true);
+
     return matchSearch && matchStatus;
   });
 
-  const activeCount = utenti.filter(u => u.attivo ?? true).length;
-  const inactiveCount = utenti.filter(u => !(u.attivo ?? true)).length;
+  const activeCount = utenti.filter((u) => u.attivo ?? true).length;
+  const inactiveCount = utenti.filter((u) => !(u.attivo ?? true)).length;
 
   if (loading) {
     return (
@@ -414,27 +431,31 @@ export default function GestioneUtentiPage() {
           <h1 className="text-3xl font-bold text-gray-900">Gestione Utenti</h1>
           <p className="text-gray-500 mt-1">Crea e gestisci gli utenti del sistema</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700">
               <UserPlus className="h-4 w-4 mr-2" />
               Nuovo Utente
             </Button>
           </DialogTrigger>
+
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>
-                {editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}
-              </DialogTitle>
+              <DialogTitle>{editingUtente ? "Modifica Utente" : "Crea Nuovo Utente"}</DialogTitle>
               <DialogDescription>
-                {editingUtente 
-                  ? "Modifica i dati dell'utente" 
+                {editingUtente
+                  ? "Modifica i dati dell'utente"
                   : "Compila i campi per creare un nuovo utente. La password verrà generata automaticamente e inviata via email."}
               </DialogDescription>
             </DialogHeader>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -446,6 +467,7 @@ export default function GestioneUtentiPage() {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="cognome">Cognome *</Label>
                   <Input
@@ -478,7 +500,10 @@ export default function GestioneUtentiPage() {
                     <Mail className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-blue-900">
                       <p className="font-semibold mb-1">🔐 Password Automatica</p>
-                      <p>Una password sicura (10 caratteri: 2 numeri, 2 maiuscole, 1 carattere speciale) verrà generata automaticamente e inviata via email all'utente.</p>
+                      <p>
+                        Una password sicura (10 caratteri: 2 numeri, 2 maiuscole, 1 carattere speciale)
+                        verrà generata automaticamente e inviata via email all'utente.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -489,7 +514,7 @@ export default function GestioneUtentiPage() {
                   <Label htmlFor="tipo_utente">Tipo Utente *</Label>
                   <Select
                     value={formData.tipo_utente}
-                    onValueChange={(value: "Admin" | "User") => 
+                    onValueChange={(value: "Admin" | "User") =>
                       setFormData({ ...formData, tipo_utente: value })
                     }
                   >
@@ -507,8 +532,11 @@ export default function GestioneUtentiPage() {
                   <Label htmlFor="ruolo_operatore_id">Ruolo Operatore</Label>
                   <Select
                     value={formData.ruolo_operatore_id || "__none__"}
-                    onValueChange={(value) => 
-                      setFormData({ ...formData, ruolo_operatore_id: value === "__none__" ? "" : value })
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        ruolo_operatore_id: value === "__none__" ? "" : value,
+                      })
                     }
                   >
                     <SelectTrigger>
@@ -529,15 +557,19 @@ export default function GestioneUtentiPage() {
               <div className="space-y-2">
                 <Label htmlFor="settore">Settore</Label>
                 <Select
-                  value={formData.settore}
-                  onValueChange={(value: "Fiscale" | "Lavoro" | "Consulenza") => 
-                    setFormData({ ...formData, settore: value })
+                  value={formData.settore || "__none__"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      settore: value === "__none__" ? "" : (value as "Fiscale" | "Lavoro" | "Consulenza"),
+                    })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona settore" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__">Nessuno</SelectItem>
                     <SelectItem value="Fiscale">Fiscale</SelectItem>
                     <SelectItem value="Lavoro">Lavoro</SelectItem>
                     <SelectItem value="Consulenza">Consulenza</SelectItem>
@@ -554,7 +586,9 @@ export default function GestioneUtentiPage() {
                     onChange={(e) => setFormData({ ...formData, responsabile: e.target.checked })}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="responsabile" className="cursor-pointer font-medium">Responsabile (può vedere promemoria del gruppo)</Label>
+                  <Label htmlFor="responsabile" className="cursor-pointer font-medium">
+                    Responsabile (può vedere promemoria del gruppo)
+                  </Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -565,7 +599,9 @@ export default function GestioneUtentiPage() {
                     onChange={(e) => setFormData({ ...formData, attivo: e.target.checked })}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <Label htmlFor="attivo" className="cursor-pointer">Utente attivo</Label>
+                  <Label htmlFor="attivo" className="cursor-pointer">
+                    Utente attivo
+                  </Label>
                 </div>
               </div>
 
@@ -577,17 +613,11 @@ export default function GestioneUtentiPage() {
                       {editingUtente ? "Aggiornamento..." : "Creazione..."}
                     </>
                   ) : (
-                    <>
-                      {editingUtente ? "Aggiorna Utente" : "Crea Utente"}
-                    </>
+                    <>{editingUtente ? "Aggiorna Utente" : "Crea Utente"}</>
                   )}
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setDialogOpen(false)}
-                  disabled={creating}
-                >
+
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={creating}>
                   Annulla
                 </Button>
               </div>
@@ -612,6 +642,7 @@ export default function GestioneUtentiPage() {
             </div>
           </div>
         </CardHeader>
+
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
@@ -623,9 +654,13 @@ export default function GestioneUtentiPage() {
                 className="pl-10"
               />
             </div>
+
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-gray-500" />
-              <Select value={filterStatus} onValueChange={(value: "all" | "active" | "inactive") => setFilterStatus(value)}>
+              <Select
+                value={filterStatus}
+                onValueChange={(value: "all" | "active" | "inactive") => setFilterStatus(value)}
+              >
                 <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
@@ -655,6 +690,7 @@ export default function GestioneUtentiPage() {
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {filteredUtenti.length === 0 ? (
                 <TableRow>
@@ -664,9 +700,9 @@ export default function GestioneUtentiPage() {
                 </TableRow>
               ) : (
                 filteredUtenti.map((utente) => {
-                  const ruolo = ruoli.find(r => r.id === utente.ruolo_operatore_id);
+                  const ruolo = ruoli.find((r) => r.id === utente.ruolo_operatore_id);
                   const isActive = utente.attivo ?? true;
-                  
+
                   return (
                     <TableRow key={utente.id} className={!isActive ? "opacity-60 bg-gray-50" : ""}>
                       <TableCell className="font-medium">{utente.nome}</TableCell>
@@ -678,16 +714,14 @@ export default function GestioneUtentiPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {utente.settore ? (
-                          <Badge variant="outline">{utente.settore}</Badge>
-                        ) : "-"}
+                        {utente.settore ? <Badge variant="outline">{utente.settore}</Badge> : "-"}
                         {utente.responsabile && (
-                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-200">Resp.</span>
+                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-200">
+                            Resp.
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {ruolo ? ruolo.ruolo : "-"}
-                      </TableCell>
+                      <TableCell>{ruolo ? ruolo.ruolo : "-"}</TableCell>
                       <TableCell>
                         <Badge variant={isActive ? "default" : "secondary"}>
                           {isActive ? "✓ Attivo" : "○ Disattivato"}
@@ -703,6 +737,7 @@ export default function GestioneUtentiPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -716,19 +751,21 @@ export default function GestioneUtentiPage() {
                               <RotateCcw className="h-4 w-4 text-orange-600" />
                             )}
                           </Button>
+
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleStatus(utente)}
                             title={isActive ? "Disattiva utente" : "Riattiva utente"}
-                            className={isActive ? "text-gray-600 hover:text-gray-700" : "text-green-600 hover:text-green-700 hover:bg-green-50"}
+                            className={
+                              isActive
+                                ? "text-gray-600 hover:text-gray-700"
+                                : "text-green-600 hover:text-green-700 hover:bg-green-50"
+                            }
                           >
-                            {isActive ? (
-                              <UserX className="h-4 w-4" />
-                            ) : (
-                              <UserCheck className="h-4 w-4" />
-                            )}
+                            {isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                           </Button>
+
                           {utente.tipo_utente !== "Admin" && (
                             <Button
                               variant="ghost"
@@ -758,10 +795,20 @@ export default function GestioneUtentiPage() {
             <div>
               <p className="font-semibold text-gray-900 mb-2">📧 Sistema Email Automatico:</p>
               <ul className="space-y-1 text-gray-700">
-                <li><strong>✨ Creazione Utente</strong> - Password generata automaticamente (10 caratteri: 2 numeri, 2 maiuscole, 1 speciale) e inviata via email</li>
-                <li><strong>🔄 Reset Password</strong> - Nuova password sicura generata e inviata via email all'utente</li>
-                <li><strong>🔒 Sicurezza</strong> - L'amministratore non vede mai le password, tutto gestito automaticamente dal sistema</li>
-                <li><strong>🗑️ Elimina</strong> - Rimuove completamente l'utente dal sistema (solo utenti non-admin)</li>
+                <li>
+                  <strong>✨ Creazione Utente</strong> - Password generata automaticamente (10 caratteri: 2 numeri,
+                  2 maiuscole, 1 speciale) e inviata via email
+                </li>
+                <li>
+                  <strong>🔄 Reset Password</strong> - Nuova password sicura generata e inviata via email all'utente
+                </li>
+                <li>
+                  <strong>🔒 Sicurezza</strong> - L'amministratore non vede mai le password, tutto gestito
+                  automaticamente dal sistema
+                </li>
+                <li>
+                  <strong>🗑️ Elimina</strong> - Rimuove completamente l'utente dal sistema (solo utenti non-admin)
+                </li>
               </ul>
             </div>
           </div>
