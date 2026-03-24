@@ -2639,6 +2639,7 @@ export type Database = {
           studio_id: string | null
           tipo_utente: string
           updated_at: string | null
+         microsoft_connection_id: string | null
         }
         Insert: {
           attivo?: boolean | null
@@ -2653,6 +2654,7 @@ export type Database = {
           studio_id?: string | null
           tipo_utente: string
           updated_at?: string | null
+         microsoft_connection_id?: string | null
         }
         Update: {
           attivo?: boolean | null
@@ -2667,6 +2669,7 @@ export type Database = {
           studio_id?: string | null
           tipo_utente?: string
           updated_at?: string | null
+         microsoft_connection_id?: string | null
         }
         Relationships: [
           {
