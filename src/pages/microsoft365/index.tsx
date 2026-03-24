@@ -85,6 +85,13 @@ export default function Microsoft365Page() {
 
   const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
 
+   const [selectedConnectionId, setSelectedConnectionId] = useState("");
+
+  const selectedConnection = useMemo(
+    () => connections.find((c) => c.id === selectedConnectionId) ?? null,
+    [connections, selectedConnectionId]
+  );
+
   const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
@@ -100,8 +107,15 @@ export default function Microsoft365Page() {
 
   const loadConnections = async () => {
     if (!studioId) return;
+
     const data = await getMicrosoftConnections(studioId);
     setConnections(data);
+
+    setSelectedConnectionId((prev) => {
+      if (prev && data.some((c) => c.id === prev)) return prev;
+      const def = data.find((c) => c.is_default);
+      return def?.id ?? data[0]?.id ?? "";
+    });
   };
 
   useEffect(() => {
@@ -512,6 +526,54 @@ export default function Microsoft365Page() {
           Sync
         </Button>
       </div>
+
+            </div>
+
+      {connections.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Connessione attiva</CardTitle>
+            <CardDescription>
+              Seleziona il tenant Microsoft 365 da usare in questa pagina
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={selectedConnectionId}
+              onChange={(e) => setSelectedConnectionId(e.target.value)}
+            >
+              {connections.map((conn) => (
+                <option key={conn.id} value={conn.id}>
+                  {conn.nome_connessione}
+                  {conn.tenant_id ? ` — ${conn.tenant_id}` : ""}
+                  {conn.is_default ? " (predefinita)" : ""}
+                </option>
+              ))}
+            </select>
+
+            {selectedConnection && (
+              <div className="text-sm text-muted-foreground">
+                <div>
+                  <strong>Tenant:</strong> {selectedConnection.tenant_id || "-"}
+                </div>
+                <div>
+                  <strong>Email:</strong>{" "}
+                  {selectedConnection.connected_email ||
+                    selectedConnection.organizer_email ||
+                    "-"}
+                </div>
+                <div>
+                  <strong>Stato:</strong> {selectedConnection.enabled ? "Attiva" : "Disattiva"}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {successMessage && (
 
       {successMessage && (
         <Alert>
