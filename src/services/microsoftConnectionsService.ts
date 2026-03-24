@@ -45,3 +45,56 @@ export async function setDefaultMicrosoftConnection(
     throw error;
   }
 }
+
+export async function createMicrosoftConnection(input: {
+  studio_id: string;
+  nome_connessione: string;
+  tenant_id: string;
+  client_id: string;
+  client_secret: string;
+  enabled?: boolean;
+  is_default?: boolean;
+  sort_order?: number;
+  connected_email?: string | null;
+  organizer_email?: string | null;
+}): Promise<MicrosoftConnection> {
+  const client = supabase as any;
+
+  if (input.is_default) {
+    const { error: resetError } = await client
+      .from("microsoft365_connections")
+      .update({ is_default: false })
+      .eq("studio_id", input.studio_id);
+
+    if (resetError) {
+      console.error("Errore reset default prima della creazione:", resetError);
+      throw resetError;
+    }
+  }
+
+  const payload = {
+    studio_id: input.studio_id,
+    nome_connessione: input.nome_connessione,
+    tenant_id: input.tenant_id,
+    client_id: input.client_id,
+    client_secret: input.client_secret,
+    enabled: input.enabled ?? true,
+    is_default: input.is_default ?? false,
+    sort_order: input.sort_order ?? 0,
+    connected_email: input.connected_email ?? null,
+    organizer_email: input.organizer_email ?? null,
+  };
+
+  const { data, error } = await client
+    .from("microsoft365_connections")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("Errore creazione connessione Microsoft:", error);
+    throw error;
+  }
+
+  return data as MicrosoftConnection;
+}
