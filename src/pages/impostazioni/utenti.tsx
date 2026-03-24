@@ -1,3 +1,4 @@
+```tsx
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase/client";
@@ -118,7 +119,10 @@ export default function GestioneUtentiPage() {
   };
 
   const loadRuoli = async (): Promise<RuoloOperatore[]> => {
-    const { data, error } = await supabase.from("tbroperatore").select("*").order("ruolo");
+    const { data, error } = await supabase
+      .from("tbroperatore")
+      .select("*")
+      .order("ruolo");
 
     if (error) throw error;
     return data || [];
@@ -494,6 +498,26 @@ export default function GestioneUtentiPage() {
                 )}
               </div>
 
+              {editingUtente && (
+                <div className="space-y-2">
+                  <Label>Microsoft 365</Label>
+                  <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                    <div className="text-sm">
+                      {editingUtente.microsoft_connection_id ? (
+                        <span className="font-medium text-green-600">✔ Collegato</span>
+                      ) : (
+                        <span className="text-gray-500">Non collegato</span>
+                      )}
+                    </div>
+                    {editingUtente.microsoft_connection_id && (
+                      <div className="text-xs text-gray-500 truncate max-w-[260px]">
+                        ID: {editingUtente.microsoft_connection_id}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {!editingUtente && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
@@ -561,7 +585,10 @@ export default function GestioneUtentiPage() {
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      settore: value === "__none__" ? "" : (value as "Fiscale" | "Lavoro" | "Consulenza"),
+                      settore:
+                        value === "__none__"
+                          ? ""
+                          : (value as "Fiscale" | "Lavoro" | "Consulenza"),
                     })
                   }
                 >
@@ -617,7 +644,12 @@ export default function GestioneUtentiPage() {
                   )}
                 </Button>
 
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={creating}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                  disabled={creating}
+                >
                   Annulla
                 </Button>
               </div>
@@ -685,6 +717,7 @@ export default function GestioneUtentiPage() {
                 <TableHead>Email</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Settore</TableHead>
+                <TableHead>Microsoft 365</TableHead>
                 <TableHead>Ruolo</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
@@ -694,7 +727,7 @@ export default function GestioneUtentiPage() {
             <TableBody>
               {filteredUtenti.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                     Nessun utente trovato
                   </TableCell>
                 </TableRow>
@@ -719,6 +752,13 @@ export default function GestioneUtentiPage() {
                           <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded border border-yellow-200">
                             Resp.
                           </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {utente.microsoft_connection_id ? (
+                          <Badge variant="default">Collegato</Badge>
+                        ) : (
+                          <Badge variant="secondary">Non collegato</Badge>
                         )}
                       </TableCell>
                       <TableCell>{ruolo ? ruolo.ruolo : "-"}</TableCell>
