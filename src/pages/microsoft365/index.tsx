@@ -84,8 +84,7 @@ export default function Microsoft365Page() {
   });
 
   const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
-
-   const [selectedConnectionId, setSelectedConnectionId] = useState("");
+  const [selectedConnectionId, setSelectedConnectionId] = useState("");
 
   const selectedConnection = useMemo(
     () => connections.find((c) => c.id === selectedConnectionId) ?? null,
@@ -133,7 +132,6 @@ export default function Microsoft365Page() {
     loadConnections();
   }, [studioId]);
 
-  // query params da callback: /microsoft365?m365=connected oppure error=true&message=...
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -144,7 +142,6 @@ export default function Microsoft365Page() {
       return;
     }
 
-    // compat: success=true
     if (router.query.success === "true") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
       if (userId) loadUserConnectionStatus(userId);
@@ -383,6 +380,7 @@ export default function Microsoft365Page() {
       setTesting(false);
     }
   }
+
   async function handleConnect() {
     if (!config) {
       setError(
@@ -465,7 +463,7 @@ export default function Microsoft365Page() {
     }
   }
 
- async function handleSyncAgenda() {
+  async function handleSyncAgenda() {
     if (!selectedConnectionId) {
       setSyncError("Seleziona una connessione Microsoft 365.");
       return;
@@ -547,8 +545,6 @@ export default function Microsoft365Page() {
         </Button>
       </div>
 
-            </div>
-
       {connections.length > 0 && (
         <Card>
           <CardHeader>
@@ -592,8 +588,6 @@ export default function Microsoft365Page() {
           </CardContent>
         </Card>
       )}
-
-      {successMessage && (
 
       {successMessage && (
         <Alert>
@@ -695,9 +689,7 @@ export default function Microsoft365Page() {
                       onClick={handleDisconnect}
                       disabled={disconnecting}
                     >
-                      {disconnecting && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
+                      {disconnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Disconnetti account
                     </Button>
                   </div>
@@ -715,10 +707,10 @@ export default function Microsoft365Page() {
                   </div>
 
                   <div className="pt-2">
-                   <Button
-  onClick={handleConnect}
-  disabled={!studioConfigValid || connecting || !selectedConnectionId}
->
+                    <Button
+                      onClick={handleConnect}
+                      disabled={!studioConfigValid || connecting || !selectedConnectionId}
+                    >
                       {connecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Connetti Microsoft 365
                     </Button>
@@ -824,10 +816,10 @@ export default function Microsoft365Page() {
 
                 {config && (
                   <Button
-  variant="outline"
-  onClick={handleTest}
-  disabled={testing || !selectedConnectionId}
->
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={testing || !selectedConnectionId}
+                  >
                     {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Testa connessione
                   </Button>
@@ -909,7 +901,12 @@ export default function Microsoft365Page() {
           ) : (
             <div className="space-y-3">
               {connections.map((conn) => (
-                <div key={conn.id} className="rounded border p-3">
+                <div
+                  key={conn.id}
+                  className={`rounded border p-3 ${
+                    conn.id === selectedConnectionId ? "border-primary" : ""
+                  }`}
+                >
                   <div className="font-semibold">{conn.nome_connessione}</div>
                   <div>Tenant: {conn.tenant_id || "-"}</div>
                   <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
@@ -937,4 +934,4 @@ export default function Microsoft365Page() {
       </Card>
     </div>
   );
-}
+        }
