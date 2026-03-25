@@ -713,9 +713,19 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
- async function handleInvioPubblico() {
+async function handleInvioPubblico() {
   if (!av4Id) {
     alert("Salva prima l'AV4.");
+    return;
+  }
+
+  if (!form.studio_id) {
+    alert("Studio non valorizzato.");
+    return;
+  }
+
+  if (!form.rapp_legale_id) {
+    alert("Rappresentante legale non valorizzato.");
     return;
   }
 
@@ -732,24 +742,30 @@ export default function ModelloAV4() {
     setLoading(true);
 
     token =
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const { error } = await supabase
-  .from("tbAV4")
-  .update({
-    public_token: token,
-    public_enabled: true,
-    public_sent_at: new Date().toISOString(),
-    compilato_da_cliente: false,
-    Av4InviatoCL: true,
-  })
-  .eq("id", av4Id);;
+    const updatePayload: any = {
+      public_token: token,
+      public_enabled: true,
+      public_sent_at: new Date().toISOString(),
+      compilato_da_cliente: false,
+    };
 
-    if (error) {
-      console.error("Errore aggiornamento AV4 pubblico:", error);
-      alert("Errore durante la generazione del link pubblico.");
+    // Riattiva questa riga SOLO se il nome colonna è esatto nel DB
+    // updatePayload.av4_inviato_cl = true;
+
+    const { error: updateError } = await supabase
+      .from("tbAV4")
+      .update(updatePayload)
+      .eq("id", av4Id);
+
+    if (updateError) {
+      console.error("Errore aggiornamento AV4 pubblico:", updateError);
+      alert(
+        `Errore durante la generazione del link pubblico: ${updateError.message || "update tbAV4 fallito"}`
+      );
       return;
     }
 
@@ -757,24 +773,28 @@ export default function ModelloAV4() {
     setPublicUrl(url);
 
     const { data: rappRow, error: rappError } = await supabase
-  .from("rapp_legali")
-  .select("email, nome_cognome")
-  .eq("id", form.rapp_legale_id)
-  .single();
+      .from("rapp_legali")
+      .select("email, nome_cognome")
+      .eq("id", form.rapp_legale_id)
+      .single();
 
-if (rappError) {
-  console.error("Errore recupero email rappresentante:", rappError);
-  alert(`Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale.\n${url}`);
-  return;
-}
+    if (rappError) {
+      console.error("Errore recupero email rappresentante:", rappError);
+      alert(
+        `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
+      );
+      return;
+    }
 
-destinatario = rappRow?.email?.trim() || "";
-nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
+    destinatario = rappRow?.email?.trim() || "";
+    nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
 
-if (!destinatario) {
-  alert(`Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`);
-  return;
-}
+    if (!destinatario) {
+      alert(
+        `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
+      );
+      return;
+    }
 
     const {
       data: { session },
@@ -783,76 +803,73 @@ if (!destinatario) {
     userId = session?.user?.id ?? null;
 
     if (!userId) {
-      alert(`Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`);
+      alert(
+        `Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+      );
       return;
     }
 
     await sendEmailViaMicrosoft(userId, {
-  to: destinatario,
-  subject,
-  html: `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Gentile ${nomeDestinatario},</p>
+      to: destinatario,
+      subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+          <p>Gentile ${nomeDestinatario},</p>
 
-      <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
+          <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
 
-      <p>
-        <a href="${url}" target="_blank">
-          ${url}
-        </a>
-      </p>
+          <p>
+            <a href="${url}" target="_blank">${url}</a>
+          </p>
 
-      <p><strong>Istruzioni rapide:</strong></p>
-      <ol style="padding-left: 18px;">
-        <li>apra il link;</li>
-        <li>compili i dati richiesti;</li>
-        <li>salvi o stampi il PDF;</li>
-        <li>firmi il documento;</li>
-        <li>ricarichi il PDF firmato;</li>
-        <li>clicchi su "Salva e chiudi".</li>
-      </ol>
+          <p><strong>Istruzioni rapide:</strong></p>
+          <ol style="padding-left: 18px;">
+            <li>apra il link;</li>
+            <li>compili i dati richiesti;</li>
+            <li>salvi o stampi il PDF;</li>
+            <li>firmi il documento;</li>
+            <li>ricarichi il PDF firmato;</li>
+            <li>clicchi su "Salva e chiudi".</li>
+          </ol>
 
-      <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
+          <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
 
-      <p>Cordiali saluti,<br/>Studio Manager Pro</p>
-    </div>
-  `,
-});
+          <p>Cordiali saluti,<br/>Studio Manager Pro</p>
+        </div>
+      `,
+    });
 
-const { error: logError } = await supabase
-  .from("tbAMLComunicazioni")
-  .insert({
-    studio_id: form.studio_id,
-    tipo_comunicazione: "invio_av4",
-    cliente_id: form.cliente_id || null,
-    rapp_legale_id: form.rapp_legale_id || null,
-    av4_id: av4Id,
-    destinatario_email: destinatario,
-    oggetto: subject,
-    body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
-    stato_invio: "inviata",
-    data_invio: new Date().toISOString(),
-    utente_id: userId,
-    public_token: token,
-    note: "Invio AV4 al cliente da modello AV4",
-  });
+    const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
+      studio_id: form.studio_id,
+      tipo_comunicazione: "invio_av4",
+      cliente_id: form.cliente_id || null,
+      rapp_legale_id: form.rapp_legale_id || null,
+      av4_id: av4Id,
+      destinatario_email: destinatario,
+      oggetto: subject,
+      body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
+      stato_invio: "inviata",
+      data_invio: new Date().toISOString(),
+      utente_id: userId,
+      public_token: token,
+      note: "Invio AV4 al cliente da modello AV4",
+    });
 
-if (logError) {
-  console.error("Errore salvataggio log tbAMLComunicazioni AV4:", logError);
-  alert(`Email AV4 inviata a ${destinatario}, ma il log comunicazioni non è stato salvato.`);
-  return;
-}
+    if (logError) {
+      console.error("Errore salvataggio log tbAMLComunicazioni AV4:", logError);
+      alert(
+        `Email AV4 inviata a ${destinatario}, ma il log comunicazioni non è stato salvato: ${logError.message}`
+      );
+      return;
+    }
 
-alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
-    
- } catch (error: any) {
-  console.error("Errore invio pubblico AV4:", error);
+    alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
+  } catch (error: any) {
+    console.error("Errore invio pubblico AV4:", error);
 
-  try {
-    if (form.studio_id && av4Id) {
-      await supabase
-        .from("tbAMLComunicazioni")
-        .insert({
+    try {
+      if (form.studio_id && av4Id) {
+        await supabase.from("tbAMLComunicazioni").insert({
           studio_id: form.studio_id,
           tipo_comunicazione: "invio_av4",
           cliente_id: form.cliente_id || null,
@@ -867,15 +884,17 @@ alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`)
           public_token: token || null,
           note: error?.message || "Errore durante invio pubblico AV4",
         });
+      }
+    } catch (logError) {
+      console.error("Errore salvataggio log errore tbAMLComunicazioni AV4:", logError);
     }
-  } catch (logError) {
-    console.error("Errore salvataggio log errore tbAMLComunicazioni AV4:", logError);
-  }
 
-  alert("Errore durante la generazione del link pubblico.");
-} finally {
-  setLoading(false);
-}
+    alert(
+      `Errore durante la generazione del link pubblico: ${error?.message || "errore sconosciuto"}`
+    );
+  } finally {
+    setLoading(false);
+  }
 }
 
 function normalizeCf(value: string) {
