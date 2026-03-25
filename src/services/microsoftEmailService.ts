@@ -115,7 +115,12 @@ export async function sendEmailViaMicrosoft(
 ): Promise<void> {
   const { utente, connection } = await getUtenteMicrosoftContext(userId);
 
-  const hasMicrosoft = await hasMicrosoft365(utente.studio_id, userId);
+  const studioId = utente.studio_id;
+if (!studioId) {
+  throw new Error("Studio non trovato per invio email Microsoft.");
+}
+
+const hasMicrosoft = await hasMicrosoft365(studioId, userId);
   if (!hasMicrosoft) {
     throw new Error("Microsoft 365 non configurato per questo utente");
   }
