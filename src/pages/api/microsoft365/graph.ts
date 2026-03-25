@@ -7,6 +7,18 @@ import {
   AccountInfo,
 } from "@azure/msal-node";
 
+export function getDecryptedClientSecret(encryptedSecret: string) {
+  if (!encryptedSecret) throw new Error("client_secret mancante");
+
+  const plain = decrypt(encryptedSecret);
+
+  if (!plain || plain.length < 20) {
+    throw new Error("client_secret decrypt fallito o troppo corto");
+  }
+
+  return plain;
+}
+
 type TokenRow = {
   token_cache_encrypted: string;
   scopes: string | null;
