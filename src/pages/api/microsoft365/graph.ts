@@ -1,27 +1,32 @@
-// src/pages/api/m365/graph.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { decrypt, encrypt } from "@/lib/encryption365";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msal-node";
+import {
+  ConfidentialClientApplication,
+  LogLevel,
+  AccountInfo,
+} from "@azure/msal-node";
 
 type TokenRow = {
   token_cache_encrypted: string;
   scopes: string | null;
   revoked_at: string | null;
+  microsoft_connection_id: string | null;
 };
 
-export function getDecryptedClientSecret(encryptedSecret: string) {
-  if (!encryptedSecret) throw new Error("client_secret mancante");
-
-  const plain = decrypt(encryptedSecret);
-
-  // controllo “minimo” per evitare valori vuoti o strani
-  if (!plain || plain.length < 20) {
-    throw new Error("client_secret decrypt fallito o troppo corto");
-  }
-
-  return plain;
-}
+type ConnectionRow = {
+  id: string;
+  studio_id: string;
+  nome_connessione: string;
+  tenant_id: string | null;
+  client_id: string | null;
+  client_secret: string | null;
+  enabled: boolean;
+  connected_email: string | null;
+  organizer_email: string | null;
+  is_default: boolean;
+  sort_order: number;
+};
 
 function buildScopes(scopesStr: string | null): string[] {
   const scopes =
@@ -33,10 +38,6 @@ function buildScopes(scopesStr: string | null): string[] {
 }
 
 function normalizeGraphUrl(endpoint: string): string {
-  // Consenti:
-  // - "/me/events" (prefisso v1.0 automatico)
-  // - "/v1.0/me" o "/beta/me"
-  // - URL completo "https://graph.microsoft.com/..."
   if (endpoint.startsWith("https://")) return endpoint;
 
   const ep = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
@@ -45,7 +46,6 @@ function normalizeGraphUrl(endpoint: string): string {
     return `https://graph.microsoft.com${ep}`;
   }
 
-  // default: v1.0
   return `https://graph.microsoft.com/v1.0${ep}`;
 }
 
@@ -58,72 +58,156 @@ function isAllowedGraphUrl(urlStr: string): boolean {
   }
 }
 
-async function acquireAccessToken(studioId: string, userId: string): Promise<{ accessToken: string }> {
-  // 1) cache + scopes utente
+async function resolveMicrosoftConnection(
+  studioId: string,
+  userId: string
+): Promise<ConnectionRow> {
+  const { data: utente, error: utenteErr } = await supabaseAdmin
+    .from("tbutenti")
+    .select("id, studio_id, microsoft_connection_id")
+    .eq("id", userId)
+    .single();
+
+  if (utenteErr || !utente?.studio_id) {
+    throw new Error("Utente/studio non trovato per Microsoft 365.");
+  }
+
+  let connection: ConnectionRow | null = null;
+
+  if (utente.microsoft_connection_id) {
+    const { data, error } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled, connected_email, organizer_email, is_default, sort_order"
+      )
+      .eq("id", utente.microsoft_connection_id)
+      .eq("studio_id", studioId)
+      .eq("enabled", true)
+      .single<ConnectionRow>();
+
+    if (!error && data) {
+      connection = data;
+    }
+  }
+
+  if (!connection) {
+    const { data, error } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled, connected_email, organizer_email, is_default, sort_order"
+      )
+      .eq("studio_id", studioId)
+      .eq("enabled", true)
+      .eq("is_default", true)
+      .single<ConnectionRow>();
+
+    if (!error && data) {
+      connection = data;
+    }
+  }
+
+  if (!connection) {
+    const { data, error } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled, connected_email, organizer_email, is_default, sort_order"
+      )
+      .eq("studio_id", studioId)
+      .eq("enabled", true)
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .single<ConnectionRow>();
+
+    if (!error && data) {
+      connection = data;
+    }
+  }
+
+  if (!connection) {
+    throw new Error("Connessione Microsoft 365 non trovata o non attiva.");
+  }
+
+  if (!connection.client_id || !connection.tenant_id || !connection.client_secret) {
+    throw new Error(
+      `Connessione Microsoft incompleta: ${connection.nome_connessione}`
+    );
+  }
+
+  return connection;
+}
+
+async function acquireAccessToken(
+  studioId: string,
+  userId: string
+): Promise<{ accessToken: string; connection: ConnectionRow }> {
+  const connection = await resolveMicrosoftConnection(studioId, userId);
+
   const { data: tokenRow, error: tokenErr } = await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
-    .select("token_cache_encrypted, scopes, revoked_at")
+    .select(
+      "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id"
+    )
     .eq("studio_id", studioId)
     .eq("user_id", userId)
+    .eq("microsoft_connection_id", connection.id)
     .maybeSingle<TokenRow>();
 
   if (tokenErr || !tokenRow?.token_cache_encrypted) {
-    throw new Error("Microsoft 365 non configurato o token cache mancante.");
+    throw new Error(
+      `Microsoft 365 non configurato o token cache mancante per la connessione ${connection.nome_connessione}. Riconnetti Microsoft 365.`
+    );
   }
+
   if (tokenRow.revoked_at !== null) {
-    throw new Error("Token Microsoft revocato: riconnetti Microsoft 365.");
+    throw new Error(
+      `Token Microsoft revocato per la connessione ${connection.nome_connessione}: riconnetti Microsoft 365.`
+    );
   }
 
-  // 2) settings studio
-  const { data: settings, error: setErr } = await supabaseAdmin
-    .from("microsoft365_config")
-    .select("client_id, tenant_id, client_secret")
-    .eq("studio_id", studioId)
-    .single<{ client_id: string; tenant_id: string; client_secret: string }>();
-
-  if (setErr || !settings?.client_id || !settings?.tenant_id || !settings?.client_secret) {
-    throw new Error("Microsoft 365 non configurato per lo studio (client credentials mancanti).");
-  }
-
-  // 3) decrypt cache + secret
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
-  const clientSecret = decrypt(settings.client_secret); // come hai indicato tu
+  const clientSecret = decrypt(connection.client_secret);
 
-  // 4) msal app + deserialize cache
   const msalApp = new ConfidentialClientApplication({
     auth: {
-      clientId: settings.client_id,
-      authority: `https://login.microsoftonline.com/${settings.tenant_id}`,
+      clientId: connection.client_id,
+      authority: `https://login.microsoftonline.com/${connection.tenant_id}`,
       clientSecret,
     },
     system: {
-      loggerOptions: { logLevel: LogLevel.Error, piiLoggingEnabled: false },
+      loggerOptions: {
+        logLevel: LogLevel.Error,
+        piiLoggingEnabled: false,
+      },
     },
   });
 
   msalApp.getTokenCache().deserialize(oldSerializedCache);
 
-  // 5) account
   const accounts = await msalApp.getTokenCache().getAllAccounts();
   const account: AccountInfo | undefined = accounts?.[0];
-  if (!account) throw new Error("Token cache Microsoft non valido (account mancante).");
 
-  // 6) silent token (MSAL usa refresh internamente)
+  if (!account) {
+    throw new Error(
+      `Token cache Microsoft non valido per la connessione ${connection.nome_connessione} (account mancante).`
+    );
+  }
+
   const scopes = buildScopes(tokenRow.scopes);
+
   let result;
   try {
     result = await msalApp.acquireTokenSilent({ account, scopes });
   } catch (e: any) {
-    // tipico: refresh token scaduto/invalid_grant/interaction_required
     throw new Error(
       `Impossibile ottenere access token Microsoft in silent: riconnetti Microsoft 365. (${e?.message ?? "silent_failed"})`
     );
   }
 
   const accessToken = result?.accessToken;
-  if (!accessToken) throw new Error("Impossibile ottenere access token Microsoft.");
+  if (!accessToken) {
+    throw new Error("Impossibile ottenere access token Microsoft.");
+  }
 
-  // 7) salva cache aggiornata (rotazione refresh token ecc.)
   const newSerializedCache = msalApp.getTokenCache().serialize();
   if (newSerializedCache && newSerializedCache !== oldSerializedCache) {
     const newEncrypted = encrypt(newSerializedCache);
@@ -136,43 +220,62 @@ async function acquireAccessToken(studioId: string, userId: string): Promise<{ a
         updated_at: new Date().toISOString(),
       })
       .eq("studio_id", studioId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", connection.id);
   }
 
-  return { accessToken };
+  return { accessToken, connection };
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") return res.status(405).send("Method not allowed");
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method not allowed");
+  }
 
   try {
-    // 1) auth supabase (Bearer)
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!token) return res.status(401).json({ error: "Missing Authorization Bearer token" });
+    if (!token) {
+      return res
+        .status(401)
+        .json({ error: "Missing Authorization Bearer token" });
+    }
 
-    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userData?.user) return res.status(401).json({ error: "Invalid session" });
+    const { data: userData, error: userErr } =
+      await supabaseAdmin.auth.getUser(token);
+
+    if (userErr || !userData?.user) {
+      return res.status(401).json({ error: "Invalid session" });
+    }
 
     const userId = userData.user.id;
 
-    // 2) studioId da tbutenti
     const { data: uRow, error: uRowErr } = await supabaseAdmin
       .from("tbutenti")
       .select("studio_id")
       .eq("id", userId)
       .maybeSingle();
 
-    if (uRowErr || !uRow?.studio_id) return res.status(400).json({ error: "Studio non trovato" });
+    if (uRowErr || !uRow?.studio_id) {
+      return res.status(400).json({ error: "Studio non trovato" });
+    }
 
     const studioId = uRow.studio_id as string;
 
-    // 3) payload
     const { endpoint, method, body } = req.body || {};
-    if (!endpoint || !method) return res.status(400).json({ error: "Missing endpoint/method" });
+    if (!endpoint || !method) {
+      return res.status(400).json({ error: "Missing endpoint/method" });
+    }
 
     const url = normalizeGraphUrl(String(endpoint));
-    if (!isAllowedGraphUrl(url)) return res.status(400).json({ error: "Endpoint non consentito (solo graph.microsoft.com)" });
+    if (!isAllowedGraphUrl(url)) {
+      return res.status(400).json({
+        error: "Endpoint non consentito (solo graph.microsoft.com)",
+      });
+    }
 
     const httpMethod = String(method).toUpperCase();
     if (!["GET", "POST", "PUT", "PATCH", "DELETE"].includes(httpMethod)) {
@@ -198,17 +301,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : undefined,
     });
 
-    if (graphRes.status === 204) return res.status(204).end();
+    if (graphRes.status === 204) {
+      return res.status(204).end();
+    }
 
     const ct = graphRes.headers.get("content-type") || "";
     const raw = await graphRes.text().catch(() => "");
 
     if (!graphRes.ok) {
-      // rimando l’errore di Graph così com’è, evitando 500 “nostri”
       return res.status(graphRes.status).send(raw || "{}");
     }
 
-    // Se è JSON valido, rimando JSON; altrimenti testo.
     if (ct.includes("application/json")) {
       try {
         return res.status(200).json(JSON.parse(raw || "{}"));
