@@ -8,7 +8,9 @@ import {
 } from "@azure/msal-node";
 
 export function getDecryptedClientSecret(encryptedSecret: string) {
-  if (!encryptedSecret) throw new Error("client_secret mancante");
+  if (!encryptedSecret) {
+    throw new Error("client_secret mancante");
+  }
 
   const plain = decrypt(encryptedSecret);
 
@@ -40,17 +42,26 @@ type ConnectionRow = {
   sort_order: number;
 };
 
+type ResolvedConnection = ConnectionRow & {
+  tenant_id: string;
+  client_id: string;
+  client_secret: string;
+};
+
 function buildScopes(scopesStr: string | null): string[] {
   const scopes =
     scopesStr
       ?.split(" ")
       .map((s) => s.trim())
       .filter(Boolean) ?? [];
+
   return scopes.length ? scopes : ["User.Read"];
 }
 
 function normalizeGraphUrl(endpoint: string): string {
-  if (endpoint.startsWith("https://")) return endpoint;
+  if (endpoint.startsWith("https://")) {
+    return endpoint;
+  }
 
   const ep = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
 
@@ -73,7 +84,7 @@ function isAllowedGraphUrl(urlStr: string): boolean {
 async function resolveMicrosoftConnection(
   studioId: string,
   userId: string
-): Promise<ConnectionRow> {
+): Promise<ResolvedConnection> {
   const { data: utente, error: utenteErr } = await supabaseAdmin
     .from("tbutenti")
     .select("id, studio_id, microsoft_connection_id")
@@ -139,19 +150,26 @@ async function resolveMicrosoftConnection(
     throw new Error("Connessione Microsoft 365 non trovata o non attiva.");
   }
 
-  if (!connection.client_id || !connection.tenant_id || !connection.client_secret) {
+  const { client_id, tenant_id, client_secret } = connection;
+
+  if (!client_id || !tenant_id || !client_secret) {
     throw new Error(
       `Connessione Microsoft incompleta: ${connection.nome_connessione}`
     );
   }
 
-  return connection;
+  return {
+    ...connection,
+    client_id,
+    tenant_id,
+    client_secret,
+  };
 }
 
 async function acquireAccessToken(
   studioId: string,
   userId: string
-): Promise<{ accessToken: string; connection: ConnectionRow }> {
+): Promise<{ accessToken: string; connection: ResolvedConnection }> {
   const connection = await resolveMicrosoftConnection(studioId, userId);
 
   const { data: tokenRow, error: tokenErr } = await supabaseAdmin
@@ -177,11 +195,7 @@ async function acquireAccessToken(
   }
 
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
-  if (!connection.client_secret) {
-  throw new Error("Microsoft client secret mancante nella connessione.");
-}
-
-const clientSecret = decrypt(connection.client_secret);
+  const clientSecret = decrypt(connection.client_secret);
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
@@ -254,6 +268,7 @@ export default async function handler(
   try {
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+
     if (!token) {
       return res
         .status(401)
