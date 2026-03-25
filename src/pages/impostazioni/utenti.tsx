@@ -40,6 +40,7 @@ export default function GestioneUtentiPage() {
     attivo: true,
     settore: "" as "Fiscale" | "Lavoro" | "Consulenza" | "",
     responsabile: false,
+    microsoft_connection_id: "",
   });
 
   useEffect(() => {
@@ -159,6 +160,7 @@ export default function GestioneUtentiPage() {
           attivo: formData.attivo,
           settore: formData.settore || null,
           responsabile: formData.responsabile,
+          microsoft_connection_id: formData.microsoft_connection_id || null,
         });
 
         toast({
@@ -215,6 +217,7 @@ export default function GestioneUtentiPage() {
             attivo: formData.attivo,
             settore: formData.settore || null,
             responsabile: formData.responsabile,
+            microsoft_connection_id: formData.microsoft_connection_id || null,
           })
           .eq("id", result.userId);
 
@@ -386,6 +389,7 @@ export default function GestioneUtentiPage() {
       attivo: utente.attivo ?? true,
       settore: (utente.settore as "Fiscale" | "Lavoro" | "Consulenza") || "",
       responsabile: utente.responsabile ?? false,
+      microsoft_connection_id: utente.microsoft_connection_id || "",
     });
     setDialogOpen(true);
   };
@@ -400,6 +404,7 @@ export default function GestioneUtentiPage() {
       attivo: true,
       settore: "",
       responsabile: false,
+      microsoft_connection_id: "",
     });
     setEditingUtente(null);
   };
@@ -504,25 +509,31 @@ export default function GestioneUtentiPage() {
                 )}
               </div>
 
-              {editingUtente && (
-                <div className="space-y-2">
-                  <Label>Microsoft 365</Label>
-                  <div className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-                    <div className="text-sm">
-                      {editingUtente.microsoft_connection_id ? (
-                        <span className="font-medium text-green-600">✔ Collegato</span>
-                      ) : (
-                        <span className="text-gray-500">Non collegato</span>
-                      )}
-                    </div>
-                    {editingUtente.microsoft_connection_id && (
-                      <div className="text-xs text-gray-500 truncate max-w-[260px]">
-                        ID: {editingUtente.microsoft_connection_id}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+               <div className="space-y-2">
+                <Label htmlFor="microsoft_connection_id">Microsoft 365</Label>
+                  <Select
+                      value={formData.microsoft_connection_id || "__none__"}
+                      onValueChange={(value) =>
+                        setFormData({
+                      ...formData,
+                          microsoft_connection_id: value === "__none__" ? "" : value,
+                            })
+                              }
+                              >
+                        <SelectTrigger>
+                        <SelectValue placeholder="Seleziona connessione Microsoft 365" />
+                          </SelectTrigger>
+                            <SelectContent>
+                        <SelectItem value="__none__">Non collegato</SelectItem>
+                          {connections.map((conn: any) => (
+                              <SelectItem key={conn.id} value={conn.id}>
+                                {conn.nome_connessione}
+                          </SelectItem>
+                            ))}
+                          </SelectContent>
+                          </Select>
+                          </div>
+                        }
 
               {!editingUtente && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
