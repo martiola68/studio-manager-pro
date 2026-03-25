@@ -2,9 +2,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-/**
- * Estrae il bearer token (Supabase access_token) dagli header.
- */
 function getBearerToken(req: NextApiRequest) {
   const h = req.headers.authorization || "";
   const m = h.match(/^Bearer\s+(.+)$/i);
@@ -37,14 +34,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log("[m365/connect] HIT", { method: req.method });
-
   if (req.method !== "GET" && req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // 1) Verifica utente (Supabase access token)
+    // 1) Auth utente tramite token Supabase
     const token = getBearerToken(req) || (req.query.token as string) || null;
 
     if (!token) {
@@ -62,14 +57,25 @@ export default async function handler(
 
     const authUser = userRes.user;
 
-    // 2) Recupera riga utente su tbutenti: prima per id, fallback per email
-    const { data: utenteById } = await supabaseAdmin
-      .from("tbutenti")
-      .select("id, studio_id, email")
-      .eq("id", authUser.id)
-      .maybeSingle();
+    // 2) Trova utente in tbutenti: prima per id, poi fallback su email
+    let userRow: {
+      id: string;
+      studio_id: string | null;
+      email: string;
+      microsoft_connection_id: string | null;
+    } | null = null;
 
-    let userRow = utenteById ?? null;
+    {
+      const { data, error } = await supabaseAdmin
+        .from("tbutenti")
+        .select("id, studio_id, email, microsoft_connection_id")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        userRow = data;
+      }
+    }
 
     if (!userRow?.studio_id) {
       if (!authUser.email) {
@@ -78,23 +84,27 @@ export default async function handler(
         });
       }
 
-      const { data: utenteByEmail, error: u2Err } = await supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("tbutenti")
-        .select("id, studio_id, email")
+        .select("id, studio_id, email, microsoft_connection_id")
         .eq("email", authUser.email)
         .maybeSingle();
 
-      if (u2Err || !utenteByEmail?.studio_id) {
+      if (error || !data?.studio_id) {
         return res.status(400).json({ error: "Studio utente non trovato" });
       }
 
-      userRow = utenteByEmail;
+      userRow = data;
     }
 
-    const userId = userRow.id as string;
-    const studioId = userRow.studio_id as string;
+    const userId = userRow.id;
+    const studioId = userRow.studio_id;
 
-    // 3) Recupera connessione selezionata
+    if (!studioId) {
+      return res.status(400).json({ error: "Studio utente non trovato" });
+    }
+
+    // 3) Recupera microsoft_connection_id dalla richiesta
     const microsoftConnectionId =
       typeof req.query.microsoft_connection_id === "string"
         ? req.query.microsoft_connection_id
@@ -108,6 +118,7 @@ export default async function handler(
       });
     }
 
+    // 4) Verifica connessione Microsoft selezionata
     const { data: conn, error: connErr } = await supabaseAdmin
       .from("microsoft365_connections")
       .select(
@@ -138,26 +149,53 @@ export default async function handler(
     const tenantId = conn.tenant_id;
     const state = randomState(48);
 
-    // 4) Salva lo state + connection_id in tbmicrosoft_settings
-    const { error: upStateErr } = await supabaseAdmin
-      .from("tbmicrosoft_settings")
-      .upsert(
-    {
-      user_id: userId,
-      m365_oauth_state: state,
-      microsoft_connection_id: microsoftConnectionId,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,microsoft_connection_id" }
-  );
+    // 5) Salva state in tbmicrosoft_settings SENZA upsert
+    const { data: existingSettings, error: existingSettingsErr } =
+      await supabaseAdmin
+        .from("tbmicrosoft_settings")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("microsoft_connection_id", microsoftConnectionId)
+        .maybeSingle();
 
-    if (upStateErr) {
+    if (existingSettingsErr) {
       return res.status(500).json({
-        error: `Errore salvataggio state: ${upStateErr.message}`,
+        error: `Errore lettura settings Microsoft: ${existingSettingsErr.message}`,
       });
     }
 
-    // 5) Costruisci authorize URL sulla connessione selezionata
+    if (existingSettings?.id) {
+      const { error: updateErr } = await supabaseAdmin
+        .from("tbmicrosoft_settings")
+        .update({
+          m365_oauth_state: state,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingSettings.id);
+
+      if (updateErr) {
+        return res.status(500).json({
+          error: `Errore salvataggio state: ${updateErr.message}`,
+        });
+      }
+    } else {
+      const { error: insertErr } = await supabaseAdmin
+        .from("tbmicrosoft_settings")
+        .insert({
+          user_id: userId,
+          microsoft_connection_id: microsoftConnectionId,
+          m365_oauth_state: state,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertErr) {
+        return res.status(500).json({
+          error: `Errore salvataggio state: ${insertErr.message}`,
+        });
+      }
+    }
+
+    // 6) Costruisci authorize URL Microsoft
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
 
     const params = new URLSearchParams({
@@ -171,16 +209,9 @@ export default async function handler(
       state,
     });
 
-    console.log("[m365/connect] authorize tenant:", tenantId);
-    console.log(
-      "[m365/connect] microsoft_connection_id:",
-      microsoftConnectionId
-    );
-    console.log("[m365/connect] nome_connessione:", conn.nome_connessione);
-
     const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 
-    // 6) Redirect o JSON
+    // 7) Redirect per GET, JSON per POST
     if (req.method === "GET") {
       res.writeHead(302, { Location: url });
       return res.end();
@@ -189,6 +220,8 @@ export default async function handler(
     return res.status(200).json({ url });
   } catch (e: any) {
     console.error("[m365/connect] fatal", e);
-    return res.status(500).json({ error: e?.message || "Errore interno" });
+    return res.status(500).json({
+      error: e?.message || "Errore interno",
+    });
   }
 }
