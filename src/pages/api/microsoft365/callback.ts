@@ -37,7 +37,7 @@ function redirectErr(res: NextApiResponse, msg: string) {
 /**
  * Crea una vera token cache MSAL a partire dal code OAuth.
  * Per supportare utenti di tenant diversi, il code viene riscattato
- * contro authority "common" e NON contro il tenant fisso di configurazione studio.
+ * contro authority "common".
  */
 async function buildMsalSerializedCache(params: {
   clientId: string;
@@ -68,11 +68,7 @@ async function buildMsalSerializedCache(params: {
     "Mail.Send",
   ];
 
-  const graphScopes = [
-    "User.Read",
-    "Calendars.ReadWrite",
-    "Mail.Send",
-  ];
+  const graphScopes = ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
 
   await msalApp.acquireTokenByCode({
     code: params.code,
@@ -101,9 +97,6 @@ export default async function handler(
   }
 
   try {
-    /* =======================
-       Parametri OAuth
-    ======================= */
     const code = typeof req.query.code === "string" ? req.query.code : null;
     const state = typeof req.query.state === "string" ? req.query.state : null;
 
@@ -124,11 +117,11 @@ export default async function handler(
     }
 
     /* =======================
-       1) Recupero user_id dallo state
+       1) Recupero user_id + connection_id dallo state
     ======================= */
     const { data: stateRow, error: stateErr } = await supabaseAdmin
       .from("tbmicrosoft_settings")
-      .select("user_id")
+      .select("user_id, microsoft_connection_id")
       .eq("m365_oauth_state", state)
       .single();
 
@@ -136,14 +129,24 @@ export default async function handler(
       return redirectErr(res, "State OAuth non valido o scaduto");
     }
 
-    const userId = stateRow.user_id;
+    const userId = stateRow.user_id as string;
+    const microsoftConnectionId = stateRow.microsoft_connection_id as
+      | string
+      | null;
+
+    if (!microsoftConnectionId) {
+      return redirectErr(
+        res,
+        "Connessione Microsoft non associata allo state OAuth"
+      );
+    }
 
     /* =======================
        2) Recupero studio_id
     ======================= */
     const { data: userRow, error: userErr } = await supabaseAdmin
       .from("tbutenti")
-      .select("studio_id")
+      .select("id, studio_id")
       .eq("id", userId)
       .maybeSingle();
 
@@ -151,62 +154,34 @@ export default async function handler(
       return redirectErr(res, "Studio utente non trovato");
     }
 
-    const studioId = userRow.studio_id;
+    const studioId = userRow.studio_id as string;
 
     /* =======================
-       3) Config Microsoft 365 studio
+       3) Recupero connessione selezionata
     ======================= */
     const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("microsoft365_config")
-      .select("client_id, tenant_id, client_secret, enabled")
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled"
+      )
+      .eq("id", microsoftConnectionId)
       .eq("studio_id", studioId)
       .maybeSingle();
 
-    console.log("CFG ERR:", cfgErr);
-    console.log("CFG KEYS:", cfg ? Object.keys(cfg) : null);
-    console.log(
-      "CLIENT_ID OK:",
-      !!cfg?.client_id,
-      "LEN:",
-      cfg?.client_id?.length
-    );
-    console.log(
-      "CLIENT_SECRET OK:",
-      !!cfg?.client_secret,
-      "LEN:",
-      cfg?.client_secret?.length
-    );
+    if (cfgErr || !cfg) {
+      return redirectErr(res, "Connessione Microsoft 365 non trovata");
+    }
 
-    if (cfgErr || !cfg?.client_id || !cfg?.client_secret) {
-      return res.redirect(
-        "/microsoft365?error=true&message=" +
-          encodeURIComponent("Configurazione Microsoft 365 incompleta")
-      );
+    if (!cfg.client_id || !cfg.client_secret) {
+      return redirectErr(res, "Configurazione Microsoft 365 incompleta");
     }
 
     if (cfg.enabled === false) {
-      return res.redirect(
-        "/microsoft365?error=true&message=" +
-          encodeURIComponent("Microsoft 365 disabilitato per lo studio")
-      );
+      return redirectErr(res, "Connessione Microsoft 365 disabilitata");
     }
 
-    /**
-     * FIX MULTITENANT:
-     * NON usare cfg.tenant_id per il token exchange del code.
-     * Il code può provenire da tenant diversi, quindi usiamo "common".
-     */
     const redirectUri = `${appBaseUrl(req)}/api/microsoft365/callback`;
     const clientSecret = getDecryptedClientSecret(cfg.client_secret);
-
-    console.log("[m365] redirectUri:", redirectUri);
-    console.log("[m365] configured tenant_id:", cfg.tenant_id || null);
-    console.log("[m365] token authority: common");
-    console.log("[m365] clientSecret len:", clientSecret?.length);
-    console.log(
-      "[m365] clientSecret starts:",
-      (clientSecret || "").slice(0, 4)
-    );
 
     /* =======================
        4) Exchange CODE -> token cache MSAL
@@ -218,10 +193,14 @@ export default async function handler(
       code,
     });
 
+    if (!serializedCache) {
+      return redirectErr(res, "Token cache Microsoft vuota");
+    }
+
     const encryptedCache = encrypt(serializedCache);
 
     /* =======================
-       5) Salvataggio token utente
+       5) Salvataggio token utente collegato alla connessione
     ======================= */
     const { error: upErr } = await supabaseAdmin
       .from("tbmicrosoft365_user_tokens")
@@ -229,13 +208,14 @@ export default async function handler(
         {
           studio_id: studioId,
           user_id: userId,
+          microsoft_connection_id: microsoftConnectionId,
           token_cache_encrypted: encryptedCache,
           scopes,
           connected_at: new Date().toISOString(),
           revoked_at: null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "studio_id,user_id" }
+        { onConflict: "studio_id,user_id,microsoft_connection_id" }
       );
 
     if (upErr) {
@@ -243,12 +223,23 @@ export default async function handler(
     }
 
     /* =======================
-       6) Cleanup OAuth state
+       6) Salvo connessione attiva sull'utente
+    ======================= */
+    await supabaseAdmin
+      .from("tbutenti")
+      .update({
+        microsoft_connection_id: microsoftConnectionId,
+      })
+      .eq("id", userId);
+
+    /* =======================
+       7) Cleanup OAuth state
     ======================= */
     await supabaseAdmin
       .from("tbmicrosoft_settings")
       .update({
         m365_oauth_state: null,
+        microsoft_connection_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
@@ -256,9 +247,6 @@ export default async function handler(
     return redirectOk(res);
   } catch (e: any) {
     console.error("[m365 callback]", e);
-    return redirectErr(
-      res,
-      e?.message || "Errore callback Microsoft 365"
-    );
+    return redirectErr(res, e?.message || "Errore callback Microsoft 365");
   }
 }
