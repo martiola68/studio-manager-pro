@@ -1,4 +1,3 @@
-// pages/api/microsoft365/save-config.ts
 export const config = { runtime: "nodejs" };
 
 import type { NextApiRequest, NextApiResponse } from "next";
@@ -9,21 +8,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { encrypt } from "@/lib/encryption365";
 import { tokenCache } from "@/services/tokenCacheService";
 
-/**
- * API: Save Microsoft 365 Configuration (Studio-level)
- * POST /api/microsoft365/save-config
- *
- * - Richiede utente autenticato (cookie Supabase).
- * - Consente salvataggio SOLO per lo studio dell'utente.
- * - Salva/aggiorna la config con service role (supabaseAdmin).
- * - Client Secret viene cifrato prima del salvataggio.
- * - Invalida token cache dello studio.
- */
-
 const SaveConfigRequestSchema = z.object({
   studioId: z.string().uuid(),
+  connectionId: z.string().uuid().optional(),
   clientId: z.string().min(1),
-  clientSecret: z.string().optional(), // opzionale: update può mantenere esistente
+  clientSecret: z.string().optional(),
   tenantId: z.string().min(1),
   organizerEmail: z.string().email().optional().or(z.literal("")),
 });
@@ -47,20 +36,17 @@ type ApiErr = {
   details?: any;
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiOk | ApiErr>) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ApiOk | ApiErr>
+) {
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
-  // (opzionale) ping rapido per debug routing
-  if (req.query.ping === "1") {
-    return res.status(200).json({ success: true, message: "PING_OK" } as any);
-  }
-
   try {
-    // 1) Auth (cookie-based) + autorizzazione sullo studio
     const supabase = createClient(req, res);
     const {
       data: { session },
@@ -68,7 +54,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     } = await supabase.auth.getSession();
 
     if (sessionErr || !session?.user) {
-      return res.status(401).json({ success: false, error: "Non autenticato. Effettua il login." });
+      return res.status(401).json({
+        success: false,
+        error: "Non autenticato. Effettua il login.",
+      });
     }
 
     const parseResult = SaveConfigRequestSchema.safeParse(req.body);
@@ -80,10 +69,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       });
     }
 
-    const { studioId, clientId, clientSecret, tenantId, organizerEmail } = parseResult.data;
+    const {
+      studioId,
+      connectionId,
+      clientId,
+      clientSecret,
+      tenantId,
+      organizerEmail,
+    } = parseResult.data;
+
     const rawSecret = (clientSecret ?? "").toString().trim();
 
-    // Verifica che l'utente appartenga allo studio richiesto
     const { data: userRow, error: userErr } = await supabase
       .from("tbutenti")
       .select("studio_id")
@@ -91,33 +87,87 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .single();
 
     if (userErr || !userRow?.studio_id) {
-      return res.status(403).json({ success: false, error: "Studio utente non valido o non trovato." });
-    }
-
-    if (userRow.studio_id !== studioId) {
-      return res.status(403).json({ success: false, error: "Operazione non autorizzata per questo studio." });
-    }
-
-    // 2) Verifica che lo studio esista (admin, no RLS)
-    const { data: studio, error: studioError } = await supabaseAdmin
-      .from("tbstudio")
-      .select("id")
-      .eq("id", studioId)
-      .maybeSingle();
-
-    if (studioError) {
-      return res.status(500).json({
+      return res.status(403).json({
         success: false,
-        error: "Failed to verify studio",
-        details: studioError.message,
+        error: "Studio utente non valido o non trovato.",
       });
     }
 
-    if (!studio) {
-      return res.status(404).json({ success: false, error: "Studio not found" });
+    if (userRow.studio_id !== studioId) {
+      return res.status(403).json({
+        success: false,
+        error: "Operazione non autorizzata per questo studio.",
+      });
     }
 
-    // 3) Leggi config esistente
+    if (!connectionId) {
+      return res.status(400).json({
+        success: false,
+        error: "connectionId obbligatorio per il salvataggio multi-tenant.",
+      });
+    }
+
+    const { data: connection, error: connectionError } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select("id, studio_id, enabled")
+      .eq("id", connectionId)
+      .eq("studio_id", studioId)
+      .maybeSingle();
+
+    if (connectionError) {
+      return res.status(500).json({
+        success: false,
+        error: "Errore verifica connessione Microsoft 365",
+        details: connectionError.message,
+      });
+    }
+
+    if (!connection) {
+      return res.status(404).json({
+        success: false,
+        error: "Connessione Microsoft 365 non trovata per questo studio.",
+      });
+    }
+
+    const payload: Record<string, any> = {
+      client_id: clientId,
+      tenant_id: tenantId,
+      organizer_email: organizerEmail ? organizerEmail : null,
+      enabled: true,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (rawSecret.length > 0) {
+      payload.client_secret = encrypt(rawSecret);
+    }
+
+    const { error: updateConnectionError } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .update(payload)
+      .eq("id", connectionId)
+      .eq("studio_id", studioId);
+
+    if (updateConnectionError) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update Microsoft 365 connection",
+        details: updateConnectionError.message,
+      });
+    }
+
+    // Compatibilità con codice legacy che legge ancora microsoft365_config
+    const legacyPayload: Record<string, any> = {
+      studio_id: studioId,
+      client_id: clientId,
+      tenant_id: tenantId,
+      organizer_email: organizerEmail ? organizerEmail : null,
+      enabled: true,
+    };
+
+    if (rawSecret.length > 0) {
+      legacyPayload.client_secret = encrypt(rawSecret);
+    }
+
     const { data: existingConfig, error: existingError } = await supabaseAdmin
       .from("microsoft365_config")
       .select("id")
@@ -127,81 +177,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (existingError) {
       return res.status(500).json({
         success: false,
-        error: "Failed to read existing configuration",
+        error: "Failed to read legacy Microsoft 365 configuration",
         details: existingError.message,
       });
     }
 
-    // 4) Payload base
-    const payload: Record<string, any> = {
-      studio_id: studioId,
-      client_id: clientId,
-      tenant_id: tenantId,
-      enabled: true,
-      organizer_email: organizerEmail ? organizerEmail : null,
-    };
-
-    // Secret: salva solo se presente (update può mantenerlo)
-    if (rawSecret.length > 0) {
-      payload.client_secret = encrypt(rawSecret);
-    }
-
-    // 5) Insert / Update
     if (existingConfig) {
-      const { error: updateError } = await supabaseAdmin
+      const { error: legacyUpdateError } = await supabaseAdmin
         .from("microsoft365_config")
-        .update(payload)
+        .update(legacyPayload)
         .eq("studio_id", studioId);
 
-      if (updateError) {
+      if (legacyUpdateError) {
         return res.status(500).json({
           success: false,
-          error: "Failed to update Microsoft 365 configuration",
-          details: updateError.message,
+          error: "Failed to update legacy Microsoft 365 configuration",
+          details: legacyUpdateError.message,
         });
       }
     } else {
-      // New config: secret obbligatorio
-      if (!payload.client_secret) {
-        return res.status(400).json({
-          success: false,
-          error: "Client secret is required for new configuration",
-        });
-      }
+      if (!legacyPayload.client_secret) {
+        // nessun insert legacy senza secret
+      } else {
+        const { error: legacyInsertError } = await supabaseAdmin
+          .from("microsoft365_config")
+          .insert(legacyPayload);
 
-      const { error: insertError } = await supabaseAdmin.from("microsoft365_config").insert(payload);
-
-      if (insertError) {
-        return res.status(500).json({
-          success: false,
-          error: "Failed to insert Microsoft 365 configuration",
-          details: insertError.message,
-        });
+        if (legacyInsertError) {
+          return res.status(500).json({
+            success: false,
+            error: "Failed to insert legacy Microsoft 365 configuration",
+            details: legacyInsertError.message,
+          });
+        }
       }
     }
 
-    // 6) Read-back (per UI)
-    const { data: savedConfig, error: selectError } = await supabaseAdmin
-      .from("microsoft365_config")
+    const { data: savedConnection, error: selectError } = await supabaseAdmin
+      .from("microsoft365_connections")
       .select("id, studio_id, client_id, tenant_id, organizer_email, enabled")
+      .eq("id", connectionId)
       .eq("studio_id", studioId)
       .single();
 
-    if (selectError || !savedConfig) {
+    if (selectError || !savedConnection) {
       return res.status(500).json({
         success: false,
-        error: "Failed to retrieve saved configuration",
+        error: "Failed to retrieve saved connection",
         details: selectError?.message || "Unknown select error",
       });
     }
 
-    // 7) Invalidate cache
     tokenCache.invalidate(studioId);
 
     return res.status(200).json({
       success: true,
-      message: "Microsoft 365 configuration saved successfully",
-      config: savedConfig,
+      message: "Microsoft 365 connection saved successfully",
+      config: savedConnection,
     });
   } catch (error: unknown) {
     console.error("[M365 save-config] Fatal error:", error);
