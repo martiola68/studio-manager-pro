@@ -116,56 +116,48 @@ export default function Microsoft365Page() {
     return Boolean(config.client_id && config.tenant_id && config.enabled === true);
   }, [config]);
 
-  const loadConnections = async () => {
-    if (!studioId) return;
-
-    const data = await getMicrosoftConnections(studioId);
-    setConnections(data);
-
-    setSelectedConnectionId((prev) => {
-      if (
-        userMicrosoftConnectionId &&
-        data.some((c) => c.id === userMicrosoftConnectionId)
-      ) {
-        return userMicrosoftConnectionId;
-      }
-
-      if (prev && data.some((c) => c.id === prev)) return prev;
-
-      const def = data.find((c) => c.is_default);
-      return def?.id ?? data[0]?.id ?? "";
-    });
-  };
-
   useEffect(() => {
     if (!router.isReady) return;
     setActiveTab(getTabFromQuery(router.query.tab));
   }, [router.isReady, router.query.tab]);
 
   useEffect(() => {
-    loadUserAndConfig();
+    void loadUserAndConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!studioId) return;
-    loadConnections();
+    void loadConnections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studioId, userMicrosoftConnectionId]);
+
+  useEffect(() => {
+    if (!selectedConnectionId || !userId) {
+      setUserConnection({ isConnected: false });
+      return;
+    }
+    void loadUserConnectionStatus(userId, selectedConnectionId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConnectionId, userId]);
 
   useEffect(() => {
     if (!router.isReady) return;
 
     if (router.query.m365 === "connected") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
-      if (userId) loadUserConnectionStatus(userId);
+      if (userId && selectedConnectionId) {
+        void loadUserConnectionStatus(userId, selectedConnectionId);
+      }
       router.replace("/microsoft365?tab=connessioni", undefined, { shallow: true });
       return;
     }
 
     if (router.query.success === "true") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
-      if (userId) loadUserConnectionStatus(userId);
+      if (userId && selectedConnectionId) {
+        void loadUserConnectionStatus(userId, selectedConnectionId);
+      }
       router.replace("/microsoft365?tab=connessioni", undefined, { shallow: true });
       return;
     }
@@ -178,12 +170,33 @@ export default function Microsoft365Page() {
       setError(`❌ ${msg}`);
       router.replace("/microsoft365?tab=connessioni", undefined, { shallow: true });
     }
-  }, [router.isReady, router.query, userId, router]);
+  }, [router.isReady, router.query, userId, selectedConnectionId, router]);
 
   async function getSupabaseBearer(): Promise<string | null> {
     const { data, error: sessionErr } = await supabase.auth.getSession();
     if (sessionErr) return null;
     return data?.session?.access_token ?? null;
+  }
+
+  async function loadConnections() {
+    if (!studioId) return;
+
+    const data = await getMicrosoftConnections(studioId);
+    setConnections(data);
+
+    setSelectedConnectionId((prev) => {
+      if (prev && data.some((c) => c.id === prev)) return prev;
+
+      if (
+        userMicrosoftConnectionId &&
+        data.some((c) => c.id === userMicrosoftConnectionId)
+      ) {
+        return userMicrosoftConnectionId;
+      }
+
+      const def = data.find((c) => c.is_default);
+      return def?.id ?? data[0]?.id ?? "";
+    });
   }
 
   async function loadUserAndConfig() {
@@ -242,8 +255,6 @@ export default function Microsoft365Page() {
       } else {
         setConfig(null);
       }
-
-      await loadUserConnectionStatus(currentUserId);
     } catch (err) {
       console.error("Error loading config:", err);
       setError(
@@ -254,14 +265,15 @@ export default function Microsoft365Page() {
     }
   }
 
-  async function loadUserConnectionStatus(uid: string) {
-    if (!uid) return;
+  async function loadUserConnectionStatus(uid: string, connectionId: string) {
+    if (!uid || !connectionId) return;
 
     try {
       const { data: tokenData, error: tokenErr } = await supabase
         .from("tbmicrosoft365_user_tokens")
         .select("connected_at, updated_at, revoked_at")
         .eq("user_id", uid)
+        .eq("microsoft_connection_id", connectionId)
         .maybeSingle();
 
       if (tokenErr) throw tokenErr;
@@ -417,7 +429,7 @@ export default function Microsoft365Page() {
     }
 
     if (!selectedConnectionId) {
-      setError("Connessione Microsoft 365 utente non assegnata.");
+      setError("Seleziona una connessione Microsoft 365.");
       return;
     }
 
@@ -478,7 +490,7 @@ export default function Microsoft365Page() {
     }
 
     if (!selectedConnectionId) {
-      setError("Connessione Microsoft 365 utente non assegnata.");
+      setError("Seleziona una connessione Microsoft 365.");
       return;
     }
 
@@ -496,7 +508,7 @@ export default function Microsoft365Page() {
 
       window.location.href =
         `/api/microsoft365/connect?token=${encodeURIComponent(bearer)}` +
-        `&connectionId=${encodeURIComponent(selectedConnectionId)}`;
+        `&microsoft_connection_id=${encodeURIComponent(selectedConnectionId)}`;
     } catch (e) {
       console.error("M365 connect fatal", e);
       setError(e instanceof Error ? e.message : "Errore imprevisto");
@@ -507,10 +519,16 @@ export default function Microsoft365Page() {
 
   async function handleDisconnect() {
     const confirmed = window.confirm(
-      "Sei sicuro di voler disconnettere il tuo account Microsoft 365?\n\n" +
-        "Perderai l'accesso a Teams, Mail e Calendar finché non ti riconnetti."
+      `Sei sicuro di voler disconnettere la connessione "${
+        selectedConnection?.nome_connessione || ""
+      }"?`
     );
     if (!confirmed) return;
+
+    if (!selectedConnectionId) {
+      setError("Seleziona una connessione Microsoft 365.");
+      return;
+    }
 
     setDisconnecting(true);
     setError(null);
@@ -526,7 +544,9 @@ export default function Microsoft365Page() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${bearer}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          microsoft_connection_id: selectedConnectionId,
+        }),
       });
 
       const result = await response.json().catch(() => ({}));
@@ -548,7 +568,7 @@ export default function Microsoft365Page() {
 
   async function handleSyncAgenda() {
     if (!selectedConnectionId) {
-      setSyncError("Connessione Microsoft 365 utente non assegnata.");
+      setSyncError("Seleziona una connessione Microsoft 365.");
       return;
     }
 
@@ -601,7 +621,7 @@ export default function Microsoft365Page() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="mb-2">
         <h1 className="text-3xl font-bold tracking-tight">Microsoft 365</h1>
         <p className="text-muted-foreground">
@@ -628,32 +648,69 @@ export default function Microsoft365Page() {
         </Button>
       </div>
 
-      {selectedConnection && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Connessione assegnata all&apos;utente</CardTitle>
-            <CardDescription>
-              Questa connessione Microsoft 365 è associata automaticamente al tuo account
-            </CardDescription>
-          </CardHeader>
+      <Card>
+        <CardHeader>
+          <CardTitle>Selezione tenant / connessione</CardTitle>
+          <CardDescription>
+            Seleziona la connessione Microsoft 365 su cui vuoi operare
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-2">
+            <Label htmlFor="selectedConnection">Connessione attiva</Label>
+            <select
+              id="selectedConnection"
+              value={selectedConnectionId}
+              onChange={(e) => {
+                setSelectedConnectionId(e.target.value);
+                setError(null);
+                setSuccessMessage(null);
+                setTestResult(null);
+                setSyncMessage(null);
+                setSyncError(null);
+              }}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Seleziona una connessione</option>
+              {connections.map((conn) => (
+                <option key={conn.id} value={conn.id}>
+                  {conn.nome_connessione}
+                  {conn.is_default ? " • predefinita" : ""}
+                  {conn.id === userMicrosoftConnectionId ? " • assegnata utente" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div>
-              <strong>Connessione:</strong> {selectedConnection.nome_connessione}
+          {selectedConnection && (
+            <div className="rounded-md border p-4 text-sm text-muted-foreground">
+              <div>
+                <strong>Connessione:</strong> {selectedConnection.nome_connessione}
+              </div>
+              <div>
+                <strong>Tenant:</strong> {selectedConnection.tenant_id || "-"}
+              </div>
+              <div>
+                <strong>Email:</strong>{" "}
+                {selectedConnection.connected_email ||
+                  selectedConnection.organizer_email ||
+                  "-"}
+              </div>
+              <div>
+                <strong>Stato:</strong>{" "}
+                {selectedConnection.enabled ? "Attiva" : "Disattiva"}
+              </div>
+              <div>
+                <strong>Predefinita:</strong> {selectedConnection.is_default ? "Sì" : "No"}
+              </div>
+              <div>
+                <strong>Assegnata all&apos;utente:</strong>{" "}
+                {selectedConnection.id === userMicrosoftConnectionId ? "Sì" : "No"}
+              </div>
             </div>
-            <div>
-              <strong>Tenant:</strong> {selectedConnection.tenant_id || "-"}
-            </div>
-            <div>
-              <strong>Email:</strong>{" "}
-              {selectedConnection.connected_email || selectedConnection.organizer_email || "-"}
-            </div>
-            <div>
-              <strong>Stato:</strong> {selectedConnection.enabled ? "Attiva" : "Disattiva"}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -809,8 +866,8 @@ export default function Microsoft365Page() {
             <Info className="h-4 w-4" />
             <AlertDescription>
               <strong>Configurazione Studio (Client Credentials):</strong> Il Client Secret viene
-              cifrato (AES-256-GCM) prima del salvataggio. La connessione personale usa OAuth
-              delegato.
+              cifrato prima del salvataggio. La connessione personale usa OAuth delegato sulla
+              connessione selezionata.
             </AlertDescription>
           </Alert>
 
@@ -850,7 +907,9 @@ export default function Microsoft365Page() {
                   </>
                 )}
               </CardTitle>
-              <CardDescription>Connessione personale a Microsoft 365</CardDescription>
+              <CardDescription>
+                Connessione personale a Microsoft 365 sulla connessione selezionata
+              </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -880,7 +939,7 @@ export default function Microsoft365Page() {
                     <Button
                       variant="outline"
                       onClick={handleDisconnect}
-                      disabled={disconnecting}
+                      disabled={disconnecting || !selectedConnectionId}
                     >
                       {disconnecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Disconnetti account
@@ -896,6 +955,7 @@ export default function Microsoft365Page() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Connetti il tuo account Microsoft per accedere a Teams, Mail e Calendar
+                      sulla connessione selezionata.
                     </p>
                   </div>
 
@@ -986,7 +1046,7 @@ export default function Microsoft365Page() {
                   autoComplete="new-password"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Il secret viene cifrato con AES-256-GCM prima del salvataggio.
+                  Il secret viene cifrato prima del salvataggio.
                 </p>
               </div>
 
@@ -1051,7 +1111,7 @@ export default function Microsoft365Page() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Devi prima connettere il tuo account Microsoft 365 nella tab “Connessioni”.
+                  Devi prima connettere il tuo account Microsoft 365 sulla connessione selezionata.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -1084,7 +1144,7 @@ export default function Microsoft365Page() {
         <CardHeader>
           <CardTitle>Connessioni Microsoft 365</CardTitle>
           <CardDescription>
-            Elenco delle connessioni Microsoft disponibili per questo studio
+            Clicca una connessione per selezionarla e lavorarci sopra
           </CardDescription>
         </CardHeader>
 
@@ -1097,30 +1157,50 @@ export default function Microsoft365Page() {
                 <div
                   key={conn.id}
                   className={`rounded border p-3 ${
-                    conn.id === selectedConnectionId ? "border-primary" : ""
+                    conn.id === selectedConnectionId ? "border-primary bg-accent/20" : ""
                   }`}
                 >
-                  <div className="font-semibold">{conn.nome_connessione}</div>
-                  <div>Tenant: {conn.tenant_id || "-"}</div>
-                  <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
-                  <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
-                  <div>Default: {conn.is_default ? "Sì" : "No"}</div>
-                  <div>Assegnata utente: {conn.id === userMicrosoftConnectionId ? "Sì" : "No"}</div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConnectionId(conn.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="font-semibold">{conn.nome_connessione}</div>
+                    <div>Tenant: {conn.tenant_id || "-"}</div>
+                    <div>Email: {conn.connected_email || conn.organizer_email || "-"}</div>
+                    <div>Stato: {conn.enabled ? "Attiva" : "Disattiva"}</div>
+                    <div>Default: {conn.is_default ? "Sì" : "No"}</div>
+                    <div>
+                      Assegnata utente: {conn.id === userMicrosoftConnectionId ? "Sì" : "No"}
+                    </div>
+                  </button>
 
-                  {!conn.is_default && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={async () => {
-                        await setDefaultMicrosoftConnection(studioId, conn.id);
-                        await loadConnections();
-                        setSuccessMessage("✅ Connessione predefinita aggiornata");
-                      }}
-                    >
-                      Imposta come predefinita
-                    </Button>
-                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {!conn.is_default && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          await setDefaultMicrosoftConnection(studioId, conn.id);
+                          await loadConnections();
+                          setSelectedConnectionId(conn.id);
+                          setSuccessMessage("✅ Connessione predefinita aggiornata");
+                        }}
+                      >
+                        Imposta come predefinita
+                      </Button>
+                    )}
+
+                    {conn.id !== selectedConnectionId && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSelectedConnectionId(conn.id)}
+                      >
+                        Seleziona
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
