@@ -29,6 +29,7 @@ export default function GestioneUtentiPage() {
   const [editingUtente, setEditingUtente] = useState<Utente | null>(null);
   const [creating, setCreating] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
+  const [connections, setConnections] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -78,11 +79,17 @@ export default function GestioneUtentiPage() {
     try {
       setLoading(true);
 
-      const [utentiDataRaw, ruoliData] = await Promise.all([
-        utenteService.getUtenti(),
-        loadRuoli(),
-      ]);
+     const [utentiDataRaw, ruoliData, connData] = await Promise.all([
+  utenteService.getUtenti(),
+  loadRuoli(),
+  supabase
+    .from("microsoft365_connections")
+    .select("id, tenant_name")
+    .then(res => res.data)
+]);
 
+      setConnections(connData || []);
+      
       const utentiData = (utentiDataRaw ?? []) as Utente[];
 
       const sortedData = [...utentiData].sort((a, b) => {
