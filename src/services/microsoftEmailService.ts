@@ -1,4 +1,4 @@
-import { graphApiCall, hasMicrosoft365 } from "./microsoftGraphService";
+import { graphApiCall } from "./microsoftGraphService";
 import { supabase } from "@/lib/supabase/client";
 
 interface EmailRecipient {
@@ -32,6 +32,7 @@ interface EmailMessage {
 }
 
 interface SendEmailParams {
+  microsoftConnectionId: string;
   to: string | string[];
   subject: string;
   html: string;
@@ -47,10 +48,13 @@ function formatRecipients(emails: string | string[]): EmailRecipient[] {
   }));
 }
 
-async function getUtenteMicrosoftContext(userId: string) {
+async function getUtenteMicrosoftContext(
+  userId: string,
+  microsoftConnectionId: string
+) {
   const { data: utente, error: utenteErr } = await supabase
     .from("tbutenti")
-    .select("id, nome, cognome, email, studio_id, microsoft_connection_id")
+    .select("id, nome, cognome, email, studio_id")
     .eq("id", userId)
     .single();
 
@@ -58,52 +62,29 @@ async function getUtenteMicrosoftContext(userId: string) {
     throw new Error("Utente o studio non trovato per invio email Microsoft.");
   }
 
-  let connection: any = null;
+  const { data: connection, error: connErr } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("*")
+    .eq("id", microsoftConnectionId)
+    .eq("studio_id", utente.studio_id)
+    .eq("enabled", true)
+    .single();
 
-  if (utente.microsoft_connection_id) {
-    const { data: connById, error: connByIdErr } = await (supabase as any)
-      .from("microsoft365_connections")
-      .select("*")
-      .eq("id", utente.microsoft_connection_id)
-      .eq("enabled", true)
-      .single();
-
-    if (!connByIdErr && connById) {
-      connection = connById;
-    }
-  }
-
-  if (!connection) {
-    const { data: defaultConn, error: defaultConnErr } = await (supabase as any)
-      .from("microsoft365_connections")
-      .select("*")
-      .eq("studio_id", utente.studio_id)
-      .eq("enabled", true)
-      .eq("is_default", true)
-      .single();
-
-    if (!defaultConnErr && defaultConn) {
-      connection = defaultConn;
-    }
-  }
-
-  if (!connection) {
-    const { data: anyConn, error: anyConnErr } = await (supabase as any)
-      .from("microsoft365_connections")
-      .select("*")
-      .eq("studio_id", utente.studio_id)
-      .eq("enabled", true)
-      .order("sort_order", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!anyConnErr && anyConn) {
-      connection = anyConn;
-    }
-  }
-
-  if (!connection) {
+  if (connErr || !connection) {
     throw new Error("Connessione Microsoft 365 non trovata o non attiva.");
+  }
+
+  const { data: tokenRow, error: tokenErr } = await (supabase as any)
+    .from("tbmicrosoft365_user_tokens")
+    .select("id, connected_at, revoked_at, microsoft_connection_id")
+    .eq("studio_id", utente.studio_id)
+    .eq("user_id", userId)
+    .eq("microsoft_connection_id", microsoftConnectionId)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (tokenErr || !tokenRow?.id) {
+    throw new Error("Microsoft 365 non configurato per questo utente");
   }
 
   return { utente, connection };
@@ -113,17 +94,10 @@ export async function sendEmailViaMicrosoft(
   userId: string,
   params: SendEmailParams
 ): Promise<void> {
-  const { utente, connection } = await getUtenteMicrosoftContext(userId);
-
-  const studioId = utente.studio_id;
-if (!studioId) {
-  throw new Error("Studio non trovato per invio email Microsoft.");
-}
-
-const hasMicrosoft = await hasMicrosoft365(studioId, userId);
-  if (!hasMicrosoft) {
-    throw new Error("Microsoft 365 non configurato per questo utente");
-  }
+  const { utente, connection } = await getUtenteMicrosoftContext(
+    userId,
+    params.microsoftConnectionId
+  );
 
   const senderEmail =
     params.from ||
@@ -167,6 +141,7 @@ const hasMicrosoft = await hasMicrosoft365(studioId, userId);
 
   console.log("📧 Invio email via Microsoft Graph...");
   console.log("📧 UserId:", userId);
+  console.log("📧 Connessione ID:", params.microsoftConnectionId);
   console.log("📧 Connessione:", connection.nome_connessione);
   console.log("📧 Destinatari:", params.to);
   console.log("📧 Oggetto:", params.subject);
@@ -178,7 +153,8 @@ const hasMicrosoft = await hasMicrosoft365(studioId, userId);
         message,
         saveToSentItems: true,
       }),
-    });
+      microsoftConnectionId: params.microsoftConnectionId,
+    } as any);
 
     console.log("✅ Email inviata con successo via Microsoft 365");
   } catch (error: any) {
@@ -187,16 +163,32 @@ const hasMicrosoft = await hasMicrosoft365(studioId, userId);
   }
 }
 
-export async function canUseMicrosoftEmail(userId: string): Promise<boolean> {
-  const { data: utente, error } = await supabase
-    .from("tbutenti")
-    .select("studio_id")
-    .eq("id", userId)
-    .single();
+export async function canUseMicrosoftEmail(
+  userId: string,
+  microsoftConnectionId: string
+): Promise<boolean> {
+  try {
+    const { data: utente, error } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("id", userId)
+      .single();
 
-  if (error || !utente?.studio_id) {
+    if (error || !utente?.studio_id) {
+      return false;
+    }
+
+    const { data: tokenRow, error: tokenErr } = await (supabase as any)
+      .from("tbmicrosoft365_user_tokens")
+      .select("id")
+      .eq("studio_id", utente.studio_id)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", microsoftConnectionId)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    return !tokenErr && !!tokenRow?.id;
+  } catch {
     return false;
   }
-
-  return await hasMicrosoft365(utente.studio_id, userId);
 }
