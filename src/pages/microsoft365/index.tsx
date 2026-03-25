@@ -1,4 +1,4 @@
-  import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { z } from "zod";
 
@@ -116,9 +116,17 @@ export default function Microsoft365Page() {
   const [newConnectionIsDefault, setNewConnectionIsDefault] = useState(false);
 
   const studioConfigValid = useMemo(() => {
+    if (selectedConnection) {
+      return Boolean(
+        (selectedClientId || selectedConnection.client_id) &&
+          (selectedTenantId || selectedConnection.tenant_id) &&
+          selectedConnection.enabled === true
+      );
+    }
+
     if (!config) return false;
     return Boolean(config.client_id && config.tenant_id && config.enabled === true);
-  }, [config]);
+  }, [config, selectedConnection, selectedClientId, selectedTenantId]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -146,20 +154,20 @@ export default function Microsoft365Page() {
   }, [selectedConnectionId, userId]);
 
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!selectedConnection) {
+      setSelectedClientId(clientId || "");
+      setSelectedTenantId(tenantId || "");
+      setSelectedClientSecret("");
+      return;
+    }
 
-    useEffect(() => {
-  if (!selectedConnection) {
-    setSelectedClientId("");
-    setSelectedTenantId("");
+    setSelectedClientId(selectedConnection.client_id || "");
+    setSelectedTenantId(selectedConnection.tenant_id || "");
     setSelectedClientSecret("");
-    return;
-  }
+  }, [selectedConnection, clientId, tenantId]);
 
-  setSelectedClientId(selectedConnection.client_id || "");
-  setSelectedTenantId(selectedConnection.tenant_id || "");
-  setSelectedClientSecret("");
-}, [selectedConnection]);
+  useEffect(() => {
+    if (!router.isReady) return;
 
     if (router.query.m365 === "connected") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
@@ -313,21 +321,21 @@ export default function Microsoft365Page() {
       return;
     }
 
-    if (!clientId || !tenantId) {
+    if (!selectedConnectionId) {
+      setError("Seleziona una connessione Microsoft 365.");
+      return;
+    }
+
+    if (!selectedClientId || !selectedTenantId) {
       setError("Inserisci almeno Client ID e Tenant ID");
       return;
     }
 
-    if (config && !clientSecret) {
+    if (selectedConnection && !selectedClientSecret) {
       const confirmed = window.confirm(
         "Non hai inserito un nuovo Client Secret. Vuoi mantenere quello esistente?"
       );
       if (!confirmed) return;
-    }
-
-    if (!config && !clientSecret) {
-      setError("Client Secret è obbligatorio per nuove configurazioni");
-      return;
     }
 
     setSaving(true);
@@ -346,9 +354,10 @@ export default function Microsoft365Page() {
         },
         body: JSON.stringify({
           studioId,
-          clientId,
-          clientSecret: clientSecret || undefined,
-          tenantId,
+          connectionId: selectedConnectionId,
+          clientId: selectedClientId,
+          clientSecret: selectedClientSecret || undefined,
+          tenantId: selectedTenantId,
         }),
       });
 
@@ -358,18 +367,25 @@ export default function Microsoft365Page() {
         throw new Error(result.error || "Errore nel salvataggio");
       }
 
-      const parsed = M365ConfigSchema.safeParse(result.config);
-      if (!parsed.success) {
-        console.error("save-config returned invalid config:", parsed.error, result.config);
-        throw new Error("Risposta salvataggio non valida");
+      setClientId(selectedClientId);
+      setTenantId(selectedTenantId);
+
+      const parsed = M365ConfigSchema.safeParse({
+        client_id: selectedClientId,
+        tenant_id: selectedTenantId,
+        enabled: selectedConnection?.enabled ?? true,
+      });
+
+      if (parsed.success) {
+        setConfig(parsed.data);
       }
 
-      setConfig(parsed.data);
+      setSelectedClientSecret("");
       setClientSecret("");
       setSuccessMessage("✅ Configurazione salvata con successo!");
 
-      await handleTest();
       await loadConnections();
+      await handleTest();
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Errore nel salvataggio");
@@ -494,15 +510,20 @@ export default function Microsoft365Page() {
   }
 
   async function handleConnect() {
-    if (!config) {
+    if (!studioConfigValid) {
       setError(
-        "Configura prima l'app Azure AD (Client ID e Tenant ID) e salva la configurazione studio."
+        "Configura prima Client ID e Tenant ID della connessione selezionata e salva la configurazione."
       );
       return;
     }
 
-    if (!config.enabled) {
-      setError("Microsoft 365 è disabilitato per questo studio. Contatta l'amministratore.");
+    if (!selectedConnection) {
+      setError("Seleziona una connessione Microsoft 365.");
+      return;
+    }
+
+    if (!selectedConnection.enabled) {
+      setError("La connessione Microsoft 365 selezionata è disabilitata.");
       return;
     }
 
@@ -882,29 +903,31 @@ export default function Microsoft365Page() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Configurazione Studio (Client Credentials):</strong> Il Client Secret viene
-              cifrato prima del salvataggio. La connessione personale usa OAuth delegato sulla
-              connessione selezionata.
+              <strong>Configurazione connessione (Client Credentials):</strong> Il Client Secret
+              viene cifrato prima del salvataggio. La connessione personale usa OAuth delegato
+              sulla connessione selezionata.
             </AlertDescription>
           </Alert>
 
-          {config && (
+          {selectedConnection && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  {config.enabled ? (
+                  {selectedConnection.enabled ? (
                     <>
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      Microsoft 365 configurato
+                      Connessione Microsoft 365 attiva
                     </>
                   ) : (
                     <>
                       <XCircle className="h-5 w-5 text-red-500" />
-                      Microsoft 365 disabilitato
+                      Connessione Microsoft 365 disabilitata
                     </>
                   )}
                 </CardTitle>
-                <CardDescription>Configurazione attiva per questo studio</CardDescription>
+                <CardDescription>
+                  Configurazione attiva sulla connessione selezionata
+                </CardDescription>
               </CardHeader>
             </Card>
           )}
@@ -987,7 +1010,7 @@ export default function Microsoft365Page() {
 
                     {!studioConfigValid && (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        ⚠️ Prima configura l&apos;app Azure AD nella sezione sottostante
+                        ⚠️ Prima configura l&apos;app Azure AD della connessione selezionata
                       </p>
                     )}
                   </div>
@@ -1024,9 +1047,9 @@ export default function Microsoft365Page() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Credenziali Azure AD (Configurazione Studio)</CardTitle>
+              <CardTitle>Credenziali Azure AD (Connessione selezionata)</CardTitle>
               <CardDescription>
-                Configura l&apos;applicazione Microsoft 365 per lo studio.
+                Configura l&apos;applicazione Microsoft 365 per il tenant selezionato.
                 <a
                   href="/guide/MICROSOFT_365_SETUP_GUIDE.md"
                   target="_blank"
@@ -1042,60 +1065,74 @@ export default function Microsoft365Page() {
               <div className="space-y-2">
                 <Label htmlFor="clientId">Client ID *</Label>
                 <Input
-                id="clientId"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                autoComplete="off"
+                  id="clientId"
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  autoComplete="off"
+                  disabled={!selectedConnectionId}
                 />
               </div>
 
               <div className="space-y-2">
-              <Label htmlFor="clientSecret">
-              Client Secret {selectedConnection ? "(Lascia vuoto per mantenere quello esistente)" : "*"}
-              </Label>
-              <Input
-                id="clientSecret"
-                type="password"
-                placeholder={
-              selectedConnection ? "Lascia vuoto per mantenere quello esistente" : "Client Secret"
-                    }
-                    value={selectedClientSecret}
-                onChange={(e) => setSelectedClientSecret(e.target.value)}
+                <Label htmlFor="clientSecret">
+                  Client Secret{" "}
+                  {selectedConnection
+                    ? "(Lascia vuoto per mantenere quello esistente)"
+                    : "*"}
+                </Label>
+                <Input
+                  id="clientSecret"
+                  type="password"
+                  placeholder={
+                    selectedConnection
+                      ? "Lascia vuoto per mantenere quello esistente"
+                      : "Client Secret"
+                  }
+                  value={selectedClientSecret}
+                  onChange={(e) => setSelectedClientSecret(e.target.value)}
                   autoComplete="new-password"
-                      />
+                  disabled={!selectedConnectionId}
+                />
                 <p className="text-xs text-muted-foreground">
                   Il secret viene cifrato prima del salvataggio.
-                    </p>
+                </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="tenantId">Tenant ID *</Label>
                 <Input
-                id="tenantId"
+                  id="tenantId"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                   value={selectedTenantId}
                   onChange={(e) => setSelectedTenantId(e.target.value)}
                   autoComplete="off"
-                  />
+                  disabled={!selectedConnectionId}
+                />
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button onClick={handleSave} disabled={saving || !clientId || !tenantId}>
+                <Button
+                  onClick={handleSave}
+                  disabled={
+                    saving ||
+                    !selectedConnectionId ||
+                    !selectedClientId ||
+                    !selectedTenantId
+                  }
+                >
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {config ? "Aggiorna configurazione" : "Salva configurazione"}
+                  Salva configurazione
                 </Button>
 
-                {config && (
-                  <Button
-                    variant="outline"
-                    onClick={handleTest}
-                    disabled={testing || !selectedConnectionId}
-                  >
-                    {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Testa connessione
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={testing || !selectedConnectionId}
+                >
+                  {testing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Testa connessione
+                </Button>
               </div>
             </CardContent>
           </Card>
