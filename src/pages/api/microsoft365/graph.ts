@@ -177,7 +177,11 @@ async function acquireAccessToken(
   }
 
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
-  const clientSecret = decrypt(connection.client_secret);
+  if (!connection.client_secret) {
+  throw new Error("Microsoft client secret mancante nella connessione.");
+}
+
+const clientSecret = decrypt(connection.client_secret);
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
