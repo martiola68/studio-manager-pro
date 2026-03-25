@@ -172,17 +172,42 @@ async function acquireAccessToken(
 ): Promise<{ accessToken: string; connection: ResolvedConnection }> {
   const connection = await resolveMicrosoftConnection(studioId, userId);
 
-  const { data: tokenRow, error: tokenErr } = await supabaseAdmin
+  let tokenRow: TokenRow | null = null;
+
+  const { data: strictTokenRow, error: strictTokenErr } = await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
     .select(
-      "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id"
+      "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
     )
     .eq("studio_id", studioId)
     .eq("user_id", userId)
     .eq("microsoft_connection_id", connection.id)
-    .maybeSingle<TokenRow>();
+    .maybeSingle();
 
-  if (tokenErr || !tokenRow?.token_cache_encrypted) {
+  if (!strictTokenErr && strictTokenRow?.token_cache_encrypted) {
+    tokenRow = strictTokenRow as TokenRow;
+  }
+
+  if (!tokenRow) {
+    const { data: fallbackTokenRow, error: fallbackTokenErr } = await supabaseAdmin
+      .from("tbmicrosoft365_user_tokens")
+      .select(
+        "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
+      )
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .is("revoked_at", null)
+      .not("token_cache_encrypted", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!fallbackTokenErr && fallbackTokenRow?.token_cache_encrypted) {
+      tokenRow = fallbackTokenRow as TokenRow;
+    }
+  }
+
+  if (!tokenRow?.token_cache_encrypted) {
     throw new Error(
       `Microsoft 365 non configurato o token cache mancante per la connessione ${connection.nome_connessione}. Riconnetti Microsoft 365.`
     );
@@ -248,15 +273,15 @@ async function acquireAccessToken(
         token_cache_encrypted: newEncrypted,
         revoked_at: null,
         updated_at: new Date().toISOString(),
+        microsoft_connection_id: connection.id,
       })
       .eq("studio_id", studioId)
       .eq("user_id", userId)
-      .eq("microsoft_connection_id", connection.id);
+      .eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
   }
 
   return { accessToken, connection };
 }
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
