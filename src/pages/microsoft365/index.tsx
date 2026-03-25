@@ -115,18 +115,13 @@ export default function Microsoft365Page() {
   const [newConnectionEnabled, setNewConnectionEnabled] = useState(true);
   const [newConnectionIsDefault, setNewConnectionIsDefault] = useState(false);
 
-  const studioConfigValid = useMemo(() => {
-    if (selectedConnection) {
-      return Boolean(
-        (selectedClientId || selectedConnection.client_id) &&
-          (selectedTenantId || selectedConnection.tenant_id) &&
-          selectedConnection.enabled === true
-      );
-    }
-
-    if (!config) return false;
-    return Boolean(config.client_id && config.tenant_id && config.enabled === true);
-  }, [config, selectedConnection, selectedClientId, selectedTenantId]);
+const studioConfigValid = useMemo(() => {
+  return Boolean(
+    selectedConnectionId &&
+      selectedClientId.trim() &&
+      selectedTenantId.trim()
+  );
+}, [selectedConnectionId, selectedClientId, selectedTenantId]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -510,27 +505,25 @@ export default function Microsoft365Page() {
   }
 
   async function handleConnect() {
-    if (!studioConfigValid) {
-      setError(
-        "Configura prima Client ID e Tenant ID della connessione selezionata e salva la configurazione."
-      );
-      return;
-    }
+  if (!selectedConnectionId) {
+    setError("Seleziona una connessione Microsoft 365.");
+    return;
+  }
 
-    if (!selectedConnection) {
-      setError("Seleziona una connessione Microsoft 365.");
-      return;
-    }
+  if (!selectedClientId.trim() || !selectedTenantId.trim()) {
+    setError("Inserisci e salva prima Client ID, Tenant ID e Client Secret della connessione selezionata.");
+    return;
+  }
 
-    if (!selectedConnection.enabled) {
-      setError("La connessione Microsoft 365 selezionata è disabilitata.");
-      return;
-    }
+  if (!selectedConnection) {
+    setError("Connessione Microsoft 365 non trovata.");
+    return;
+  }
 
-    if (!selectedConnectionId) {
-      setError("Seleziona una connessione Microsoft 365.");
-      return;
-    }
+  if (!selectedConnection.enabled) {
+    setError("La connessione Microsoft 365 selezionata è disabilitata.");
+    return;
+  }
 
     setConnecting(true);
     setError(null);
