@@ -533,8 +533,7 @@ export default function GestioneUtentiPage() {
                           </SelectContent>
                           </Select>
                           </div>
-                        }
-
+                       
               {!editingUtente && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start gap-3">
