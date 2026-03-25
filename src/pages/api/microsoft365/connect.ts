@@ -142,14 +142,14 @@ export default async function handler(
     const { error: upStateErr } = await supabaseAdmin
       .from("tbmicrosoft_settings")
       .upsert(
-        {
-          user_id: userId,
-          m365_oauth_state: state,
-          microsoft_connection_id: microsoftConnectionId,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
+    {
+      user_id: userId,
+      m365_oauth_state: state,
+      microsoft_connection_id: microsoftConnectionId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,microsoft_connection_id" }
+  );
 
     if (upStateErr) {
       return res.status(500).json({
