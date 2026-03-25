@@ -380,7 +380,7 @@ const studioConfigValid = useMemo(() => {
       setSuccessMessage("✅ Configurazione salvata con successo!");
 
       await loadConnections();
-      await handleTest();
+      
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Errore nel salvataggio");
