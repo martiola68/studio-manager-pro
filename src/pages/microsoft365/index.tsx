@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+  import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { z } from "zod";
 
@@ -90,6 +90,10 @@ export default function Microsoft365Page() {
   const [connections, setConnections] = useState<MicrosoftConnection[]>([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState("");
 
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedClientSecret, setSelectedClientSecret] = useState("");
+
   const selectedConnection = useMemo(
     () => connections.find((c) => c.id === selectedConnectionId) ?? null,
     [connections, selectedConnectionId]
@@ -143,6 +147,19 @@ export default function Microsoft365Page() {
 
   useEffect(() => {
     if (!router.isReady) return;
+
+    useEffect(() => {
+  if (!selectedConnection) {
+    setSelectedClientId("");
+    setSelectedTenantId("");
+    setSelectedClientSecret("");
+    return;
+  }
+
+  setSelectedClientId(selectedConnection.client_id || "");
+  setSelectedTenantId(selectedConnection.tenant_id || "");
+  setSelectedClientSecret("");
+}, [selectedConnection]);
 
     if (router.query.m365 === "connected") {
       setSuccessMessage("✅ Microsoft 365 connesso con successo!");
@@ -1025,40 +1042,42 @@ export default function Microsoft365Page() {
               <div className="space-y-2">
                 <Label htmlFor="clientId">Client ID *</Label>
                 <Input
-                  id="clientId"
-                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  autoComplete="off"
+                id="clientId"
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                autoComplete="off"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientSecret">
-                  Client Secret {config ? "(Lascia vuoto per mantenere quello esistente)" : "*"}
-                </Label>
-                <Input
-                  id="clientSecret"
-                  type="password"
-                  placeholder={config ? "••••••••••••••••" : "Client Secret"}
-                  value={clientSecret}
-                  onChange={(e) => setClientSecret(e.target.value)}
+              <Label htmlFor="clientSecret">
+              Client Secret {selectedConnection ? "(Lascia vuoto per mantenere quello esistente)" : "*"}
+              </Label>
+              <Input
+                id="clientSecret"
+                type="password"
+                placeholder={
+              selectedConnection ? "Lascia vuoto per mantenere quello esistente" : "Client Secret"
+                    }
+                    value={selectedClientSecret}
+                onChange={(e) => setSelectedClientSecret(e.target.value)}
                   autoComplete="new-password"
-                />
+                      />
                 <p className="text-xs text-muted-foreground">
                   Il secret viene cifrato prima del salvataggio.
-                </p>
+                    </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="tenantId">Tenant ID *</Label>
                 <Input
-                  id="tenantId"
+                id="tenantId"
                   placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
+                  value={selectedTenantId}
+                  onChange={(e) => setSelectedTenantId(e.target.value)}
                   autoComplete="off"
-                />
+                  />
               </div>
 
               <div className="flex gap-3 pt-4">
