@@ -220,7 +220,13 @@ async function acquireAccessToken(
   }
 
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
-  const clientSecret = decrypt(connection.client_secret);
+  let clientSecret = "";
+
+try {
+  clientSecret = decrypt(connection.client_secret);
+} catch {
+  clientSecret = connection.client_secret;
+}
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
