@@ -1,5 +1,4 @@
 // src/services/microsoftGraphService.ts
-// ✅ CLIENT-SAFE: niente @azure/msal-node qui dentro
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 /* =========================================================
@@ -9,7 +8,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 export function hasMicrosoft365(studioId: string, userId: string): Promise<boolean>;
 export function hasMicrosoft365(userId: string): Promise<boolean>;
 
-export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean> {
+export async function hasMicrosoft365(a: string, b?: string): Promise<boolean> {
   const supabase = getSupabaseClient();
   const {
     data: { session },
@@ -18,7 +17,15 @@ export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean>
   const token = session?.access_token;
   if (!token) return false;
 
-  const res = await fetch("/api/microsoft365/status", {
+  const qs = new URLSearchParams();
+  if (b) {
+    qs.set("studioId", a);
+    qs.set("userId", b);
+  } else {
+    qs.set("userId", a);
+  }
+
+  const res = await fetch(`/api/microsoft365/status?${qs.toString()}`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -34,11 +41,6 @@ export async function hasMicrosoft365(_a: string, _b?: string): Promise<boolean>
 
 /* =========================================================
    graphApiCall (client facade -> /api/microsoft365/graph)
-   ✅ Supporta TUTTE le firme legacy:
-   - (endpoint)
-   - (endpoint, options)
-   - (userId, endpoint, options)
-   - (studioId, userId, endpoint, options)
 ========================================================= */
 
 export function graphApiCall<T = any>(endpoint: string, options?: RequestInit): Promise<T>;
@@ -51,7 +53,8 @@ export function graphApiCall<T = any>(
 ): Promise<T>;
 
 export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): Promise<T> {
-  // --- Normalizza firme
+  let studioId: string | undefined;
+  let userId: string | undefined;
   let endpoint: string | undefined;
   let options: RequestInit | undefined;
 
@@ -62,11 +65,14 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
   }
   // (userId, endpoint, options)
   else if (typeof a === "string" && typeof b === "string" && (typeof c === "undefined" || typeof c === "object")) {
+    userId = a;
     endpoint = b;
     options = c as RequestInit | undefined;
   }
   // (studioId, userId, endpoint, options)
   else if (typeof a === "string" && typeof b === "string" && typeof c === "string") {
+    studioId = a;
+    userId = b;
     endpoint = c;
     options = d as RequestInit | undefined;
   } else {
@@ -75,7 +81,6 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
 
   const method = String(options?.method || "GET").toUpperCase();
 
-  // body: se string lo mando così; se oggetto lo serializzo; se null/undefined -> undefined
   const rawBody: any = (options as any)?.body;
   const body =
     typeof rawBody === "string"
@@ -84,7 +89,6 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
       ? JSON.stringify(rawBody)
       : undefined;
 
-  // Token Supabase per Authorization verso proxy
   const supabase = getSupabaseClient();
   const {
     data: { session },
@@ -95,12 +99,8 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
     throw new Error("Sessione non valida. Rifai login.");
   }
 
-  // Validazioni minime
   if (!endpoint || typeof endpoint !== "string") {
     throw new Error("endpoint/method: endpoint mancante");
-  }
-  if (!method) {
-    throw new Error("endpoint/method: method mancante");
   }
 
   const res = await fetch("/api/microsoft365/graph", {
@@ -108,12 +108,14 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
     headers: {
       "Content-Type": "application/json",
       ...(options?.headers || {}),
-      Authorization: `Bearer ${token}`, // deve vincere
+      Authorization: `Bearer ${token}`,
     } as any,
     body: JSON.stringify({
+      studioId,
+      userId,
       endpoint,
       method,
-      body, // string | undefined
+      body,
     }),
   });
 
@@ -131,7 +133,7 @@ export async function graphApiCall<T = any>(a: any, b?: any, c?: any, d?: any): 
 }
 
 /* =========================================================
-   Wrapper legacy usati da email/teamsNotificationService
+   Wrapper legacy
 ========================================================= */
 
 export type GraphSendMailMessage = {
@@ -144,9 +146,8 @@ export type GraphSendMailMessage = {
   ccRecipients?: Array<{ emailAddress: { address: string } }>;
 };
 
-export async function sendEmail(_userId: string, message: GraphSendMailMessage): Promise<void> {
-  // ✅ QUI viene usata la firma (endpoint, options) -> ora supportata
-  await graphApiCall("/me/sendMail", {
+export async function sendEmail(userId: string, message: GraphSendMailMessage): Promise<void> {
+  await graphApiCall(userId, "/me/sendMail", {
     method: "POST",
     body: {
       message,
@@ -156,13 +157,13 @@ export async function sendEmail(_userId: string, message: GraphSendMailMessage):
 }
 
 export async function sendChannelMessage(
-  _userId: string,
+  userId: string,
   teamId: string,
   channelId: string,
   messageHtml: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    await graphApiCall(`/teams/${teamId}/channels/${channelId}/messages`, {
+    await graphApiCall(userId, `/teams/${teamId}/channels/${channelId}/messages`, {
       method: "POST",
       body: {
         body: { contentType: "html", content: messageHtml },
@@ -175,7 +176,6 @@ export async function sendChannelMessage(
   }
 }
 
-// ✅ export legacy atteso da altri file
 export const microsoftGraphService = {
   graphApiCall,
   hasMicrosoft365,
