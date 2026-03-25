@@ -79,13 +79,13 @@ export default function GestioneUtentiPage() {
     try {
       setLoading(true);
 
-     const [utentiDataRaw, ruoliData, connData] = await Promise.all([
+ const [utentiDataRaw, ruoliData, connData] = await Promise.all([
   utenteService.getUtenti(),
   loadRuoli(),
-  supabase
+  (supabase as any)
     .from("microsoft365_connections")
-    .select("id, tenant_name")
-    .then(res => res.data)
+    .select("id, nome_connessione")
+    .then((res: any) => res.data),
 ]);
 
       setConnections(connData || []);
