@@ -48,6 +48,65 @@ export type Database = {
   }
   Relationships: []
 },
+microsoft365_connections: {
+  Row: {
+    id: string
+    studio_id: string
+    nome_connessione: string
+    tenant_id: string | null
+    client_id: string | null
+    client_secret: string | null
+    enabled: boolean
+    connected_email: string | null
+    organizer_email: string | null
+    features: any
+    is_default: boolean
+    sort_order: number
+    created_at: string | null
+    updated_at: string | null
+  }
+  Insert: {
+    id?: string
+    studio_id: string
+    nome_connessione: string
+    tenant_id?: string | null
+    client_id?: string | null
+    client_secret?: string | null
+    enabled?: boolean
+    connected_email?: string | null
+    organizer_email?: string | null
+    features?: any
+    is_default?: boolean
+    sort_order?: number
+    created_at?: string | null
+    updated_at?: string | null
+  }
+  Update: {
+    id?: string
+    studio_id?: string
+    nome_connessione?: string
+    tenant_id?: string | null
+    client_id?: string | null
+    client_secret?: string | null
+    enabled?: boolean
+    connected_email?: string | null
+    organizer_email?: string | null
+    features?: any
+    is_default?: boolean
+    sort_order?: number
+    created_at?: string | null
+    updated_at?: string | null
+  }
+  Relationships: [
+    {
+      foreignKeyName: "microsoft365_connections_studio_id_fkey"
+      columns: ["studio_id"]
+      referencedRelation: "tbstudio"
+      referencedColumns: ["id"]
+    }
+  ]
+},
+     
      event_confirmations: {
         Row: {
           confirmed: boolean | null
