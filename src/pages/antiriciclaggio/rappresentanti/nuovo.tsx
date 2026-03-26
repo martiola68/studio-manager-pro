@@ -507,6 +507,7 @@ async function handleInviaRichiestaDocumento() {
     `;
 
     await sendEmailViaMicrosoft(userId, {
+      microsoftConnectionId: form.microsoft_connection_id, // oppure la variabile corretta del file
       to: destinatario,
       subject,
       html,
