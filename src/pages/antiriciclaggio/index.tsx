@@ -48,6 +48,8 @@ type AV1Row = {
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
 
+const AML_SELECTED_SOCIETA_KEY = "antiriciclaggio_selected_societa_id";
+
 export default function AntiriciclaggioPage() {
   const router = useRouter();
 
@@ -329,14 +331,21 @@ export default function AntiriciclaggioPage() {
     void init();
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = sessionStorage.getItem(AML_SESSION_KEY);
-    if (saved) {
-      setUnlockedSocietaId(saved);
-    }
-  }, []);
+ useEffect(() => {
+  if (typeof window === "undefined") return;
 
+  const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
+  const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
+
+  if (savedUnlocked) {
+    setUnlockedSocietaId(savedUnlocked);
+  }
+
+  if (savedSelected) {
+    setSocietaFilter(savedSelected);
+  }
+}, []);
+  
   useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
       setSelectedSocieta(null);
@@ -394,38 +403,44 @@ export default function AntiriciclaggioPage() {
   }, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
-    if (isSocietaSelectionLocked) return;
+  if (isSocietaSelectionLocked) return;
 
-    setSocietaFilter(societaId);
-    setRows([]);
-    setPassword("");
-    setPasswordError("");
-    setShowForgotPasswordInfo(false);
-    setWorkingId(null);
+  setSocietaFilter(societaId);
 
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem(AML_SESSION_KEY);
+  if (typeof window !== "undefined") {
+    if (societaId) {
+      sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, societaId);
+    } else {
+      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
     }
 
-    setUnlockedSocietaId(null);
+    sessionStorage.removeItem(AML_SESSION_KEY);
+  }
 
-    if (!societaId) {
-      setSelectedSocieta(null);
-      setShowPasswordModal(false);
-      return;
-    }
+  setRows([]);
+  setPassword("");
+  setPasswordError("");
+  setShowForgotPasswordInfo(false);
+  setWorkingId(null);
+  setUnlockedSocietaId(null);
 
-    const societa = societaOptions.find((s) => s.id === societaId) || null;
-    setSelectedSocieta(societa);
-
-    if (societa?.antiriciclaggio_enabled) {
-      setShowPasswordModal(true);
-      return;
-    }
-
+  if (!societaId) {
+    setSelectedSocieta(null);
     setShowPasswordModal(false);
-  };
+    return;
+  }
 
+  const societa = societaOptions.find((s) => s.id === societaId) || null;
+  setSelectedSocieta(societa);
+
+  if (societa?.antiriciclaggio_enabled) {
+    setShowPasswordModal(true);
+    return;
+  }
+
+  setShowPasswordModal(false);
+};
+  
   const handleUnlockSocieta = async () => {
     try {
       if (!selectedSocieta?.id) {
