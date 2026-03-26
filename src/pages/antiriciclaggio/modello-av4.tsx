@@ -11,7 +11,8 @@ type FormState = {
   cliente_id: string;
   av1_id: string;
   rapp_legale_id: string;
-
+  microsoft_connection_id: string;
+  
   dichiarante_nome_cognome: string;
   dichiarante_codice_fiscale: string;
   dichiarante_luogo_nascita: string;
@@ -81,6 +82,7 @@ const initialFormState = (
   cliente_id: clienteId,
   av1_id: av1Id,
   rapp_legale_id: "",
+  microsoft_connection_id: "",
 
   dichiarante_nome_cognome: "",
   dichiarante_codice_fiscale: "",
