@@ -74,15 +74,22 @@ async function getUtenteMicrosoftContext(
     throw new Error("Connessione Microsoft 365 non trovata o non attiva.");
   }
 
-  const { data: tokenRow, error: tokenErr } = await (supabase as any)
-    .from("tbmicrosoft365_user_tokens")
-    .select("id, connected_at, revoked_at, microsoft_connection_id")
-    .eq("studio_id", utente.studio_id)
-    .eq("user_id", userId)
-    .eq("microsoft_connection_id", microsoftConnectionId)
-    .is("revoked_at", null)
-    .maybeSingle();
+console.log("CHECK TOKEN MICROSOFT", {
+  studio_id: utente.studio_id,
+  user_id: userId,
+  microsoft_connection_id: microsoftConnectionId,
+});
 
+const { data: tokenRow, error: tokenErr } = await (supabase as any)
+  .from("tbmicrosoft365_user_tokens")
+  .select("id, connected_at, revoked_at, microsoft_connection_id")
+  .eq("studio_id", utente.studio_id)
+  .eq("user_id", userId)
+  .eq("microsoft_connection_id", microsoftConnectionId)
+  .is("revoked_at", null)
+  .maybeSingle();
+
+console.log("TOKEN ROW TROVATA", tokenRow, tokenErr);
   if (tokenErr || !tokenRow?.id) {
     throw new Error("Microsoft 365 non configurato per questo utente");
   }
