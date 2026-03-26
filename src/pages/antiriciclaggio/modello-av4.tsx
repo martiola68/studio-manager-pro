@@ -810,8 +810,9 @@ async function handleInvioPubblico() {
     }
 
     await sendEmailViaMicrosoft(userId, {
-      to: destinatario,
-      subject,
+  microsoftConnectionId: form.microsoft_connection_id,
+  to: destinatario,
+  subject,
       html: `
         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
           <p>Gentile ${nomeDestinatario},</p>
