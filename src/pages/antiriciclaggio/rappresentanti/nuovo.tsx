@@ -4,6 +4,11 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
+import {
+  getMicrosoftConnectionsForUser,
+  resolveMicrosoftConnectionId,
+} from "@/services/microsoftConnectionsService";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
