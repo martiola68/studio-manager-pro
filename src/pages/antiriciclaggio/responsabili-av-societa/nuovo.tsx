@@ -432,6 +432,49 @@ export default function NuovaSocietaRespAVPage() {
                 )}
               </div>
 
+             {passwordLockedForNormalEdit && (
+  <div className="mt-3 flex justify-end">
+    <Button
+      type="button"
+      variant="destructive"
+      onClick={async () => {
+        const nuova = prompt("Inserisci nuova password:");
+
+        if (!nuova || nuova.length < 6) {
+          alert("Password non valida (minimo 6 caratteri)");
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/antiriciclaggio/set-societa-password", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              societaId: id,
+              enabled: true,
+              password: nuova,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data?.ok) {
+            throw new Error(data?.error || "Errore reset password");
+          }
+
+          alert("Password aggiornata correttamente");
+        } catch (err: any) {
+          alert(err.message);
+        }
+      }}
+    >
+      Reset password (admin)
+    </Button>
+  </div>
+)} 
+
               {error && (
                 <p className="text-sm text-red-600">
                   Errore: {error}
