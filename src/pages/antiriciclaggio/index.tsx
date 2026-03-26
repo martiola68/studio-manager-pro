@@ -315,6 +315,7 @@ export default function AntiriciclaggioPage() {
 
     if (typeof window !== "undefined") {
       sessionStorage.setItem(AML_SESSION_KEY, societa.id);
+      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
     }
 
     await loadRowsBySocieta(societa.id);
@@ -508,9 +509,19 @@ const clearAccessState = () => {
   }
 };
 
-  const handleCloseAccess = () => {
+ const handleCloseAccess = () => {
   clearAccessState();
-  window.location.reload();
+
+  setSocietaFilter("");
+  setSelectedSocieta(null);
+  setRows([]);
+  setWorkingId(null);
+
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(AML_SESSION_KEY);
+    sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+    window.location.reload();
+  }
 };
 
   const handleNuovoAV1 = () => {
