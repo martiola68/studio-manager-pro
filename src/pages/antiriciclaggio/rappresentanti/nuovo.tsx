@@ -61,7 +61,7 @@ type RappLegaleRow = {
   nazionalita?: string | null;
   email?: string | null;
   tipo_doc?: string | null;
-  NumDoc?: string | null;
+  num_doc?: string | null;
   scadenza_doc?: string | null;
   allegato_doc?: string | null;
   microsoft_connection_id?: string | null;
@@ -130,7 +130,7 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     nazionalita: row?.nazionalita ?? "",
     email: row?.email ?? "",
     tipo_doc: safeTipo,
-    num_doc: row?.NumDoc ?? "",
+    num_doc: row?.num_doc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
     microsoft_connection_id: row?.microsoft_connection_id ?? "",
@@ -747,7 +747,7 @@ if (!connection || !resolvedConnectionId) {
         nazionalita: form.nazionalita.trim() || null,
         email: form.email.trim() || null,
         tipo_doc: form.tipo_doc || null,
-        NumDoc: form.num_doc.trim() || null,
+        num_doc: form.num_doc.trim() || null,
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
         microsoft_connection_id: form.microsoft_connection_id || null,
