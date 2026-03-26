@@ -98,3 +98,64 @@ export async function createMicrosoftConnection(input: {
 
   return data as MicrosoftConnection;
 }
+export async function getMicrosoftConnectionsForUser(
+  studioId: string,
+  userId: string
+): Promise<MicrosoftConnection[]> {
+  const client = supabase as any;
+
+  const { data: connections, error: connectionsError } = await client
+    .from("microsoft365_connections")
+    .select("*")
+    .eq("studio_id", studioId)
+    .eq("enabled", true)
+    .order("is_default", { ascending: false })
+    .order("sort_order", { ascending: true });
+
+  if (connectionsError) {
+    console.error("Errore caricamento connessioni Microsoft per utente:", connectionsError);
+    throw connectionsError;
+  }
+
+  const { data: tokenRows, error: tokenError } = await client
+    .from("tbmicrosoft365_user_tokens")
+    .select("microsoft_connection_id")
+    .eq("studio_id", studioId)
+    .eq("user_id", userId)
+    .is("revoked_at", null);
+
+  if (tokenError) {
+    console.error("Errore caricamento token Microsoft utente:", tokenError);
+    throw tokenError;
+  }
+
+  const allowedIds = new Set(
+    (tokenRows ?? [])
+      .map((row: any) => row.microsoft_connection_id)
+      .filter(Boolean)
+  );
+
+  return ((connections ?? []) as MicrosoftConnection[]).filter((conn) =>
+    allowedIds.has(conn.id)
+  );
+}
+
+export function resolveMicrosoftConnectionId(
+  connections: MicrosoftConnection[],
+  currentConnectionId?: string | null
+): string {
+  const current = currentConnectionId ?? "";
+
+  if (current && connections.some((conn) => conn.id === current)) {
+    return current;
+  }
+
+  const defaultConnection =
+    connections.find((conn: any) => conn.is_default) ?? null;
+
+  if (defaultConnection?.id) {
+    return defaultConnection.id;
+  }
+
+  return connections[0]?.id ?? "";
+}
