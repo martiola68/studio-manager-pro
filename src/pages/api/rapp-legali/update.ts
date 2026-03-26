@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nazionalita,
       email,
       tipo_doc,
-      NumDoc,
+      num_doc,
       scadenza_doc,
       allegato_doc,
     } = req.body || {};
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nazionalita: nazionalita ? String(nazionalita).trim() : null,
       email: email ? String(email).trim() : null,
       tipo_doc: tipo_doc ? String(tipo_doc).trim() : null,
-      NumDoc: NumDoc ? String(NumDoc).trim() : null,
+      num_doc: num_doc ? String(num_doc).trim() : null,
       scadenza_doc: scadenza_doc || null,
       allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
     };
