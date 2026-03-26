@@ -98,6 +98,7 @@ export async function createMicrosoftConnection(input: {
 
   return data as MicrosoftConnection;
 }
+
 export async function getMicrosoftConnectionsForUser(
   studioId: string,
   userId: string
