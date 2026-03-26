@@ -137,7 +137,7 @@ export default async function handler(
       .from("rapp_legali")
       .update({
         tipo_doc,
-        NumDoc: String(num_doc).trim(),
+        num_doc: String(num_doc).trim(),
         scadenza_doc,
         allegato_doc: filePath,
         public_doc_submitted_at: submittedAt,
