@@ -281,11 +281,8 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
       return false;
     }
 
-    const microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
-
     // Verifica se l'utente ha Microsoft 365 configurato
     const microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
-
     const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
     
     if (!hasMicrosoft) {
