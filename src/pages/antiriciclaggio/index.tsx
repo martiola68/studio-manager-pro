@@ -65,6 +65,7 @@ export default function AntiriciclaggioPage() {
   const [password, setPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -250,6 +251,7 @@ export default function AntiriciclaggioPage() {
     setPassword("");
     setPasswordError("");
     setShowPasswordModal(false);
+    setShowForgotPasswordInfo(false);
 
     if (typeof window !== "undefined") {
       sessionStorage.removeItem(AML_SESSION_KEY);
@@ -386,7 +388,14 @@ export default function AntiriciclaggioPage() {
   const isProtectedSocieta = !!selectedSocieta?.antiriciclaggio_enabled;
   const canAccessAntiriciclaggio =
     !!societaFilter &&
-    (!!selectedSocieta && (!isProtectedSocieta || unlockedSocietaId === societaFilter));
+    !!selectedSocieta &&
+    (!isProtectedSocieta || unlockedSocietaId === societaFilter);
+
+  const isSocietaSelectionLocked =
+    !!societaFilter &&
+    !!selectedSocieta &&
+    !!isProtectedSocieta &&
+    unlockedSocietaId === societaFilter;
 
   const filteredRows = useMemo(() => {
     if (!societaFilter || !canAccessAntiriciclaggio) return [];
@@ -398,10 +407,13 @@ export default function AntiriciclaggioPage() {
   }, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
+    if (isSocietaSelectionLocked) return;
+
     setSocietaFilter(societaId);
     setRows([]);
     setPassword("");
     setPasswordError("");
+    setShowForgotPasswordInfo(false);
     setWorkingId(null);
 
     if (typeof window !== "undefined") {
@@ -467,6 +479,7 @@ export default function AntiriciclaggioPage() {
       }
 
       setShowPasswordModal(false);
+      setShowForgotPasswordInfo(false);
       setPassword("");
       await loadRowsBySocieta(selectedSocieta.id);
     } catch (err: any) {
@@ -700,21 +713,32 @@ export default function AntiriciclaggioPage() {
 
       <div className="mb-4 max-w-md">
         <label className="mb-1 block text-sm font-medium">
-          Filtra per società
+          Seleziona soggetto responsabile
         </label>
 
         <select
-          className="w-full rounded-md border px-3 py-2"
+          className={`w-full rounded-md border px-3 py-2 ${
+            isSocietaSelectionLocked
+              ? "cursor-not-allowed bg-gray-100 text-gray-500"
+              : ""
+          }`}
           value={societaFilter}
           onChange={(e) => handleSocietaChange(e.target.value)}
+          disabled={isSocietaSelectionLocked}
         >
-          <option value="">Seleziona società</option>
+          <option value="">Seleziona soggetto responsabile</option>
           {societaOptions.map((soc) => (
             <option key={soc.id} value={soc.id}>
               {soc.Denominazione}
             </option>
           ))}
         </select>
+
+        {isSocietaSelectionLocked && selectedSocieta && (
+          <div className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            Accesso attivo su <span className="font-semibold">{selectedSocieta.Denominazione}</span>. Per cambiare soggetto responsabile usa prima <span className="font-semibold">Chiudi accesso</span>.
+          </div>
+        )}
       </div>
 
       {selectedSocieta && isProtectedSocieta && !canAccessAntiriciclaggio && (
@@ -750,7 +774,7 @@ export default function AntiriciclaggioPage() {
             <tbody>
               <tr>
                 <td colSpan={11} className="p-4 text-center">
-                  Seleziona una società per visualizzare le pratiche
+                  Seleziona un soggetto responsabile per visualizzare le pratiche
                 </td>
               </tr>
             </tbody>
@@ -814,7 +838,7 @@ export default function AntiriciclaggioPage() {
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="p-4 text-center">
-                    Nessuna pratica trovata per la società selezionata
+                    Nessuna pratica trovata per il soggetto responsabile selezionato
                   </td>
                 </tr>
               ) : (
@@ -1000,33 +1024,49 @@ export default function AntiriciclaggioPage() {
                 </div>
               ) : null}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowPasswordModal(false);
-                    setSocietaFilter("");
-                    setSelectedSocieta(null);
-                    clearAccessState();
-                  }}
-                  className="rounded border px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowForgotPasswordInfo((prev) => !prev)}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
-                  Annulla
+                  Password dimenticata?
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => void handleUnlockSocieta()}
-                  disabled={passwordLoading}
-                  className={`rounded px-4 py-2 text-white ${
-                    passwordLoading
-                      ? "cursor-not-allowed bg-blue-400"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {passwordLoading ? "Verifica..." : "Accedi"}
-                </button>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setSocietaFilter("");
+                      setSelectedSocieta(null);
+                      clearAccessState();
+                    }}
+                    className="rounded border px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  >
+                    Annulla
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleUnlockSocieta()}
+                    disabled={passwordLoading}
+                    className={`rounded px-4 py-2 text-white ${
+                      passwordLoading
+                        ? "cursor-not-allowed bg-blue-400"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                  >
+                    {passwordLoading ? "Verifica..." : "Accedi"}
+                  </button>
+                </div>
               </div>
+
+              {showForgotPasswordInfo && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                  Se hai dimenticato la password, contatta l’amministratore di sistema o il responsabile abilitato per richiedere il reset dell’accesso antiriciclaggio della società selezionata.
+                </div>
+              )}
             </div>
           </div>
         </div>
