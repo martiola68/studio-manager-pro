@@ -430,17 +430,22 @@ async function handleInviaRichiestaDocumento() {
       return;
     }
 
-    if (!form.email || !String(form.email).trim()) {
-      alert("Il rappresentante non ha un indirizzo email valorizzato.");
-      return;
-    }
+   if (!form.email || !String(form.email).trim()) {
+  alert("Il rappresentante non ha un indirizzo email valorizzato.");
+  return;
+}
 
-    setSendingPublicDoc(true);
+if (!form.microsoft_connection_id || !String(form.microsoft_connection_id).trim()) {
+  alert("Connessione Microsoft non valorizzata per questo rappresentante.");
+  return;
+}
 
-    token =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+setSendingPublicDoc(true);
+
+token =
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const nowIso = new Date().toISOString();
 
@@ -571,7 +576,8 @@ async function handleInviaRichiestaDocumento() {
       console.error("Errore salvataggio log AML di errore:", logCatchError);
     }
 
-    alert("Errore durante l'invio della richiesta documento.");
+    alert(`Errore durante l'invio della richiesta documento: ${error?.message || "errore sconosciuto"}`);
+    
   } finally {
     setSendingPublicDoc(false);
   }
