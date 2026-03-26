@@ -272,6 +272,22 @@ export default function NuovoRappresentantePage() {
       setLoadingMicrosoftConnections(true);
 
       try {
+
+  console.log("studioId:", studioId);
+
+  const { data: allData } = await supabase
+    .from("microsoft365_connections")
+    .select("*");
+
+  console.log("TUTTE le connessioni:", allData);
+
+  const { data: filtered } = await supabase
+    .from("microsoft365_connections")
+    .select("*")
+    .eq("studio_id", studioId);
+
+  console.log("FILTRATE per studio:", filtered);
+        
         const { data, error } = await supabase
           .from("microsoft365_connections")
           .select("*")
