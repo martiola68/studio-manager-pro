@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import { microsoftGraphService } from "./microsoftGraphService";
 
 interface TeamsChannelConfig {
+  microsoftConnectionId: string;
   teamId: string;
   channelId: string;
 }
@@ -65,28 +66,39 @@ export const teamsNotificationService = {
 
       if (!utente?.studio_id) return null;
 
-      const { data: config } = await supabase
-        .from("microsoft365_config")
-        .select("teams_default_team_id, teams_default_channel_id, teams_scadenze_channel_id, teams_alert_channel_id")
-        .eq("studio_id", utente.studio_id)
-        .single();
+     const { data: connessione } = await supabase
+  .from("microsoft365_connections")
+  .select("id")
+  .eq("studio_id", utente.studio_id)
+  .eq("is_active", true)
+  .limit(1)
+  .maybeSingle();
 
-      if (!config?.teams_default_team_id) return null;
+if (!connessione?.id) return null;
 
-      let channelId = config.teams_default_channel_id;
-      
-      if (type === "scadenza" && config.teams_scadenze_channel_id) {
-        channelId = config.teams_scadenze_channel_id;
-      } else if (type === "alert" && config.teams_alert_channel_id) {
-        channelId = config.teams_alert_channel_id;
-      }
+const { data: config } = await supabase
+  .from("microsoft365_config")
+  .select("teams_default_team_id, teams_default_channel_id, teams_scadenze_channel_id, teams_alert_channel_id")
+  .eq("studio_id", utente.studio_id)
+  .single();
 
-      if (!channelId) return null;
+if (!config?.teams_default_team_id) return null;
 
-      return {
-        teamId: config.teams_default_team_id,
-        channelId: channelId
-      };
+let channelId = config.teams_default_channel_id;
+
+if (type === "scadenza" && config.teams_scadenze_channel_id) {
+  channelId = config.teams_scadenze_channel_id;
+} else if (type === "alert" && config.teams_alert_channel_id) {
+  channelId = config.teams_alert_channel_id;
+}
+
+if (!channelId) return null;
+
+return {
+  microsoftConnectionId: String(connessione.id),
+  teamId: config.teams_default_team_id,
+  channelId: channelId
+};
     } catch {
       return null;
     }
@@ -143,11 +155,12 @@ export const teamsNotificationService = {
       const formattedMessage = this.formatMessage(title, message, type);
       
       return await microsoftGraphService.sendChannelMessage(
-        uid,
-        config.teamId,
-        config.channelId,
-        formattedMessage
-      );
+  uid,
+  config.microsoftConnectionId,
+  config.teamId,
+  config.channelId,
+  formattedMessage
+);
     } catch (error: any) {
       console.error("Errore invio notifica Teams:", error);
       return { success: false, error: error.message };
