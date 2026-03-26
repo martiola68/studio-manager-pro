@@ -394,19 +394,28 @@ setForm((prev) => {
 
         if (cancelled) return;
 
-        const mapped = mapRowToForm(row);
+      const mapped = mapRowToForm(row);
 
-        setForm(mapped);
-        setInitialLoadedForm(mapped);
+setForm((prev) => ({
+  ...mapped,
+  microsoft_connection_id:
+    mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
+}));
 
-        if (row.studio_id) {
-          const sid = String(row.studio_id);
-          setStudioId((prev) => prev || sid);
+setInitialLoadedForm((prev) => ({
+  ...mapped,
+  microsoft_connection_id:
+    mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
+}));
 
-          if (typeof window !== "undefined" && sid) {
-            localStorage.setItem("studio_id", sid);
-          }
-        }
+if (row.studio_id) {
+  const sid = String(row.studio_id);
+  setStudioId((prev) => prev || sid);
+
+  if (typeof window !== "undefined" && sid) {
+    localStorage.setItem("studio_id", sid);
+  }
+}
       } catch (error: any) {
         if (!cancelled) {
           setErrMsg(error?.message || "Errore caricamento rappresentante");
