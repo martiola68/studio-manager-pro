@@ -7,15 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type SocietaRel = {
+  id: string;
+  Denominazione?: string | null;
+  codice_fiscale?: string | null;
+};
+
 type RespAVRow = {
   id: string;
   studio_id: string;
   cognome_nome: string;
   codice_fiscale: string;
   TipoSoggetto: string;
-  societa_id?: string;
+  societa?: string | null;
+  societa_id?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  tbRespAVSocieta?: SocietaRel | SocietaRel[] | null;
 };
 
 export default function ResponsabiliAVPage() {
@@ -26,6 +34,29 @@ export default function ResponsabiliAVPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const getSocieta = (row: RespAVRow): SocietaRel | null => {
+    if (!row.tbRespAVSocieta) return null;
+    return Array.isArray(row.tbRespAVSocieta)
+      ? row.tbRespAVSocieta[0] || null
+      : row.tbRespAVSocieta;
+  };
+
+  const getSocietaLabel = (row: RespAVRow) => {
+    const societaRel = getSocieta(row);
+
+    const denominazioneRel = societaRel?.Denominazione?.trim() || "";
+    const cfRel = societaRel?.codice_fiscale?.trim() || "";
+
+    if (denominazioneRel && cfRel) return `${denominazioneRel} - ${cfRel}`;
+    if (denominazioneRel) return denominazioneRel;
+    if (cfRel) return cfRel;
+
+    const societaLegacy = row.societa?.trim() || "";
+    if (societaLegacy) return societaLegacy;
+
+    return "-";
+  };
 
   const loadRows = async () => {
     setLoading(true);
@@ -42,7 +73,22 @@ export default function ResponsabiliAVPage() {
 
       const { data, error } = await supabase
         .from("tbRespAV")
-        .select("id, studio_id, cognome_nome, codice_fiscale, TipoSoggetto, created_at, updated_at")
+        .select(`
+          id,
+          studio_id,
+          cognome_nome,
+          codice_fiscale,
+          TipoSoggetto,
+          societa,
+          societa_id,
+          created_at,
+          updated_at,
+          tbRespAVSocieta (
+            id,
+            Denominazione,
+            codice_fiscale
+          )
+        `)
         .eq("studio_id", studioId)
         .order("cognome_nome", { ascending: true });
 
@@ -69,7 +115,14 @@ export default function ResponsabiliAVPage() {
     if (!q) return rows;
 
     return rows.filter((row) => {
-      const values = [row.cognome_nome, row.codice_fiscale, row.TipoSoggetto]
+      const societaLabel = getSocietaLabel(row);
+
+      const values = [
+        row.cognome_nome,
+        row.codice_fiscale,
+        row.TipoSoggetto,
+        societaLabel,
+      ]
         .filter(Boolean)
         .map((v) => String(v).toLowerCase());
 
@@ -123,7 +176,7 @@ export default function ResponsabiliAVPage() {
           <div>
             <Input
               type="text"
-              placeholder="Cerca per nominativo, codice fiscale o tipo soggetto..."
+              placeholder="Cerca per nominativo, codice fiscale, tipo soggetto o società..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -142,7 +195,7 @@ export default function ResponsabiliAVPage() {
                   <th className="px-4 py-3 font-medium">Cognome e nome</th>
                   <th className="px-4 py-3 font-medium">Codice fiscale</th>
                   <th className="px-4 py-3 font-medium">Tipo soggetto</th>
-                  <th className="px-4 py-3 font-medium">società</th>
+                  <th className="px-4 py-3 font-medium">Società</th>
                   <th className="px-4 py-3 text-right font-medium">Azioni</th>
                 </tr>
               </thead>
@@ -151,7 +204,7 @@ export default function ResponsabiliAVPage() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-6 text-center text-muted-foreground"
                     >
                       Caricamento...
@@ -160,7 +213,7 @@ export default function ResponsabiliAVPage() {
                 ) : filteredRows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-6 text-center text-muted-foreground"
                     >
                       Nessun responsabile trovato.
@@ -172,7 +225,7 @@ export default function ResponsabiliAVPage() {
                       <td className="px-4 py-3">{row.cognome_nome}</td>
                       <td className="px-4 py-3">{row.codice_fiscale}</td>
                       <td className="px-4 py-3">{row.TipoSoggetto}</td>
-                      <td className="px-4 py-3">{row.societa_id || "-"}</td>
+                      <td className="px-4 py-3">{getSocietaLabel(row)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <Button
