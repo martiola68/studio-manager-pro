@@ -490,9 +490,21 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  const handleCloseAccess = () => {
-    clearAccessState();
-  };
+const clearAccessState = () => {
+  setUnlockedSocietaId(null);
+  setRows([]);
+  setPassword("");
+  setPasswordError("");
+  setShowPasswordModal(false);
+  setShowForgotPasswordInfo(false);
+  setSocietaFilter("");
+  setSelectedSocieta(null);
+  setWorkingId(null);
+
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(AML_SESSION_KEY);
+  }
+};
 
   const handleNuovoAV1 = () => {
     if (!canAccessAntiriciclaggio) return;
@@ -1004,19 +1016,21 @@ export default function AntiriciclaggioPage() {
             </div>
 
             <div className="space-y-4">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !passwordLoading) {
-                    void handleUnlockSocieta();
-                  }
-                }}
-                placeholder="Password"
-                className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-500"
-                autoFocus
-              />
+             <input
+  type="password"
+  name="aml-access-password"
+  autoComplete="new-password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && !passwordLoading) {
+      void handleUnlockSocieta();
+    }
+  }}
+  placeholder="Password"
+  className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-500"
+  autoFocus
+/>
 
               {passwordError ? (
                 <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
