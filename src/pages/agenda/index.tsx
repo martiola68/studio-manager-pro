@@ -1299,13 +1299,11 @@ const sendSingleNotifications = async (
 
     // 🔴 COSTRUZIONE DATI CORRETTI
 
-    const participantIds = [...new Set(
-      (rowForUser.partecipanti || []).filter(Boolean)
-    )];
+   const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
 
-    const participantUsers = participantIds
-      .map((id: string) => utenti.find((u) => String(u.id) === String(id)))
-      .filter(Boolean);
+const participantUsers = participantIds
+  .map((id) => utenti.find((u) => String(u.id) === String(id)))
+  .filter((u): u is UtenteAgenda => Boolean(u));
 
     // 👉 ESCLUDO ORGANIZZATORE
     const visibleParticipants = participantUsers.filter(
