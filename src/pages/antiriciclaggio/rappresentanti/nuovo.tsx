@@ -1119,20 +1119,15 @@ export default function NuovoRappresentantePage() {
                       Rimuovi
                     </Button>
 
-                    <Button
-                      type="button"
-                      onClick={handleInviaRichiestaDocumento}
-                      disabled={
-                        sendingPublicDoc ||
-                        !recordId ||
-                        !form.email?.trim() ||
-                        !form.microsoft_connection_id
-                      }
-                      variant="outline"
-                      className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
-                    >
-                      {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
-                    </Button>
+                   <Button
+  type="button"
+  onClick={handleInviaRichiestaDocumento}
+  disabled={sendingPublicDoc || !recordId}
+  variant="outline"
+  className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+>
+  {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
+</Button>
                   </div>
 
                   {publicDocUrl && (
