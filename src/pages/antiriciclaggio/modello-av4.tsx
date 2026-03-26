@@ -179,6 +179,7 @@ function mapDbRowToForm(row: any): FormState {
     cliente_id: row?.cliente_id ? String(row.cliente_id) : "",
     av1_id: row?.av1_id != null ? String(row.av1_id) : "",
     rapp_legale_id: row?.rapp_legale_id ? String(row.rapp_legale_id) : "",
+    microsoft_connection_id: row?.microsoft_connection_id ? String(row.microsoft_connection_id) : "",
 
     dichiarante_nome_cognome: row?.dichiarante_nome_cognome ?? "",
     dichiarante_codice_fiscale: row?.dichiarante_codice_fiscale ?? "",
