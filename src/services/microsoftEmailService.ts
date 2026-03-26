@@ -94,6 +94,10 @@ export async function sendEmailViaMicrosoft(
   userId: string,
   params: SendEmailParams
 ): Promise<void> {
+  if (!params.microsoftConnectionId) {
+    throw new Error("microsoftConnectionId mancante per invio email Microsoft.");
+  }
+
   const { utente, connection } = await getUtenteMicrosoftContext(
     userId,
     params.microsoftConnectionId
@@ -139,22 +143,15 @@ export async function sendEmailViaMicrosoft(
     message.bccRecipients = formatRecipients(params.bcc);
   }
 
-  console.log("📧 Invio email via Microsoft Graph...");
-  console.log("📧 UserId:", userId);
-  console.log("📧 Connessione ID:", params.microsoftConnectionId);
-  console.log("📧 Connessione:", connection.nome_connessione);
-  console.log("📧 Destinatari:", params.to);
-  console.log("📧 Oggetto:", params.subject);
-
   try {
     await graphApiCall(userId, "/me/sendMail", {
       method: "POST",
-      body: JSON.stringify({
+      microsoftConnectionId: params.microsoftConnectionId,
+      body: {
         message,
         saveToSentItems: true,
-      }),
-      microsoftConnectionId: params.microsoftConnectionId,
-    } as any);
+      } as any,
+    });
 
     console.log("✅ Email inviata con successo via Microsoft 365");
   } catch (error: any) {
@@ -168,6 +165,8 @@ export async function canUseMicrosoftEmail(
   microsoftConnectionId: string
 ): Promise<boolean> {
   try {
+    if (!microsoftConnectionId) return false;
+
     const { data: utente, error } = await supabase
       .from("tbutenti")
       .select("studio_id")
