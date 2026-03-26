@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase/client";
-import { getWelcomeEmailTemplate, getPasswordResetEmailTemplate } from "@/lib/emailTemplates";
+import {
+  getWelcomeEmailTemplate,
+  getPasswordResetEmailTemplate,
+} from "@/lib/emailTemplates";
 import { microsoftGraphService } from "./microsoftGraphService";
 
 export interface EventEmailData {
@@ -27,6 +30,7 @@ export interface ComunicazioneEmailData {
   oggetto: string;
   messaggio: string;
   allegati?: any;
+  microsoftConnectionId?: string;
 }
 
 export interface EmailData {
@@ -34,107 +38,87 @@ export interface EmailData {
   subject: string;
   html: string;
   text: string;
+  microsoftConnectionId?: string;
 }
 
-// Helper function to add delay between requests (rate limiting)
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Strict email validation function
 const isValidEmailFormat = (email: string): boolean => {
   if (!email || typeof email !== "string") return false;
-  
-  // RFC 5322 compliant email regex (simplified)
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-  
+
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
   if (!emailRegex.test(email)) return false;
-  
-  // Additional checks
+
   const [localPart, domain] = email.split("@");
-  
-  // Check local part length (max 64 chars)
+
   if (localPart.length > 64) return false;
-  
-  // Check domain length (max 255 chars)
   if (domain.length > 255) return false;
-  
-  // Blacklist test/fake domains
+
   const testDomains = ["prova", "test", "example", "xxx", "fake", "temp"];
-  if (testDomains.some(test => domain.toLowerCase().includes(test))) return false;
-  
+  if (testDomains.some((test) => domain.toLowerCase().includes(test))) return false;
+
   return true;
 };
 
-// Check if Microsoft 365 is configured for current studio
-async function isMicrosoft365Enabled(): Promise<{ enabled: boolean; userId?: string }> {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return { enabled: false };
+async function getCurrentUserId(): Promise<string | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    const { data: userData } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", session.user.id)
-      .single();
-
-    if (!userData?.studio_id) return { enabled: false };
-
-    const { data: configData } = await supabase
-      .from("microsoft365_config" as any)
-      .select("enabled")
-      .eq("studio_id", userData.studio_id)
-      .single();
-
-    // Cast esplicito per evitare errori TS
-    const config = configData as { enabled: boolean } | null;
-
-    return {
-      enabled: config?.enabled === true,
-      userId: session.user.id
-    };
-  } catch (error) {
-    console.error("Error checking Microsoft 365 config:", error);
-    return { enabled: false };
-  }
+  return session?.user?.id ?? null;
 }
 
-// Send email via Microsoft Graph API
 async function sendEmailViaMicrosoft(
   userId: string,
   data: EmailData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!data.microsoftConnectionId) {
+      return {
+        success: false,
+        error: "microsoftConnectionId mancante per invio Microsoft",
+      };
+    }
+
     const message = {
       subject: data.subject,
       body: {
         contentType: "HTML" as const,
-        content: data.html
+        content: data.html,
       },
       toRecipients: [
         {
           emailAddress: {
-            address: data.to
-          }
-        }
-      ]
+            address: data.to,
+          },
+        },
+      ],
     };
 
-    await microsoftGraphService.sendEmail(userId, message);
+    await microsoftGraphService.sendEmail(
+      userId,
+      data.microsoftConnectionId,
+      message
+    );
 
     return { success: true };
   } catch (error) {
     console.error("Error sending email via Microsoft:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
-// Send email via Edge Function (Resend fallback)
-async function sendEmailViaEdgeFunction(data: EmailData): Promise<{ success: boolean; error?: string }> {
+async function sendEmailViaEdgeFunction(
+  data: EmailData
+): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: result, error } = await supabase.functions.invoke("send-email", {
-      body: data
+      body: data,
     });
 
     if (error) {
@@ -147,29 +131,29 @@ async function sendEmailViaEdgeFunction(data: EmailData): Promise<{ success: boo
     console.error("Error sending email via edge function:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
-// Main email sending function with dual mode support
-export async function sendEmail(data: EmailData): Promise<{ success: boolean; error?: string }> {
+export async function sendEmail(
+  data: EmailData
+): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if Microsoft 365 is enabled
-    const { enabled, userId } = await isMicrosoft365Enabled();
+    const userId = await getCurrentUserId();
 
-    if (enabled && userId) {
+    if (data.microsoftConnectionId && userId) {
       console.log("📧 Sending email via Microsoft 365...");
       return await sendEmailViaMicrosoft(userId, data);
-    } else {
-      console.log("📧 Sending email via Edge Function (Resend)...");
-      return await sendEmailViaEdgeFunction(data);
     }
+
+    console.log("📧 Sending email via Edge Function (Resend)...");
+    return await sendEmailViaEdgeFunction(data);
   } catch (error) {
     console.error("Error in sendEmail:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -177,13 +161,14 @@ export async function sendEmail(data: EmailData): Promise<{ success: boolean; er
 export async function sendWelcomeEmail(
   nome: string,
   email: string,
-  password: string
+  password: string,
+  microsoftConnectionId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const loginUrl = "https://studio-manager-pro.vercel.app/login";
-    
+
     const htmlContent = getWelcomeEmailTemplate(nome, email, password, loginUrl);
-    
+
     const textContent = `
 Benvenuto in Studio Manager Pro
 
@@ -207,18 +192,19 @@ Studio Manager Pro - Sistema Gestionale Integrato
 Powered by ProWork Studio M
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
-    
+
     return await sendEmail({
       to: email,
       subject: "Benvenuto in Studio Manager Pro - Credenziali di accesso",
       html: htmlContent,
-      text: textContent
+      text: textContent,
+      microsoftConnectionId,
     });
   } catch (error) {
     console.error("Error sending welcome email:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -226,13 +212,19 @@ Questa è una email automatica, non rispondere a questo messaggio
 export async function sendPasswordResetEmail(
   nome: string,
   email: string,
-  password: string
+  password: string,
+  microsoftConnectionId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const loginUrl = "https://studio-manager-pro.vercel.app/login";
-    
-    const htmlContent = getPasswordResetEmailTemplate(nome, email, password, loginUrl);
-    
+
+    const htmlContent = getPasswordResetEmailTemplate(
+      nome,
+      email,
+      password,
+      loginUrl
+    );
+
     const textContent = `
 Password Reset - Studio Manager Pro
 
@@ -256,23 +248,26 @@ Studio Manager Pro - Sistema Gestionale Integrato
 Powered by ProWork Studio M
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
-    
+
     return await sendEmail({
       to: email,
       subject: "Password Reset - Studio Manager Pro",
       html: htmlContent,
-      text: textContent
+      text: textContent,
+      microsoftConnectionId,
     });
   } catch (error) {
     console.error("Error sending password reset email:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
-export async function sendEventNotification(data: EventEmailData): Promise<{
+export async function sendEventNotification(
+  data: EventEmailData & { microsoftConnectionId?: string }
+): Promise<{
   success: boolean;
   sent: number;
   failed: number;
@@ -286,93 +281,73 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
 
     const isValidEmail = (email: string): boolean => {
       if (!email || typeof email !== "string") return false;
-      
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) return false;
-      
+
       const testDomains = ["prova", "test", "example", "xxx", "fake"];
       const domain = email.split("@")[1]?.toLowerCase();
-      if (testDomains.some(test => domain?.includes(test))) return false;
-      
+      if (testDomains.some((test) => domain?.includes(test))) return false;
+
       return true;
     };
 
     if (isValidEmail(data.responsabileEmail)) {
       recipients.push(data.responsabileEmail);
-      console.log("✅ Responsabile:", data.responsabileEmail);
     } else {
-      console.error("❌ Responsabile email invalid or missing:", data.responsabileEmail);
       return {
         success: false,
         sent: 0,
         failed: 0,
         total: 0,
-        error: "Responsabile email is required and must be valid"
+        error: "Responsabile email is required and must be valid",
       };
     }
 
     if (data.partecipantiEmails && Array.isArray(data.partecipantiEmails)) {
-      data.partecipantiEmails.forEach(email => {
+      data.partecipantiEmails.forEach((email) => {
         if (isValidEmail(email) && !recipients.includes(email)) {
           recipients.push(email);
-          console.log("✅ Partecipante:", email);
-        } else if (email) {
-          console.warn("⚠️ Partecipante email non valida, esclusa:", email);
         }
       });
     }
 
-    if (data.clienteEmail) {
-      console.log("ℹ️ Cliente escluso dall'invio email:", data.clienteEmail);
-    }
-
     if (recipients.length === 0) {
-      console.error("❌ No valid recipients found!");
       return {
         success: false,
         sent: 0,
         failed: 0,
         total: 0,
-        error: "No valid email recipients"
+        error: "No valid email recipients",
       };
     }
 
-    console.log(`📧 Total valid recipients: ${recipients.length}`);
-    console.log("📧 Recipients list:", recipients);
-
-    console.log("PAYLOAD send-event-notification:", {
-  ...data,
-  recipients
-});
     const { data: result, error } = await supabase.functions.invoke(
       "send-event-notification",
       {
         body: {
           ...data,
-          recipients
-        }
+          recipients,
+        },
       }
     );
 
     if (error) {
-      console.error("❌ Error invoking email function:", error);
       return {
         success: false,
         sent: 0,
         failed: 0,
         total: recipients.length,
-        error: error.message
+        error: error.message,
       };
     }
-
-    console.log("✅ Email function response:", result);
 
     return {
       success: true,
       sent: recipients.length,
       failed: 0,
       total: recipients.length,
-      ...result
+      ...result,
     };
   } catch (error) {
     console.error("💥 Error sending event notification:", error);
@@ -381,7 +356,7 @@ export async function sendEventNotification(data: EventEmailData): Promise<{
       sent: 0,
       failed: 0,
       total: 0,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -398,12 +373,11 @@ export async function triggerEventReminders(): Promise<{
     );
 
     if (error) {
-      console.error("Error invoking reminder function:", error);
       return {
         success: false,
         events_processed: 0,
         reminders_sent: 0,
-        error: error.message
+        error: error.message,
       };
     }
 
@@ -414,20 +388,25 @@ export async function triggerEventReminders(): Promise<{
       success: false,
       events_processed: 0,
       reminders_sent: 0,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
 
 export async function sendComunicazioneEmail(
   data: ComunicazioneEmailData
-): Promise<{ success: boolean; sent: number; failed: number; skipped: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  sent: number;
+  failed: number;
+  skipped: number;
+  error?: string;
+}> {
   try {
     const { supabase } = await import("@/lib/supabase/client");
-    
+
     let recipients: { email: string; nome: string }[] = [];
 
-    // 1. Raccogli destinatari in base al tipo
     if (data.tipo === "singola" && data.destinatarioId) {
       const { data: cliente, error } = await supabase
         .from("tbclienti")
@@ -437,11 +416,16 @@ export async function sendComunicazioneEmail(
         .single();
 
       if (error || !cliente?.email) {
-        return { success: false, sent: 0, failed: 0, skipped: 0, error: "Cliente non trovato o senza email" };
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: "Cliente non trovato o senza email",
+        };
       }
 
       recipients.push({ email: cliente.email, nome: cliente.ragione_sociale });
-
     } else if (data.tipo === "newsletter") {
       const { data: clienti, error } = await supabase
         .from("tbclienti")
@@ -451,13 +435,18 @@ export async function sendComunicazioneEmail(
         .eq("flag_mail_newsletter", true);
 
       if (error) {
-        return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: error.message,
+        };
       }
 
       recipients = (clienti || [])
-        .filter(c => c.email)
-        .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
-
+        .filter((c) => c.email)
+        .map((c) => ({ email: c.email as string, nome: c.ragione_sociale }));
     } else if (data.tipo === "scadenze") {
       const { data: clienti, error } = await supabase
         .from("tbclienti")
@@ -467,13 +456,18 @@ export async function sendComunicazioneEmail(
         .eq("flag_mail_scadenze", true);
 
       if (error) {
-        return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: error.message,
+        };
       }
 
       recipients = (clienti || [])
-        .filter(c => c.email)
-        .map(c => ({ email: c.email as string, nome: c.ragione_sociale }));
-
+        .filter((c) => c.email)
+        .map((c) => ({ email: c.email as string, nome: c.ragione_sociale }));
     } else if (data.tipo === "interna") {
       if (data.destinatariIds && data.destinatariIds.length > 0) {
         const { data: utenti, error } = await supabase
@@ -483,13 +477,18 @@ export async function sendComunicazioneEmail(
           .eq("attivo", true);
 
         if (error) {
-          return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
+          return {
+            success: false,
+            sent: 0,
+            failed: 0,
+            skipped: 0,
+            error: error.message,
+          };
         }
 
         recipients = (utenti || [])
-          .filter(u => u.email)
-          .map(u => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
-
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
       } else {
         const { data: utenti, error } = await supabase
           .from("tbutenti")
@@ -497,43 +496,44 @@ export async function sendComunicazioneEmail(
           .eq("attivo", true);
 
         if (error) {
-          return { success: false, sent: 0, failed: 0, skipped: 0, error: error.message };
+          return {
+            success: false,
+            sent: 0,
+            failed: 0,
+            skipped: 0,
+            error: error.message,
+          };
         }
 
         recipients = (utenti || [])
-          .filter(u => u.email)
-          .map(u => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
       }
     }
 
     if (recipients.length === 0) {
-      return { success: false, sent: 0, failed: 0, skipped: 0, error: "Nessun destinatario valido trovato" };
-    }
-
-    console.log(`📧 Tentativo invio comunicazione a ${recipients.length} destinatari`);
-
-    // 2. Valida email e separa valide/invalide
-    const validRecipients = recipients.filter(r => isValidEmailFormat(r.email));
-    const invalidRecipients = recipients.filter(r => !isValidEmailFormat(r.email));
-
-    if (invalidRecipients.length > 0) {
-      console.warn(`⚠️ ${invalidRecipients.length} email con formato invalido escluse:`, 
-        invalidRecipients.map(r => `${r.nome} <${r.email}>`));
-    }
-
-    if (validRecipients.length === 0) {
-      return { 
-        success: false, 
-        sent: 0, 
-        failed: 0, 
-        skipped: invalidRecipients.length,
-        error: "Nessuna email valida trovata" 
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        error: "Nessun destinatario valido trovato",
       };
     }
 
-    console.log(`✅ ${validRecipients.length} email valide, ${invalidRecipients.length} escluse`);
+    const validRecipients = recipients.filter((r) => isValidEmailFormat(r.email));
+    const invalidRecipients = recipients.filter((r) => !isValidEmailFormat(r.email));
 
-    // 3. Prepara il contenuto HTML
+    if (validRecipients.length === 0) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: invalidRecipients.length,
+        error: "Nessuna email valida trovata",
+      };
+    }
+
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -551,12 +551,11 @@ export async function sendComunicazioneEmail(
 </head>
 <body>
   <div class="container">
-   
     <div class="content">
       <div class="message">
-        ${data.messaggio.replace(/\n/g, '<br>')}
+        ${data.messaggio.replace(/\n/g, "<br>")}
       </div>
-      ${data.allegati ? '<p><strong>Questa comunicazione contiene allegati</strong></p>' : ''}
+      ${data.allegati ? "<p><strong>Questa comunicazione contiene allegati</strong></p>" : ""}
     </div>
     <div class="footer">
       <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
@@ -573,7 +572,7 @@ ${data.oggetto}
 
 ${data.messaggio}
 
-${data.allegati ? '📎 Questa comunicazione contiene allegati' : ''}
+${data.allegati ? "📎 Questa comunicazione contiene allegati" : ""}
 
 ---
 Studio Manager Pro - Sistema Gestionale Integrato
@@ -581,51 +580,42 @@ Powered by ProWork Studio M
 Questa è una email automatica, non rispondere a questo messaggio
     `.trim();
 
-    // 4. Invia email con rate limiting (2 req/sec = 500ms delay)
     let sent = 0;
     let failed = 0;
 
-    console.log(`📤 Inizio invio con rate limiting (2 req/sec)...`);
-
     for (let i = 0; i < validRecipients.length; i++) {
       const recipient = validRecipients[i];
-      
+
       try {
         const result = await sendEmail({
           to: recipient.email,
           subject: data.oggetto,
           html: htmlContent,
-          text: textContent
+          text: textContent,
+          microsoftConnectionId: data.microsoftConnectionId,
         });
 
         if (result.success) {
           sent++;
-          console.log(`✅ [${i + 1}/${validRecipients.length}] Email inviata a ${recipient.email}`);
         } else {
           failed++;
-          console.error(`❌ [${i + 1}/${validRecipients.length}] Errore invio a ${recipient.email}:`, result.error);
         }
-      } catch (error) {
+      } catch {
         failed++;
-        console.error(`❌ [${i + 1}/${validRecipients.length}] Errore invio a ${recipient.email}:`, error);
       }
 
-      // Rate limiting: 500ms delay between requests (2 req/sec safe)
       if (i < validRecipients.length - 1) {
         await sleep(500);
       }
     }
-
-    console.log(`📊 Risultato finale: ${sent} inviate, ${failed} fallite, ${invalidRecipients.length} escluse su ${recipients.length} totali`);
 
     return {
       success: sent > 0,
       sent,
       failed,
       skipped: invalidRecipients.length,
-      error: failed > 0 ? `${failed} email non inviate` : undefined
+      error: failed > 0 ? `${failed} email non inviate` : undefined,
     };
-
   } catch (error) {
     console.error("💥 Errore generale invio comunicazione:", error);
     return {
@@ -633,7 +623,7 @@ Questa è una email automatica, non rispondere a questo messaggio
       sent: 0,
       failed: 0,
       skipped: 0,
-      error: error instanceof Error ? error.message : "Errore sconosciuto"
+      error: error instanceof Error ? error.message : "Errore sconosciuto",
     };
   }
 }
@@ -644,5 +634,5 @@ export const emailService = {
   sendEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
-  sendComunicazioneEmail
+  sendComunicazioneEmail,
 };
