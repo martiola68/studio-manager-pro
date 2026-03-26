@@ -87,19 +87,23 @@ async function sendDirectMessage(
 
     // 1) prova a trovare chat 1:1 esistente (best-effort)
     const chats = await graphApiCall<{ value: any[] }>(
-      studioId,
-      userId,
-      "/me/chats?$top=50"
-    );
+  userId,
+  "/me/chats?$top=50",
+  {
+    microsoftConnectionId: studioId,
+  }
+);
 
     // best-effort: prendo una oneOnOne (senza filtrare per destinatario: API non è banale senza espansioni)
     let oneOnOne = (chats.value ?? []).find((c1) => c1?.chatType === "oneOnOne");
 
     // recupero utente Microsoft corrente
 const me = await graphApiCall<any>(
-  studioId,
   userId,
-  "/me?$select=id,mail,userPrincipalName"
+  "/me?$select=id,mail,userPrincipalName",
+  {
+    microsoftConnectionId: studioId,
+  }
 );
 
 const currentMicrosoftUser =
@@ -115,24 +119,25 @@ if (!currentMicrosoftUser) {
     // 2) se non trovata, crea chat 1:1
 if (!oneOnOne) {
   try {
-    const created = await graphApiCall<any>(studioId, userId, "/chats", {
-      method: "POST",
-      body: JSON.stringify({
-        chatType: "oneOnOne",
-        members: [
-          {
-            "@odata.type": "#microsoft.graph.aadUserConversationMember",
-            roles: ["owner"],
-            "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(currentMicrosoftUser)}')`,
-          },
-          {
-            "@odata.type": "#microsoft.graph.aadUserConversationMember",
-            roles: ["owner"],
-            "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
-          },
-        ],
-      }),
-    });
+   const created = await graphApiCall<any>(userId, "/chats", {
+  method: "POST",
+  microsoftConnectionId: studioId,
+  body: JSON.stringify({
+    chatType: "oneOnOne",
+    members: [
+      {
+        "@odata.type": "#microsoft.graph.aadUserConversationMember",
+        roles: ["owner"],
+        "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(currentMicrosoftUser)}')`,
+      },
+      {
+        "@odata.type": "#microsoft.graph.aadUserConversationMember",
+        roles: ["owner"],
+        "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
+      },
+    ],
+  }),
+});
 
     oneOnOne = created;
   } catch (err: any) {
@@ -154,16 +159,17 @@ if (!oneOnOne) {
     }
 
     // 3) invia messaggio
-    await graphApiCall(studioId, userId, `/chats/${oneOnOne.id}/messages`, {
-      method: "POST",
-      body: JSON.stringify({
-        body: {
-          contentType: message.contentType,
-          content: message.content,
-        },
-        importance: message.importance ?? "normal",
-      }),
-    });
+   await graphApiCall(userId, `/chats/${oneOnOne.id}/messages`, {
+  method: "POST",
+  microsoftConnectionId: studioId,
+  body: JSON.stringify({
+    body: {
+      contentType: message.contentType,
+      content: message.content,
+    },
+    importance: message.importance ?? "normal",
+  }),
+});
 
     return { success: true };
   } catch (error: any) {
@@ -178,11 +184,13 @@ export const teamsService = {
    */
   getUserTeams: async (studioId: string, userId: string): Promise<Team[]> => {
     try {
-      const response = await graphApiCall<{ value: Team[] }>(
-        studioId,
-        userId,
-        "/me/joinedTeams"
-      );
+   const response = await graphApiCall<{ value: Team[] }>(
+  userId,
+  "/me/joinedTeams",
+  {
+    microsoftConnectionId: studioId,
+  }
+);
       return response.value ?? [];
     } catch (error) {
       console.error("Error fetching user teams:", error);
@@ -199,11 +207,13 @@ export const teamsService = {
     teamId: string
   ): Promise<Channel[]> => {
     try {
-      const response = await graphApiCall<{ value: Channel[] }>(
-        studioId,
-        userId,
-        `/teams/${teamId}/channels`
-      );
+     const response = await graphApiCall<{ value: Channel[] }>(
+  userId,
+  `/teams/${teamId}/channels`,
+  {
+    microsoftConnectionId: studioId,
+  }
+);
       return response.value ?? [];
     } catch (error) {
       console.error(`Error fetching channels for team ${teamId}:`, error);
@@ -222,20 +232,20 @@ export const teamsService = {
     messageHtml: string
   ): Promise<SendMessageResult> => {
     try {
-      await graphApiCall(
-        studioId,
-        userId,
-        `/teams/${teamId}/channels/${channelId}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            body: {
-              contentType: "html",
-              content: messageHtml,
-            },
-          }),
-        }
-      );
+     await graphApiCall(
+  userId,
+  `/teams/${teamId}/channels/${channelId}/messages`,
+  {
+    method: "POST",
+    microsoftConnectionId: studioId,
+    body: JSON.stringify({
+      body: {
+        contentType: "html",
+        content: messageHtml,
+      },
+    }),
+  }
+);
       return { success: true };
     } catch (error: any) {
       console.error("Error sending message to Teams:", error);
@@ -255,19 +265,19 @@ export const teamsService = {
     endTime: Date
   ): Promise<TeamsMeetingResult> => {
     try {
-      const response = await graphApiCall<any>(
-        studioId,
-        userId,
-        "/me/onlineMeetings",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            subject,
-            startDateTime: startTime.toISOString(),
-            endDateTime: endTime.toISOString(),
-          }),
-        }
-      );
+     const response = await graphApiCall<any>(
+  userId,
+  "/me/onlineMeetings",
+  {
+    method: "POST",
+    microsoftConnectionId: studioId,
+    body: JSON.stringify({
+      subject,
+      startDateTime: startTime.toISOString(),
+      endDateTime: endTime.toISOString(),
+    }),
+  }
+);
 
       return {
         success: true,
