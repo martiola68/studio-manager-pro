@@ -105,13 +105,12 @@ export async function getMicrosoftConnectionsForUser(
 ): Promise<MicrosoftConnection[]> {
   const client = supabase as any;
 
-  const { data: connections, error: connectionsError } = await client
-    .from("microsoft365_connections")
-    .select("*")
-    .eq("studio_id", studioId)
-    .eq("enabled", true)
-    .order("is_default", { ascending: false })
-    .order("sort_order", { ascending: true });
+ const { data: connections, error: connectionsError } = await client
+  .from("microsoft365_connections")
+  .select("*")
+  .eq("studio_id", studioId)
+  .order("is_default", { ascending: false })
+  .order("sort_order", { ascending: true });
 
   if (connectionsError) {
     console.error("Errore caricamento connessioni Microsoft per utente:", connectionsError);
