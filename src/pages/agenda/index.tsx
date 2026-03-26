@@ -707,11 +707,30 @@ export default function AgendaPage() {
     });
   }, [groupedEvents, filtroUtenti]);
 
+  const loggedUser = useMemo(
+    () => utenti.find((u) => String(u.id) === String(currentUserId || "")) || null,
+    [utenti, currentUserId]
+  );
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (filtroUtenti.length > 0) return;
+
+    setFiltroUtenti([String(currentUserId)]);
+  }, [currentUserId, filtroUtenti.length]);
+
   const teamsEvents = useMemo(() => {
-    return filteredEvents
-      .filter((e) => Boolean(e.riunione_teams) && Boolean(String(e.link_teams || "").trim()))
+    return groupedEvents
+      .filter(
+        (e) =>
+          Boolean(e.riunione_teams) &&
+          Boolean(String(e.link_teams || "").trim()) &&
+          Boolean(currentUserId) &&
+          (String(e.utente_id || "") === String(currentUserId) ||
+            e.partecipanti.some((id) => String(id) === String(currentUserId)))
+      )
       .sort((a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime());
-  }, [filteredEvents]);
+  }, [groupedEvents, currentUserId]);
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
@@ -901,8 +920,15 @@ export default function AgendaPage() {
 
   const syncRowsToOutlook = async (rows: Array<{ id: string; utente_id: string | null }>) => {
     for (const row of rows) {
+      if (!row?.id) continue;
       if (!row.utente_id) continue;
+
       try {
+        console.log("[Agenda][Outlook sync] syncEventToOutlook", {
+          eventId: String(row.id),
+          utenteId: String(row.utente_id),
+        });
+
         await calendarSyncService.syncEventToOutlook(String(row.utente_id), String(row.id));
       } catch (syncError) {
         console.error("Errore sincronizzazione Outlook:", syncError);
@@ -1249,16 +1275,23 @@ const sendSingleNotifications = async (
 ) => {
   const { eventoService } = await import("@/services/eventoService");
 
-  const targetUserIds = internalParticipantIds.filter(
-    (id) => id && String(id) !== String(ownerUserId)
-  );
+  const targetUserIds = [...new Set(
+    (internalParticipantIds ?? [])
+      .filter((id) => id && String(id) !== String(ownerUserId))
+      .map((id) => String(id))
+  )];
+
+  const sentKeys = new Set<string>();
 
   for (const userId of targetUserIds) {
-    const rowForUser = rows.find(
-      (r) => String(r?.utente_id || "") === String(userId)
-    );
+    const rowForUser = rows.find((r) => String(r?.utente_id || "") === String(userId));
 
-    if (!rowForUser) continue;
+    if (!rowForUser?.id) continue;
+
+    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}`;
+    if (sentKeys.has(dedupeKey)) continue;
+
+    sentKeys.add(dedupeKey);
 
     await eventoService.sendEventNotification(
       toNotificationPayload(rowForUser as any) as any
@@ -2167,17 +2200,30 @@ const sendSingleNotifications = async (
   };
 
   const renderTeamsView = () => {
+    const loggedUserLabel = loggedUser
+      ? `${loggedUser.cognome} ${loggedUser.nome}`
+      : "utente loggato";
+
     if (teamsEvents.length === 0) {
       return (
         <div className="text-center py-12">
           <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-gray-500">Nessuna riunione Teams trovata</p>
+          <p className="text-gray-500">Nessuna riunione Teams trovata per {loggedUserLabel}</p>
         </div>
       );
     }
 
     return (
-      <div className="max-h-[600px] overflow-y-auto p-4">
+      <div className="max-h-[600px] overflow-y-auto p-4 space-y-4">
+        <div className="rounded-lg border bg-violet-50/40 px-4 py-3">
+          <div className="text-sm font-semibold text-violet-900">
+            Riunioni Teams di {loggedUserLabel}
+          </div>
+          <div className="text-xs text-violet-700 mt-1">
+            Elenco riunioni filtrato automaticamente sull'utente loggato
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full border rounded-lg overflow-hidden">
             <thead className="bg-gray-50">
@@ -2230,7 +2276,7 @@ const sendSingleNotifications = async (
                     <td className="p-3 text-sm">
                       <Button asChild size="sm" className="bg-violet-700 hover:bg-violet-800">
                         <a href={link} target="_blank" rel="noopener noreferrer">
-                          Apri link
+                          Partecipa alla riunione
                         </a>
                       </Button>
                     </td>
