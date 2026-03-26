@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 type Cliente = {
   id: string;
@@ -29,6 +29,7 @@ type SocietaOption = {
   id: string;
   Denominazione: string;
   codice_fiscale?: string | null;
+  antiriciclaggio_enabled?: boolean | null;
 };
 
 type AV1Row = {
@@ -45,6 +46,8 @@ type AV1Row = {
   av4_info?: AV4Info | AV4Info[] | null;
 };
 
+const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
+
 export default function AntiriciclaggioPage() {
   const router = useRouter();
 
@@ -55,6 +58,13 @@ export default function AntiriciclaggioPage() {
 
   const [societaOptions, setSocietaOptions] = useState<SocietaOption[]>([]);
   const [societaFilter, setSocietaFilter] = useState("");
+  const [selectedSocieta, setSelectedSocieta] = useState<SocietaOption | null>(null);
+
+  const [unlockedSocietaId, setUnlockedSocietaId] = useState<string | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -201,7 +211,7 @@ export default function AntiriciclaggioPage() {
 
       const { data, error } = await supabase
         .from("tbRespAVSocieta")
-        .select("id, Denominazione, codice_fiscale")
+        .select("id, Denominazione, codice_fiscale, antiriciclaggio_enabled")
         .eq("studio_id", studioId)
         .order("Denominazione", { ascending: true });
 
@@ -234,9 +244,31 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  const loadRows = async () => {
+  const clearAccessState = () => {
+    setUnlockedSocietaId(null);
+    setRows([]);
+    setPassword("");
+    setPasswordError("");
+    setShowPasswordModal(false);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+    }
+  };
+
+  const loadRowsBySocieta = async (societaId: string) => {
     try {
       setLoading(true);
+      setRows([]);
+
+      const responsabiliIds = responsabili
+        .filter((r) => r.societa_id === societaId)
+        .map((r) => r.id);
+
+      if (responsabiliIds.length === 0) {
+        setRows([]);
+        return;
+      }
 
       const supabase = getSupabaseClient();
       const supabaseAny = supabase as any;
@@ -267,6 +299,7 @@ export default function AntiriciclaggioPage() {
             compilato_da_cliente
           )
         `)
+        .in("incaricato_adeguata_verifica_id", responsabiliIds)
         .order("DataVerifica", { ascending: false });
 
       if (error) {
@@ -278,40 +311,189 @@ export default function AntiriciclaggioPage() {
 
       setRows((data as AV1Row[]) || []);
     } catch (err: any) {
-      console.error("Errore loadRows:", err);
-      alert(`Errore loadRows: ${err?.message || "errore sconosciuto"}`);
+      console.error("Errore loadRowsBySocieta:", err);
+      alert(`Errore loadRowsBySocieta: ${err?.message || "errore sconosciuto"}`);
       setRows([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const unlockSocietaDirectly = async (societa: SocietaOption) => {
+    setUnlockedSocietaId(societa.id);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(AML_SESSION_KEY, societa.id);
+    }
+
+    await loadRowsBySocieta(societa.id);
+  };
+
   useEffect(() => {
-    void loadSocietaOptions();
-    void loadResponsabili();
-    void loadRows();
+    const init = async () => {
+      setLoading(true);
+      await loadSocietaOptions();
+      await loadResponsabili();
+      setLoading(false);
+    };
+
+    void init();
   }, []);
 
-  const filteredRows = useMemo(() => {
-  if (!societaFilter) return [];
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem(AML_SESSION_KEY);
+    if (saved) {
+      setUnlockedSocietaId(saved);
+    }
+  }, []);
 
-  return rows.filter((row) => {
-    const responsabile = getResponsabileById(
-      row.incaricato_adeguata_verifica_id
-    );
-    return responsabile?.societa_id === societaFilter;
-  });
-}, [rows, responsabili, societaFilter]);
+  useEffect(() => {
+    if (!societaFilter || societaOptions.length === 0) {
+      setSelectedSocieta(null);
+      return;
+    }
+
+    const societa = societaOptions.find((s) => s.id === societaFilter) || null;
+    setSelectedSocieta(societa);
+  }, [societaFilter, societaOptions]);
+
+  useEffect(() => {
+    const tryRestoreAccess = async () => {
+      if (!societaFilter || !selectedSocieta) {
+        setRows([]);
+        return;
+      }
+
+      const isProtected = !!selectedSocieta.antiriciclaggio_enabled;
+
+      if (!isProtected) {
+        await unlockSocietaDirectly(selectedSocieta);
+        return;
+      }
+
+      if (unlockedSocietaId === societaFilter) {
+        await loadRowsBySocieta(societaFilter);
+        return;
+      }
+
+      setRows([]);
+    };
+
+    void tryRestoreAccess();
+  }, [societaFilter, selectedSocieta, unlockedSocietaId, responsabili]);
+
+  const isProtectedSocieta = !!selectedSocieta?.antiriciclaggio_enabled;
+  const canAccessAntiriciclaggio =
+    !!societaFilter &&
+    (!!selectedSocieta && (!isProtectedSocieta || unlockedSocietaId === societaFilter));
+
+  const filteredRows = useMemo(() => {
+    if (!societaFilter || !canAccessAntiriciclaggio) return [];
+
+    return rows.filter((row) => {
+      const responsabile = getResponsabileById(row.incaricato_adeguata_verifica_id);
+      return responsabile?.societa_id === societaFilter;
+    });
+  }, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
+
+  const handleSocietaChange = (societaId: string) => {
+    setSocietaFilter(societaId);
+    setRows([]);
+    setPassword("");
+    setPasswordError("");
+    setWorkingId(null);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+    }
+
+    setUnlockedSocietaId(null);
+
+    if (!societaId) {
+      setSelectedSocieta(null);
+      setShowPasswordModal(false);
+      return;
+    }
+
+    const societa = societaOptions.find((s) => s.id === societaId) || null;
+    setSelectedSocieta(societa);
+
+    if (societa?.antiriciclaggio_enabled) {
+      setShowPasswordModal(true);
+      return;
+    }
+
+    setShowPasswordModal(false);
+  };
+
+  const handleUnlockSocieta = async () => {
+    try {
+      if (!selectedSocieta?.id) {
+        setPasswordError("Seleziona una società.");
+        return;
+      }
+
+      if (!password.trim()) {
+        setPasswordError("Inserisci la password.");
+        return;
+      }
+
+      setPasswordLoading(true);
+      setPasswordError("");
+
+      const res = await fetch("/api/antiriciclaggio/verify-societa-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          societaId: selectedSocieta.id,
+          password: password.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) {
+        setPasswordError(data?.error || "Password non corretta.");
+        return;
+      }
+
+      setUnlockedSocietaId(selectedSocieta.id);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(AML_SESSION_KEY, selectedSocieta.id);
+      }
+
+      setShowPasswordModal(false);
+      setPassword("");
+      await loadRowsBySocieta(selectedSocieta.id);
+    } catch (err: any) {
+      console.error("Errore verifica password società:", err);
+      setPasswordError(err?.message || "Errore durante la verifica password.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleCloseAccess = () => {
+    clearAccessState();
+  };
 
   const handleNuovoAV1 = () => {
+    if (!canAccessAntiriciclaggio) return;
     router.push("/antiriciclaggio/modello-av1");
   };
 
   const handleApriAV1 = (id: string) => {
+    if (!canAccessAntiriciclaggio) return;
     router.push(`/antiriciclaggio/modello-av1?id=${id}`);
   };
 
   const handleApriAV2 = async (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio) return;
+
     try {
       setWorkingId(row.id);
 
@@ -343,7 +525,7 @@ export default function AntiriciclaggioPage() {
         }
       }
 
-      await loadRows();
+      await loadRowsBySocieta(societaFilter);
 
       if (av2?.id) {
         router.push(
@@ -367,6 +549,8 @@ export default function AntiriciclaggioPage() {
   };
 
   const handleApriAV4 = async (row: AV1Row) => {
+    if (!canAccessAntiriciclaggio) return;
+
     try {
       setWorkingId(row.id);
 
@@ -398,7 +582,7 @@ export default function AntiriciclaggioPage() {
         }
       }
 
-      await loadRows();
+      await loadRowsBySocieta(societaFilter);
 
       if (av4?.id) {
         router.push(
@@ -422,6 +606,8 @@ export default function AntiriciclaggioPage() {
   };
 
   const handleEliminaCompleto = async (av1Id: string) => {
+    if (!canAccessAntiriciclaggio) return;
+
     const conferma = window.confirm(
       "Vuoi eliminare AV1 e gli eventuali AV2/AV4 collegati?"
     );
@@ -470,7 +656,7 @@ export default function AntiriciclaggioPage() {
 
       if (deleteAV1Error) throw deleteAV1Error;
 
-      await loadRows();
+      await loadRowsBySocieta(societaFilter);
     } catch (err: any) {
       console.error("Errore eliminazione completa:", err);
       alert(
@@ -481,42 +667,126 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-    return (
+  return (
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <h1 className="text-2xl font-bold">Elenco Antiriciclaggio</h1>
 
-        <button
-          type="button"
-          onClick={handleNuovoAV1}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-        >
-          Nuova pratica
-        </button>
+        <div className="flex items-center gap-2">
+          {canAccessAntiriciclaggio && isProtectedSocieta && (
+            <button
+              type="button"
+              onClick={handleCloseAccess}
+              className="rounded border border-red-300 bg-white px-4 py-2 text-red-700 hover:bg-red-50"
+            >
+              Chiudi accesso
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleNuovoAV1}
+            disabled={!canAccessAntiriciclaggio}
+            className={`rounded px-4 py-2 text-white ${
+              canAccessAntiriciclaggio
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "cursor-not-allowed bg-gray-400"
+            }`}
+          >
+            Nuova pratica
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 max-w-md">
         <label className="mb-1 block text-sm font-medium">
           Filtra per società
         </label>
-        
-       <select
-  className="w-full rounded-md border px-3 py-2"
-  value={societaFilter}
-  onChange={(e) => setSocietaFilter(e.target.value)}
->
-  <option value="">Seleziona società</option>
-  {societaOptions.map((soc) => (
-    <option key={soc.id} value={soc.id}>
-      {soc.Denominazione}
-    </option>
-  ))}
-</select>
-        
+
+        <select
+          className="w-full rounded-md border px-3 py-2"
+          value={societaFilter}
+          onChange={(e) => handleSocietaChange(e.target.value)}
+        >
+          <option value="">Seleziona società</option>
+          {societaOptions.map((soc) => (
+            <option key={soc.id} value={soc.id}>
+              {soc.Denominazione}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {selectedSocieta && isProtectedSocieta && !canAccessAntiriciclaggio && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Per visualizzare le pratiche antiriciclaggio della società selezionata è necessaria l’autenticazione con password.
+        </div>
+      )}
 
       {loading ? (
         <div>Caricamento...</div>
+      ) : !societaFilter ? (
+        <div className="overflow-x-auto rounded-lg border bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Stato</th>
+                <th className="p-3 text-left">Cliente</th>
+                <th className="p-3 text-left">Codice fiscale</th>
+                <th className="p-3 text-left">Data verifica</th>
+                <th className="p-3 text-left">Scadenza verifica</th>
+                <th className="p-3 text-center">AV1 conferma</th>
+                <th className="p-3 text-center">AV2 generato</th>
+                <th className="w-[90px] p-2 text-center leading-tight">
+                  AV4
+                  <br />
+                  inviato
+                </th>
+                <th className="p-3 text-center">Data invio AV4</th>
+                <th className="p-3 text-center">AV4 confermato</th>
+                <th className="p-3 text-center">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan={11} className="p-4 text-center">
+                  Seleziona una società per visualizzare le pratiche
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : !canAccessAntiriciclaggio ? (
+        <div className="overflow-x-auto rounded-lg border bg-white">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Stato</th>
+                <th className="p-3 text-left">Cliente</th>
+                <th className="p-3 text-left">Codice fiscale</th>
+                <th className="p-3 text-left">Data verifica</th>
+                <th className="p-3 text-left">Scadenza verifica</th>
+                <th className="p-3 text-center">AV1 conferma</th>
+                <th className="p-3 text-center">AV2 generato</th>
+                <th className="w-[90px] p-2 text-center leading-tight">
+                  AV4
+                  <br />
+                  inviato
+                </th>
+                <th className="p-3 text-center">Data invio AV4</th>
+                <th className="p-3 text-center">AV4 confermato</th>
+                <th className="p-3 text-center">Azioni</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan={11} className="p-4 text-center">
+                  Accesso riservato: inserisci la password della società per consultare le pratiche.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-white">
           <table className="w-full text-sm">
@@ -544,7 +814,7 @@ export default function AntiriciclaggioPage() {
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="p-4 text-center">
-                    Seleziona una società per visualizzare le pratiche
+                    Nessuna pratica trovata per la società selezionata
                   </td>
                 </tr>
               ) : (
@@ -678,6 +948,87 @@ export default function AntiriciclaggioPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showPasswordModal && selectedSocieta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Accesso riservato antiriciclaggio
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Inserisci la password per accedere alla società{" "}
+                  <span className="font-medium">{selectedSocieta.Denominazione}</span>.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setSocietaFilter("");
+                  setSelectedSocieta(null);
+                  clearAccessState();
+                }}
+                className="rounded p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !passwordLoading) {
+                    void handleUnlockSocieta();
+                  }
+                }}
+                placeholder="Password"
+                className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-500"
+                autoFocus
+              />
+
+              {passwordError ? (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {passwordError}
+                </div>
+              ) : null}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setSocietaFilter("");
+                    setSelectedSocieta(null);
+                    clearAccessState();
+                  }}
+                  className="rounded border px-4 py-2 text-gray-700 hover:bg-gray-50"
+                >
+                  Annulla
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleUnlockSocieta()}
+                  disabled={passwordLoading}
+                  className={`rounded px-4 py-2 text-white ${
+                    passwordLoading
+                      ? "cursor-not-allowed bg-blue-400"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {passwordLoading ? "Verifica..." : "Accedi"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
