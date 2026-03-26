@@ -245,20 +245,7 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  const clearAccessState = () => {
-    setUnlockedSocietaId(null);
-    setRows([]);
-    setPassword("");
-    setPasswordError("");
-    setShowPasswordModal(false);
-    setShowForgotPasswordInfo(false);
-
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem(AML_SESSION_KEY);
-    }
-  };
-
-  const loadRowsBySocieta = async (societaId: string) => {
+   const loadRowsBySocieta = async (societaId: string) => {
     try {
       setLoading(true);
       setRows([]);
