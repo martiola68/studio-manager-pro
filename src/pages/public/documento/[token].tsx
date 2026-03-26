@@ -58,7 +58,7 @@ function mapRowToForm(row: any): PublicDocumentoFormState {
     id: String(row?.id ?? ""),
     nome_cognome: row?.nome_cognome ?? "",
     tipo_doc: row?.tipo_doc ?? "",
-    num_doc: row?.NumDoc ?? "",
+    num_doc: row?.num_doc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
     public_doc_token: row?.public_doc_token ?? "",
