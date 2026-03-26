@@ -57,6 +57,9 @@ export default function NuovaSocietaRespAVPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordConfigured, setPasswordConfigured] = useState(false);
 
+  const passwordLockedForNormalEdit =
+    isEdit && antiriciclaggioEnabled && passwordConfigured;
+
   const updateField = <K extends keyof FormDataType>(
     field: K,
     value: FormDataType[K]
@@ -147,7 +150,7 @@ export default function NuovaSocietaRespAVPage() {
         throw new Error("Conferma la password antiriciclaggio.");
       }
 
-      if (trimmedPassword || trimmedConfirmPassword) {
+      if (!passwordLockedForNormalEdit && (trimmedPassword || trimmedConfirmPassword)) {
         if (!trimmedPassword || !trimmedConfirmPassword) {
           throw new Error("Compila sia la password sia la conferma password.");
         }
@@ -168,6 +171,12 @@ export default function NuovaSocietaRespAVPage() {
           "La protezione è attiva ma non risulta ancora impostata una password. Inserisci una nuova password."
         );
       }
+
+      if (passwordLockedForNormalEdit && (trimmedPassword || trimmedConfirmPassword)) {
+        throw new Error(
+          "La password già configurata non può essere modificata da questa schermata. Solo l’amministratore di sistema può eseguire il reset."
+        );
+      }
     }
 
     const response = await fetch("/api/antiriciclaggio/set-societa-password", {
@@ -178,7 +187,8 @@ export default function NuovaSocietaRespAVPage() {
       body: JSON.stringify({
         societaId,
         enabled: antiriciclaggioEnabled,
-        password: trimmedPassword || undefined,
+        password:
+          passwordLockedForNormalEdit ? undefined : trimmedPassword || undefined,
       }),
     });
 
@@ -372,9 +382,12 @@ export default function NuovaSocietaRespAVPage() {
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder={
                           isEdit
-                            ? "Lascia vuoto per non cambiarla"
+                            ? passwordLockedForNormalEdit
+                              ? "Password gestita solo da amministratore"
+                              : "Lascia vuoto per non cambiarla"
                             : "Inserisci password"
                         }
+                        disabled={passwordLockedForNormalEdit}
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
                         Minimo 6 caratteri.
@@ -391,9 +404,12 @@ export default function NuovaSocietaRespAVPage() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder={
                           isEdit
-                            ? "Ripeti la nuova password"
+                            ? passwordLockedForNormalEdit
+                              ? "Reset disponibile solo ad amministratore"
+                              : "Ripeti la nuova password"
                             : "Conferma password"
                         }
+                        disabled={passwordLockedForNormalEdit}
                       />
                     </div>
 
@@ -401,9 +417,15 @@ export default function NuovaSocietaRespAVPage() {
                       <div className="md:col-span-2">
                         <p className="text-xs text-muted-foreground">
                           {passwordConfigured
-                            ? "Password già configurata. Compila i campi solo se vuoi sostituirla."
+                            ? "Password già configurata."
                             : "Nessuna password ancora configurata. Inseriscine una per attivare la protezione."}
                         </p>
+
+                        {passwordLockedForNormalEdit && (
+                          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            La password già configurata non è modificabile dagli utenti normali da questa schermata. Il cambio password deve avvenire solo tramite reset eseguito dall’amministratore di sistema.
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
