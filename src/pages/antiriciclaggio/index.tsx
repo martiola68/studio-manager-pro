@@ -493,6 +493,11 @@ const clearAccessState = () => {
   }
 };
 
+  const handleCloseAccess = () => {
+  clearAccessState();
+  window.location.reload();
+};
+
   const handleNuovoAV1 = () => {
     if (!canAccessAntiriciclaggio) return;
     router.push("/antiriciclaggio/modello-av1");
