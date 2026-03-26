@@ -1275,6 +1275,8 @@ const sendSingleNotifications = async (
 ) => {
   const { eventoService } = await import("@/services/eventoService");
 
+  const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
+
   const targetUserIds = [...new Set(
     (internalParticipantIds ?? [])
       .filter((id) => id && String(id) !== String(ownerUserId))
@@ -1284,7 +1286,9 @@ const sendSingleNotifications = async (
   const sentKeys = new Set<string>();
 
   for (const userId of targetUserIds) {
-    const rowForUser = rows.find((r) => String(r?.utente_id || "") === String(userId));
+    const rowForUser = rows.find(
+      (r) => String(r?.utente_id || "") === String(userId)
+    );
 
     if (!rowForUser?.id) continue;
 
@@ -1293,8 +1297,48 @@ const sendSingleNotifications = async (
 
     sentKeys.add(dedupeKey);
 
+    // 🔴 COSTRUZIONE DATI CORRETTI
+
+    const participantIds = [...new Set(
+      (rowForUser.partecipanti || []).filter(Boolean)
+    )];
+
+    const participantUsers = participantIds
+      .map((id: string) => utenti.find((u) => String(u.id) === String(id)))
+      .filter(Boolean);
+
+    // 👉 ESCLUDO ORGANIZZATORE
+    const visibleParticipants = participantUsers.filter(
+      (u) => String(u!.id) !== String(ownerUserId)
+    );
+
+    const payload = {
+      ...rowForUser,
+
+      // ✅ FORZO RESPONSABILE CORRETTO
+      utente_id: ownerUserId,
+      utente: owner || rowForUser.utente,
+
+      responsabile_nome: owner
+        ? `${owner.nome} ${owner.cognome}`
+        : "",
+
+      // ✅ PARTECIPANTI SENZA ORGANIZZATORE
+      partecipanti_notifica: visibleParticipants.map((u) => ({
+        id: u!.id,
+        nome: u!.nome,
+        cognome: u!.cognome,
+        email: u!.email,
+        settore: u!.settore ?? null,
+      })),
+
+      partecipanti_nomi: visibleParticipants.map(
+        (u) => `${u!.nome} ${u!.cognome}`
+      ),
+    };
+
     await eventoService.sendEventNotification(
-      toNotificationPayload(rowForUser as any) as any
+      toNotificationPayload(payload as any) as any
     );
   }
 };
