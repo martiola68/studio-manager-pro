@@ -555,15 +555,19 @@ if (row.studio_id) {
         return;
       }
 
-      const connection = microsoftConnections.find(
-        (c) => c.id === form.microsoft_connection_id
-      );
+   const resolvedConnectionId = resolveMicrosoftConnectionId(
+  microsoftConnections as any,
+  form.microsoft_connection_id
+);
 
-      if (!connection) {
-        alert("La connessione Microsoft selezionata non è disponibile.");
-        return;
-      }
+const connection = microsoftConnections.find(
+  (c) => c.id === resolvedConnectionId
+);
 
+if (!connection || !resolvedConnectionId) {
+  alert("La connessione Microsoft selezionata non è disponibile.");
+  return;
+}
       setSendingPublicDoc(true);
 
       token =
