@@ -261,13 +261,6 @@ async function deleteOutlookEvent(
  */
 async function syncEventToOutlook(userId: string, eventoId: string): Promise<boolean> {
   try {
-    // Verifica se l'utente ha Microsoft 365 configurato
-    const hasMicrosoft = await hasMicrosoft365(userId);
-    if (!hasMicrosoft) {
-      console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
-      return false;
-    }
-
     // Recupera l'evento dal database
     const { data: evento, error } = await supabase
       .from("tbagenda")
@@ -277,6 +270,15 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
 
     if (error || !evento) {
       console.error("Evento non trovato:", error);
+      return false;
+    }
+
+    const microsoftConnectionId = evento.microsoft_connection_id || "";
+
+    // Verifica se l'utente ha Microsoft 365 configurato
+    const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
+    if (!hasMicrosoft) {
+      console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
       return false;
     }
 
