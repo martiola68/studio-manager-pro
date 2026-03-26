@@ -40,6 +40,7 @@ type FormState = {
   num_doc: string;
   scadenza_doc: string;
   allegato_doc: string;
+  microsoft_connection_id: string;
 };
 
 type RappLegaleRow = {
@@ -58,6 +59,7 @@ type RappLegaleRow = {
   NumDoc?: string | null;
   scadenza_doc?: string | null;
   allegato_doc?: string | null;
+  microsoft_connection_id?: string | null;
 };
 
 const initialFormState: FormState = {
@@ -74,6 +76,7 @@ const initialFormState: FormState = {
   num_doc: "",
   scadenza_doc: "",
   allegato_doc: "",
+   microsoft_connection_id: "",
 };
 
 /* =========================================================
@@ -111,6 +114,7 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     num_doc: row?.NumDoc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
+    microsoft_connection_id: row?.microsoft_connection_id ?? "",
   };
 }
 
@@ -255,12 +259,12 @@ export default function NuovoRappresentantePage() {
 
         if (!row) {
           const { data, error } = await supabase
-            .from("rapp_legali")
-            .select(
-              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc"
-            )
-            .eq("id", recordId)
-            .single();
+  .from("rapp_legali")
+  .select(
+    "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc, microsoft_connection_id"
+  )
+  .eq("id", recordId)
+  .single();
 
           if (error) {
             throw new Error(error.message || "Errore caricamento rappresentante");
@@ -609,6 +613,7 @@ async function handleInviaRichiestaDocumento() {
         NumDoc: form.num_doc.trim() || null,
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
+        microsoft_connection_id: form.microsoft_connection_id || null,
       };
 
       const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
