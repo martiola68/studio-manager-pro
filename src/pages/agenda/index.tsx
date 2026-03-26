@@ -1469,6 +1469,30 @@ try {
     microsoft_event_id: r.microsoft_event_id
   }));
 
+        const sendSingleNotifications = async (
+  rows: any[],
+  ownerUserId: string,
+  internalParticipantIds: string[]
+) => {
+  const { eventoService } = await import("@/services/eventoService");
+
+  const targetUserIds = internalParticipantIds.filter(
+    (id) => id && String(id) !== String(ownerUserId)
+  );
+
+  for (const userId of targetUserIds) {
+    const rowForUser = rows.find(
+      (r) => String(r?.utente_id || "") === String(userId)
+    );
+
+    if (!rowForUser) continue;
+
+    await eventoService.sendEventNotification(
+      toNotificationPayload(rowForUser as any) as any
+    );
+  }
+};
+          
           await deleteRowsFromOutlook(rowsToDeleteFromOutlook);
 
           const { error } = await supabase.from("tbagenda").delete().in("id", rowIdsToDelete);
@@ -1477,10 +1501,7 @@ try {
 
         const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-        const { eventoService } = await import("@/services/eventoService");
-        for (const row of finalRows) {
-          await eventoService.sendEventNotification(toNotificationPayload(row as any) as any);
-        }
+     await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
 
         await syncRowsToOutlook(
           finalRows.map((row: any) => ({
@@ -1533,10 +1554,7 @@ try {
           const { data, error } = await supabase.from("tbagenda").insert(occurrences as any).select();
           if (error) throw error;
 
-          const { eventoService } = await import("@/services/eventoService");
-          for (const occurrence of data ?? []) {
-            await eventoService.sendEventNotification(toNotificationPayload(occurrence as any) as any);
-          }
+        await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
 
           await syncRowsToOutlook(
             (data ?? []).map((row: any) => ({
@@ -1566,11 +1584,8 @@ try {
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
           if (error) throw error;
 
-          const { eventoService } = await import("@/services/eventoService");
-          for (const insertedEvent of data ?? []) {
-            await eventoService.sendEventNotification(toNotificationPayload(insertedEvent as any) as any);
-          }
-
+        await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
+          
           await syncRowsToOutlook(
             (data ?? []).map((row: any) => ({
               id: String(row.id),
