@@ -284,26 +284,25 @@ export default function NuovoRappresentantePage() {
           );
         }
 
-        const rows = (data || []) as MicrosoftConnectionRow[];
-        const enabledRows = rows.filter(isConnectionEnabled);
+const rows = (data || []) as MicrosoftConnectionRow[];
 
-        if (cancelled) return;
+if (cancelled) return;
 
-        setMicrosoftConnections(enabledRows);
+setMicrosoftConnections(rows);
 
-        setForm((prev) => {
-          const currentExists = enabledRows.some(
-            (c) => c.id === prev.microsoft_connection_id
-          );
+setForm((prev) => {
+  const currentExists = rows.some(
+    (c) => c.id === prev.microsoft_connection_id
+  );
 
-          if (currentExists) return prev;
+  if (currentExists) return prev;
 
-          const fallbackId = enabledRows[0]?.id || "";
-          return {
-            ...prev,
-            microsoft_connection_id: prev.microsoft_connection_id || fallbackId,
-          };
-        });
+  const fallbackId = rows[0]?.id || "";
+  return {
+    ...prev,
+    microsoft_connection_id: prev.microsoft_connection_id || fallbackId,
+  };
+});
       } catch (error: any) {
         if (!cancelled) {
           setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
