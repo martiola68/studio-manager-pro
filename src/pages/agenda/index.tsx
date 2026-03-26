@@ -1266,8 +1266,6 @@ const sendSingleNotifications = async (
   }
 };
 
-const handleSaveEvento = async () => {
-  
    const handleSaveEvento = async () => {
     const supabase = getSupabaseClient();
 
