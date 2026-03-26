@@ -278,6 +278,7 @@ export default function ModelloAV4() {
     setForm((prev) => ({
       ...prev,
       rapp_legale_id: "",
+      microsoft_connection_id: "",
       dichiarante_nome_cognome: "",
       dichiarante_codice_fiscale: "",
       dichiarante_luogo_nascita: "",
@@ -341,6 +342,9 @@ export default function ModelloAV4() {
         ...prev,
         cliente_id: String(clienteId),
         rapp_legale_id: String(rappRow.id),
+          microsoft_connection_id: rappRow?.microsoft_connection_id
+          ? String(rappRow.microsoft_connection_id)
+            : "",
         dichiarante_nome_cognome: rappRow?.nome_cognome ?? "",
         dichiarante_codice_fiscale: rappRow?.codice_fiscale ?? "",
         dichiarante_luogo_nascita: rappRow?.luogo_nascita ?? "",
@@ -727,10 +731,15 @@ async function handleInvioPubblico() {
     return;
   }
 
-  if (!form.rapp_legale_id) {
-    alert("Rappresentante legale non valorizzato.");
-    return;
-  }
+if (!form.rapp_legale_id) {
+  alert("Rappresentante legale non valorizzato.");
+  return;
+}
+
+if (!form.microsoft_connection_id) {
+  alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
+  return;
+}
 
   const supabase = getSupabaseClient() as any;
 
@@ -812,13 +821,13 @@ async function handleInvioPubblico() {
       return;
     }
 
-    await sendEmailViaMicrosoft(userId, {
+ await sendEmailViaMicrosoft(userId, {
   microsoftConnectionId: form.microsoft_connection_id,
   to: destinatario,
   subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-          <p>Gentile ${nomeDestinatario},</p>
+  html: `
+    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+      <p>Gentile ${nomeDestinatario},</p>
 
           <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
 
@@ -1004,6 +1013,7 @@ function isDuplicateTitolare(
         cliente_id: form.cliente_id,
         av1_id: Number(form.av1_id),
         rapp_legale_id: form.rapp_legale_id || null,
+        microsoft_connection_id: form.microsoft_connection_id || null,
 
         dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
         dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
