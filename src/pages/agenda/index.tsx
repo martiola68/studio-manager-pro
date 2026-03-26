@@ -910,7 +910,14 @@ export default function AgendaPage() {
     }
   };
 
-  const deleteRowsFromOutlook = async (rows: Array<{ id: string; utente_id: string | null }>) => {
+  const deleteRowsFromOutlook = async (
+  rows: Array<{
+    id: string;
+    utente_id: string | null;
+    microsoft_connection_id?: string | null;
+    microsoft_event_id?: string | null;
+  }>
+) => {
     for (const row of rows) {
       if (!row.utente_id) continue;
 if (!row.microsoft_connection_id) continue;
@@ -1454,8 +1461,13 @@ try {
 
         if (rowIdsToDelete.length > 0) {
           const rowsToDeleteFromOutlook = existingRows
-            .filter((r) => rowIdsToDelete.includes(String(r.id)))
-            .map((r) => ({ id: String(r.id), utente_id: r.utente_id }));
+  .filter((r) => rowIdsToDelete.includes(String(r.id)))
+  .map((r) => ({
+    id: String(r.id),
+    utente_id: r.utente_id,
+    microsoft_connection_id: (r as any).microsoft_connection_id,
+    microsoft_event_id: r.microsoft_event_id
+  }));
 
           await deleteRowsFromOutlook(rowsToDeleteFromOutlook);
 
@@ -1620,12 +1632,14 @@ try {
         (r) => String(r.gruppo_evento || r.id) === String(gruppo.gruppo_evento)
       );
 
-      await deleteRowsFromOutlook(
-        rowsToDelete.map((r) => ({
-          id: String(r.id),
-          utente_id: r.utente_id,
-        }))
-      );
+    await deleteRowsFromOutlook(
+  rowsToDelete.map((r) => ({
+    id: String(r.id),
+    utente_id: r.utente_id,
+    microsoft_connection_id: (r as any).microsoft_connection_id,
+    microsoft_event_id: r.microsoft_event_id
+  }))
+);
 
       const { error } = await supabase
         .from("tbagenda")
