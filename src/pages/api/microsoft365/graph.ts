@@ -180,9 +180,11 @@ async function acquireAccessToken(
       "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
     )
     .eq("studio_id", studioId)
-    .eq("user_id", userId)
-    .eq("microsoft_connection_id", connection.id)
-    .maybeSingle();
+.eq("microsoft_connection_id", connection.id)
+.is("revoked_at", null)
+.order("updated_at", { ascending: false })
+.limit(1)
+.maybeSingle();
 
   if (!strictTokenErr && strictTokenRow?.token_cache_encrypted) {
     tokenRow = strictTokenRow as TokenRow;
@@ -194,13 +196,13 @@ async function acquireAccessToken(
       .select(
         "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
       )
-      .eq("studio_id", studioId)
-      .eq("user_id", userId)
-      .is("revoked_at", null)
-      .not("token_cache_encrypted", "is", null)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+     .eq("studio_id", studioId)
+.eq("microsoft_connection_id", connection.id)
+.is("revoked_at", null)
+.not("token_cache_encrypted", "is", null)
+.order("updated_at", { ascending: false })
+.limit(1)
+.maybeSingle();
 
     if (!fallbackTokenErr && fallbackTokenRow?.token_cache_encrypted) {
       tokenRow = fallbackTokenRow as TokenRow;
@@ -281,9 +283,8 @@ try {
         updated_at: new Date().toISOString(),
         microsoft_connection_id: connection.id,
       })
-      .eq("studio_id", studioId)
-      .eq("user_id", userId)
-      .eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
+.eq("studio_id", studioId)
+.eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
   }
 
   return { accessToken, connection };
