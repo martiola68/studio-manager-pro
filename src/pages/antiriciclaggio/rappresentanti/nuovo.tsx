@@ -267,68 +267,47 @@ export default function NuovoRappresentantePage() {
 
     let cancelled = false;
 
-    const loadMicrosoftConnections = async () => {
-      const supabase = getSupabaseClient() as any;
-      setLoadingMicrosoftConnections(true);
+  const loadMicrosoftConnections = async () => {
+  const supabase = getSupabaseClient() as any;
+  setLoadingMicrosoftConnections(true);
 
-      try {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  console.log("studioId:", studioId);
+    const userId = session?.user?.id || "";
 
-  const { data: allData } = await supabase
-    .from("microsoft365_connections")
-    .select("*");
+    if (!userId) {
+      throw new Error("Utente non autenticato.");
+    }
 
-  console.log("TUTTE le connessioni:", allData);
+    const rows = (await getMicrosoftConnectionsForUser(
+      studioId,
+      userId
+    )) as MicrosoftConnectionRow[];
 
-  const { data: filtered } = await supabase
-    .from("microsoft365_connections")
-    .select("*")
-    .eq("studio_id", studioId);
+    if (cancelled) return;
 
-  console.log("FILTRATE per studio:", filtered);
-        
-        const { data, error } = await supabase
-          .from("microsoft365_connections")
-          .select("*")
-          .eq("studio_id", studioId)
-          .order("created_at", { ascending: false });
+    setMicrosoftConnections(rows);
 
-        if (error) {
-          throw new Error(
-            error.message || "Errore caricamento connessioni Microsoft"
-          );
-        }
-
-const rows = (data || []) as MicrosoftConnectionRow[];
-
-if (cancelled) return;
-
-setMicrosoftConnections(rows);
-
-setForm((prev) => {
-  const currentExists = rows.some(
-    (c) => c.id === prev.microsoft_connection_id
-  );
-
-  if (currentExists) return prev;
-
-  const fallbackId = rows[0]?.id || "";
-  return {
-    ...prev,
-    microsoft_connection_id: prev.microsoft_connection_id || fallbackId,
-  };
-});
-      } catch (error: any) {
-        if (!cancelled) {
-          setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingMicrosoftConnections(false);
-        }
-      }
-    };
+    setForm((prev) => ({
+      ...prev,
+      microsoft_connection_id: resolveMicrosoftConnectionId(
+        rows as any,
+        prev.microsoft_connection_id
+      ),
+    }));
+  } catch (error: any) {
+    if (!cancelled) {
+      setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
+    }
+  } finally {
+    if (!cancelled) {
+      setLoadingMicrosoftConnections(false);
+    }
+  }
+};
 
     void loadMicrosoftConnections();
 
