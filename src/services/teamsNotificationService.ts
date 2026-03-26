@@ -66,7 +66,7 @@ export const teamsNotificationService = {
 
       if (!utente?.studio_id) return null;
 
-     const { data: connessione } = await supabase
+  const { data: connessione } = await (supabase as any)
   .from("microsoft365_connections")
   .select("id")
   .eq("studio_id", utente.studio_id)
@@ -76,7 +76,7 @@ export const teamsNotificationService = {
 
 if (!connessione?.id) return null;
 
-const { data: config } = await supabase
+const { data: config } = await (supabase as any)
   .from("microsoft365_config")
   .select("teams_default_team_id, teams_default_channel_id, teams_scadenze_channel_id, teams_alert_channel_id")
   .eq("studio_id", utente.studio_id)
