@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
@@ -47,8 +47,9 @@ type AV1Row = {
 };
 
 const AML_SESSION_KEY = "antiriciclaggio_unlocked_societa_id";
-
 const AML_SELECTED_SOCIETA_KEY = "antiriciclaggio_selected_societa_id";
+const AML_TIMEOUT_MS = 5 * 60 * 1000;
+const AML_WARNING_MS = 60 * 1000;
 
 export default function AntiriciclaggioPage() {
   const router = useRouter();
@@ -68,6 +69,16 @@ export default function AntiriciclaggioPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
+
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+  const [timeoutCountdown, setTimeoutCountdown] = useState(
+    Math.floor(AML_WARNING_MS / 1000)
+  );
+
+  const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "-";
@@ -247,7 +258,7 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-   const loadRowsBySocieta = async (societaId: string) => {
+  const loadRowsBySocieta = async (societaId: string) => {
     try {
       setLoading(true);
       setRows([]);
@@ -310,12 +321,124 @@ export default function AntiriciclaggioPage() {
     }
   };
 
+  const clearAmlTimers = () => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+
+    if (warningIntervalRef.current) {
+      clearInterval(warningIntervalRef.current);
+      warningIntervalRef.current = null;
+    }
+
+    if (autoCloseTimeoutRef.current) {
+      clearTimeout(autoCloseTimeoutRef.current);
+      autoCloseTimeoutRef.current = null;
+    }
+  };
+
+  const closeTimeoutModal = () => {
+    setShowTimeoutModal(false);
+    setTimeoutCountdown(Math.floor(AML_WARNING_MS / 1000));
+
+    if (warningIntervalRef.current) {
+      clearInterval(warningIntervalRef.current);
+      warningIntervalRef.current = null;
+    }
+
+    if (autoCloseTimeoutRef.current) {
+      clearTimeout(autoCloseTimeoutRef.current);
+      autoCloseTimeoutRef.current = null;
+    }
+  };
+
+  const clearAccessState = () => {
+    setUnlockedSocietaId(null);
+    setRows([]);
+    setPassword("");
+    setPasswordError("");
+    setShowPasswordModal(false);
+    setShowForgotPasswordInfo(false);
+    setShowTimeoutModal(false);
+    setSocietaFilter("");
+    setSelectedSocieta(null);
+    setWorkingId(null);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+    }
+  };
+
+  const handleCloseAccess = () => {
+    clearAmlTimers();
+    closeTimeoutModal();
+    clearAccessState();
+
+    setSocietaFilter("");
+    setSelectedSocieta(null);
+    setRows([]);
+    setWorkingId(null);
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+      window.location.reload();
+    }
+  };
+
+  const startWarningPhase = () => {
+    closeTimeoutModal();
+
+    setShowTimeoutModal(true);
+    setTimeoutCountdown(Math.floor(AML_WARNING_MS / 1000));
+
+    warningIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      const remainingMs = Math.max(0, AML_TIMEOUT_MS - elapsed);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+
+      setTimeoutCountdown(remainingSec);
+
+      if (remainingSec <= 0 && warningIntervalRef.current) {
+        clearInterval(warningIntervalRef.current);
+        warningIntervalRef.current = null;
+      }
+    }, 1000);
+
+    autoCloseTimeoutRef.current = setTimeout(() => {
+      closeTimeoutModal();
+      handleCloseAccess();
+    }, AML_WARNING_MS);
+  };
+
+  const resetInactivityTimer = () => {
+    if (!canAccessAntiriciclaggio) return;
+
+    lastActivityRef.current = Date.now();
+
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+
+    inactivityTimeoutRef.current = setTimeout(() => {
+      startWarningPhase();
+    }, AML_TIMEOUT_MS - AML_WARNING_MS);
+  };
+
+  const handleContinueSession = () => {
+    lastActivityRef.current = Date.now();
+    closeTimeoutModal();
+    resetInactivityTimer();
+  };
+
   const unlockSocietaDirectly = async (societa: SocietaOption) => {
     setUnlockedSocietaId(societa.id);
 
     if (typeof window !== "undefined") {
       sessionStorage.setItem(AML_SESSION_KEY, societa.id);
-      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+      sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, societa.id);
     }
 
     await loadRowsBySocieta(societa.id);
@@ -332,21 +455,21 @@ export default function AntiriciclaggioPage() {
     void init();
   }, []);
 
- useEffect(() => {
-  if (typeof window === "undefined") return;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
-  const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
+    const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
+    const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
 
-  if (savedUnlocked) {
-    setUnlockedSocietaId(savedUnlocked);
-  }
+    if (savedUnlocked) {
+      setUnlockedSocietaId(savedUnlocked);
+    }
 
-  if (savedSelected) {
-    setSocietaFilter(savedSelected);
-  }
-}, []);
-  
+    if (savedSelected) {
+      setSocietaFilter(savedSelected);
+    }
+  }, []);
+
   useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
       setSelectedSocieta(null);
@@ -394,6 +517,41 @@ export default function AntiriciclaggioPage() {
     !!isProtectedSocieta &&
     unlockedSocietaId === societaFilter;
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !canAccessAntiriciclaggio) {
+      clearAmlTimers();
+      closeTimeoutModal();
+      return;
+    }
+
+    const events: Array<keyof WindowEventMap> = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+
+    const onActivity = () => {
+      if (showTimeoutModal) return;
+      resetInactivityTimer();
+    };
+
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, onActivity);
+    });
+
+    resetInactivityTimer();
+
+    return () => {
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, onActivity);
+      });
+      clearAmlTimers();
+    };
+  }, [canAccessAntiriciclaggio, showTimeoutModal]);
+
   const filteredRows = useMemo(() => {
     if (!societaFilter || !canAccessAntiriciclaggio) return [];
 
@@ -404,44 +562,46 @@ export default function AntiriciclaggioPage() {
   }, [rows, responsabili, societaFilter, canAccessAntiriciclaggio]);
 
   const handleSocietaChange = (societaId: string) => {
-  if (isSocietaSelectionLocked) return;
+    if (isSocietaSelectionLocked) return;
 
-  setSocietaFilter(societaId);
+    setSocietaFilter(societaId);
 
-  if (typeof window !== "undefined") {
-    if (societaId) {
-      sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, societaId);
-    } else {
-      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+    if (typeof window !== "undefined") {
+      if (societaId) {
+        sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, societaId);
+      } else {
+        sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+      }
+
+      sessionStorage.removeItem(AML_SESSION_KEY);
     }
 
-    sessionStorage.removeItem(AML_SESSION_KEY);
-  }
+    clearAmlTimers();
+    closeTimeoutModal();
+    setRows([]);
+    setPassword("");
+    setPasswordError("");
+    setShowForgotPasswordInfo(false);
+    setWorkingId(null);
+    setUnlockedSocietaId(null);
 
-  setRows([]);
-  setPassword("");
-  setPasswordError("");
-  setShowForgotPasswordInfo(false);
-  setWorkingId(null);
-  setUnlockedSocietaId(null);
+    if (!societaId) {
+      setSelectedSocieta(null);
+      setShowPasswordModal(false);
+      return;
+    }
 
-  if (!societaId) {
-    setSelectedSocieta(null);
+    const societa = societaOptions.find((s) => s.id === societaId) || null;
+    setSelectedSocieta(societa);
+
+    if (societa?.antiriciclaggio_enabled) {
+      setShowPasswordModal(true);
+      return;
+    }
+
     setShowPasswordModal(false);
-    return;
-  }
+  };
 
-  const societa = societaOptions.find((s) => s.id === societaId) || null;
-  setSelectedSocieta(societa);
-
-  if (societa?.antiriciclaggio_enabled) {
-    setShowPasswordModal(true);
-    return;
-  }
-
-  setShowPasswordModal(false);
-};
-  
   const handleUnlockSocieta = async () => {
     try {
       if (!selectedSocieta?.id) {
@@ -479,11 +639,13 @@ export default function AntiriciclaggioPage() {
 
       if (typeof window !== "undefined") {
         sessionStorage.setItem(AML_SESSION_KEY, selectedSocieta.id);
+        sessionStorage.setItem(AML_SELECTED_SOCIETA_KEY, selectedSocieta.id);
       }
 
       setShowPasswordModal(false);
       setShowForgotPasswordInfo(false);
       setPassword("");
+      lastActivityRef.current = Date.now();
       await loadRowsBySocieta(selectedSocieta.id);
     } catch (err: any) {
       console.error("Errore verifica password società:", err);
@@ -492,37 +654,6 @@ export default function AntiriciclaggioPage() {
       setPasswordLoading(false);
     }
   };
-
-const clearAccessState = () => {
-  setUnlockedSocietaId(null);
-  setRows([]);
-  setPassword("");
-  setPasswordError("");
-  setShowPasswordModal(false);
-  setShowForgotPasswordInfo(false);
-  setSocietaFilter("");
-  setSelectedSocieta(null);
-  setWorkingId(null);
-
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem(AML_SESSION_KEY);
-  }
-};
-
- const handleCloseAccess = () => {
-  clearAccessState();
-
-  setSocietaFilter("");
-  setSelectedSocieta(null);
-  setRows([]);
-  setWorkingId(null);
-
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem(AML_SESSION_KEY);
-    sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
-    window.location.reload();
-  }
-};
 
   const handleNuovoAV1 = () => {
     if (!canAccessAntiriciclaggio) return;
@@ -766,14 +897,18 @@ const clearAccessState = () => {
 
         {isSocietaSelectionLocked && selectedSocieta && (
           <div className="mt-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-            Accesso attivo su <span className="font-semibold">{selectedSocieta.Denominazione}</span>. Per cambiare soggetto responsabile usa prima <span className="font-semibold">Chiudi accesso</span>.
+            Accesso attivo su{" "}
+            <span className="font-semibold">{selectedSocieta.Denominazione}</span>.
+            Per cambiare soggetto responsabile usa prima{" "}
+            <span className="font-semibold">Chiudi accesso</span>.
           </div>
         )}
       </div>
 
       {selectedSocieta && isProtectedSocieta && !canAccessAntiriciclaggio && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Per visualizzare le pratiche antiriciclaggio della società selezionata è necessaria l’autenticazione con password.
+          Per visualizzare le pratiche antiriciclaggio della società selezionata
+          è necessaria l’autenticazione con password.
         </div>
       )}
 
@@ -835,7 +970,8 @@ const clearAccessState = () => {
             <tbody>
               <tr>
                 <td colSpan={11} className="p-4 text-center">
-                  Accesso riservato: inserisci la password della società per consultare le pratiche.
+                  Accesso riservato: inserisci la password della società per
+                  consultare le pratiche.
                 </td>
               </tr>
             </tbody>
@@ -868,7 +1004,8 @@ const clearAccessState = () => {
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="p-4 text-center">
-                    Nessuna pratica trovata per il soggetto responsabile selezionato
+                    Nessuna pratica trovata per il soggetto responsabile
+                    selezionato
                   </td>
                 </tr>
               ) : (
@@ -934,7 +1071,9 @@ const clearAccessState = () => {
 
                       <td
                         className={`p-3 text-center font-semibold ${
-                          av4Info?.compilato_da_cliente ? "text-green-600" : "text-red-600"
+                          av4Info?.compilato_da_cliente
+                            ? "text-green-600"
+                            : "text-red-600"
                         }`}
                       >
                         {av4Info?.compilato_da_cliente ? "Sì" : "No"}
@@ -1015,7 +1154,10 @@ const clearAccessState = () => {
                 </h2>
                 <p className="mt-1 text-sm text-gray-600">
                   Inserisci la password per accedere alla società{" "}
-                  <span className="font-medium">{selectedSocieta.Denominazione}</span>.
+                  <span className="font-medium">
+                    {selectedSocieta.Denominazione}
+                  </span>
+                  .
                 </p>
               </div>
 
@@ -1034,21 +1176,21 @@ const clearAccessState = () => {
             </div>
 
             <div className="space-y-4">
-             <input
-  type="password"
-  name="aml-access-password"
-  autoComplete="new-password"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" && !passwordLoading) {
-      void handleUnlockSocieta();
-    }
-  }}
-  placeholder="Password"
-  className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-500"
-  autoFocus
-/>
+              <input
+                type="password"
+                name="aml-access-password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !passwordLoading) {
+                    void handleUnlockSocieta();
+                  }
+                }}
+                placeholder="Password"
+                className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-500"
+                autoFocus
+              />
 
               {passwordError ? (
                 <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -1096,9 +1238,64 @@ const clearAccessState = () => {
 
               {showForgotPasswordInfo && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                  Se hai dimenticato la password, contatta l’amministratore di sistema o il responsabile abilitato per richiedere il reset dell’accesso antiriciclaggio della società selezionata.
+                  Se hai dimenticato la password, contatta l’amministratore di
+                  sistema o il responsabile abilitato per richiedere il reset
+                  dell’accesso antiriciclaggio della società selezionata.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTimeoutModal && canAccessAntiriciclaggio && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-red-700">
+                Sessione in scadenza
+              </h2>
+              <p className="mt-2 text-sm text-gray-700">
+                Nessuna attività rilevata. La sessione antiriciclaggio verrà
+                chiusa automaticamente tra{" "}
+                <span className="font-bold text-red-600">
+                  {timeoutCountdown}
+                </span>{" "}
+                secondi.
+              </p>
+            </div>
+
+            <div className="mb-4 h-3 w-full overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full bg-red-500 transition-all duration-1000"
+                style={{
+                  width: `${Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      (timeoutCountdown / (AML_WARNING_MS / 1000)) * 100
+                    )
+                  )}%`,
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCloseAccess}
+                className="rounded border border-red-300 bg-white px-4 py-2 text-red-700 hover:bg-red-50"
+              >
+                Chiudi ora
+              </button>
+
+              <button
+                type="button"
+                onClick={handleContinueSession}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                Continua sessione
+              </button>
             </div>
           </div>
         </div>
