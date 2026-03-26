@@ -62,6 +62,20 @@ type RappLegaleRow = {
   microsoft_connection_id?: string | null;
 };
 
+type MicrosoftConnectionRow = {
+  id: string;
+  studio_id?: string | null;
+  nome?: string | null;
+  nome_connessione?: string | null;
+  email?: string | null;
+  tenant_id?: string | null;
+  client_id?: string | null;
+  active?: boolean | null;
+  is_active?: boolean | null;
+  enabled?: boolean | null;
+  created_at?: string | null;
+};
+
 const initialFormState: FormState = {
   nome_cognome: "",
   codice_fiscale: "",
@@ -76,7 +90,7 @@ const initialFormState: FormState = {
   num_doc: "",
   scadenza_doc: "",
   allegato_doc: "",
-   microsoft_connection_id: "",
+  microsoft_connection_id: "",
 };
 
 /* =========================================================
@@ -116,6 +130,23 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     allegato_doc: row?.allegato_doc ?? "",
     microsoft_connection_id: row?.microsoft_connection_id ?? "",
   };
+}
+
+function getMicrosoftConnectionLabel(conn: MicrosoftConnectionRow): string {
+  return (
+    conn.nome_connessione?.trim() ||
+    conn.nome?.trim() ||
+    conn.email?.trim() ||
+    (conn.tenant_id ? `Tenant ${conn.tenant_id}` : "") ||
+    `Connessione ${conn.id.slice(0, 8)}`
+  );
+}
+
+function isConnectionEnabled(conn: MicrosoftConnectionRow): boolean {
+  if (typeof conn.is_active === "boolean") return conn.is_active;
+  if (typeof conn.active === "boolean") return conn.active;
+  if (typeof conn.enabled === "boolean") return conn.enabled;
+  return true;
 }
 
 export default function NuovoRappresentantePage() {
@@ -162,6 +193,12 @@ export default function NuovoRappresentantePage() {
 
   const [publicDocUrl, setPublicDocUrl] = useState("");
   const [sendingPublicDoc, setSendingPublicDoc] = useState(false);
+
+  const [microsoftConnections, setMicrosoftConnections] = useState<
+    MicrosoftConnectionRow[]
+  >([]);
+  const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] =
+    useState(false);
 
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -223,6 +260,69 @@ export default function NuovoRappresentantePage() {
   }, []);
 
   /* =========================================================
+     LOAD MICROSOFT CONNECTIONS
+     ========================================================= */
+  useEffect(() => {
+    if (!studioId) return;
+
+    let cancelled = false;
+
+    const loadMicrosoftConnections = async () => {
+      const supabase = getSupabaseClient() as any;
+      setLoadingMicrosoftConnections(true);
+
+      try {
+        const { data, error } = await supabase
+          .from("microsoft365_connections")
+          .select("*")
+          .eq("studio_id", studioId)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw new Error(
+            error.message || "Errore caricamento connessioni Microsoft"
+          );
+        }
+
+        const rows = (data || []) as MicrosoftConnectionRow[];
+        const enabledRows = rows.filter(isConnectionEnabled);
+
+        if (cancelled) return;
+
+        setMicrosoftConnections(enabledRows);
+
+        setForm((prev) => {
+          const currentExists = enabledRows.some(
+            (c) => c.id === prev.microsoft_connection_id
+          );
+
+          if (currentExists) return prev;
+
+          const fallbackId = enabledRows[0]?.id || "";
+          return {
+            ...prev,
+            microsoft_connection_id: prev.microsoft_connection_id || fallbackId,
+          };
+        });
+      } catch (error: any) {
+        if (!cancelled) {
+          setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMicrosoftConnections(false);
+        }
+      }
+    };
+
+    void loadMicrosoftConnections();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId]);
+
+  /* =========================================================
      LOAD RECORD IN EDIT MODE
      ========================================================= */
   useEffect(() => {
@@ -259,12 +359,12 @@ export default function NuovoRappresentantePage() {
 
         if (!row) {
           const { data, error } = await supabase
-  .from("rapp_legali")
-  .select(
-    "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc, microsoft_connection_id"
-  )
-  .eq("id", recordId)
-  .single();
+            .from("rapp_legali")
+            .select(
+              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc, microsoft_connection_id"
+            )
+            .eq("id", recordId)
+            .single();
 
           if (error) {
             throw new Error(error.message || "Errore caricamento rappresentante");
@@ -323,6 +423,10 @@ export default function NuovoRappresentantePage() {
     return !!studioId && form.nome_cognome.trim().length > 0 && cfOk;
   }, [studioId, form.nome_cognome, cfOk]);
 
+  const selectedMicrosoftConnection = useMemo(() => {
+    return microsoftConnections.find((c) => c.id === form.microsoft_connection_id) || null;
+  }, [microsoftConnections, form.microsoft_connection_id]);
+
   /* =========================================================
      ACTIONS
      ========================================================= */
@@ -333,7 +437,11 @@ export default function NuovoRappresentantePage() {
     if (isEditMode) {
       setForm(initialLoadedForm);
     } else {
-      setForm(initialFormState);
+      setForm((prev) => ({
+        ...initialFormState,
+        microsoft_connection_id:
+          prev.microsoft_connection_id || microsoftConnections[0]?.id || "",
+      }));
       setPublicDocUrl("");
     }
   }
@@ -413,118 +521,125 @@ export default function NuovoRappresentantePage() {
     setErrMsg(null);
   }
 
-async function handleInviaRichiestaDocumento() {
-  const supabase = getSupabaseClient() as any;
-  let token = "";
-  let url = "";
-  let userId: string | null = null;
+  async function handleInviaRichiestaDocumento() {
+    const supabase = getSupabaseClient() as any;
+    let token = "";
+    let userId: string | null = null;
 
-  try {
-    if (!recordId) {
-      alert("Salva prima il rappresentante.");
-      return;
-    }
+    try {
+      if (!recordId) {
+        alert("Salva prima il rappresentante.");
+        return;
+      }
 
-    if (!studioId) {
-      alert("studio_id non disponibile.");
-      return;
-    }
+      if (!studioId) {
+        alert("studio_id non disponibile.");
+        return;
+      }
 
-   if (!form.email || !String(form.email).trim()) {
-  alert("Il rappresentante non ha un indirizzo email valorizzato.");
-  return;
-}
+      if (!form.email || !String(form.email).trim()) {
+        alert("Il rappresentante non ha un indirizzo email valorizzato.");
+        return;
+      }
 
-if (!form.microsoft_connection_id || !String(form.microsoft_connection_id).trim()) {
-  alert("Connessione Microsoft non valorizzata per questo rappresentante.");
-  return;
-}
+      if (!form.microsoft_connection_id || !String(form.microsoft_connection_id).trim()) {
+        alert("Seleziona una connessione Microsoft.");
+        return;
+      }
 
-setSendingPublicDoc(true);
-
-token =
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    const nowIso = new Date().toISOString();
-
-    const { error: updateError } = await supabase
-      .from("rapp_legali")
-      .update({
-        public_doc_token: token,
-        public_doc_enabled: true,
-        public_doc_sent_at: nowIso,
-        public_doc_opened_at: null,
-        public_doc_submitted_at: null,
-      })
-      .eq("id", recordId);
-
-    if (updateError) {
-      console.error("Errore aggiornamento link pubblico documento:", updateError);
-      alert("Errore durante la generazione del link pubblico.");
-      return;
-    }
-
-    url = `${window.location.origin}/public/documento/${token}`;
-    setPublicDocUrl(url);
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    userId = session?.user?.id ?? null;
-
-    if (!userId) {
-      alert(
-        `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+      const connection = microsoftConnections.find(
+        (c) => c.id === form.microsoft_connection_id
       );
-      return;
-    }
 
-    const nomeDestinatario = form.nome_cognome || "Cliente";
-    const destinatario = String(form.email).trim();
-    const subject = "Richiesta aggiornamento documento di riconoscimento";
-    const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
+      if (!connection) {
+        alert("La connessione Microsoft selezionata non è disponibile.");
+        return;
+      }
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-        <p>Gentile ${nomeDestinatario},</p>
+      setSendingPublicDoc(true);
 
-        <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
+      token =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
+      const nowIso = new Date().toISOString();
 
-        <p>
-          <a href="${url}" target="_blank" rel="noopener noreferrer">
-            ${url}
-          </a>
-        </p>
+      const { error: updateError } = await supabase
+        .from("rapp_legali")
+        .update({
+          public_doc_token: token,
+          public_doc_enabled: true,
+          public_doc_sent_at: nowIso,
+          public_doc_opened_at: null,
+          public_doc_submitted_at: null,
+          microsoft_connection_id: form.microsoft_connection_id,
+        })
+        .eq("id", recordId);
 
-        <p><strong>Documenti accettati:</strong></p>
-        <ul style="padding-left: 18px; margin: 8px 0;">
-          <li>Carta di identità</li>
-          <li>Passaporto</li>
-        </ul>
+      if (updateError) {
+        console.error("Errore aggiornamento link pubblico documento:", updateError);
+        alert("Errore durante la generazione del link pubblico.");
+        return;
+      }
 
-        <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+      const url = `${window.location.origin}/public/documento/${token}`;
+      setPublicDocUrl(url);
 
-        <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        <p>Cordiali saluti,<br />Studio Manager Pro</p>
-      </div>
-    `;
+      userId = session?.user?.id ?? null;
 
-    await sendEmailViaMicrosoft(userId, {
-      microsoftConnectionId: form.microsoft_connection_id, // oppure la variabile corretta del file
-      to: destinatario,
-      subject,
-      html,
-    });
+      if (!userId) {
+        alert(
+          `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+        );
+        return;
+      }
 
-    const { error: logError } = await supabase
-      .from("tbAMLComunicazioni")
-      .insert({
+      const nomeDestinatario = form.nome_cognome || "Cliente";
+      const destinatario = String(form.email).trim();
+      const subject = "Richiesta aggiornamento documento di riconoscimento";
+      const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+          <p>Gentile ${nomeDestinatario},</p>
+
+          <p>La invitiamo ad allegare un documento di riconoscimento in corso di validità.</p>
+
+          <p>Può caricare il nuovo documento tramite il seguente collegamento riservato:</p>
+
+          <p>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">
+              ${url}
+            </a>
+          </p>
+
+          <p><strong>Documenti accettati:</strong></p>
+          <ul style="padding-left: 18px; margin: 8px 0;">
+            <li>Carta di identità</li>
+            <li>Passaporto</li>
+          </ul>
+
+          <p>Le chiediamo di compilare i campi richiesti e allegare il documento aggiornato.</p>
+
+          <p>Una volta completata la procedura, il collegamento non sarà più riutilizzabile.</p>
+
+          <p>Cordiali saluti,<br />Studio Manager Pro</p>
+        </div>
+      `;
+
+      await sendEmailViaMicrosoft(userId, {
+        microsoftConnectionId: form.microsoft_connection_id,
+        to: destinatario,
+        subject,
+        html,
+      });
+
+      const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
         studio_id: studioId,
         tipo_comunicazione: "richiesta_documento",
         cliente_id: clienteIdFromQuery || null,
@@ -540,48 +655,52 @@ token =
         note: "Invio richiesta documento da anagrafica rappresentante",
       });
 
-    if (logError) {
-      console.error("Errore salvataggio log tbAMLComunicazioni:", logError);
-      alert(
-        `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
-      );
-      return;
-    }
-
-    alert(`Email inviata correttamente a ${destinatario}.`);
-  } catch (error: any) {
-    console.error("Errore invio richiesta documento:", error);
-
-    try {
-      if (studioId && recordId && form.email?.trim()) {
-        await supabase.from("tbAMLComunicazioni").insert({
-          studio_id: studioId,
-          tipo_comunicazione: "richiesta_documento",
-          cliente_id: clienteIdFromQuery || null,
-          rapp_legale_id: recordId,
-          av4_id: av4IdFromQuery || null,
-          destinatario_email: String(form.email).trim(),
-          oggetto: "Richiesta aggiornamento documento di riconoscimento",
-          body_preview: `Errore invio richiesta documento a ${String(form.email).trim()}.`,
-          stato_invio: "errore",
-          data_invio: new Date().toISOString(),
-          utente_id: userId,
-          public_token: token || null,
-          note:
-            error?.message ||
-            "Errore durante l'invio della richiesta documento.",
-        });
+      if (logError) {
+        console.error("Errore salvataggio log tbAMLComunicazioni:", logError);
+        alert(
+          `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
+        );
+        return;
       }
-    } catch (logCatchError) {
-      console.error("Errore salvataggio log AML di errore:", logCatchError);
-    }
 
-    alert(`Errore durante l'invio della richiesta documento: ${error?.message || "errore sconosciuto"}`);
-    
-  } finally {
-    setSendingPublicDoc(false);
+      alert(`Email inviata correttamente a ${destinatario}.`);
+    } catch (error: any) {
+      console.error("Errore invio richiesta documento:", error);
+
+      try {
+        if (studioId && recordId && form.email?.trim()) {
+          await supabase.from("tbAMLComunicazioni").insert({
+            studio_id: studioId,
+            tipo_comunicazione: "richiesta_documento",
+            cliente_id: clienteIdFromQuery || null,
+            rapp_legale_id: recordId,
+            av4_id: av4IdFromQuery || null,
+            destinatario_email: String(form.email).trim(),
+            oggetto: "Richiesta aggiornamento documento di riconoscimento",
+            body_preview: `Errore invio richiesta documento a ${String(form.email).trim()}.`,
+            stato_invio: "errore",
+            data_invio: new Date().toISOString(),
+            utente_id: userId,
+            public_token: token || null,
+            note:
+              error?.message ||
+              "Errore durante l'invio della richiesta documento.",
+          });
+        }
+      } catch (logCatchError) {
+        console.error("Errore salvataggio log AML di errore:", logCatchError);
+      }
+
+      alert(
+        `Errore durante l'invio della richiesta documento: ${
+          error?.message || "errore sconosciuto"
+        }`
+      );
+    } finally {
+      setSendingPublicDoc(false);
+    }
   }
-}
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -771,6 +890,41 @@ token =
                     }
                     placeholder="nome@dominio.it"
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="microsoft_connection_id">Connessione Microsoft</Label>
+                  <Select
+                    value={form.microsoft_connection_id || "__none__"}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        microsoft_connection_id: value === "__none__" ? "" : value,
+                      }))
+                    }
+                    disabled={loadingMicrosoftConnections}
+                  >
+                    <SelectTrigger id="microsoft_connection_id">
+                      <SelectValue
+                        placeholder={
+                          loadingMicrosoftConnections
+                            ? "Caricamento connessioni..."
+                            : "Seleziona connessione Microsoft"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nessuna connessione</SelectItem>
+                      {microsoftConnections.map((conn) => (
+                        <SelectItem key={conn.id} value={conn.id}>
+                          {getMicrosoftConnectionLabel(conn)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    La connessione selezionata verrà usata per l'invio delle email al rappresentante.
+                  </p>
                 </div>
 
                 <div>
@@ -968,7 +1122,12 @@ token =
                     <Button
                       type="button"
                       onClick={handleInviaRichiestaDocumento}
-                      disabled={sendingPublicDoc || !recordId}
+                      disabled={
+                        sendingPublicDoc ||
+                        !recordId ||
+                        !form.email?.trim() ||
+                        !form.microsoft_connection_id
+                      }
                       variant="outline"
                       className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                     >
@@ -990,7 +1149,10 @@ token =
               <p className="text-xs text-muted-foreground">
                 Debug studio_id: {studioId || "-"} | Bucket: {BUCKET_NAME} | Mode:{" "}
                 {isEditMode ? `edit (${recordId})` : "create"} | From: {from || "-"} |
-                Cliente: {clienteIdFromQuery || "-"}
+                Cliente: {clienteIdFromQuery || "-"} | Connessione Microsoft:{" "}
+                {selectedMicrosoftConnection
+                  ? getMicrosoftConnectionLabel(selectedMicrosoftConnection)
+                  : "-"}
               </p>
 
               <div className="flex gap-2">
