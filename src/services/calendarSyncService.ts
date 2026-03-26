@@ -56,7 +56,7 @@ function convertOutlookToLocal(dateTime: string): string {
 /**
  * Sincronizza eventi da Outlook ad Agenda app
  */
-async function syncFromOutlook(userId: string): Promise<number> {
+async function syncFromOutlook(userId: string, microsoftConnectionId: string): Promise<number> {
   console.log("🔄 Sincronizzazione da Outlook ad Agenda...");
 
   try {
@@ -71,7 +71,9 @@ async function syncFromOutlook(userId: string): Promise<number> {
 const response = await graphApiCall<{ value: OutlookEvent[] }>(
   userId,
   `/me/calendar/events?$filter=${encodeURIComponent(filter)}&$top=100`,
-  {}
+  {
+    microsoftConnectionId
+  }
 );
     const outlookEvents = response.value;
     console.log(`📅 Trovati ${outlookEvents.length} eventi in Outlook`);
@@ -135,6 +137,7 @@ const response = await graphApiCall<{ value: OutlookEvent[] }>(
  */
 async function createOutlookEvent(
   userId: string,
+  microsoftConnectionId: string,
   appEvent: AppEvent
 ): Promise<string> {
   console.log("📅 Creazione evento in Outlook...");
@@ -163,13 +166,14 @@ async function createOutlookEvent(
     };
 
     const response = await graphApiCall<OutlookEvent>(
-      userId,
-      "/me/calendar/events",
-      {
-        method: "POST",
-        body: JSON.stringify(outlookEvent),
-      }
-    );
+  userId,
+  "/me/calendar/events",
+  {
+    method: "POST",
+    microsoftConnectionId,
+    body: JSON.stringify(outlookEvent),
+  }
+);
 
     console.log("✅ Evento creato in Outlook:", response.id);
 
@@ -195,6 +199,7 @@ async function createOutlookEvent(
  */
 async function updateOutlookEvent(
   userId: string,
+  microsoftConnectionId: string,
   microsoftEventId: string,
   appEvent: AppEvent
 ): Promise<void> {
@@ -223,10 +228,11 @@ async function updateOutlookEvent(
         : undefined,
     };
 
-    await graphApiCall(userId, `/me/calendar/events/${microsoftEventId}`, {
-      method: "PATCH",
-      body: JSON.stringify(outlookEvent),
-    });
+ await graphApiCall(userId, `/me/calendar/events/${microsoftEventId}`, {
+  method: "PATCH",
+  microsoftConnectionId,
+  body: JSON.stringify(outlookEvent),
+});
 
     console.log("✅ Evento aggiornato in Outlook");
   } catch (error: any) {
@@ -240,14 +246,16 @@ async function updateOutlookEvent(
  */
 async function deleteOutlookEvent(
   userId: string,
+  microsoftConnectionId: string,
   microsoftEventId: string
 ): Promise<void> {
   console.log("🗑️ Eliminazione evento da Outlook...");
 
   try {
     await graphApiCall(userId, `/me/calendar/events/${microsoftEventId}`, {
-      method: "DELETE",
-    });
+  method: "DELETE",
+  microsoftConnectionId,
+});
 
     console.log("✅ Evento eliminato da Outlook");
   } catch (error: any) {
@@ -276,7 +284,10 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
     const microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
 
     // Verifica se l'utente ha Microsoft 365 configurato
+    const microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
+
     const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
+    
     if (!hasMicrosoft) {
       console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
       return false;
@@ -298,12 +309,12 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
 
     // Se l'evento ha già un microsoft_event_id, aggiornalo
     if (evento.microsoft_event_id) {
-      await updateOutlookEvent(userId, evento.microsoft_event_id, appEvent);
+      await updateOutlookEvent(userId, microsoftConnectionId, evento.microsoft_event_id, appEvent);
       return true;
     }
 
     // Altrimenti, crealo
-    await createOutlookEvent(userId, appEvent);
+    await createOutlookEvent(userId, microsoftConnectionId, appEvent);
     return true;
 
   } catch (error: any) {
@@ -320,11 +331,11 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
 /**
  * Sincronizza tutti gli eventi (bidirezionale)
  */
-async function fullCalendarSync(userId: string): Promise<void> {
+async function fullCalendarSync(userId: string, microsoftConnectionId: string): Promise<void> {
   console.log("🔄 Sincronizzazione completa calendario...");
 
   // Sync da Outlook ad app
-  await syncFromOutlook(userId);
+  await syncFromOutlook(userId, microsoftConnectionId);
 
   // Sync da app ad Outlook (eventi senza microsoft_event_id)
   const today = new Date().toISOString();
@@ -341,7 +352,7 @@ async function fullCalendarSync(userId: string): Promise<void> {
 
     for (const event of unsyncedEvents) {
       try {
-        await createOutlookEvent(userId, event as AppEvent);
+        await createOutlookEvent(userId, microsoftConnectionId, event as AppEvent);
       } catch (error) {
         console.error(`❌ Errore sync evento ${event.id}:`, error);
       }
