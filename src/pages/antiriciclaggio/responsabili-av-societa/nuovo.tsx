@@ -25,10 +25,8 @@ function validateCodiceFiscaleGiuridico(value: string): boolean {
     if (Number.isNaN(n)) return false;
 
     if (i % 2 === 0) {
-      // posizione 1,3,5... lato umano
       n = n;
     } else {
-      // posizione 2,4,6...
       n = n * 2;
       if (n > 9) n -= 9;
     }
@@ -54,6 +52,11 @@ export default function NuovaSocietaRespAVPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [antiriciclaggioEnabled, setAntiriciclaggioEnabled] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordConfigured, setPasswordConfigured] = useState(false);
+
   const updateField = <K extends keyof FormDataType>(
     field: K,
     value: FormDataType[K]
@@ -73,7 +76,9 @@ export default function NuovaSocietaRespAVPage() {
 
       const { data, error } = await supabase
         .from("tbRespAVSocieta")
-        .select("id, Denominazione, codice_fiscale")
+        .select(
+          "id, Denominazione, codice_fiscale, antiriciclaggio_enabled, antiriciclaggio_password_hash"
+        )
         .eq("id", recordId)
         .single();
 
@@ -84,6 +89,11 @@ export default function NuovaSocietaRespAVPage() {
         Denominazione: data.Denominazione || "",
         codice_fiscale: data.codice_fiscale || "",
       });
+
+      setAntiriciclaggioEnabled(!!data.antiriciclaggio_enabled);
+      setPasswordConfigured(!!data.antiriciclaggio_password_hash);
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err: any) {
       setError(err?.message || "Errore caricamento società.");
     } finally {
@@ -120,6 +130,65 @@ export default function NuovaSocietaRespAVPage() {
     if (error) throw new Error(error.message);
 
     return Array.isArray(data) && data.length > 0;
+  };
+
+  const savePasswordSettings = async (societaId: string) => {
+    const trimmedPassword = newPassword.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+
+    if (antiriciclaggioEnabled) {
+      if (!isEdit && !trimmedPassword) {
+        throw new Error(
+          "Per abilitare la protezione antiriciclaggio devi inserire una password."
+        );
+      }
+
+      if (!isEdit && !trimmedConfirmPassword) {
+        throw new Error("Conferma la password antiriciclaggio.");
+      }
+
+      if (trimmedPassword || trimmedConfirmPassword) {
+        if (!trimmedPassword || !trimmedConfirmPassword) {
+          throw new Error("Compila sia la password sia la conferma password.");
+        }
+
+        if (trimmedPassword.length < 6) {
+          throw new Error(
+            "La password antiriciclaggio deve contenere almeno 6 caratteri."
+          );
+        }
+
+        if (trimmedPassword !== trimmedConfirmPassword) {
+          throw new Error("Le password non coincidono.");
+        }
+      }
+
+      if (isEdit && !passwordConfigured && !trimmedPassword) {
+        throw new Error(
+          "La protezione è attiva ma non risulta ancora impostata una password. Inserisci una nuova password."
+        );
+      }
+    }
+
+    const response = await fetch("/api/antiriciclaggio/set-societa-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        societaId,
+        enabled: antiriciclaggioEnabled,
+        password: trimmedPassword || undefined,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(
+        data?.error || "Errore durante il salvataggio della password."
+      );
+    }
   };
 
   const handleSave = async () => {
@@ -172,6 +241,8 @@ export default function NuovaSocietaRespAVPage() {
         codice_fiscale: codiceFiscale,
       };
 
+      let societaId = "";
+
       if (isEdit) {
         const { error } = await supabase
           .from("tbRespAVSocieta")
@@ -179,13 +250,22 @@ export default function NuovaSocietaRespAVPage() {
           .eq("id", id);
 
         if (error) throw new Error(error.message);
+
+        societaId = id as string;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("tbRespAVSocieta")
-          .insert([payload]);
+          .insert([payload])
+          .select("id")
+          .single();
 
         if (error) throw new Error(error.message);
+        if (!data?.id) throw new Error("ID società non restituito.");
+
+        societaId = data.id;
       }
+
+      await savePasswordSettings(societaId);
 
       await router.push("/antiriciclaggio/responsabili-av-societa");
     } catch (err: any) {
@@ -253,6 +333,81 @@ export default function NuovaSocietaRespAVPage() {
                     placeholder="Codice fiscale società"
                   />
                 </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    id="antiriciclaggio_enabled"
+                    type="checkbox"
+                    checked={antiriciclaggioEnabled}
+                    onChange={(e) =>
+                      setAntiriciclaggioEnabled(e.target.checked)
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="antiriciclaggio_enabled"
+                      className="block text-sm font-medium"
+                    >
+                      Proteggi accesso antiriciclaggio con password
+                    </label>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Se attivato, per accedere alle pratiche della società
+                      selezionata sarà richiesta una password.
+                    </p>
+                  </div>
+                </div>
+
+                {antiriciclaggioEnabled && (
+                  <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        {isEdit ? "Nuova password" : "Password"}
+                      </label>
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder={
+                          isEdit
+                            ? "Lascia vuoto per non cambiarla"
+                            : "Inserisci password"
+                        }
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Minimo 6 caratteri.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">
+                        {isEdit ? "Conferma nuova password" : "Conferma password"}
+                      </label>
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder={
+                          isEdit
+                            ? "Ripeti la nuova password"
+                            : "Conferma password"
+                        }
+                      />
+                    </div>
+
+                    {isEdit && (
+                      <div className="md:col-span-2">
+                        <p className="text-xs text-muted-foreground">
+                          {passwordConfigured
+                            ? "Password già configurata. Compila i campi solo se vuoi sostituirla."
+                            : "Nessuna password ancora configurata. Inseriscine una per attivare la protezione."}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {error && (
