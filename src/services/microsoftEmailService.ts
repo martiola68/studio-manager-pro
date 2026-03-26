@@ -82,11 +82,12 @@ console.log("CHECK TOKEN MICROSOFT", {
 
 const { data: tokenRow, error: tokenErr } = await (supabase as any)
   .from("tbmicrosoft365_user_tokens")
-  .select("id, connected_at, revoked_at, microsoft_connection_id")
+  .select("id, connected_at, revoked_at, microsoft_connection_id, user_id")
   .eq("studio_id", utente.studio_id)
-  .eq("user_id", userId)
   .eq("microsoft_connection_id", microsoftConnectionId)
   .is("revoked_at", null)
+  .order("connected_at", { ascending: false })
+  .limit(1)
   .maybeSingle();
 
 console.log("TOKEN ROW TROVATA", tokenRow, tokenErr);
@@ -184,14 +185,15 @@ export async function canUseMicrosoftEmail(
       return false;
     }
 
-    const { data: tokenRow, error: tokenErr } = await (supabase as any)
-      .from("tbmicrosoft365_user_tokens")
-      .select("id")
-      .eq("studio_id", utente.studio_id)
-      .eq("user_id", userId)
-      .eq("microsoft_connection_id", microsoftConnectionId)
-      .is("revoked_at", null)
-      .maybeSingle();
+   const { data: tokenRow, error: tokenErr } = await (supabase as any)
+  .from("tbmicrosoft365_user_tokens")
+  .select("id")
+  .eq("studio_id", utente.studio_id)
+  .eq("microsoft_connection_id", microsoftConnectionId)
+  .is("revoked_at", null)
+  .order("connected_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
     return !tokenErr && !!tokenRow?.id;
   } catch {
