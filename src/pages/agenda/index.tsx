@@ -1504,7 +1504,7 @@ const handleSaveEvento = async () => {
 
         const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-     await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
+     await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
 
         await syncRowsToOutlook(
           finalRows.map((row: any) => ({
