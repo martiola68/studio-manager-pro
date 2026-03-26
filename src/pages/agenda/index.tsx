@@ -1504,7 +1504,7 @@ const handleSaveEvento = async () => {
 
         const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-     await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
+     await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
 
         await syncRowsToOutlook(
           finalRows.map((row: any) => ({
@@ -1557,7 +1557,7 @@ const handleSaveEvento = async () => {
           const { data, error } = await supabase.from("tbagenda").insert(occurrences as any).select();
           if (error) throw error;
 
-        await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
 
           await syncRowsToOutlook(
             (data ?? []).map((row: any) => ({
@@ -1587,7 +1587,7 @@ const handleSaveEvento = async () => {
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
           if (error) throw error;
 
-        await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
           
           await syncRowsToOutlook(
             (data ?? []).map((row: any) => ({
