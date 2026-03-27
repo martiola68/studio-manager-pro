@@ -562,6 +562,27 @@ useEffect(() => {
     };
   }, [canAccessAntiriciclaggio, showTimeoutModal]);
 
+   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleRouteChangeStart = (url: string) => {
+      if (!url.startsWith("/antiriciclaggio")) {
+        clearAmlTimers();
+        closeTimeoutModal();
+        clearAccessState();
+        setSocietaFilter("");
+        setSelectedSocieta(null);
+        sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+      }
+    };
+
+    router.events.on("routeChangeStart", handleRouteChangeStart);
+
+    return () => {
+      router.events.off("routeChangeStart", handleRouteChangeStart);
+    };
+  }, [router.events]);
+
   const filteredRows = useMemo(() => {
     if (!societaFilter || !canAccessAntiriciclaggio) return [];
 
