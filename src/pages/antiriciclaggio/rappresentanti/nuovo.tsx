@@ -451,7 +451,7 @@ export default function NuovoRappresentantePage() {
      ACTIONS
      ========================================================= */
 
-     async function handleCodiceFiscaleAutoComune(rawValue: string) {
+    async function handleCodiceFiscaleAutoComune(rawValue: string) {
     const normalized = normalizeCF(rawValue);
 
     setForm((prev) => ({
@@ -463,14 +463,21 @@ export default function NuovoRappresentantePage() {
     if (!isValidCF(normalized)) return;
 
     try {
-      const comune = await getComuneFromCF(normalized);
+      const comuneData = await getComuneFromCF(normalized);
       const dataNascita = extractDataNascitaFromCF(normalized);
 
       setForm((prev) => ({
         ...prev,
         codice_fiscale: normalized,
-        luogo_nascita: prev.luogo_nascita?.trim() ? prev.luogo_nascita : comune || "",
-        data_nascita: prev.data_nascita?.trim() ? prev.data_nascita : dataNascita || "",
+        luogo_nascita: prev.luogo_nascita?.trim()
+          ? prev.luogo_nascita
+          : comuneData?.comune || "",
+        data_nascita: prev.data_nascita?.trim()
+          ? prev.data_nascita
+          : dataNascita || "",
+        nazionalita: prev.nazionalita?.trim()
+          ? prev.nazionalita
+          : comuneData?.nazionalita || "",
       }));
     } catch (error) {
       console.error("Errore lookup dati da codice fiscale:", error);
@@ -921,18 +928,22 @@ export default function NuovoRappresentantePage() {
                 </div>
 
                <div>
+<div>
   <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
   <Input
     id="codice_fiscale"
     value={form.codice_fiscale}
-    onChange={(e) =>
+    onChange={(e) => {
+      const value = normalizeCF(e.target.value);
+
       setForm((prev) => ({
         ...prev,
-        codice_fiscale: normalizeCF(e.target.value),
-      }))
-    }
-    onBlur={(e) => {
-      void handleCodiceFiscaleAutoComune(e.target.value);
+        codice_fiscale: value,
+      }));
+
+      if (value.length === 16) {
+        void handleCodiceFiscaleAutoComune(value);
+      }
     }}
     placeholder="RSSMRA80A01H501U"
     maxLength={16}
