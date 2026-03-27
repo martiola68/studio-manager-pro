@@ -27,6 +27,13 @@ function normalizeLine(line: string): string {
     .trim();
 }
 
+function normalizeRoleText(value: string): string {
+  return normalizeLine(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function splitUsefulLines(text: string): string[] {
   return normalizeTextForParsing(text)
     .split("\n")
@@ -160,6 +167,7 @@ function decodeBirthDateFromCodiceFiscale(
 
   return `${dd}/${mm}/${yyyy}`;
 }
+
 function cleanPersonName(name: string): string {
   return name
     .replace(/\b(amministratore|amministratrice)\b/gi, "")
@@ -224,6 +232,69 @@ function candidateNamesFromText(text: string): string[] {
     .filter((m) => isLikelyPersonName(m));
 }
 
+function extractQualificaFromText(text: string, tipo: "amministratore" | "socio"): string | null {
+  const normalized = normalizeRoleText(text);
+
+  const rolePatterns: { label: string; regex: RegExp }[] = [
+    {
+      label: "presidente del consiglio di amministrazione",
+      regex: /\bpresidente\s+(del\s+)?consiglio\s+di\s+amministrazione\b/i,
+    },
+    {
+      label: "amministratrice delegata",
+      regex: /\bamministratrice\s+delegata\b/i,
+    },
+    {
+      label: "amministratore delegato",
+      regex: /\bamministratore\s+delegato\b/i,
+    },
+    {
+      label: "amministratore unico",
+      regex: /\bamministratore\s+unico\b/i,
+    },
+    {
+      label: "liquidatore",
+      regex: /\bliquidatore\b/i,
+    },
+    {
+      label: "procuratore",
+      regex: /\bprocuratore\b/i,
+    },
+    {
+      label: "consigliere",
+      regex: /\bconsigliere\b/i,
+    },
+    {
+      label: "presidente",
+      regex: /\bpresidente\b/i,
+    },
+    {
+      label: "amministratore",
+      regex: /\bamministratore\b/i,
+    },
+    {
+      label: "socio",
+      regex: /\bsocio\b/i,
+    },
+    {
+      label: "titolare",
+      regex: /\btitolare\b/i,
+    },
+    {
+      label: "revisore",
+      regex: /\brevisore\b/i,
+    },
+  ];
+
+  for (const pattern of rolePatterns) {
+    if (pattern.regex.test(normalized)) {
+      return pattern.label;
+    }
+  }
+
+  return tipo === "socio" ? "socio" : null;
+}
+
 function parseSubjectBlock(
   blockLines: string[],
   tipo: "amministratore" | "socio"
@@ -253,20 +324,17 @@ function parseSubjectBlock(
 
   if (!nomeLine) return null;
 
-  const qualificaMatch = blockText.match(
-    /\b(amministratore|presidente|consigliere|socio|titolare|procuratore|liquidatore|revisore)\b/i
-  );
-
   const birth = extractBirthDataStrict(blockText);
   const residence = extractResidenceStrict(blockText);
+  const qualifica = extractQualificaFromText(blockLines.join("\n"), tipo);
 
   return {
     nome_cognome: nomeLine,
     codice_fiscale: codiceFiscale,
-    qualifica: qualificaMatch ? qualificaMatch[1] : tipo === "socio" ? "socio" : null,
+    qualifica,
     tipo_soggetto: tipo,
     luogo_nascita: birth.luogo_nascita,
-   data_nascita: birth.data_nascita || decodeBirthDateFromCodiceFiscale(codiceFiscale),
+    data_nascita: birth.data_nascita || decodeBirthDateFromCodiceFiscale(codiceFiscale),
     citta_residenza: residence.citta_residenza,
     indirizzo_residenza: residence.indirizzo_residenza,
     CAP: residence.CAP,
@@ -281,7 +349,7 @@ function parsePeopleFromSection(
   const results: VisuraRappresentante[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const windowSizes = tipo === "socio" ? [12, 10, 8, 6] : [8, 6];
+    const windowSizes = tipo === "socio" ? [12, 10, 8, 6] : [12, 10, 8, 6];
 
     let parsedSubject: VisuraRappresentante | null = null;
     let usedWindow = 0;
@@ -330,18 +398,20 @@ function parseFallbackNameByCf(rawText: string): VisuraRappresentante[] {
     const index = match.index ?? -1;
     if (!cf || index < 0) continue;
 
-    const start = Math.max(0, index - 100);
+    const start = Math.max(0, index - 220);
     const beforeCf = normalized.slice(start, index);
     const candidates = candidateNamesFromText(beforeCf);
     const candidateName = candidates.length ? candidates[candidates.length - 1] : null;
 
     if (!candidateName) continue;
 
+    const qualifica = extractQualificaFromText(beforeCf, "socio");
+
     results.push({
       nome_cognome: candidateName,
       codice_fiscale: cf,
-      qualifica: null,
-      tipo_soggetto: "socio",
+      qualifica,
+      tipo_soggetto: qualifica && qualifica !== "socio" ? "amministratore" : "socio",
       luogo_nascita: null,
       data_nascita: decodeBirthDateFromCodiceFiscale(cf),
       citta_residenza: null,
@@ -381,8 +451,20 @@ export function dedupeByCodiceFiscale(
     const cf = (item.codice_fiscale || "").toUpperCase().trim();
     if (!cf) continue;
 
-    if (!map.has(cf)) {
+    const existing = map.get(cf);
+    if (!existing) {
       map.set(cf, item);
+      continue;
+    }
+
+    const existingQualLen = (existing.qualifica || "").length;
+    const newQualLen = (item.qualifica || "").length;
+
+    if (newQualLen > existingQualLen) {
+      map.set(cf, {
+        ...existing,
+        ...item,
+      });
     }
   }
 
@@ -429,6 +511,15 @@ export function parseVisuraRappresentanti(rawText: string): VisuraRappresentante
         existing.nome_cognome && existing.nome_cognome.trim()
           ? existing.nome_cognome
           : fallbackItem.nome_cognome,
+      qualifica:
+        existing.qualifica && existing.qualifica.trim()
+          ? existing.qualifica
+          : fallbackItem.qualifica,
+      tipo_soggetto:
+        existing.tipo_soggetto === "amministratore" ||
+        fallbackItem.tipo_soggetto === "amministratore"
+          ? "amministratore"
+          : "socio",
     };
   }
 
