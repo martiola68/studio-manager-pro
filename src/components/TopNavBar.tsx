@@ -338,23 +338,35 @@ export function TopNavBar() {
     return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
   };
 
-  const isActive = (item: MenuItem) => {
-    if (item.href && (isExactRoute(item.href) || isPathActive(item.href))) {
-      return true;
+ const isActive = (item: MenuItem) => {
+  const anagraficheOverrides = ["/antiriciclaggio/rappresentanti"];
+
+  // FIX: questa route appartiene visivamente ad "Anagrafiche"
+  // quindi NON deve attivare "Antiriciclaggio"
+  if (item.label === "Antiriciclaggio") {
+    const isOverrideRoute = anagraficheOverrides.some((route) => {
+      return pathname === route || pathname.startsWith(`${route}/`);
+    });
+
+    if (isOverrideRoute) {
+      return false;
     }
+  }
 
-    if (item.children?.length) {
-      return item.children.some((child) => {
-        if (child.href && (isExactRoute(child.href) || isPathActive(child.href))) {
-          return true;
-        }
+  if (item.href && (isExactRoute(item.href) || isPathActive(item.href))) {
+    return true;
+  }
 
-        return false;
-      });
-    }
+  if (item.children?.length) {
+    return item.children.some((child) => {
+      if (!child.href) return false;
 
-    return false;
-  };
+      return isExactRoute(child.href) || isPathActive(child.href);
+    });
+  }
+
+  return false;
+};
 
   const renderMenuItem = (item: MenuItem) => {
     if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
