@@ -68,6 +68,7 @@ export default async function handler(
       num_doc: num_doc ? String(num_doc).trim() : null,
       scadenza_doc: scadenza_doc || null,
       allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
+       rappresentante_legale: rappresentante_legale ?? false,
     };
 
     const { data, error } = await supabaseAdmin
