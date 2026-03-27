@@ -11,8 +11,8 @@ import {
   normalizeCF,
   isValidCF,
   extractDataNascitaFromCF,
+  extractCodiceCatastaleFromCF,
 } from "@/utils/codiceFiscale";
-import { getComuneFromCF } from "@/utils/comuniCatastali";
 
 export const config = {
   api: {
@@ -92,12 +92,50 @@ function getSubjectRole(subject: any): string | null {
   );
 }
 
-async function enrichSubjectFromCF(subject: any) {
+async function getComuneFromCFServer(
+  supabase: any,
+  codiceFiscale: string
+): Promise<{ comune: string; nazionalita: string } | null> {
+  const cf = normalizeCF(codiceFiscale);
+
+  if (!cf || cf.length !== 16 || !isValidCF(cf)) {
+    return null;
+  }
+
+  const codiceCatastale = extractCodiceCatastaleFromCF(cf);
+  if (!codiceCatastale) return null;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("tb_comuni_catastali")
+    .select(
+      "codice_catastale, comune, sigla_provincia, data_inizio_validita, data_fine_validita"
+    )
+    .eq("codice_catastale", codiceCatastale)
+    .or(`data_fine_validita.is.null,data_fine_validita.gte.${today}`)
+    .order("data_inizio_validita", { ascending: false });
+
+  if (error) {
+    console.error("Errore ricerca comune catastale server:", error);
+    return null;
+  }
+
+  const row = data?.[0];
+  if (!row?.comune) return null;
+
+  return {
+    comune: String(row.comune).trim(),
+    nazionalita: "Italiana",
+  };
+}
+
+async function enrichSubjectFromCF(supabase: any, subject: any) {
   const cf = normalizeCF(subject?.codice_fiscale || "");
 
   const baseDataNascita = toIsoDate(subject?.data_nascita);
-  const baseLuogoNascita = (subject?.luogo_nascita || "").trim();
-  const baseNazionalita = (subject?.nazionalita || "").trim();
+  const baseLuogoNascita = String(subject?.luogo_nascita || "").trim();
+  const baseNazionalita = String(subject?.nazionalita || "").trim();
 
   if (!cf || cf.length !== 16 || !isValidCF(cf)) {
     return {
@@ -108,7 +146,7 @@ async function enrichSubjectFromCF(subject: any) {
     };
   }
 
-  const comuneData = await getComuneFromCF(cf);
+  const comuneData = await getComuneFromCFServer(supabase, cf);
   const dataNascitaDaCf = extractDataNascitaFromCF(cf);
 
   return {
@@ -252,7 +290,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const rowsToInsert = await Promise.all(
       daInserire.map(async (subject: any) => {
-        const enriched = await enrichSubjectFromCF(subject);
+        const enriched = await enrichSubjectFromCF(supabase, subject);
 
         return {
           studio_id: studioId,
