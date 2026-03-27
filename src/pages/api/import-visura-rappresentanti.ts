@@ -50,6 +50,42 @@ function toIsoDate(date: string | null | undefined): string | null {
   return null;
 }
 
+function normalizeRole(value: string | null | undefined): string {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isRappresentanteLegaleRole(value: string | null | undefined): boolean {
+  const role = normalizeRole(value);
+  if (!role) return false;
+
+  const labels = [
+    "amministratore delegato",
+    "amministratrice delegata",
+    "presidente del consiglio di amministrazione",
+    "amministratore unico",
+    "amministratore",
+    "liquidatore",
+  ];
+
+  return labels.some((label) => role.includes(label));
+}
+
+function getSubjectRole(subject: any): string | null {
+  return (
+    subject?.qualifica ||
+    subject?.carica ||
+    subject?.ruolo ||
+    subject?.tipo_carica ||
+    subject?.funzione ||
+    null
+  );
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("API import-visura-rappresentanti chiamata:", req.method);
 
@@ -91,13 +127,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const parsed = parseVisuraRappresentanti(text);
 
     console.log(
-  "=== DATE PARSER DEBUG ===",
-      parsed.map((x) => ({
-    nome: x.nome_cognome,
-    cf: x.codice_fiscale,
-    data_nascita: x.data_nascita,
+      "=== DATE PARSER DEBUG ===",
+      parsed.map((x: any) => ({
+        nome: x.nome_cognome,
+        cf: x.codice_fiscale,
+        data_nascita: x.data_nascita,
+        ruolo: getSubjectRole(x),
+        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(x)),
       }))
-      );
+    );
 
     console.log("=== SOGGETTI PARSATI RAW ===");
     console.log(JSON.stringify(parsed, null, 2));
@@ -105,11 +143,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = getServerSupabase() as any;
 
     const scartatiSenzaCf = parsed.filter(
-      (item) => !item.codice_fiscale || !item.codice_fiscale.trim()
+      (item: any) => !item.codice_fiscale || !item.codice_fiscale.trim()
     );
 
     const validi = parsed.filter(
-      (item) => !!item.codice_fiscale && !!item.codice_fiscale.trim()
+      (item: any) => !!item.codice_fiscale && !!item.codice_fiscale.trim()
     );
 
     const unici = dedupeByCodiceFiscale(validi);
@@ -122,8 +160,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(JSON.stringify(unici, null, 2));
 
     const cfList = unici
-      .map((item) => item.codice_fiscale?.toUpperCase().trim())
-      .filter((cf): cf is string => !!cf);
+      .map((item: any) => item.codice_fiscale?.toUpperCase().trim())
+      .filter((cf: unknown): cf is string => !!cf && typeof cf === "string");
 
     let existingSet = new Set<string>();
 
@@ -146,12 +184,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
-    const giaPresenti = unici.filter((item) =>
+    const giaPresenti = unici.filter((item: any) =>
       existingSet.has(item.codice_fiscale!.toUpperCase().trim())
     );
 
     const daInserire = unici.filter(
-      (item) => !existingSet.has(item.codice_fiscale!.toUpperCase().trim())
+      (item: any) => !existingSet.has(item.codice_fiscale!.toUpperCase().trim())
     );
 
     console.log("=== GIA PRESENTI ===");
@@ -162,14 +200,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(
       "=== DATE DEBUG ===",
-      daInserire.map((x) => ({
+      daInserire.map((x: any) => ({
         nome: x.nome_cognome,
         originale: x.data_nascita,
         convertita: toIsoDate(x.data_nascita),
+        ruolo: getSubjectRole(x),
+        rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(x)),
       }))
     );
 
-    const rowsToInsert = daInserire.map((subject) => ({
+    const rowsToInsert = daInserire.map((subject: any) => ({
       studio_id: studioId,
       nome_cognome: subject.nome_cognome || null,
       codice_fiscale: subject.codice_fiscale || null,
@@ -179,6 +219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       indirizzo_residenza: subject.indirizzo_residenza || null,
       nazionalita: subject.nazionalita || null,
       CAP: subject.CAP || null,
+      rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(subject)),
     }));
 
     let inserted = 0;
