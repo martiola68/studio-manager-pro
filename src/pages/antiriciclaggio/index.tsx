@@ -449,7 +449,7 @@ export default function AntiriciclaggioPage() {
     void init();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     if (typeof window === "undefined") return;
 
     const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
@@ -472,29 +472,7 @@ export default function AntiriciclaggioPage() {
         clearAccessState();
       }
     };
-
-useEffect(() => {
-  const handleRouteChange = () => {
-    // Pulisco stato AML
-    setUnlockedSocietaId(null);
-    setSocietaFilter("");
-    setSelectedSocieta(null);
-    clearAmlTimers();
-    closeTimeoutModal();
-
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("antiriciclaggio_unlocked_societa_id");
-      sessionStorage.removeItem("antiriciclaggio_selected_societa_id");
-    }
-  };
-
-  router.events.on("routeChangeStart", handleRouteChange);
-
-  return () => {
-    router.events.off("routeChangeStart", handleRouteChange);
-  };
-}, [router.events]);
-    
+ 
     router.events.on("routeChangeStart", handleRouteChangeStart);
 
     return () => {
