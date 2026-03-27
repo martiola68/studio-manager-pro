@@ -48,6 +48,50 @@ function formatRecipients(emails: string | string[]): EmailRecipient[] {
   }));
 }
 
+function extractErrorMessage(error: any): string {
+  if (!error) return "Errore sconosciuto";
+
+  if (typeof error === "string") return error;
+  if (typeof error?.message === "string" && error.message.trim()) return error.message;
+
+  if (typeof error?.error === "string") return error.error;
+  if (typeof error?.error?.message === "string") return error.error.message;
+
+  if (typeof error?.details === "string") return error.details;
+  if (typeof error?.response?.data?.error?.message === "string") {
+    return error.response.data.error.message;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Errore sconosciuto";
+  }
+}
+
+function isAuthOrPermissionError(error: any): boolean {
+  const status =
+    error?.status ??
+    error?.statusCode ??
+    error?.response?.status ??
+    error?.response?.data?.status;
+
+  const message = extractErrorMessage(error).toLowerCase();
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    message.includes("403") ||
+    message.includes("401") ||
+    message.includes("forbidden") ||
+    message.includes("unauthorized") ||
+    message.includes("access denied") ||
+    message.includes("insufficient privileges") ||
+    message.includes("token") ||
+    message.includes("consent")
+  );
+}
+
 async function getUtenteMicrosoftContext(
   userId: string,
   microsoftConnectionId: string
@@ -162,9 +206,18 @@ export async function sendEmailViaMicrosoft(
     });
 
     console.log("✅ Email inviata con successo via Microsoft 365");
-  } catch (error: any) {
+ } catch (error: any) {
     console.error("❌ Errore invio email Microsoft:", error);
-    throw new Error(`Errore invio email: ${error.message}`);
+
+    const detailedMessage = extractErrorMessage(error);
+
+    if (isAuthOrPermissionError(error)) {
+      throw new Error(
+        "Connessione Microsoft scaduta o non valida. Disconnetti e riconnetti l'account Microsoft selezionato."
+      );
+    }
+
+    throw new Error(`Errore invio email: ${detailedMessage}`);
   }
 }
 
@@ -175,28 +228,16 @@ export async function canUseMicrosoftEmail(
   try {
     if (!microsoftConnectionId) return false;
 
-    const { data: utente, error } = await supabase
-      .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
-      .single();
+    await getUtenteMicrosoftContext(userId, microsoftConnectionId);
 
-    if (error || !utente?.studio_id) {
-      return false;
-    }
+    await graphApiCall(userId, "/me?$select=id", {
+      method: "GET",
+      microsoftConnectionId,
+    });
 
-   const { data: tokenRow, error: tokenErr } = await (supabase as any)
-  .from("tbmicrosoft365_user_tokens")
-  .select("id")
-  .eq("studio_id", utente.studio_id)
-  .eq("microsoft_connection_id", microsoftConnectionId)
-  .is("revoked_at", null)
-  .order("connected_at", { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-    return !tokenErr && !!tokenRow?.id;
-  } catch {
+    return true;
+  } catch (error) {
+    console.warn("Connessione Microsoft non utilizzabile:", extractErrorMessage(error));
     return false;
   }
 }
