@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = getServerSupabase();
 
     // puoi cambiare il path se metti il file altrove
-    const filePath = path.join(process.cwd(), "data", "gi_comuni_validita.xlsx");
+    const filePath = path.join(process.cwd(), "gi_comuni_validita.xlsx");
 
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
