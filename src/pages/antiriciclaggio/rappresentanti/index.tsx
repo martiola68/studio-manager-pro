@@ -362,7 +362,7 @@ export default function RappresentantiIndexPage() {
           ) : (
             <div className="overflow-x-auto rounded-md border">
               <div className="min-w-[1450px]">
-<div className="sticky top-0 z-10 grid grid-cols-[1.9fr_1.35fr_1.15fr_1fr_1fr_1.15fr_90px_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur"</div>
+<div className="sticky top-0 z-10 grid grid-cols-[1.9fr_1.35fr_1.15fr_1fr_1fr_1.15fr_90px_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div>Codice fiscale</div>
                   <div>Email</div>
