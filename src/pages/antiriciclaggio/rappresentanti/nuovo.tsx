@@ -931,45 +931,6 @@ export default function NuovoRappresentantePage() {
                   </Label>
                 </div>
 
-                <div className="md:col-span-2">
-                  <Label htmlFor="microsoft_connection_id">Connessione Microsoft</Label>
-                  <Select
-                    value={form.microsoft_connection_id || "__none__"}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        microsoft_connection_id: value === "__none__" ? "" : value,
-                      }))
-                    }
-                    disabled={loadingMicrosoftConnections}
-                  >
-                    <SelectTrigger id="microsoft_connection_id">
-                      <SelectValue
-                        placeholder={
-                          loadingMicrosoftConnections
-                            ? "Caricamento connessioni..."
-                            : "Seleziona connessione Microsoft"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Nessuna connessione</SelectItem>
-                      {microsoftConnections.map((conn) => (
-                        <SelectItem
-                          key={conn.id}
-                          value={conn.id}
-                          disabled={!isConnectionEnabled(conn)}
-                        >
-                          {getMicrosoftConnectionLabel(conn)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    La connessione selezionata verrà usata per l'invio delle email al rappresentante.
-                  </p>
-                </div>
-
                 <div>
                   <Label htmlFor="nazionalita">Nazionalità</Label>
                   <Input
