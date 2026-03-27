@@ -30,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       num_doc,
       scadenza_doc,
       allegato_doc,
+      rappresentante_legale,
     } = req.body || {};
 
     if (!id) {
@@ -57,6 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       num_doc: num_doc ? String(num_doc).trim() : null,
       scadenza_doc: scadenza_doc || null,
       allegato_doc: allegato_doc ? String(allegato_doc).trim() : null,
+      rappresentante_legale: rappresentante_legale ?? null,
     };
 
     const { data, error } = await supabase
