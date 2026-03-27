@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ const BUCKET_NAME = "allegati";
 /* =========================================================
    TYPES
    ========================================================= */
+
 type TipoDocumento = "" | "Carta di identità" | "Passaporto";
 
 type FormState = {
@@ -46,6 +48,7 @@ type FormState = {
   scadenza_doc: string;
   allegato_doc: string;
   microsoft_connection_id: string;
+  rappresentante_legale: boolean;
 };
 
 type RappLegaleRow = {
@@ -65,6 +68,7 @@ type RappLegaleRow = {
   scadenza_doc?: string | null;
   allegato_doc?: string | null;
   microsoft_connection_id?: string | null;
+  rappresentante_legale?: boolean | null;
 };
 
 type MicrosoftConnectionRow = {
@@ -96,11 +100,13 @@ const initialFormState: FormState = {
   scadenza_doc: "",
   allegato_doc: "",
   microsoft_connection_id: "",
+  rappresentante_legale: false,
 };
 
 /* =========================================================
    HELPERS
    ========================================================= */
+
 function normalizeDateForInput(value?: string | null): string {
   if (!value) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -134,6 +140,7 @@ function mapRowToForm(row?: RappLegaleRow | null): FormState {
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
     allegato_doc: row?.allegato_doc ?? "",
     microsoft_connection_id: row?.microsoft_connection_id ?? "",
+    rappresentante_legale: row?.rappresentante_legale ?? false,
   };
 }
 
@@ -272,47 +279,47 @@ export default function NuovoRappresentantePage() {
 
     let cancelled = false;
 
-  const loadMicrosoftConnections = async () => {
-  const supabase = getSupabaseClient() as any;
-  setLoadingMicrosoftConnections(true);
+    const loadMicrosoftConnections = async () => {
+      const supabase = getSupabaseClient() as any;
+      setLoadingMicrosoftConnections(true);
 
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-    const userId = session?.user?.id || "";
+        const userId = session?.user?.id || "";
 
-    if (!userId) {
-      throw new Error("Utente non autenticato.");
-    }
+        if (!userId) {
+          throw new Error("Utente non autenticato.");
+        }
 
-    const rows = (await getMicrosoftConnectionsForUser(
-      studioId,
-      userId
-    )) as MicrosoftConnectionRow[];
+        const rows = (await getMicrosoftConnectionsForUser(
+          studioId,
+          userId
+        )) as MicrosoftConnectionRow[];
 
-    if (cancelled) return;
+        if (cancelled) return;
 
-    setMicrosoftConnections(rows);
+        setMicrosoftConnections(rows);
 
-    setForm((prev) => ({
-      ...prev,
-      microsoft_connection_id: resolveMicrosoftConnectionId(
-        rows as any,
-        prev.microsoft_connection_id
-      ),
-    }));
-  } catch (error: any) {
-    if (!cancelled) {
-      setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
-    }
-  } finally {
-    if (!cancelled) {
-      setLoadingMicrosoftConnections(false);
-    }
-  }
-};
+        setForm((prev) => ({
+          ...prev,
+          microsoft_connection_id: resolveMicrosoftConnectionId(
+            rows as any,
+            prev.microsoft_connection_id
+          ),
+        }));
+      } catch (error: any) {
+        if (!cancelled) {
+          setErrMsg((prev) => prev || error?.message || "Errore connessioni Microsoft");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMicrosoftConnections(false);
+        }
+      }
+    };
 
     void loadMicrosoftConnections();
 
@@ -360,7 +367,7 @@ export default function NuovoRappresentantePage() {
           const { data, error } = await supabase
             .from("rapp_legali")
             .select(
-              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, NumDoc, scadenza_doc, allegato_doc, microsoft_connection_id"
+              "id, studio_id, nome_cognome, codice_fiscale, luogo_nascita, data_nascita, citta_residenza, indirizzo_residenza, CAP, nazionalita, email, tipo_doc, num_doc, scadenza_doc, allegato_doc, microsoft_connection_id, rappresentante_legale"
             )
             .eq("id", recordId)
             .single();
@@ -378,28 +385,28 @@ export default function NuovoRappresentantePage() {
 
         if (cancelled) return;
 
-      const mapped = mapRowToForm(row);
+        const mapped = mapRowToForm(row);
 
-setForm((prev) => ({
-  ...mapped,
-  microsoft_connection_id:
-    mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
-}));
+        setForm((prev) => ({
+          ...mapped,
+          microsoft_connection_id:
+            mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
+        }));
 
-setInitialLoadedForm((prev) => ({
-  ...mapped,
-  microsoft_connection_id:
-    mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
-}));
+        setInitialLoadedForm((prev) => ({
+          ...mapped,
+          microsoft_connection_id:
+            mapped.microsoft_connection_id || prev.microsoft_connection_id || "",
+        }));
 
-if (row.studio_id) {
-  const sid = String(row.studio_id);
-  setStudioId((prev) => prev || sid);
+        if (row.studio_id) {
+          const sid = String(row.studio_id);
+          setStudioId((prev) => prev || sid);
 
-  if (typeof window !== "undefined" && sid) {
-    localStorage.setItem("studio_id", sid);
-  }
-}
+          if (typeof window !== "undefined" && sid) {
+            localStorage.setItem("studio_id", sid);
+          }
+        }
       } catch (error: any) {
         if (!cancelled) {
           setErrMsg(error?.message || "Errore caricamento rappresentante");
@@ -438,6 +445,7 @@ if (row.studio_id) {
   /* =========================================================
      ACTIONS
      ========================================================= */
+
   function resetForm() {
     setOkMsg(null);
     setErrMsg(null);
@@ -555,19 +563,20 @@ if (row.studio_id) {
         return;
       }
 
-   const resolvedConnectionId = resolveMicrosoftConnectionId(
-  microsoftConnections as any,
-  form.microsoft_connection_id
-);
+      const resolvedConnectionId = resolveMicrosoftConnectionId(
+        microsoftConnections as any,
+        form.microsoft_connection_id
+      );
 
-const connection = microsoftConnections.find(
-  (c) => c.id === resolvedConnectionId
-);
+      const connection = microsoftConnections.find(
+        (c) => c.id === resolvedConnectionId
+      );
 
-if (!connection || !resolvedConnectionId) {
-  alert("La connessione Microsoft selezionata non è disponibile.");
-  return;
-}
+      if (!connection || !resolvedConnectionId) {
+        alert("La connessione Microsoft selezionata non è disponibile.");
+        return;
+      }
+
       setSendingPublicDoc(true);
 
       token =
@@ -631,6 +640,7 @@ if (!connection || !resolvedConnectionId) {
           </p>
 
           <p><strong>Documenti accettati:</strong></p>
+
           <ul style="padding-left: 18px; margin: 8px 0;">
             <li>Carta di identità</li>
             <li>Passaporto</li>
@@ -751,6 +761,7 @@ if (!connection || !resolvedConnectionId) {
         scadenza_doc: form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
         microsoft_connection_id: form.microsoft_connection_id || null,
+        rappresentante_legale: form.rappresentante_legale ?? false,
       };
 
       const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
@@ -904,6 +915,22 @@ if (!connection || !resolvedConnectionId) {
                   />
                 </div>
 
+                <div className="md:col-span-2 flex items-center gap-2 rounded-md border p-3">
+                  <Checkbox
+                    id="rappresentante_legale"
+                    checked={form.rappresentante_legale}
+                    onCheckedChange={(checked) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        rappresentante_legale: checked === true,
+                      }))
+                    }
+                  />
+                  <Label htmlFor="rappresentante_legale" className="cursor-pointer">
+                    Rappresentante legale
+                  </Label>
+                </div>
+
                 <div className="md:col-span-2">
                   <Label htmlFor="microsoft_connection_id">Connessione Microsoft</Label>
                   <Select
@@ -928,7 +955,11 @@ if (!connection || !resolvedConnectionId) {
                     <SelectContent>
                       <SelectItem value="__none__">Nessuna connessione</SelectItem>
                       {microsoftConnections.map((conn) => (
-                        <SelectItem key={conn.id} value={conn.id}>
+                        <SelectItem
+                          key={conn.id}
+                          value={conn.id}
+                          disabled={!isConnectionEnabled(conn)}
+                        >
                           {getMicrosoftConnectionLabel(conn)}
                         </SelectItem>
                       ))}
@@ -1131,15 +1162,15 @@ if (!connection || !resolvedConnectionId) {
                       Rimuovi
                     </Button>
 
-                   <Button
-  type="button"
-  onClick={handleInviaRichiestaDocumento}
-  disabled={sendingPublicDoc || !recordId}
-  variant="outline"
-  className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
->
-  {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
-</Button>
+                    <Button
+                      type="button"
+                      onClick={handleInviaRichiestaDocumento}
+                      disabled={sendingPublicDoc || !recordId}
+                      variant="outline"
+                      className="h-10 border-red-600 bg-white px-4 text-red-600 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                    >
+                      {sendingPublicDoc ? "Invio..." : "Richiedi nuovo documento"}
+                    </Button>
                   </div>
 
                   {publicDocUrl && (
