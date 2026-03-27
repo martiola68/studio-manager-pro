@@ -15,6 +15,7 @@ type Rapp = {
   tipo_doc: string | null;
   scadenza_doc: string | null;
   allegato_doc: string | null;
+  rappresentante_legale: boolean | null;
   created_at?: string | null;
 };
 
@@ -90,6 +91,16 @@ function AllegatoIndicator({ present }: { present: boolean }) {
   );
 }
 
+function RappLegaleIndicator({ value }: { value: boolean | null | undefined }) {
+  return value ? (
+    <div className="flex items-center justify-center text-green-600">
+      <Check className="h-4 w-4" />
+    </div>
+  ) : (
+    <div className="flex items-center justify-center text-muted-foreground">-</div>
+  );
+}
+
 export default function RappresentantiIndexPage() {
   const router = useRouter();
 
@@ -154,7 +165,7 @@ export default function RappresentantiIndexPage() {
       const { data, error } = await supabase
         .from("rapp_legali")
         .select(
-          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, created_at"
+          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, created_at"
         )
         .eq("studio_id", studioId)
         .order("nome_cognome", { ascending: true });
@@ -350,14 +361,15 @@ export default function RappresentantiIndexPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1560px]">
-                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+              <div className="min-w-[1700px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
                   <div>Codice fiscale</div>
                   <div>Email</div>
                   <div>Tipo documento</div>
                   <div>Scadenza documento</div>
                   <div>Documento allegato</div>
+                  <div className="text-center">Rapp. legale</div>
                   <div className="text-right">Azioni</div>
                 </div>
 
@@ -365,12 +377,12 @@ export default function RappresentantiIndexPage() {
                   {filtered.map((r) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                      className="grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
                       <div>
-                      <EmailIndicator present={!!r.email} />
+                        <EmailIndicator present={!!r.email} />
                       </div>
                       <div className="truncate">{r.tipo_doc || "-"}</div>
                       <div className="min-w-[120px]">
@@ -378,6 +390,9 @@ export default function RappresentantiIndexPage() {
                       </div>
                       <div className="min-w-[160px]">
                         <AllegatoIndicator present={!!r.allegato_doc} />
+                      </div>
+                      <div className="flex justify-center">
+                        <RappLegaleIndicator value={r.rappresentante_legale} />
                       </div>
 
                       <div className="flex items-center justify-end gap-1">
