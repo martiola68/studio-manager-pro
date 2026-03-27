@@ -76,7 +76,7 @@ function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
 function AllegatoIndicator({ present }: { present: boolean }) {
   if (present) {
     return (
-      <div className="flex min-w-[140px] items-center gap-2 whitespace-nowrap text-green-600">
+     <div className="flex min-w-[105px] items-center gap-1.5 whitespace-nowrap text-green-600">
         <Check className="h-4 w-4 shrink-0" />
         <span className="text-sm font-medium shrink-0">Presente</span>
       </div>
@@ -84,7 +84,7 @@ function AllegatoIndicator({ present }: { present: boolean }) {
   }
 
   return (
-    <div className="flex min-w-[140px] items-center gap-2 whitespace-nowrap text-red-600">
+    <div className="flex min-w-[105px] items-center gap-1.5 whitespace-nowrap text-red-600">
       <X className="h-4 w-4 shrink-0" />
       <span className="text-sm font-medium shrink-0">Mancante</span>
     </div>
@@ -377,7 +377,7 @@ export default function RappresentantiIndexPage() {
                   {filtered.map((r) => (
                     <div
                       key={r.id}
-                      className="grid grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1.2fr_1.7fr_120px_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
+                     className="grid grid-cols-[1.9fr_1.35fr_1.15fr_1fr_1fr_1.15fr_90px_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
                     >
                       <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
                       <div className="truncate">{r.codice_fiscale || "-"}</div>
