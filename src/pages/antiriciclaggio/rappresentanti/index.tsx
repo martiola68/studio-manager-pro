@@ -97,7 +97,9 @@ function RappLegaleIndicator({ value }: { value: boolean | null | undefined }) {
       <Check className="h-4 w-4" />
     </div>
   ) : (
-    <div className="flex items-center justify-center text-muted-foreground">-</div>
+    <div className="flex items-center justify-center text-red-600">
+      <X className="h-4 w-4" />
+    </div>
   );
 }
 
