@@ -632,6 +632,7 @@ export default function NuovoRappresentantePage() {
           public_doc_sent_at: nowIso,
           public_doc_opened_at: null,
           public_doc_submitted_at: null,
+          doc_richiesto_il: nowIso,
           microsoft_connection_id: form.microsoft_connection_id,
         })
         .eq("id", recordId);
