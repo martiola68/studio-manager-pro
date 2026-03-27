@@ -237,77 +237,91 @@ export function TopNavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  const menuItems: MenuItem[] = [
-    { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
-    { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-    { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
-    { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
-    { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
-    {
-      label: "Scadenzario",
-      icon: <FileText className="h-4 w-4" />,
-      children: [
-        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
-        { label: "Calendario", href: "/scadenze/calendario", icon: null },
-        { label: "IVA", href: "/scadenze/iva", icon: null },
-        { label: "CCGG", href: "/scadenze/ccgg", icon: null },
-        { label: "CU", href: "/scadenze/cu", icon: null },
-        { label: "IMU", href: "/scadenze/imu", icon: null },
-        { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
-        { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
-        { label: "770", href: "/scadenze/modello-770", icon: null },
-        { label: "LIPE", href: "/scadenze/lipe", icon: null },
-        { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
-        { label: "Proforma", href: "/scadenze/proforma", icon: null },
-      ],
-    },
-    { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-    { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-    { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
-    {
-      label: "Antiriciclaggio",
-      icon: <ShieldCheck className="h-5 w-5" />,
-      children: [
-        { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
-        { label: "Rappresentanti", href: "/antiriciclaggio/rappresentanti", icon: null },
-        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
-        { label: "Responsabili AV", href: "/antiriciclaggio/responsabili-av", icon: null },
-        { label: "Società Responsabili AV", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
-        { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
-      ],
-    },
-    { label: "Clienti", icon: <Users className="h-4 w-4" />, href: "/clienti" },
-    {
-      label: "Microsoft 365",
-      icon: <Cloud className="h-4 w-4" />,
-      children: [
-        {
-          label: "Connessioni",
-          href: "/microsoft365?tab=connessioni",
-          icon: <Link2 className="h-4 w-4" />,
-        },
-        {
-          label: "Sync",
-          href: "/microsoft365?tab=sync",
-          icon: <RefreshCcw className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      label: "Impostazioni",
-      icon: <Settings className="h-4 w-4" />,
-      adminOnly: true,
-      children: [
-        { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-        { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-        { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-        { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-      ],
-    },
-  ];
+ const menuItems: MenuItem[] = [
+  { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
+  { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+  { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
+  { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
+  { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
+
+  {
+    label: "Scadenzario",
+    icon: <FileText className="h-4 w-4" />,
+    children: [
+      { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
+      { label: "Calendario", href: "/scadenze/calendario", icon: null },
+      { label: "IVA", href: "/scadenze/iva", icon: null },
+      { label: "CCGG", href: "/scadenze/ccgg", icon: null },
+      { label: "CU", href: "/scadenze/cu", icon: null },
+      { label: "IMU", href: "/scadenze/imu", icon: null },
+      { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
+      { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
+      { label: "770", href: "/scadenze/modello-770", icon: null },
+      { label: "LIPE", href: "/scadenze/lipe", icon: null },
+      { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
+      { label: "Proforma", href: "/scadenze/proforma", icon: null },
+    ],
+  },
+
+  { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+  { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+  { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
+
+  // 🔴 ANTIRICICLAGGIO RIPULITO
+  {
+    label: "Antiriciclaggio",
+    icon: <ShieldCheck className="h-5 w-5" />,
+    children: [
+      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
+      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
+      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: null },
+      { label: "Soggetto responsabile", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
+      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
+    ],
+  },
+
+  // 🟢 NUOVO MENU ANAGRAFICHE
+  {
+    label: "Anagrafiche",
+    icon: <Users className="h-4 w-4" />,
+    children: [
+      { label: "Clienti", href: "/clienti", icon: null },
+      { label: "Rappresentanti e soci", href: "/antiriciclaggio/rappresentanti", icon: null },
+    ],
+  },
+
+  {
+    label: "Microsoft 365",
+    icon: <Cloud className="h-4 w-4" />,
+    children: [
+      {
+        label: "Connessioni",
+        href: "/microsoft365?tab=connessioni",
+        icon: <Link2 className="h-4 w-4" />,
+      },
+      {
+        label: "Sync",
+        href: "/microsoft365?tab=sync",
+        icon: <RefreshCcw className="h-4 w-4" />,
+      },
+    ],
+  },
+
+  {
+    label: "Impostazioni",
+    icon: <Settings className="h-4 w-4" />,
+    adminOnly: true,
+    children: [
+      { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+      { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+      { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+      { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+      { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+    ],
+  },
+];
 
   const isActive = (href: string) => pathname === href;
 
