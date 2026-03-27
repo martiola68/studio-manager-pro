@@ -926,8 +926,6 @@ export default function NuovoRappresentantePage() {
                     placeholder="Mario Rossi"
                   />
                 </div>
-
-               <div>
 <div>
   <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
   <Input
