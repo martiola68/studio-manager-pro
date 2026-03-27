@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
+import {
+  isValidCF,
+  normalizeCF,
+  extractDataNascitaFromCF,
+} from "@/utils/codiceFiscale";
 import { getComuneFromCF } from "@/utils/comuniCatastali";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
@@ -447,7 +451,7 @@ export default function NuovoRappresentantePage() {
      ACTIONS
      ========================================================= */
 
-    async function handleCodiceFiscaleAutoComune(rawValue: string) {
+     async function handleCodiceFiscaleAutoComune(rawValue: string) {
     const normalized = normalizeCF(rawValue);
 
     setForm((prev) => ({
@@ -460,20 +464,16 @@ export default function NuovoRappresentantePage() {
 
     try {
       const comune = await getComuneFromCF(normalized);
-
-      if (!comune) return;
-
-        const luogo = comune;
-
-      if (!luogo) return;
+      const dataNascita = extractDataNascitaFromCF(normalized);
 
       setForm((prev) => ({
         ...prev,
         codice_fiscale: normalized,
-        luogo_nascita: prev.luogo_nascita?.trim() ? prev.luogo_nascita : luogo,
+        luogo_nascita: prev.luogo_nascita?.trim() ? prev.luogo_nascita : comune || "",
+        data_nascita: prev.data_nascita?.trim() ? prev.data_nascita : dataNascita || "",
       }));
     } catch (error) {
-      console.error("Errore lookup comune da codice fiscale:", error);
+      console.error("Errore lookup dati da codice fiscale:", error);
     }
   }
   
