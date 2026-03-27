@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { isValidCF, normalizeCF } from "@/utils/codiceFiscale";
+import { getComuneFromCF } from "@/utils/comuniCatastali";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
 
 import {
@@ -446,6 +447,39 @@ export default function NuovoRappresentantePage() {
      ACTIONS
      ========================================================= */
 
+    async function handleCodiceFiscaleAutoComune(rawValue: string) {
+    const normalized = normalizeCF(rawValue);
+
+    setForm((prev) => ({
+      ...prev,
+      codice_fiscale: normalized,
+    }));
+
+    if (normalized.length !== 16) return;
+    if (!isValidCF(normalized)) return;
+
+    try {
+      const comune = await getComuneFromCF(normalized);
+
+      if (!comune) return;
+
+      const luogo =
+        typeof comune === "string"
+          ? comune
+          : comune.nome || comune.comune || comune.denominazione || "";
+
+      if (!luogo) return;
+
+      setForm((prev) => ({
+        ...prev,
+        codice_fiscale: normalized,
+        luogo_nascita: prev.luogo_nascita?.trim() ? prev.luogo_nascita : luogo,
+      }));
+    } catch (error) {
+      console.error("Errore lookup comune da codice fiscale:", error);
+    }
+  }
+  
   function resetForm() {
     setOkMsg(null);
     setErrMsg(null);
@@ -881,26 +915,29 @@ export default function NuovoRappresentantePage() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
-                  <Input
-                    id="codice_fiscale"
-                    value={form.codice_fiscale}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        codice_fiscale: e.target.value.toUpperCase(),
-                      }))
-                    }
-                    placeholder="RSSMRA80A01H501U"
-                    maxLength={16}
-                  />
-                  {cf.length === 16 && !cfOk && (
-                    <p className="mt-1 text-sm text-red-500">
-                      Codice fiscale non valido
-                    </p>
-                  )}
-                </div>
+               <div>
+  <Label htmlFor="codice_fiscale">Codice Fiscale *</Label>
+  <Input
+    id="codice_fiscale"
+    value={form.codice_fiscale}
+    onChange={(e) =>
+      setForm((prev) => ({
+        ...prev,
+        codice_fiscale: normalizeCF(e.target.value),
+      }))
+    }
+    onBlur={(e) => {
+      void handleCodiceFiscaleAutoComune(e.target.value);
+    }}
+    placeholder="RSSMRA80A01H501U"
+    maxLength={16}
+  />
+  {cf.length === 16 && !cfOk && (
+    <p className="mt-1 text-sm text-red-500">
+      Codice fiscale non valido
+    </p>
+  )}
+</div>
 
                 <div>
                   <Label htmlFor="email">Email</Label>
