@@ -275,7 +275,7 @@ export function TopNavBar() {
       { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
       { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
       { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: null },
-      { label: "Soggetto responsabile", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
+      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
       { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
     ],
   },
