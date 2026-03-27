@@ -473,6 +473,28 @@ export default function AntiriciclaggioPage() {
       }
     };
 
+useEffect(() => {
+  const handleRouteChange = () => {
+    // Pulisco stato AML
+    setUnlockedSocietaId(null);
+    setSocietaFilter("");
+    setSelectedSocieta(null);
+    clearAmlTimers();
+    closeTimeoutModal();
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("antiriciclaggio_unlocked_societa_id");
+      sessionStorage.removeItem("antiriciclaggio_selected_societa_id");
+    }
+  };
+
+  router.events.on("routeChangeStart", handleRouteChange);
+
+  return () => {
+    router.events.off("routeChangeStart", handleRouteChange);
+  };
+}, [router.events]);
+    
     router.events.on("routeChangeStart", handleRouteChangeStart);
 
     return () => {
