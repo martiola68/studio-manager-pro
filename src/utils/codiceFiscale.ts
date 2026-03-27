@@ -112,3 +112,78 @@ export function extractCodiceCatastaleFromCF(cfRaw?: string | null) {
 
   return cf.slice(11, 15);
 }
+
+export function extractCodiceCatastaleFromCF(codiceFiscale: string): string {
+  const cf = normalizeCF(codiceFiscale);
+  if (cf.length !== 16) return "";
+  return cf.slice(11, 15);
+}
+
+function decodeOmocodiaChar(char: string): string {
+  const map: Record<string, string> = {
+    L: "0",
+    M: "1",
+    N: "2",
+    P: "3",
+    Q: "4",
+    R: "5",
+    S: "6",
+    T: "7",
+    U: "8",
+    V: "9",
+  };
+
+  const upper = char.toUpperCase();
+  return map[upper] ?? upper;
+}
+
+export function extractDataNascitaFromCF(codiceFiscale: string): string | null {
+  const cf = normalizeCF(codiceFiscale);
+  if (cf.length !== 16) return null;
+
+  const yearPart =
+    decodeOmocodiaChar(cf[6]) + decodeOmocodiaChar(cf[7]);
+
+  const monthChar = cf[8].toUpperCase();
+
+  const dayPart =
+    decodeOmocodiaChar(cf[9]) + decodeOmocodiaChar(cf[10]);
+
+  const monthMap: Record<string, number> = {
+    A: 1,
+    B: 2,
+    C: 3,
+    D: 4,
+    E: 5,
+    H: 6,
+    L: 7,
+    M: 8,
+    P: 9,
+    R: 10,
+    S: 11,
+    T: 12,
+  };
+
+  const month = monthMap[monthChar];
+  if (!month) return null;
+
+  let day = Number(dayPart);
+  if (Number.isNaN(day)) return null;
+
+  if (day > 40) {
+    day -= 40;
+  }
+
+  if (day < 1 || day > 31) return null;
+
+  const yy = Number(yearPart);
+  if (Number.isNaN(yy)) return null;
+
+  const currentYear = new Date().getFullYear() % 100;
+  const fullYear = yy <= currentYear ? 2000 + yy : 1900 + yy;
+
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+
+  return `${fullYear}-${mm}-${dd}`;
+}
