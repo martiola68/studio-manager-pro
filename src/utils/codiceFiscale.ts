@@ -105,17 +105,11 @@ export function isValidCF(cfRaw: string) {
   return expected === cf[15];
 }
 
-export function extractCodiceCatastaleFromCF(cfRaw?: string | null) {
+export function extractCodiceCatastaleFromCF(cfRaw?: string | null): string | null {
   const cf = normalizeCF(cfRaw || "");
 
   if (!CF_RE.test(cf)) return null;
 
-  return cf.slice(11, 15);
-}
-
-export function extractCodiceCatastaleFromCF(codiceFiscale: string): string {
-  const cf = normalizeCF(codiceFiscale);
-  if (cf.length !== 16) return "";
   return cf.slice(11, 15);
 }
 
@@ -139,15 +133,12 @@ function decodeOmocodiaChar(char: string): string {
 
 export function extractDataNascitaFromCF(codiceFiscale: string): string | null {
   const cf = normalizeCF(codiceFiscale);
-  if (cf.length !== 16) return null;
 
-  const yearPart =
-    decodeOmocodiaChar(cf[6]) + decodeOmocodiaChar(cf[7]);
+  if (!CF_RE.test(cf)) return null;
 
+  const yearPart = decodeOmocodiaChar(cf[6]) + decodeOmocodiaChar(cf[7]);
   const monthChar = cf[8].toUpperCase();
-
-  const dayPart =
-    decodeOmocodiaChar(cf[9]) + decodeOmocodiaChar(cf[10]);
+  const dayPart = decodeOmocodiaChar(cf[9]) + decodeOmocodiaChar(cf[10]);
 
   const monthMap: Record<string, number> = {
     A: 1,
