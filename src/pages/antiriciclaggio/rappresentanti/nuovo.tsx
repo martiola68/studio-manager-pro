@@ -463,10 +463,7 @@ export default function NuovoRappresentantePage() {
 
       if (!comune) return;
 
-      const luogo =
-        typeof comune === "string"
-          ? comune
-          : comune.nome || comune.comune || comune.denominazione || "";
+        const luogo = comune;
 
       if (!luogo) return;
 
