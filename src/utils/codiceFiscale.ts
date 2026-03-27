@@ -104,3 +104,11 @@ export function isValidCF(cfRaw: string) {
   const expected = computeCFCheckChar(cf.substring(0, 15));
   return expected === cf[15];
 }
+
+export function extractCodiceCatastaleFromCF(cfRaw?: string | null) {
+  const cf = normalizeCF(cfRaw || "");
+
+  if (!CF_RE.test(cf)) return null;
+
+  return cf.slice(11, 15);
+}
