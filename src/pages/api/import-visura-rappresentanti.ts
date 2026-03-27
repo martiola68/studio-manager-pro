@@ -7,6 +7,12 @@ import {
   parseVisuraRappresentanti,
   dedupeByCodiceFiscale,
 } from "@/utils/visuraRappresentantiMapper";
+import {
+  normalizeCF,
+  isValidCF,
+  extractDataNascitaFromCF,
+} from "@/utils/codiceFiscale";
+import { getComuneFromCF } from "@/utils/comuniCatastali";
 
 export const config = {
   api: {
@@ -34,7 +40,7 @@ async function extractTextFromPdfBuffer(buffer: Buffer): Promise<string> {
 function toIsoDate(date: string | null | undefined): string | null {
   if (!date) return null;
 
-  const trimmed = date.trim();
+  const trimmed = String(date).trim();
 
   const itaMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (itaMatch) {
@@ -84,6 +90,33 @@ function getSubjectRole(subject: any): string | null {
     subject?.funzione ||
     null
   );
+}
+
+async function enrichSubjectFromCF(subject: any) {
+  const cf = normalizeCF(subject?.codice_fiscale || "");
+
+  const baseDataNascita = toIsoDate(subject?.data_nascita);
+  const baseLuogoNascita = (subject?.luogo_nascita || "").trim();
+  const baseNazionalita = (subject?.nazionalita || "").trim();
+
+  if (!cf || cf.length !== 16 || !isValidCF(cf)) {
+    return {
+      codice_fiscale: cf || null,
+      luogo_nascita: baseLuogoNascita || null,
+      data_nascita: baseDataNascita || null,
+      nazionalita: baseNazionalita || null,
+    };
+  }
+
+  const comuneData = await getComuneFromCF(cf);
+  const dataNascitaDaCf = extractDataNascitaFromCF(cf);
+
+  return {
+    codice_fiscale: cf,
+    luogo_nascita: baseLuogoNascita || comuneData?.comune || null,
+    data_nascita: baseDataNascita || dataNascitaDaCf || null,
+    nazionalita: baseNazionalita || comuneData?.nazionalita || null,
+  };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -143,14 +176,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = getServerSupabase() as any;
 
     const scartatiSenzaCf = parsed.filter(
-      (item: any) => !item.codice_fiscale || !item.codice_fiscale.trim()
+      (item: any) => !item.codice_fiscale || !String(item.codice_fiscale).trim()
     );
 
     const validi = parsed.filter(
-      (item: any) => !!item.codice_fiscale && !!item.codice_fiscale.trim()
+      (item: any) => !!item.codice_fiscale && !!String(item.codice_fiscale).trim()
     );
 
-    const unici = dedupeByCodiceFiscale(validi);
+    const unici = dedupeByCodiceFiscale(
+      validi.map((item: any) => ({
+        ...item,
+        codice_fiscale: normalizeCF(item.codice_fiscale || ""),
+      }))
+    );
+
     const duplicatiInterniPdf = validi.length - unici.length;
 
     console.log("=== SOGGETTI VALIDI ===");
@@ -160,7 +199,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(JSON.stringify(unici, null, 2));
 
     const cfList = unici
-      .map((item: any) => item.codice_fiscale?.toUpperCase().trim())
+      .map((item: any) => normalizeCF(item.codice_fiscale || ""))
       .filter((cf: unknown): cf is string => !!cf && typeof cf === "string");
 
     let existingSet = new Set<string>();
@@ -178,18 +217,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       existingSet = new Set(
         (existingRows || [])
           .map((row: { codice_fiscale?: string | null }) =>
-            (row.codice_fiscale || "").toUpperCase().trim()
+            normalizeCF(row.codice_fiscale || "")
           )
           .filter(Boolean)
       );
     }
 
     const giaPresenti = unici.filter((item: any) =>
-      existingSet.has(item.codice_fiscale!.toUpperCase().trim())
+      existingSet.has(normalizeCF(item.codice_fiscale || ""))
     );
 
     const daInserire = unici.filter(
-      (item: any) => !existingSet.has(item.codice_fiscale!.toUpperCase().trim())
+      (item: any) => !existingSet.has(normalizeCF(item.codice_fiscale || ""))
     );
 
     console.log("=== GIA PRESENTI ===");
@@ -202,25 +241,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "=== DATE DEBUG ===",
       daInserire.map((x: any) => ({
         nome: x.nome_cognome,
+        cf: normalizeCF(x.codice_fiscale || ""),
         originale: x.data_nascita,
         convertita: toIsoDate(x.data_nascita),
+        da_cf: extractDataNascitaFromCF(normalizeCF(x.codice_fiscale || "")),
         ruolo: getSubjectRole(x),
         rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(x)),
       }))
     );
 
-    const rowsToInsert = daInserire.map((subject: any) => ({
-      studio_id: studioId,
-      nome_cognome: subject.nome_cognome || null,
-      codice_fiscale: subject.codice_fiscale || null,
-      luogo_nascita: subject.luogo_nascita || null,
-      data_nascita: toIsoDate(subject.data_nascita),
-      citta_residenza: subject.citta_residenza || null,
-      indirizzo_residenza: subject.indirizzo_residenza || null,
-      nazionalita: subject.nazionalita || null,
-      CAP: subject.CAP || null,
-      rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(subject)),
-    }));
+    const rowsToInsert = await Promise.all(
+      daInserire.map(async (subject: any) => {
+        const enriched = await enrichSubjectFromCF(subject);
+
+        return {
+          studio_id: studioId,
+          nome_cognome: subject.nome_cognome || null,
+          codice_fiscale: enriched.codice_fiscale,
+          luogo_nascita: enriched.luogo_nascita,
+          data_nascita: enriched.data_nascita,
+          citta_residenza: subject.citta_residenza || null,
+          indirizzo_residenza: subject.indirizzo_residenza || null,
+          nazionalita: enriched.nazionalita,
+          CAP: subject.CAP || null,
+          rappresentante_legale: isRappresentanteLegaleRole(getSubjectRole(subject)),
+        };
+      })
+    );
+
+    console.log("=== ROWS TO INSERT ===");
+    console.log(JSON.stringify(rowsToInsert, null, 2));
 
     let inserted = 0;
 
@@ -260,6 +310,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         giaPresenti,
         daInserire,
         scartatiSenzaCf,
+        rowsToInsert,
       },
     });
   } catch (error: any) {
