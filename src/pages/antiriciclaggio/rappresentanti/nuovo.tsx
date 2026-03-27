@@ -898,7 +898,15 @@ export default function NuovoRappresentantePage() {
               Caricamento dati rappresentante...
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+           <form
+  onSubmit={handleSubmit}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  }}
+  className="space-y-6"
+>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="md:col-span-2">
                   <Label htmlFor="nome_cognome">Cognome e nome *</Label>
