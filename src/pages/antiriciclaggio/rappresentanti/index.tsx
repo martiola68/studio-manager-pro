@@ -4,7 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, Pencil, Trash2, Check, X } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 type Rapp = {
   id: string;
@@ -16,12 +16,16 @@ type Rapp = {
   scadenza_doc: string | null;
   allegato_doc: string | null;
   rappresentante_legale: boolean | null;
+  doc_richiesto_il?: string | null;
   created_at?: string | null;
 };
 
 function formatDateEU(value: string | null | undefined) {
   if (!value) return "-";
-  const parts = value.split("-");
+
+  const onlyDate = value.includes("T") ? value.split("T")[0] : value;
+  const parts = onlyDate.split("-");
+
   if (parts.length !== 3) return value;
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
@@ -31,7 +35,8 @@ function getScadenzaStatus(
 ): "missing" | "valid" | "expired" {
   if (!value) return "missing";
 
-  const date = new Date(`${value}T00:00:00`);
+  const onlyDate = value.includes("T") ? value.split("T")[0] : value;
+  const date = new Date(`${onlyDate}T00:00:00`);
   if (Number.isNaN(date.getTime())) return "missing";
 
   const today = new Date();
@@ -40,25 +45,55 @@ function getScadenzaStatus(
   return date < todayOnly ? "expired" : "valid";
 }
 
-function EmailIndicator({ present }: { present: boolean }) {
-  return present ? (
-    <div className="flex items-center gap-2 text-green-600">
-      <Check className="h-4 w-4" />
-      <span className="text-sm">Presente</span>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2 text-red-600">
-      <X className="h-4 w-4" />
-      <span className="text-sm">Mancante</span>
-    </div>
+function PresenzaBadge({
+  label,
+  present,
+}: {
+  label?: string;
+  present: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex min-w-[92px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${
+        present
+          ? "bg-green-100 text-green-800"
+          : "bg-red-100 text-red-800"
+      }`}
+    >
+      {label || (present ? "Presente" : "Mancante")}
+    </span>
   );
 }
 
-function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
+function RappLegaleText({ value }: { value: boolean | null | undefined }) {
+  const isYes = value === true;
+
+  return (
+    <span
+      className={`inline-flex min-w-[42px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+        isYes ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
+      }`}
+    >
+      {isYes ? "SI" : "NO"}
+    </span>
+  );
+}
+
+function ScadenzaCell({
+  value,
+  enabled,
+}: {
+  value: string | null | undefined;
+  enabled: boolean;
+}) {
+  if (!enabled) {
+    return <span className="text-sm text-muted-foreground">-</span>;
+  }
+
   const status = getScadenzaStatus(value);
 
   if (status === "missing") {
-    return <span className="text-sm whitespace-nowrap">-</span>;
+    return <span className="text-sm text-red-700">-</span>;
   }
 
   return (
@@ -68,39 +103,49 @@ function ScadenzaIndicator({ value }: { value: string | null | undefined }) {
           status === "valid" ? "bg-green-500" : "bg-red-500"
         }`}
       />
-      <span className="text-sm shrink-0">{formatDateEU(value)}</span>
+      <span
+        className={`text-sm shrink-0 ${
+          status === "valid" ? "text-green-800" : "text-red-700"
+        }`}
+      >
+        {formatDateEU(value)}
+      </span>
     </div>
   );
 }
 
-function AllegatoIndicator({ present }: { present: boolean }) {
-  if (present) {
-    return (
-     <div className="flex min-w-[105px] items-center gap-1.5 whitespace-nowrap text-green-600">
-        <Check className="h-4 w-4 shrink-0" />
-        <span className="text-sm font-medium shrink-0">Presente</span>
-      </div>
-    );
+function getRowAmlState(r: Rapp): "neutral" | "green" | "yellow" | "red" {
+  if (!r.rappresentante_legale) return "neutral";
+
+  const hasEmail = !!r.email?.trim();
+  const hasTipoDoc = !!r.tipo_doc?.trim();
+  const hasAllegato = !!r.allegato_doc?.trim();
+  const scadenzaStatus = getScadenzaStatus(r.scadenza_doc);
+  const hasRichiesta = !!r.doc_richiesto_il;
+
+  const isComplete =
+    hasEmail && hasTipoDoc && hasAllegato && scadenzaStatus === "valid";
+
+  if (isComplete) return "green";
+
+  if (hasRichiesta) return "yellow";
+
+  return "red";
+}
+
+function getRowClassName(r: Rapp): string {
+  const state = getRowAmlState(r);
+
+  switch (state) {
+    case "green":
+      return "bg-green-50 hover:bg-green-100/70 border-green-200";
+    case "yellow":
+      return "bg-yellow-50 hover:bg-yellow-100/70 border-yellow-200";
+    case "red":
+      return "bg-red-50 hover:bg-red-100/70 border-red-200";
+    default:
+      return "hover:bg-muted/30";
   }
-
-  return (
-    <div className="flex min-w-[105px] items-center gap-1.5 whitespace-nowrap text-red-600">
-      <X className="h-4 w-4 shrink-0" />
-      <span className="text-sm font-medium shrink-0">Mancante</span>
-    </div>
-  );
-}
-
-function RappLegaleIndicator({ value }: { value: boolean | null | undefined }) {
-  return value ? (
-    <div className="flex items-center justify-center text-green-600">
-      <Check className="h-4 w-4" />
-    </div>
-  ) : (
-    <div className="flex items-center justify-center text-red-600">
-      <X className="h-4 w-4" />
-    </div>
-  );
 }
 
 export default function RappresentantiIndexPage() {
@@ -167,7 +212,7 @@ export default function RappresentantiIndexPage() {
       const { data, error } = await supabase
         .from("rapp_legali")
         .select(
-          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, created_at"
+          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, created_at"
         )
         .eq("studio_id", studioId)
         .order("nome_cognome", { ascending: true });
@@ -194,7 +239,6 @@ export default function RappresentantiIndexPage() {
     return rows.filter(
       (r) =>
         (r.nome_cognome || "").toLowerCase().includes(s) ||
-        (r.codice_fiscale || "").toLowerCase().includes(s) ||
         (r.email || "").toLowerCase().includes(s) ||
         (r.tipo_doc || "").toLowerCase().includes(s)
     );
@@ -347,7 +391,7 @@ export default function RappresentantiIndexPage() {
 
         <CardContent className="space-y-3 px-3 pb-3 pt-0">
           <Input
-            placeholder="Cerca per cognome e nome, CF, email, tipo documento..."
+            placeholder="Cerca per cognome e nome, email, tipo documento..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="h-9 text-sm"
@@ -363,87 +407,134 @@ export default function RappresentantiIndexPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-md border">
-              <div className="min-w-[1450px]">
-<div className="sticky top-0 z-10 grid grid-cols-[1.9fr_1.35fr_1.15fr_1fr_1fr_1.15fr_90px_120px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+              <div className="min-w-[1540px]">
+                <div className="sticky top-0 z-10 grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b bg-muted/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide backdrop-blur">
                   <div>Cognome e nome</div>
-                  <div>Codice fiscale</div>
+                  <div className="text-center">Rapp. legale</div>
                   <div>Email</div>
                   <div>Tipo documento</div>
                   <div>Scadenza documento</div>
+                  <div>Doc. richiesto il</div>
                   <div>Documento allegato</div>
-                  <div className="text-center">Rapp. legale</div>
                   <div className="text-right">Azioni</div>
                 </div>
 
                 <div>
-                  {filtered.map((r) => (
-                    <div
-                      key={r.id}
-                     className="grid grid-cols-[1.9fr_1.35fr_1.15fr_1fr_1fr_1.15fr_90px_120px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 hover:bg-muted/30"
-                    >
-                      <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
-                      <div className="truncate">{r.codice_fiscale || "-"}</div>
-                      <div>
-                        <EmailIndicator present={!!r.email} />
-                      </div>
-                      <div className="truncate">{r.tipo_doc || "-"}</div>
-                      <div className="min-w-[120px]">
-                        <ScadenzaIndicator value={r.scadenza_doc} />
-                      </div>
-                      <div className="min-w-[160px]">
-                        <AllegatoIndicator present={!!r.allegato_doc} />
-                      </div>
-                      <div className="flex justify-center">
-                        <RappLegaleIndicator value={r.rappresentante_legale} />
-                      </div>
+                  {filtered.map((r) => {
+                    const isLegale = r.rappresentante_legale === true;
 
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          title="Apri documento"
-                          disabled={!r.allegato_doc}
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            if (r.allegato_doc) {
-                              void handleOpenDoc(r.allegato_doc);
+                    return (
+                      <div
+                        key={r.id}
+                        className={`grid grid-cols-[1.9fr_0.85fr_1.2fr_1.15fr_1fr_1fr_1.15fr_140px] items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0 ${getRowClassName(
+                          r
+                        )}`}
+                      >
+                        <div className="truncate font-medium">{r.nome_cognome || "-"}</div>
+
+                        <div className="flex justify-center">
+                          <RappLegaleText value={r.rappresentante_legale} />
+                        </div>
+
+                        <div>
+                          {isLegale ? (
+                            <PresenzaBadge present={!!r.email?.trim()} />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+
+                        <div className="truncate">
+                          {isLegale ? r.tipo_doc || "-" : "-"}
+                        </div>
+
+                        <div className="min-w-[120px]">
+                          <ScadenzaCell
+                            value={r.scadenza_doc}
+                            enabled={isLegale}
+                          />
+                        </div>
+
+                        <div className="min-w-[120px]">
+                          {isLegale ? (
+                            <span className="text-sm">
+                              {formatDateEU(r.doc_richiesto_il)}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+
+                        <div className="min-w-[120px]">
+                          {isLegale ? (
+                            <PresenzaBadge present={!!r.allegato_doc?.trim()} />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">-</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            title="Apri documento"
+                            disabled={!r.allegato_doc}
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              if (r.allegato_doc) {
+                                void handleOpenDoc(r.allegato_doc);
+                              }
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            title="Modifica"
+                            className="h-8 w-8 p-0"
+                            onClick={() =>
+                              router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
                             }
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
 
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="icon"
-                          title="Modifica"
-                          className="h-8 w-8 p-0"
-                          onClick={() =>
-                            router.push(`/antiriciclaggio/rappresentanti/nuovo?id=${r.id}`)
-                          }
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          title="Elimina"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            void handleDelete(r.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            title="Elimina"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              void handleDelete(r.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {!loading && filtered.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-red-700">
+                Stato AML rosso = documento mancante/scaduto e non richiesto
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-1 text-yellow-700">
+                Stato AML giallo = richiesta inviata ma documentazione incompleta
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-green-700">
+                Stato AML verde = documentazione completa e valida
+              </span>
             </div>
           )}
         </CardContent>
