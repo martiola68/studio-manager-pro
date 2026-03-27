@@ -353,7 +353,7 @@ export default function AntiriciclaggioPage() {
     }
   };
 
-  const clearAccessState = () => {
+ const clearAccessState = () => {
     setUnlockedSocietaId(null);
     setRows([]);
     setPassword("");
@@ -361,13 +361,10 @@ export default function AntiriciclaggioPage() {
     setShowPasswordModal(false);
     setShowForgotPasswordInfo(false);
     setShowTimeoutModal(false);
-    setSocietaFilter("");
-    setSelectedSocieta(null);
     setWorkingId(null);
 
     if (typeof window !== "undefined") {
       sessionStorage.removeItem(AML_SESSION_KEY);
-      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
     }
   };
 
@@ -376,14 +373,11 @@ export default function AntiriciclaggioPage() {
     closeTimeoutModal();
     clearAccessState();
 
-    setSocietaFilter("");
-    setSelectedSocieta(null);
     setRows([]);
     setWorkingId(null);
 
     if (typeof window !== "undefined") {
       sessionStorage.removeItem(AML_SESSION_KEY);
-      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
       window.location.reload();
     }
   };
@@ -469,6 +463,22 @@ export default function AntiriciclaggioPage() {
       setSocietaFilter(savedSelected);
     }
   }, []);
+
+  useEffect(() => {
+    const handleRouteChangeStart = (url: string) => {
+      if (!url.startsWith("/antiriciclaggio")) {
+        clearAmlTimers();
+        closeTimeoutModal();
+        clearAccessState();
+      }
+    };
+
+    router.events.on("routeChangeStart", handleRouteChangeStart);
+
+    return () => {
+      router.events.off("routeChangeStart", handleRouteChangeStart);
+    };
+  }, [router.events]);
 
   useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
