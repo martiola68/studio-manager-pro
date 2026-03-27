@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { Database } from "@/lib/supabase/types";
 import { ShieldCheck } from "lucide-react";
 import {
@@ -63,6 +63,11 @@ export function TopNavBar() {
   const [eventiImminenti, setEventiImminenti] = useState(0);
 
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentRoute = searchParams?.toString()
+    ? `${pathname}?${searchParams.toString()}`
+    : pathname;
 
   const loadCurrentUser = async () => {
     try {
@@ -237,98 +242,125 @@ export function TopNavBar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
- const menuItems: MenuItem[] = [
-  { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
-  { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
-  { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
-  { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
-  { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
+  const menuItems: MenuItem[] = [
+    { label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" />, href: "/dashboard" },
+    { label: "Messaggi", icon: <MessageSquare className="h-4 w-4" />, href: "/messaggi" },
+    { label: "Agenda", icon: <Calendar className="h-4 w-4" />, href: "/agenda" },
+    { label: "Rubrica", icon: <UserCircle className="h-4 w-4" />, href: "/contatti" },
+    { label: "Promemoria", icon: <FileText className="h-4 w-4" />, href: "/promemoria" },
 
-  {
-    label: "Scadenzario",
-    icon: <FileText className="h-4 w-4" />,
-    children: [
-      { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
-      { label: "Calendario", href: "/scadenze/calendario", icon: null },
-      { label: "IVA", href: "/scadenze/iva", icon: null },
-      { label: "CCGG", href: "/scadenze/ccgg", icon: null },
-      { label: "CU", href: "/scadenze/cu", icon: null },
-      { label: "IMU", href: "/scadenze/imu", icon: null },
-      { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
-      { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
-      { label: "770", href: "/scadenze/modello-770", icon: null },
-      { label: "LIPE", href: "/scadenze/lipe", icon: null },
-      { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
-      { label: "Proforma", href: "/scadenze/proforma", icon: null },
-    ],
-  },
+    {
+      label: "Scadenzario",
+      icon: <FileText className="h-4 w-4" />,
+      children: [
+        { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
+        { label: "Calendario", href: "/scadenze/calendario", icon: null },
+        { label: "IVA", href: "/scadenze/iva", icon: null },
+        { label: "CCGG", href: "/scadenze/ccgg", icon: null },
+        { label: "CU", href: "/scadenze/cu", icon: null },
+        { label: "IMU", href: "/scadenze/imu", icon: null },
+        { label: "Fiscali", href: "/scadenze/fiscali", icon: null },
+        { label: "Bilanci", href: "/scadenze/bilanci", icon: null },
+        { label: "770", href: "/scadenze/modello-770", icon: null },
+        { label: "LIPE", href: "/scadenze/lipe", icon: null },
+        { label: "Esterometro", href: "/scadenze/esterometro", icon: null },
+        { label: "Proforma", href: "/scadenze/proforma", icon: null },
+      ],
+    },
 
-  { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
-  { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
-  { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
+    { label: "Accesso Portali", icon: <Key className="h-4 w-4" />, href: "/accesso-portali" },
+    { label: "Cassetti Fiscali", icon: <FileText className="h-4 w-4" />, href: "/cassetti-fiscali" },
+    { label: "Comunicazioni", icon: <Mail className="h-4 w-4" />, href: "/comunicazioni" },
 
-  // 🔴 ANTIRICICLAGGIO RIPULITO
-  {
-    label: "Antiriciclaggio",
-    icon: <ShieldCheck className="h-5 w-5" />,
-    children: [
-      { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
-      { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
-      { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: null },
-      { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
-      { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
-    ],
-  },
+    {
+      label: "Antiriciclaggio",
+      icon: <ShieldCheck className="h-5 w-5" />,
+      children: [
+        { label: "Elenco Antiriciclaggio", href: "/antiriciclaggio", icon: null },
+        { label: "Prestazioni AR", href: "/impostazioni/elenco-prestazioni-ar", icon: null },
+        { label: "Professionisti", href: "/antiriciclaggio/responsabili-av", icon: null },
+        { label: "Soggetti responsabili", href: "/antiriciclaggio/responsabili-av-societa", icon: null },
+        { label: "Comunicazioni inviate", href: "/antiriciclaggio/comunicazioni", icon: null },
+      ],
+    },
 
-  // 🟢 NUOVO MENU ANAGRAFICHE
-  {
-    label: "Anagrafiche",
-    icon: <Users className="h-4 w-4" />,
-    children: [
-      { label: "Clienti", href: "/clienti", icon: null },
-      { label: "Rappresentanti e soci", href: "/antiriciclaggio/rappresentanti", icon: null },
-    ],
-  },
+    {
+      label: "Anagrafiche",
+      icon: <Users className="h-4 w-4" />,
+      children: [
+        { label: "Clienti", href: "/clienti", icon: null },
+        { label: "Rappresentanti e soci", href: "/antiriciclaggio/rappresentanti", icon: null },
+      ],
+    },
 
-  {
-    label: "Microsoft 365",
-    icon: <Cloud className="h-4 w-4" />,
-    children: [
-      {
-        label: "Connessioni",
-        href: "/microsoft365?tab=connessioni",
-        icon: <Link2 className="h-4 w-4" />,
-      },
-      {
-        label: "Sync",
-        href: "/microsoft365?tab=sync",
-        icon: <RefreshCcw className="h-4 w-4" />,
-      },
-    ],
-  },
+    {
+      label: "Microsoft 365",
+      icon: <Cloud className="h-4 w-4" />,
+      children: [
+        {
+          label: "Connessioni",
+          href: "/microsoft365?tab=connessioni",
+          icon: <Link2 className="h-4 w-4" />,
+        },
+        {
+          label: "Sync",
+          href: "/microsoft365?tab=sync",
+          icon: <RefreshCcw className="h-4 w-4" />,
+        },
+      ],
+    },
 
-  {
-    label: "Impostazioni",
-    icon: <Settings className="h-4 w-4" />,
-    adminOnly: true,
-    children: [
-      { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
-      { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
-      { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
-      { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
-      { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
-      { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
-      { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
-    ],
-  },
-];
+    {
+      label: "Impostazioni",
+      icon: <Settings className="h-4 w-4" />,
+      adminOnly: true,
+      children: [
+        { label: "Utenti", href: "/impostazioni/utenti", icon: <Users className="h-4 w-4" /> },
+        { label: "Dati Studio", href: "/impostazioni/studio", icon: <Building2 className="h-4 w-4" /> },
+        { label: "Ruoli", href: "/impostazioni/ruoli", icon: <Settings className="h-4 w-4" /> },
+        { label: "Prestazioni", href: "/impostazioni/prestazioni", icon: <Settings className="h-4 w-4" /> },
+        { label: "Scadenzari", href: "/impostazioni/scadenzari", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipi Scadenze", href: "/impostazioni/tipi-scadenze", icon: <Settings className="h-4 w-4" /> },
+        { label: "Tipo Promemoria", href: "/impostazioni/tipo-promemoria", icon: <Settings className="h-4 w-4" /> },
+      ],
+    },
+  ];
 
-  const isActive = (href: string) => pathname === href;
+  const isExactRoute = (href?: string) => {
+    if (!href) return false;
+    return currentRoute === href;
+  };
+
+  const isPathActive = (href?: string) => {
+    if (!href) return false;
+
+    const normalizedHref = href.split("?")[0];
+    return pathname === normalizedHref || pathname.startsWith(`${normalizedHref}/`);
+  };
+
+  const isActive = (item: MenuItem) => {
+    if (item.href && (isExactRoute(item.href) || isPathActive(item.href))) {
+      return true;
+    }
+
+    if (item.children?.length) {
+      return item.children.some((child) => {
+        if (child.href && (isExactRoute(child.href) || isPathActive(child.href))) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    return false;
+  };
 
   const renderMenuItem = (item: MenuItem) => {
     if (item.adminOnly && currentUser?.tipo_utente !== "Admin") return null;
 
     const hasChildren = !!(item.children && item.children.length > 0);
+    const itemActive = isActive(item);
 
     const showMessaggiBadge = item.label === "Messaggi" && messaggiNonLetti > 0;
     const showPromemoriaRicevutiBadge = item.label === "Promemoria" && promemoriaRicevuti > 0;
@@ -342,8 +374,10 @@ export function TopNavBar() {
             <Button
               variant="ghost"
               className={cn(
-                "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors",
-                "hover:bg-blue-50 hover:text-blue-600"
+                "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg",
+                itemActive
+                  ? "bg-blue-600 text-white hover:bg-blue-700 hover:text-white"
+                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
               )}
             >
               {item.icon}
@@ -353,20 +387,24 @@ export function TopNavBar() {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="start" className="w-56">
-            {item.children?.map((child) => (
-              <DropdownMenuItem key={child.label} asChild>
-                <Link
-                  href={child.href || "#"}
-                  className={cn(
-                    "flex items-center gap-2 px-2 py-2 cursor-pointer",
-                    isActive(child.href || "") && "bg-blue-50 text-blue-600 font-semibold"
-                  )}
-                >
-                  {child.icon}
-                  <span>{child.label}</span>
-                </Link>
-              </DropdownMenuItem>
-            ))}
+            {item.children?.map((child) => {
+              const childActive = isActive(child);
+
+              return (
+                <DropdownMenuItem key={child.label} asChild>
+                  <Link
+                    href={child.href || "#"}
+                    className={cn(
+                      "flex items-center gap-2 px-2 py-2 cursor-pointer",
+                      childActive && "bg-blue-50 text-blue-600 font-semibold"
+                    )}
+                  >
+                    {child.icon}
+                    <span>{child.label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -379,7 +417,7 @@ export function TopNavBar() {
         onClick={item.label === "Promemoria" ? handlePromemoriaClick : undefined}
         className={cn(
           "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative",
-          isActive(item.href || "")
+          itemActive
             ? "bg-blue-600 text-white"
             : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
         )}
