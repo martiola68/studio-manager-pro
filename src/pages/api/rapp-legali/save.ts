@@ -39,7 +39,8 @@ export default async function handler(
       num_doc,
       scadenza_doc,
       allegato_doc,
-    } = req.body ?? {};
+      rappresentante_legale,
+      } = req.body ?? {};
 
     if (!studio_id) {
       return res.status(400).json({ ok: false, error: "studio_id obbligatorio" });
