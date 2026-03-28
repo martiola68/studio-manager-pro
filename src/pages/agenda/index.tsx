@@ -888,38 +888,40 @@ export default function AgendaPage() {
     return String(data.studio_id);
   };
 
-  const buildBasePayload = (
-    utenteId: string,
-    gruppoEvento: string,
-    dataInizio: string,
-    dataFine: string,
-    teamsLink: string | null,
-    studioId: string | null
-  ): Partial<AgendaRow> & Record<string, unknown> => ({
-    gruppo_evento: gruppoEvento,
-    titolo: formData.titolo,
-    descrizione: formData.descrizione || null,
-    data_inizio: dataInizio,
-    data_fine: dataFine,
-    ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
-    ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
-    tutto_giorno: formData.tutto_giorno as any,
-    cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
-    utente_id: utenteId as any,
-    in_sede: formData.in_sede as any,
-    sala: formData.in_sede ? formData.sala || null : null,
-    luogo: !formData.in_sede ? formData.luogo || null : null,
-    evento_generico: formData.evento_generico,
-    riunione_teams: formData.riunione_teams,
-    link_teams: teamsLink || null,
-    partecipanti: [...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean))],
-    email_partecipanti_esterni: [...new Set(formData.email_partecipanti_esterni.filter(Boolean))],
-    ricorrente: formData.ricorrente,
-    frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-    durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
-    studio_id: studioId || currentStudioId || null,
-    updated_at: new Date().toISOString(),
-  });
+const buildBasePayload = (
+  utenteId: string,
+  gruppoEvento: string,
+  dataInizio: string,
+  dataFine: string,
+  teamsLink: string | null,
+  studioId: string | null,
+  microsoftConnectionId: string | null
+): Partial<AgendaRow> & Record<string, unknown> => ({
+  gruppo_evento: gruppoEvento,
+  titolo: formData.titolo,
+  descrizione: formData.descrizione || null,
+  data_inizio: dataInizio,
+  data_fine: dataFine,
+  ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
+  ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
+  tutto_giorno: formData.tutto_giorno as any,
+  cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
+  utente_id: utenteId as any,
+  in_sede: formData.in_sede as any,
+  sala: formData.in_sede ? formData.sala || null : null,
+  luogo: !formData.in_sede ? formData.luogo || null : null,
+  evento_generico: formData.evento_generico,
+  riunione_teams: formData.riunione_teams,
+  link_teams: teamsLink || null,
+  partecipanti: [...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean))],
+  email_partecipanti_esterni: [...new Set(formData.email_partecipanti_esterni.filter(Boolean))],
+  ricorrente: formData.ricorrente,
+  frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
+  durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
+  studio_id: studioId || currentStudioId || null,
+  microsoft_connection_id: microsoftConnectionId || null,
+  updated_at: new Date().toISOString(),
+});
 
 const syncRowsToOutlook = async (
   rows: Array<{
@@ -1009,6 +1011,22 @@ const syncRowsToOutlook = async (
         console.error("Errore invio notifiche Teams: studioId non trovato.");
         return;
       }
+
+      const getMicrosoftConnectionIdForUser = async (ownerUserId: string) => {
+  if (!ownerUserId) return null;
+
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("id")
+    .eq("utente_id", ownerUserId)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (error || !data?.id) return null;
+  return String(data.id);
+};
 
       const { teamsService } = await import("@/services/teamsService");
 
@@ -1447,6 +1465,8 @@ const participantUsers = participantIds
         } else if (!editingGruppoEvento) {
           const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
 
+          const ownerMicrosoftConnectionId = await getMicrosoftConnectionIdForUser(formData.utente_id);
+
           if (!ownerStudioId) {
             toast({
               title: "Errore",
@@ -1577,14 +1597,15 @@ const participantUsers = participantIds
 
         if (userIdsToInsert.length > 0) {
           const payloads = userIdsToInsert.map((utenteId) =>
-            buildBasePayload(
-              utenteId,
-              editingGruppoEvento,
-              startDateTimeISO,
-              endDateTimeISO,
-              teamsLink || null,
-              ownerStudioId
-            )
+          buildBasePayload(
+  utenteId,
+  editingGruppoEvento,
+  startDateTimeISO,
+  endDateTimeISO,
+  teamsLink || null,
+  ownerStudioId,
+  ownerMicrosoftConnectionId
+)
           );
 
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
