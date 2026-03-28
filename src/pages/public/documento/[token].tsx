@@ -494,6 +494,11 @@ export default function PublicDocumentoPage() {
                  <p className="mt-1 text-xs text-slate-500">
                   Formati ammessi: PDF, JPG, JPEG, PNG • Dimensione massima: {MAX_FILE_SIZE_MB} MB
                       </p>
+
+                  <p className="mt-1 text-xs text-amber-700">
+                  Il documento deve essere completo e perfettamente leggibile, senza tagli, sfocature, riflessi o parti coperte.
+                    </p>
+                  
                   {selectedFile && (
                     <p className="mt-1 text-sm text-slate-700">
                       File selezionato: <strong>{selectedFile.name}</strong>
