@@ -22,6 +22,7 @@ export function getDecryptedClientSecret(encryptedSecret: string) {
 }
 
 type TokenRow = {
+  user_id: string;
   token_cache_encrypted: string;
   scopes: string | null;
   revoked_at: string | null;
@@ -83,7 +84,8 @@ function isAllowedGraphUrl(urlStr: string): boolean {
 
 async function resolveMicrosoftConnection(
   studioId: string,
-  userId: string
+  userId: string,
+  requestedConnectionId?: string | null
 ): Promise<ResolvedConnection> {
   const { data: utente, error: utenteErr } = await supabaseAdmin
     .from("tbutenti")
@@ -97,7 +99,23 @@ async function resolveMicrosoftConnection(
 
   let connection: ConnectionRow | null = null;
 
-  if (utente.microsoft_connection_id) {
+  if (requestedConnectionId) {
+    const { data, error } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled, connected_email, organizer_email, is_default, sort_order"
+      )
+      .eq("id", requestedConnectionId)
+      .eq("studio_id", studioId)
+      .eq("enabled", true)
+      .single<ConnectionRow>();
+
+    if (!error && data) {
+      connection = data;
+    }
+  }
+
+  if (!connection && utente.microsoft_connection_id) {
     const { data, error } = await supabaseAdmin
       .from("microsoft365_connections")
       .select(
@@ -168,23 +186,29 @@ async function resolveMicrosoftConnection(
 
 async function acquireAccessToken(
   studioId: string,
-  userId: string
+  userId: string,
+  requestedConnectionId?: string | null
 ): Promise<{ accessToken: string; connection: ResolvedConnection }> {
-  const connection = await resolveMicrosoftConnection(studioId, userId);
+  const connection = await resolveMicrosoftConnection(
+    studioId,
+    userId,
+    requestedConnectionId
+  );
 
   let tokenRow: TokenRow | null = null;
 
   const { data: strictTokenRow, error: strictTokenErr } = await supabaseAdmin
     .from("tbmicrosoft365_user_tokens")
     .select(
-      "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
+      "user_id, token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
     )
     .eq("studio_id", studioId)
-.eq("microsoft_connection_id", connection.id)
-.is("revoked_at", null)
-.order("updated_at", { ascending: false })
-.limit(1)
-.maybeSingle();
+    .eq("user_id", userId)
+    .eq("microsoft_connection_id", connection.id)
+    .is("revoked_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!strictTokenErr && strictTokenRow?.token_cache_encrypted) {
     tokenRow = strictTokenRow as TokenRow;
@@ -194,15 +218,16 @@ async function acquireAccessToken(
     const { data: fallbackTokenRow, error: fallbackTokenErr } = await supabaseAdmin
       .from("tbmicrosoft365_user_tokens")
       .select(
-        "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
+        "user_id, token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
       )
-     .eq("studio_id", studioId)
-.eq("microsoft_connection_id", connection.id)
-.is("revoked_at", null)
-.not("token_cache_encrypted", "is", null)
-.order("updated_at", { ascending: false })
-.limit(1)
-.maybeSingle();
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", connection.id)
+      .is("revoked_at", null)
+      .not("token_cache_encrypted", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!fallbackTokenErr && fallbackTokenRow?.token_cache_encrypted) {
       tokenRow = fallbackTokenRow as TokenRow;
@@ -222,13 +247,13 @@ async function acquireAccessToken(
   }
 
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
-  let clientSecret = "";
 
-try {
-  clientSecret = decrypt(connection.client_secret);
-} catch {
-  clientSecret = connection.client_secret;
-}
+  let clientSecret = "";
+  try {
+    clientSecret = decrypt(connection.client_secret);
+  } catch {
+    clientSecret = connection.client_secret;
+  }
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
@@ -283,12 +308,14 @@ try {
         updated_at: new Date().toISOString(),
         microsoft_connection_id: connection.id,
       })
-.eq("studio_id", studioId)
-.eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
   }
 
   return { accessToken, connection };
 }
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -328,7 +355,7 @@ export default async function handler(
 
     const studioId = uRow.studio_id as string;
 
-    const { endpoint, method, body } = req.body || {};
+    const { endpoint, method, body, microsoftConnectionId } = req.body || {};
     if (!endpoint || !method) {
       return res.status(400).json({ error: "Missing endpoint/method" });
     }
@@ -345,7 +372,11 @@ export default async function handler(
       return res.status(400).json({ error: "Metodo non supportato" });
     }
 
-    const { accessToken } = await acquireAccessToken(studioId, userId);
+    const { accessToken } = await acquireAccessToken(
+      studioId,
+      userId,
+      microsoftConnectionId || null
+    );
 
     const graphRes = await fetch(url, {
       method: httpMethod,
