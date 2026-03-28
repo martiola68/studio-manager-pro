@@ -874,7 +874,7 @@ export default function AgendaPage() {
   const getStudioIdForOwner = async (ownerUserId: string) => {
     if (!ownerUserId) return null;
 
-    const localUser = utenti.find((u) => u.id === ownerUserId);
+     const localUser = utenti.find((u) => u.id === ownerUserId);
     if (localUser?.studio_id) return String(localUser.studio_id);
 
     const supabase = getSupabaseClient();
@@ -887,6 +887,22 @@ export default function AgendaPage() {
     if (error || !data?.studio_id) return null;
     return String(data.studio_id);
   };
+
+  const getMicrosoftConnectionIdForUser = async (ownerUserId: string) => {
+  if (!ownerUserId) return null;
+
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("id")
+    .eq("utente_id", ownerUserId)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (error || !data?.id) return null;
+  return String(data.id);
+};
 
 const buildBasePayload = (
   utenteId: string,
