@@ -36,7 +36,11 @@ const BUCKET_NAME = "allegati";
    TYPES
    ========================================================= */
 
-type TipoDocumento = "" | "Carta di identità" | "Passaporto";
+type TipoDocumento =
+  | "__NONE__"
+  | "Carta di identità"
+  | "Passaporto"
+  | "Patente";
 
 type FormState = {
   nome_cognome: string;
@@ -100,7 +104,7 @@ const initialFormState: FormState = {
   cap: "",
   nazionalita: "",
   email: "",
-  tipo_doc: "",
+  tipo_doc: "__NONE__",
   num_doc: "",
   scadenza_doc: "",
   allegato_doc: "",
@@ -126,9 +130,13 @@ function normalizeDateForInput(value?: string | null): string {
 }
 
 function mapRowToForm(row?: RappLegaleRow | null): FormState {
-  const tipo = row?.tipo_doc ?? "";
-  const safeTipo: TipoDocumento =
-    tipo === "Carta di identità" || tipo === "Passaporto" ? tipo : "";
+ const tipo = row?.tipo_doc ?? "";
+const safeTipo: TipoDocumento =
+  tipo === "Carta di identità" ||
+  tipo === "Passaporto" ||
+  tipo === "Patente"
+    ? tipo
+    : "__NONE__";
 
   return {
     nome_cognome: row?.nome_cognome ?? "",
@@ -447,6 +455,8 @@ export default function NuovoRappresentantePage() {
     return microsoftConnections.find((c) => c.id === form.microsoft_connection_id) || null;
   }, [microsoftConnections, form.microsoft_connection_id]);
 
+  const documentoAttivo = form.tipo_doc !== "__NONE__";
+
   /* =========================================================
      ACTIONS
      ========================================================= */
@@ -569,11 +579,17 @@ export default function NuovoRappresentantePage() {
     }
   }
 
-  function handleRemoveDoc() {
-    setForm((prev) => ({ ...prev, allegato_doc: "" }));
-    setOkMsg(null);
-    setErrMsg(null);
-  }
+ function handleRemoveDoc() {
+  setForm((prev) => ({
+    ...prev,
+    allegato_doc: "",
+    tipo_doc: "__NONE__",
+    num_doc: "",
+    scadenza_doc: "",
+  }));
+  setOkMsg(null);
+  setErrMsg(null);
+}
 
   async function handleInviaRichiestaDocumento() {
     const supabase = getSupabaseClient() as any;
@@ -690,10 +706,11 @@ export default function NuovoRappresentantePage() {
 
     <p><strong>Documenti accettati:</strong></p>
 
-    <ul style="padding-left: 18px; margin: 8px 0;">
-      <li>Carta di identità</li>
-      <li>Passaporto</li>
-    </ul>
+  <ul style="padding-left: 18px; margin: 8px 0;">
+  <li>Carta di identità</li>
+  <li>Passaporto</li>
+  <li>Patente</li>
+</ul>
 
     <p>
       Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
@@ -815,9 +832,9 @@ export default function NuovoRappresentantePage() {
         CAP: form.cap.trim() || null,
         nazionalita: form.nazionalita.trim() || null,
         email: form.email.trim() || null,
-        tipo_doc: form.tipo_doc || null,
-        num_doc: form.num_doc.trim() || null,
-        scadenza_doc: form.scadenza_doc || null,
+        tipo_doc: form.tipo_doc === "__NONE__" ? null : form.tipo_doc,
+        num_doc: form.tipo_doc === "__NONE__" ? null : form.num_doc.trim() || null,
+        scadenza_doc: form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
         allegato_doc: form.allegato_doc || null,
         microsoft_connection_id: form.microsoft_connection_id || null,
         rappresentante_legale: form.rappresentante_legale ?? false,
@@ -1099,45 +1116,74 @@ export default function NuovoRappresentantePage() {
                         }))
                       }
                     >
-                      <SelectTrigger id="tipo_doc">
-                        <SelectValue placeholder="Seleziona..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Carta di identità">
-                          Carta di identità
-                        </SelectItem>
-                        <SelectItem value="Passaporto">Passaporto</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Select
+  value={form.tipo_doc}
+  onValueChange={(value) =>
+    setForm((prev) => ({
+      ...prev,
+      tipo_doc: value as TipoDocumento,
+      ...(value === "__NONE__"
+        ? {
+            num_doc: "",
+            scadenza_doc: "",
+          }
+        : {}),
+    }))
+  }
+>
+  <SelectTrigger id="tipo_doc">
+    <SelectValue placeholder="Seleziona..." />
+  </SelectTrigger>
+
+  <SelectContent>
+    <SelectItem value="__NONE__">----</SelectItem>
+
+    <SelectItem value="Carta di identità">
+      Carta di identità
+    </SelectItem>
+
+    <SelectItem value="Passaporto">
+      Passaporto
+    </SelectItem>
+
+    <SelectItem value="Patente">
+      Patente
+    </SelectItem>
+  </SelectContent>
+</Select>
                   </div>
 
                   <div>
                     <Label htmlFor="num_doc">Numero documento</Label>
-                    <Input
-                      id="num_doc"
+                   <Input
+                    id="num_doc"
                       value={form.num_doc}
+                      disabled={!documentoAttivo}
                       onChange={(e) =>
                         setForm((prev) => ({
-                          ...prev,
-                          num_doc: e.target.value,
-                        }))
-                      }
+                      ...prev,
+                    num_doc: e.target.value,
+                          }))
+                        }
+                        className={!documentoAttivo ? "bg-muted text-muted-foreground" : ""}
                     />
                   </div>
 
                   <div>
                     <Label htmlFor="scadenza_doc">Scadenza documento</Label>
                     <Input
-                      id="scadenza_doc"
-                      type="date"
-                      value={form.scadenza_doc}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          scadenza_doc: e.target.value,
-                        }))
-                      }
-                    />
+  id="scadenza_doc"
+  type="date"
+  value={form.scadenza_doc}
+  disabled={!documentoAttivo}
+  onChange={(e) =>
+    setForm((prev) => ({
+      ...prev,
+      scadenza_doc: e.target.value,
+    }))
+  }
+  className={!documentoAttivo ? "bg-muted text-muted-foreground" : ""}
+/>
                   </div>
                 </div>
 
