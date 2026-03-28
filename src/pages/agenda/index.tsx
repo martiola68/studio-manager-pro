@@ -955,6 +955,46 @@ const syncRowsToOutlook = async (
   }
 };
 
+  const deleteRowsFromOutlook = async (
+  rows: Array<{
+    id: string;
+    utente_id: string | null;
+    microsoft_connection_id?: string | null;
+    microsoft_event_id?: string | null;
+  }>
+) => {
+  const supabase = getSupabaseClient();
+
+  for (const row of rows) {
+    if (!row?.microsoft_event_id || !row?.utente_id) continue;
+
+    try {
+      const { data: connection } = await (supabase as any)
+        .from("microsoft365_connections")
+        .select("id")
+        .eq("utente_id", row.utente_id)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (!connection?.id) {
+        console.warn("Connessione Microsoft non trovata per:", row.utente_id);
+        continue;
+      }
+
+      if ((calendarSyncService as any).deleteEventFromOutlook) {
+        await (calendarSyncService as any).deleteEventFromOutlook(
+          String(row.utente_id),
+          String(row.microsoft_event_id)
+        );
+      } else {
+        console.warn("deleteEventFromOutlook non presente in calendarSyncService");
+      }
+    } catch (error) {
+      console.error("Errore cancellazione Outlook:", error);
+    }
+  }
+};
+
   const sendTeamsMessagesToParticipants = async (
     ownerUserId: string,
     internalParticipantIds: string[],
