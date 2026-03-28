@@ -696,6 +696,11 @@ export default function NuovoRappresentantePage() {
     </ul>
 
     <p>
+      Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
+      sfocature, riflessi o parti coperte.
+      </p>
+
+    <p>
       Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
       e allegare il documento aggiornato.
     </p>
