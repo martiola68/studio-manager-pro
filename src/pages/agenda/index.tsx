@@ -921,23 +921,37 @@ export default function AgendaPage() {
     updated_at: new Date().toISOString(),
   });
 
-  const syncRowsToOutlook = async (rows: Array<{ id: string; utente_id: string | null }>) => {
-    for (const row of rows) {
-      if (!row?.id) continue;
-      if (!row.utente_id) continue;
+ const syncRowsToOutlook = async (rows) => {
+  const supabase = getSupabaseClient();
 
-      try {
-        console.log("[Agenda][Outlook sync] syncEventToOutlook", {
-          eventId: String(row.id),
-          utenteId: String(row.utente_id),
-        });
+  for (const row of rows) {
+    if (!row?.id || !row.utente_id) continue;
 
-        await calendarSyncService.syncEventToOutlook(String(row.utente_id), String(row.id));
-      } catch (syncError) {
-        console.error("Errore sincronizzazione Outlook:", syncError);
+    try {
+      // 🔴 1. Recupero connessione Microsoft
+      const { data: connection } = await supabase
+        .from("microsoft365_connections")
+        .select("id")
+        .eq("utente_id", row.utente_id)
+        .eq("active", true)
+        .maybeSingle();
+
+      if (!connection?.id) {
+        console.warn("Utente senza connessione Microsoft:", row.utente_id);
+        continue;
       }
+
+      // 🔴 2. Sync reale
+      await calendarSyncService.syncEventToOutlook(
+        String(row.utente_id),
+        String(row.id)
+      );
+
+    } catch (syncError) {
+      console.error("Errore sincronizzazione Outlook:", syncError);
     }
-  };
+  }
+};
 
   const deleteRowsFromOutlook = async (
   rows: Array<{
