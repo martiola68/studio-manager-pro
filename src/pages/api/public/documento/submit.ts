@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
-import { PDFDocument } from "pdf-lib";
+
 
 const BUCKET_NAME = "allegati";
 
@@ -43,19 +43,42 @@ async function validateUploadedFile(
   }
 
   if (fileType === "application/pdf") {
-    try {
-      const pdf = await PDFDocument.load(fileBuffer);
-      const pageCount = pdf.getPageCount();
+    const header = fileBuffer.slice(0, 4).toString("utf8");
 
-      if (!pageCount || pageCount < 1) {
-        return "Il PDF non contiene pagine valide.";
+    if (header !== "%PDF") {
+      return "Il file PDF non è valido o risulta corrotto.";
+    }
+
+    return null;
+  }
+
+  if (
+    fileType === "image/jpeg" ||
+    fileType === "image/jpg" ||
+    fileType === "image/png"
+  ) {
+    try {
+      const metadata = await sharp(fileBuffer).metadata();
+
+      const width = metadata.width || 0;
+      const height = metadata.height || 0;
+
+      if (!width || !height) {
+        return "Impossibile leggere le dimensioni dell'immagine caricata.";
+      }
+
+      if (width < MIN_IMAGE_WIDTH || height < MIN_IMAGE_HEIGHT) {
+        return `L'immagine è troppo piccola. Dimensioni minime richieste: ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel.`;
       }
 
       return null;
     } catch {
-      return "Il file PDF non è valido o risulta corrotto.";
+      return "Il file immagine non è valido o risulta corrotto.";
     }
   }
+
+  return "Formato file non supportato.";
+}
 
   if (
     fileType === "image/jpeg" ||
