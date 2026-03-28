@@ -1616,35 +1616,109 @@ const handleSaveEvento = async () => {
 
       let insertedRows: any[] = [];
 
-     if (userIdsToInsert.length > 0) {
-  const payloads = userIdsToInsert.map((utenteId) =>
-    buildBasePayload(
-      utenteId,
-      editingGruppoEvento,
-      startDateTimeISO,
-      endDateTimeISO,
-      teamsLink || null,
-      ownerStudioId,
-      ownerMicrosoftConnectionId
-    )
-  );
+      if (userIdsToInsert.length > 0) {
+        const payloads = userIdsToInsert.map((utenteId) =>
+          buildBasePayload(
+            utenteId,
+            editingGruppoEvento,
+            startDateTimeISO,
+            endDateTimeISO,
+            teamsLink || null,
+            ownerStudioId,
+            ownerMicrosoftConnectionId
+          )
+        );
 
-  const { data, error } = await supabase
-    .from("tbagenda")
-    .insert(payloads as any)
-    .select();
+        const { data, error } = await supabase
+          .from("tbagenda")
+          .insert(payloads as any)
+          .select();
 
-  if (error) throw error;
-  insertedRows = data ?? [];
-}
-
-        // QUI continua con il resto della tua logica già esistente
+        if (error) throw error;
+        insertedRows = data ?? [];
       }
 
-      // QUI continua con il resto della tua logica già esistente
-    }
+      if (rowIdsToDelete.length > 0) {
+        const rowsToDeleteFromOutlook = existingRows
+          .filter((r) => rowIdsToDelete.includes(String(r.id)))
+          .map((r) => ({
+            id: String(r.id),
+            utente_id: r.utente_id,
+            microsoft_connection_id: (r as any).microsoft_connection_id,
+            microsoft_event_id: r.microsoft_event_id,
+          }));
 
-    // QUI continua con il resto della tua logica già esistente
+        await deleteRowsFromOutlook(rowsToDeleteFromOutlook);
+
+        const { error } = await supabase
+          .from("tbagenda")
+          .delete()
+          .in("id", rowIdsToDelete);
+
+        if (error) throw error;
+      }
+
+      const finalRows = [...(updatedRows ?? []), ...insertedRows];
+
+      await sendSingleNotifications(
+        finalRows,
+        formData.utente_id,
+        internalParticipantIds
+      );
+
+      const organizerRows = finalRows.filter(
+        (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+      );
+
+      await syncRowsToOutlook(
+        organizerRows.map((row: any) => ({
+          id: String(row.id),
+          utente_id: row.utente_id ? String(row.utente_id) : null,
+        }))
+      );
+
+      toast({
+        title: "Successo",
+        description: "Gruppo evento aggiornato",
+      });
+    } else {
+      if (formData.ricorrente) {
+        const startDate = new Date(formData.data_inizio);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + formData.durata_giorni);
+
+        const occurrences: Array<Record<string, unknown>> = [];
+        let current = new Date(startDate);
+
+        while (current <= endDate) {
+          const gruppoEvento = crypto.randomUUID();
+
+          const occurrenceStartDateTime = formData.tutto_giorno
+            ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+            : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+
+          const occurrenceEndDateTime = formData.tutto_giorno
+            ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+            : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+
+          for (const utenteId of allParticipantIds) {
+            occurrences.push(
+              buildBasePayload(
+                utenteId,
+                gruppoEvento,
+                occurrenceStartDateTime,
+                occurrenceEndDateTime,
+                teamsLink || null,
+                ownerStudioId,
+                ownerMicrosoftConnectionId
+              )
+            );
+          }
+
+          current.setDate(current.getDate() + formData.frequenza_giorni);
+        }
+      }
+    }
   } catch (error: any) {
     console.error("Errore salvataggio evento:", error);
 
@@ -1658,80 +1732,6 @@ const handleSaveEvento = async () => {
     setSavingEvento(false);
   }
 };
-
-  const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
-  if (error) throw error;
-  insertedRows = data ?? [];
-}
-        if (rowIdsToDelete.length > 0) {
-          const rowsToDeleteFromOutlook = existingRows
-  .filter((r) => rowIdsToDelete.includes(String(r.id)))
-  .map((r) => ({
-    id: String(r.id),
-    utente_id: r.utente_id,
-    microsoft_connection_id: (r as any).microsoft_connection_id,
-    microsoft_event_id: r.microsoft_event_id
-  }));
-
-          
-          await deleteRowsFromOutlook(rowsToDeleteFromOutlook);
-
-          const { error } = await supabase.from("tbagenda").delete().in("id", rowIdsToDelete);
-          if (error) throw error;
-        }
-
-        const finalRows = [...(updatedRows ?? []), ...insertedRows];
-
-     await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
-
-       const organizerRows = finalRows.filter(
-  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
-);
-
-await syncRowsToOutlook(
-  organizerRows.map((row: any) => ({
-    id: String(row.id),
-    utente_id: row.utente_id ? String(row.utente_id) : null,
-  }))
-);
-        toast({
-          title: "Successo",
-          description: "Gruppo evento aggiornato",
-        });
-      } else {
-        if (formData.ricorrente) {
-          const startDate = new Date(formData.data_inizio);
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + formData.durata_giorni);
-
-          const occurrences: Array<Record<string, unknown>> = [];
-          let current = new Date(startDate);
-
-          while (current <= endDate) {
-            const gruppoEvento = crypto.randomUUID();
-
-            const occurrenceStartDateTime = formData.tutto_giorno
-              ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
-              : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
-
-            const occurrenceEndDateTime = formData.tutto_giorno
-              ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
-              : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
-
-            for (const utenteId of allParticipantIds) {
-              occurrences.push(
-                buildBasePayload(
-              utenteId,
-              gruppoEvento,
-              occurrenceStartDateTime,
-              occurrenceEndDateTime,
-                teamsLink || null,
-              ownerStudioId,
-                ownerMicrosoftConnectionId
-                  )
-              );
-            }
-
             current = new Date(current);
             current.setDate(current.getDate() + formData.frequenza_giorni);
           }
