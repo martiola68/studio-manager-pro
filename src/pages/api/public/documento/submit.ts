@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
+import { PDFDocument } from "pdf-lib";
 
 const BUCKET_NAME = "allegati";
 
@@ -12,6 +14,9 @@ const ALLOWED_FILE_TYPES = [
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+const MIN_IMAGE_WIDTH = 1200;
+const MIN_IMAGE_HEIGHT = 800;
 
 export const config = {
   api: {
@@ -29,6 +34,56 @@ function sanitizeFileName(fileName: string) {
     .replace(/[^a-zA-Z0-9._-]/g, "");
 }
 
+async function validateUploadedFile(
+  fileBuffer: Buffer,
+  fileType: string
+): Promise<string | null> {
+  if (!fileBuffer || fileBuffer.length === 0) {
+    return "Il file caricato è vuoto o non valido.";
+  }
+
+  if (fileType === "application/pdf") {
+    try {
+      const pdf = await PDFDocument.load(fileBuffer);
+      const pageCount = pdf.getPageCount();
+
+      if (!pageCount || pageCount < 1) {
+        return "Il PDF non contiene pagine valide.";
+      }
+
+      return null;
+    } catch {
+      return "Il file PDF non è valido o risulta corrotto.";
+    }
+  }
+
+  if (
+    fileType === "image/jpeg" ||
+    fileType === "image/jpg" ||
+    fileType === "image/png"
+  ) {
+    try {
+      const metadata = await sharp(fileBuffer).metadata();
+
+      const width = metadata.width || 0;
+      const height = metadata.height || 0;
+
+      if (!width || !height) {
+        return "Impossibile leggere le dimensioni dell'immagine caricata.";
+      }
+
+      if (width < MIN_IMAGE_WIDTH || height < MIN_IMAGE_HEIGHT) {
+        return `L'immagine è troppo piccola. Dimensioni minime richieste: ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel.`;
+      }
+
+      return null;
+    } catch {
+      return "Il file immagine non è valido o risulta corrotto.";
+    }
+  }
+
+  return "Formato file non supportato.";
+}
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -141,6 +196,15 @@ export default async function handler(
       return res.status(400).json({
         ok: false,
         error: `Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE_MB} MB.`,
+      });
+    }
+
+    const validationError = await validateUploadedFile(fileBuffer, fileType);
+
+    if (validationError) {
+      return res.status(400).json({
+        ok: false,
+        error: validationError,
       });
     }
 
