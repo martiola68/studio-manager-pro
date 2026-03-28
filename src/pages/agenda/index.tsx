@@ -1612,15 +1612,7 @@ const participantUsers = participantIds
 
         if (userIdsToInsert.length > 0) {
           const payloads = userIdsToInsert.map((utenteId) =>
-          buildBasePayload(
-  utenteId,
-  editingGruppoEvento,
-  startDateTimeISO,
-  endDateTimeISO,
-  teamsLink || null,
-  ownerStudioId,
-  ownerMicrosoftConnectionId
-)
+       buildBasePayload(
           );
 
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
