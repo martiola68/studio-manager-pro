@@ -1690,33 +1690,33 @@ const handleSaveEvento = async () => {
         const occurrences: Array<Record<string, unknown>> = [];
         let current = new Date(startDate);
 
-        while (current <= endDate) {
-          const gruppoEvento = crypto.randomUUID();
+      while (current <= endDate) {
+  const gruppoEvento = crypto.randomUUID();
 
-          const occurrenceStartDateTime = formData.tutto_giorno
-            ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
-            : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+  const occurrenceStartDateTime = formData.tutto_giorno
+    ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+    : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
 
-          const occurrenceEndDateTime = formData.tutto_giorno
-            ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
-            : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+  const occurrenceEndDateTime = formData.tutto_giorno
+    ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+    : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
-          for (const utenteId of allParticipantIds) {
-            occurrences.push(
-              buildBasePayload(
-                utenteId,
-                gruppoEvento,
-                occurrenceStartDateTime,
-                occurrenceEndDateTime,
-                teamsLink || null,
-                ownerStudioId,
-                ownerMicrosoftConnectionId
-              )
-            );
-          }
+  for (const utenteId of allParticipantIds) {
+    occurrences.push(
+      buildBasePayload(
+        utenteId,
+        gruppoEvento,
+        occurrenceStartDateTime,
+        occurrenceEndDateTime,
+        teamsLink || null,
+        ownerStudioId,
+        ownerMicrosoftConnectionId
+      )
+    );
+  }
 
-          current.setDate(current.getDate() + formData.frequenza_giorni);
-        }
+  current.setDate(current.getDate() + formData.frequenza_giorni);
+}
       }
     }
   } catch (error: any) {
@@ -1732,8 +1732,7 @@ const handleSaveEvento = async () => {
     setSavingEvento(false);
   }
 };
-            current = new Date(current);
-            current.setDate(current.getDate() + formData.frequenza_giorni);
+    
           }
 
           const { data, error } = await supabase.from("tbagenda").insert(occurrences as any).select();
