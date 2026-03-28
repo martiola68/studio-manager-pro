@@ -1,20 +1,13 @@
 // src/pages/api/microsoft365/graph.ts
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-/**
- * ============================================================
- * CONFIG
- * ============================================================
- * Se nel tuo progetto il nome reale della tabella token cache
- * è diverso, cambia solo TOKENS_TABLE.
- */
+import crypto from "crypto";
+import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msal-node";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { decrypt, encrypt } from "@/lib/encryption365";
 
 const CONNECTIONS_TABLE = "microsoft365_connections";
-const TOKENS_TABLE = "microsoft_token_cache"; // <-- cambia qui solo se nel progetto ha un nome diverso
-
-const GRAPH_BASE_URL = "https://graph.microsoft.com";
+const TOKENS_TABLE = "tbmicrosoft365_user_tokens";
 
 type Json =
   | string
@@ -24,101 +17,158 @@ type Json =
   | { [key: string]: Json }
   | Json[];
 
-type MicrosoftConnectionRow = {
-  id: string;
-  user_id?: string | null;
-  studio_id?: string | null;
-  nome?: string | null;
-  name?: string | null;
-  tenant_id?: string | null;
-  client_id?: string | null;
-  client_secret?: string | null;
-  active?: boolean | null;
-  enabled?: boolean | null;
-  is_default?: boolean | null;
-  [key: string]: unknown;
-};
-
-type TokenCacheRow = {
-  id?: string;
-  user_id?: string | null;
-  microsoft_connection_id?: string | null;
-  connection_id?: string | null;
-  tenant_id?: string | null;
-  access_token?: string | null;
-  refresh_token?: string | null;
-  expires_at?: string | null;
-  token_type?: string | null;
-  scope?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  [key: string]: unknown;
-};
-
 type ApiError = {
   error: string;
   details?: unknown;
 };
 
-function getEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-  return value;
-}
+type AuthUser = {
+  id: string;
+  email?: string | null;
+};
 
-function getSupabaseAdmin(): SupabaseClient {
-  return createClient(
-    getEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    getEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
-}
+type StudioUserRow = {
+  id: string;
+  studio_id: string;
+  email?: string | null;
+};
 
-function getBearerTokenFromRequest(req: NextApiRequest): string | null {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return null;
+type MicrosoftConnectionRow = {
+  id: string;
+  studio_id?: string | null;
+  user_id?: string | null;
+  nome?: string | null;
+  name?: string | null;
+  tenant_id?: string | null;
+  client_id?: string | null;
+  client_secret?: string | null;
+  encrypted_client_secret?: string | null;
+  enabled?: boolean | null;
+  active?: boolean | null;
+  is_default?: boolean | null;
+  [key: string]: unknown;
+};
 
+type Microsoft365ConfigRow = {
+  client_id?: string | null;
+  tenant_id?: string | null;
+  client_secret?: string | null;
+  enabled?: boolean | null;
+};
+
+type TokenRow = {
+  id: string;
+  studio_id: string;
+  user_id: string;
+  token_cache_encrypted: string;
+  scopes?: string | null;
+  connected_at?: string | null;
+  updated_at?: string | null;
+  revoked_at?: string | null;
+  microsoft_connection_id?: string | null;
+};
+
+type GraphProxyBody = {
+  path?: string;
+  method?: string;
+  query?: Record<string, unknown>;
+  body?: unknown;
+  scopes?: string[];
+  microsoftConnectionId?: string;
+  connectionId?: string;
+};
+
+function getBearerToken(req: NextApiRequest): string | null {
+  const authHeader = req.headers.authorization || "";
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   return match?.[1] ?? null;
 }
 
-async function getAuthenticatedUserId(
-  req: NextApiRequest
-): Promise<string | null> {
-  try {
-    const jwt = getBearerTokenFromRequest(req);
-    if (!jwt) return null;
+async function getAuthUser(req: NextApiRequest): Promise<{ user: AuthUser; token: string } | { error: string }> {
+  const token = getBearerToken(req);
+  if (!token) return { error: "Missing Authorization Bearer token" };
 
-    const supabase = createClient(
-      getEnv("NEXT_PUBLIC_SUPABASE_URL"),
-      getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-        global: {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        },
-      }
-    );
-
-    const { data, error } = await supabase.auth.getUser(jwt);
-    if (error || !data?.user?.id) return null;
-
-    return data.user.id;
-  } catch {
-    return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data?.user) {
+    return { error: "Utente non autenticato" };
   }
+
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email,
+    },
+    token,
+  };
+}
+
+async function getUtenteStudio(authUser: AuthUser): Promise<{ utente: StudioUserRow } | { error: string }> {
+  const orParts: string[] = [`id.eq.${authUser.id}`];
+  if (authUser.email) {
+    orParts.push(`email.eq.${authUser.email}`);
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("tbutenti")
+    .select("id, studio_id, email")
+    .or(orParts.join(","))
+    .maybeSingle();
+
+  if (error || !data?.studio_id) {
+    return { error: "Studio utente non trovato" };
+  }
+
+  return { utente: data as StudioUserRow };
+}
+
+function normalizeSecretValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function looksEncrypted(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value);
+    return !!parsed && typeof parsed === "object";
+  } catch {
+    return false;
+  }
+}
+
+export function getDecryptedClientSecret(input: unknown): string | null {
+  const raw =
+    typeof input === "string"
+      ? normalizeSecretValue(input)
+      : input && typeof input === "object"
+      ? normalizeSecretValue((input as Record<string, unknown>).client_secret) ||
+        normalizeSecretValue((input as Record<string, unknown>).encrypted_client_secret) ||
+        normalizeSecretValue((input as Record<string, unknown>).clientSecret) ||
+        normalizeSecretValue((input as Record<string, unknown>).secret)
+      : null;
+
+  if (!raw) return null;
+
+  if (!looksEncrypted(raw)) {
+    return raw;
+  }
+
+  try {
+    return decrypt(raw);
+  } catch {
+    return raw;
+  }
+}
+
+export function maskClientSecret(secret: string | null | undefined): string {
+  if (!secret) return "";
+  if (secret.length <= 8) return "*".repeat(secret.length);
+  return `${secret.slice(0, 4)}${"*".repeat(Math.max(4, secret.length - 8))}${secret.slice(-4)}`;
+}
+
+export function getClientSecretFingerprint(secret: string | null | undefined): string {
+  if (!secret) return "";
+  return crypto.createHash("sha256").update(secret).digest("hex");
 }
 
 function readMicrosoftConnectionId(req: NextApiRequest): string | null {
@@ -133,317 +183,111 @@ function readMicrosoftConnectionId(req: NextApiRequest): string | null {
       ? req.query.connectionId
       : null;
 
+  const body = (req.body ?? {}) as GraphProxyBody;
+
   const bodyValue =
-    req.body && typeof req.body === "object"
-      ? typeof req.body.microsoftConnectionId === "string"
-        ? req.body.microsoftConnectionId
-        : typeof req.body.connectionId === "string"
-        ? req.body.connectionId
-        : null
+    typeof body.microsoftConnectionId === "string"
+      ? body.microsoftConnectionId
+      : typeof body.connectionId === "string"
+      ? body.connectionId
       : null;
 
   return headerValue || queryValue || bodyValue || null;
 }
 
 function readGraphPath(req: NextApiRequest): string {
-  const fromQuery =
+  const queryPath =
     typeof req.query.path === "string"
       ? req.query.path
       : Array.isArray(req.query.path)
       ? req.query.path.join("/")
       : "";
 
-  const fromBody =
-    req.body && typeof req.body === "object" && typeof req.body.path === "string"
-      ? req.body.path
-      : "";
+  const body = (req.body ?? {}) as GraphProxyBody;
+  const bodyPath = typeof body.path === "string" ? body.path : "";
 
-  const raw = fromQuery || fromBody || "";
+  const rawPath = queryPath || bodyPath;
 
-  if (!raw) {
+  if (!rawPath) {
     throw new Error("Missing Graph path");
   }
 
-  return raw.startsWith("/") ? raw : `/${raw}`;
+  return rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
 }
 
 function readGraphMethod(req: NextApiRequest): string {
-  if (req.body && typeof req.body === "object" && typeof req.body.method === "string") {
-    return req.body.method.toUpperCase();
+  const body = (req.body ?? {}) as GraphProxyBody;
+
+  if (typeof body.method === "string" && body.method.trim()) {
+    return body.method.trim().toUpperCase();
   }
+
   return (req.method || "GET").toUpperCase();
 }
 
 function readGraphQuery(req: NextApiRequest): Record<string, string> {
-  const bodyQuery =
-    req.body && typeof req.body === "object" && req.body.query && typeof req.body.query === "object"
-      ? req.body.query
-      : {};
-
-  const queryParams: Record<string, string> = {};
+  const result: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(req.query)) {
-    if (key === "path" || key === "microsoftConnectionId" || key === "connectionId") continue;
-    if (typeof value === "string") queryParams[key] = value;
-    if (Array.isArray(value)) queryParams[key] = value[value.length - 1] ?? "";
+    if (["path", "microsoftConnectionId", "connectionId"].includes(key)) continue;
+
+    if (typeof value === "string") {
+      result[key] = value;
+    } else if (Array.isArray(value) && value.length > 0) {
+      result[key] = value[value.length - 1] ?? "";
+    }
   }
 
-  for (const [key, value] of Object.entries(bodyQuery)) {
-    if (typeof value === "string") queryParams[key] = value;
+  const body = (req.body ?? {}) as GraphProxyBody;
+  if (body.query && typeof body.query === "object") {
+    for (const [key, value] of Object.entries(body.query)) {
+      if (typeof value === "string") {
+        result[key] = value;
+      }
+    }
   }
 
-  return queryParams;
+  return result;
+}
+
+function readRequestedScopes(req: NextApiRequest): string[] {
+  const body = (req.body ?? {}) as GraphProxyBody;
+
+  if (Array.isArray(body.scopes) && body.scopes.length > 0) {
+    return body.scopes.filter((v): v is string => typeof v === "string" && !!v.trim());
+  }
+
+  return ["User.Read", "Calendars.ReadWrite", "Mail.Send"];
 }
 
 function buildGraphUrl(path: string, query: Record<string, string>): string {
-  const url = new URL(`${GRAPH_BASE_URL}${path}`);
+  const url = new URL(`https://graph.microsoft.com${path}`);
 
-  Object.entries(query).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== "") {
       url.searchParams.set(key, value);
     }
-  });
+  }
 
   return url.toString();
 }
 
-function isConnectionEnabled(connection: MicrosoftConnectionRow): boolean {
-  if (typeof connection.enabled === "boolean") return connection.enabled;
-  if (typeof connection.active === "boolean") return connection.active;
-  return true;
-}
-
-async function loadUserConnections(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<MicrosoftConnectionRow[]> {
-  const { data, error } = await supabase
-    .from(CONNECTIONS_TABLE)
-    .select("*")
-    .eq("user_id", userId);
-
-  if (error) {
-    throw new Error(`Errore lettura connessioni Microsoft: ${error.message}`);
-  }
-
-  return (data ?? []) as MicrosoftConnectionRow[];
-}
-
-function resolveConnection(
-  connections: MicrosoftConnectionRow[],
-  requestedId: string | null
-): MicrosoftConnectionRow | null {
-  const enabledConnections = connections.filter(isConnectionEnabled);
-
-  if (requestedId) {
-    const exact = enabledConnections.find((c) => c.id === requestedId);
-    if (exact) return exact;
-    return null;
-  }
-
-  const explicitDefault = enabledConnections.find((c) => c.is_default === true);
-  if (explicitDefault) return explicitDefault;
-
-  return enabledConnections[0] ?? null;
-}
-
-async function loadCachedTokenForConnection(
-  supabase: SupabaseClient,
-  userId: string,
-  connection: MicrosoftConnectionRow
-): Promise<TokenCacheRow | null> {
-  /**
-   * Filtriamo SEMPRE per:
-   * - user_id
-   * - connessione
-   *
-   * Supportiamo sia microsoft_connection_id sia connection_id
-   * perché in alcuni progetti storici cambia il nome colonna.
-   */
-
-  let lastError: unknown = null;
-
-  // Tentativo 1: microsoft_connection_id
-  {
-    const { data, error } = await supabase
-      .from(TOKENS_TABLE)
-      .select("*")
-      .eq("user_id", userId)
-      .eq("microsoft_connection_id", connection.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && data) {
-      return data as TokenCacheRow;
-    }
-
-    if (!error && !data) {
-      // nessun token, proseguiamo col fallback
-    } else {
-      lastError = error;
-    }
-  }
-
-  // Tentativo 2: connection_id
-  {
-    const { data, error } = await supabase
-      .from(TOKENS_TABLE)
-      .select("*")
-      .eq("user_id", userId)
-      .eq("connection_id", connection.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && data) {
-      return data as TokenCacheRow;
-    }
-
-    if (!error && !data) {
-      // nessun token
-    } else {
-      lastError = error;
-    }
-  }
-
-  // Tentativo 3: fallback stretto su user_id + tenant_id
-  // utile solo se il progetto storico non salvava il riferimento diretto alla connessione
-  if (connection.tenant_id) {
-    const { data, error } = await supabase
-      .from(TOKENS_TABLE)
-      .select("*")
-      .eq("user_id", userId)
-      .eq("tenant_id", connection.tenant_id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && data) {
-      return data as TokenCacheRow;
-    }
-
-    if (error) {
-      lastError = error;
-    }
-  }
-
-  if (lastError) {
-    console.error("Errore token cache:", lastError);
-  }
-
-  return null;
-}
-
-function isTokenExpired(token: TokenCacheRow | null): boolean {
-  if (!token?.expires_at) return false;
-
-  const expiresAtMs = new Date(token.expires_at).getTime();
-  if (Number.isNaN(expiresAtMs)) return false;
-
-  // margine di sicurezza di 60 secondi
-  return expiresAtMs <= Date.now() + 60_000;
-}
-
-async function refreshAccessToken(params: {
-  connection: MicrosoftConnectionRow;
-  cachedToken: TokenCacheRow;
-  supabase: SupabaseClient;
-  userId: string;
-}): Promise<TokenCacheRow | null> {
-  const { connection, cachedToken, supabase, userId } = params;
-
-  const tenantId = connection.tenant_id;
-  const clientId = connection.client_id;
-  const clientSecret = connection.client_secret;
-  const refreshToken = cachedToken.refresh_token;
-
-  if (!tenantId || !clientId || !clientSecret || !refreshToken) {
-    return null;
-  }
-
-  const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-
-  const body = new URLSearchParams();
-  body.set("client_id", clientId);
-  body.set("client_secret", clientSecret);
-  body.set("grant_type", "refresh_token");
-  body.set("refresh_token", refreshToken);
-  body.set(
-    "scope",
-    typeof cachedToken.scope === "string" && cachedToken.scope.trim()
-      ? cachedToken.scope
-      : "https://graph.microsoft.com/.default offline_access"
-  );
-
-  const resp = await fetch(tokenEndpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: body.toString(),
-  });
-
-  const payload = await resp.json().catch(() => null);
-
-  if (!resp.ok || !payload?.access_token) {
-    console.error("Refresh token Microsoft fallito:", payload);
-    return null;
-  }
-
-  const expiresIn = Number(payload.expires_in ?? 3600);
-  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-  const updatePayload = {
-    user_id: userId,
-    microsoft_connection_id: connection.id,
-    tenant_id: tenantId,
-    access_token: payload.access_token as string,
-    refresh_token: (payload.refresh_token as string) || refreshToken,
-    expires_at: expiresAt,
-    token_type: (payload.token_type as string) || "Bearer",
-    scope:
-      (payload.scope as string) ||
-      (typeof cachedToken.scope === "string" ? cachedToken.scope : null),
-    updated_at: new Date().toISOString(),
-  };
-
-  // upsert 1: usando microsoft_connection_id
-  {
-    const { error } = await supabase.from(TOKENS_TABLE).upsert(updatePayload, {
-      onConflict: "user_id,microsoft_connection_id",
-    });
-
-    if (!error) {
-      return updatePayload;
-    }
-  }
-
-  // fallback update per schemi legacy
-  {
-    const { error } = await supabase
-      .from(TOKENS_TABLE)
-      .update(updatePayload)
-      .eq("user_id", userId)
-      .eq("tenant_id", tenantId);
-
-    if (!error) {
-      return updatePayload;
-    }
-  }
-
-  return updatePayload;
-}
-
 function readForwardHeaders(req: NextApiRequest): HeadersInit {
-  const contentType = req.headers["content-type"];
-  const prefer = req.headers["prefer"];
-  const consistencyLevel = req.headers["consistencylevel"] || req.headers["consistency-level"];
-
   const headers: Record<string, string> = {};
 
-  if (typeof contentType === "string") headers["Content-Type"] = contentType;
-  if (typeof prefer === "string") headers["Prefer"] = prefer;
+  const contentType = req.headers["content-type"];
+  const prefer = req.headers["prefer"];
+  const consistencyLevel =
+    req.headers["consistencylevel"] || req.headers["consistency-level"];
+
+  if (typeof contentType === "string") {
+    headers["Content-Type"] = contentType;
+  }
+
+  if (typeof prefer === "string") {
+    headers["Prefer"] = prefer;
+  }
+
   if (typeof consistencyLevel === "string") {
     headers["ConsistencyLevel"] = consistencyLevel;
   }
@@ -454,163 +298,392 @@ function readForwardHeaders(req: NextApiRequest): HeadersInit {
 function readForwardBody(req: NextApiRequest, method: string): BodyInit | undefined {
   if (method === "GET" || method === "HEAD") return undefined;
 
-  const body = req.body;
+  const body = (req.body ?? {}) as GraphProxyBody;
+  if (body.body !== undefined) {
+    return typeof body.body === "string" ? body.body : JSON.stringify(body.body);
+  }
 
-  if (body == null) return undefined;
+  if (req.body == null) return undefined;
+  if (typeof req.body === "string") return req.body;
 
-  if (typeof body === "string") return body;
-
-  if (typeof body === "object") {
-    // rimuoviamo i campi di controllo interni
+  if (typeof req.body === "object") {
     const {
       path,
       method: _method,
       query,
+      scopes,
       microsoftConnectionId,
       connectionId,
       ...rest
-    } = body;
+    } = req.body as Record<string, unknown>;
 
-    return JSON.stringify(rest);
+    void path;
+    void _method;
+    void query;
+    void scopes;
+    void microsoftConnectionId;
+    void connectionId;
+
+    return Object.keys(rest).length > 0 ? JSON.stringify(rest) : undefined;
   }
 
   return undefined;
 }
 
-function setPassthroughResponse(
-  res: NextApiResponse,
-  upstream: Response,
-  data: unknown
-) {
-  res.status(upstream.status);
-
-  const contentType = upstream.headers.get("content-type");
-  if (contentType) {
-    res.setHeader("Content-Type", contentType);
-  }
-
-  const etag = upstream.headers.get("etag");
-  if (etag) {
-    res.setHeader("ETag", etag);
-  }
-
-  const odataVersion = upstream.headers.get("odata-version");
-  if (odataVersion) {
-    res.setHeader("OData-Version", odataVersion);
-  }
-
-  res.send(data as Json);
+function isConnectionEnabled(connection: MicrosoftConnectionRow): boolean {
+  if (typeof connection.enabled === "boolean") return connection.enabled;
+  if (typeof connection.active === "boolean") return connection.active;
+  return true;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Json | ApiError>
-) {
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
+async function getMicrosoft365Config(studioId: string): Promise<{ cfg: Microsoft365ConfigRow } | { error: string }> {
+  const { data, error } = await supabaseAdmin
+    .from("microsoft365_config")
+    .select("client_id, tenant_id, client_secret, enabled")
+    .eq("studio_id", studioId)
+    .maybeSingle();
+
+  if (error || !data?.client_id) {
+    return { error: "Configurazione Microsoft 365 incompleta" };
+  }
+
+  if (data.enabled === false) {
+    return { error: "Microsoft 365 disabilitato per lo studio" };
+  }
+
+  return { cfg: data as Microsoft365ConfigRow };
+}
+
+async function loadConnections(studioId: string, userId: string): Promise<MicrosoftConnectionRow[]> {
+  const triedQueries: MicrosoftConnectionRow[][] = [];
+
+  const byStudioAndUser = await supabaseAdmin
+    .from(CONNECTIONS_TABLE)
+    .select("*")
+    .eq("studio_id", studioId)
+    .eq("user_id", userId);
+
+  if (!byStudioAndUser.error && Array.isArray(byStudioAndUser.data) && byStudioAndUser.data.length > 0) {
+    triedQueries.push(byStudioAndUser.data as MicrosoftConnectionRow[]);
+  }
+
+  const byStudio = await supabaseAdmin
+    .from(CONNECTIONS_TABLE)
+    .select("*")
+    .eq("studio_id", studioId);
+
+  if (!byStudio.error && Array.isArray(byStudio.data) && byStudio.data.length > 0) {
+    triedQueries.push(byStudio.data as MicrosoftConnectionRow[]);
+  }
+
+  const merged = new Map<string, MicrosoftConnectionRow>();
+  for (const bucket of triedQueries) {
+    for (const row of bucket) {
+      if (row?.id) merged.set(row.id, row);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+function resolveConnection(
+  connections: MicrosoftConnectionRow[],
+  requestedConnectionId: string | null
+): MicrosoftConnectionRow | null {
+  const enabled = connections.filter(isConnectionEnabled);
+
+  if (requestedConnectionId) {
+    return enabled.find((c) => c.id === requestedConnectionId) ?? null;
+  }
+
+  const explicitDefault = enabled.find((c) => c.is_default === true);
+  if (explicitDefault) return explicitDefault;
+
+  if (enabled.length === 1) return enabled[0];
+
+  const userOwned = enabled.find((c) => !!c.user_id);
+  if (userOwned) return userOwned;
+
+  return enabled[0] ?? null;
+}
+
+async function loadTokenRow(params: {
+  studioId: string;
+  userId: string;
+  microsoftConnectionId: string | null;
+}): Promise<TokenRow | null> {
+  const { studioId, userId, microsoftConnectionId } = params;
+
+  if (microsoftConnectionId) {
+    const { data, error } = await supabaseAdmin
+      .from(TOKENS_TABLE)
+      .select("*")
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", microsoftConnectionId)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    if (!error && data) {
+      return data as TokenRow;
+    }
+  }
+
+  const { data: legacyData, error: legacyError } = await supabaseAdmin
+    .from(TOKENS_TABLE)
+    .select("*")
+    .eq("studio_id", studioId)
+    .eq("user_id", userId)
+    .is("microsoft_connection_id", null)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  if (!legacyError && legacyData) {
+    return legacyData as TokenRow;
+  }
+
+  return null;
+}
+
+function buildMsalApp(params: { clientId: string; tenantId: string; clientSecret: string }) {
+  return new ConfidentialClientApplication({
+    auth: {
+      clientId: params.clientId,
+      authority: `https://login.microsoftonline.com/${params.tenantId || "common"}`,
+      clientSecret: params.clientSecret,
+    },
+    system: {
+      loggerOptions: {
+        logLevel: LogLevel.Error,
+        piiLoggingEnabled: false,
+      },
+    },
+  });
+}
+
+async function acquireAccessTokenFromCache(params: {
+  msalApp: ConfidentialClientApplication;
+  serializedCache: string;
+  scopes: string[];
+}) {
+  params.msalApp.getTokenCache().deserialize(params.serializedCache);
+
+  const accounts = await params.msalApp.getTokenCache().getAllAccounts();
+  const account: AccountInfo | undefined = accounts?.[0];
+
+  if (!account) {
+    return { error: "Account MSAL non trovato in cache: riconnetti Microsoft 365" as const };
   }
 
   try {
-    const userId = await getAuthenticatedUserId(req);
+    const result = await params.msalApp.acquireTokenSilent({
+      account,
+      scopes: params.scopes,
+    });
 
-    if (!userId) {
-      return res.status(401).json({
-        error: "Utente non autenticato",
+    if (!result?.accessToken) {
+      return { error: "Access token mancante" as const };
+    }
+
+    const newSerializedCache = params.msalApp.getTokenCache().serialize();
+
+    return {
+      accessToken: result.accessToken,
+      account,
+      newSerializedCache,
+    };
+  } catch (e: any) {
+    return {
+      error: "Impossibile ottenere token silent: riconnetti Microsoft 365 (token scaduto o consenso mancante)" as const,
+      details: e?.message ?? String(e),
+    };
+  }
+}
+
+async function persistCacheIfChanged(params: {
+  studioId: string;
+  userId: string;
+  microsoftConnectionId: string | null;
+  oldSerialized: string;
+  newSerialized: string;
+}) {
+  const { studioId, userId, microsoftConnectionId, oldSerialized, newSerialized } = params;
+
+  if (!newSerialized || newSerialized === oldSerialized) return;
+
+  const newEncryptedCache = encrypt(newSerialized);
+
+  let query = supabaseAdmin
+    .from(TOKENS_TABLE)
+    .update({
+      token_cache_encrypted: newEncryptedCache,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("studio_id", studioId)
+    .eq("user_id", userId)
+    .is("revoked_at", null);
+
+  if (microsoftConnectionId) {
+    query = query.eq("microsoft_connection_id", microsoftConnectionId);
+  } else {
+    query = query.is("microsoft_connection_id", null);
+  }
+
+  await query;
+}
+
+async function sendUpstreamResponse(res: NextApiResponse, upstream: Response): Promise<void> {
+  res.status(upstream.status);
+
+  const contentType = upstream.headers.get("content-type");
+  const etag = upstream.headers.get("etag");
+  const odataVersion = upstream.headers.get("odata-version");
+
+  if (contentType) res.setHeader("Content-Type", contentType);
+  if (etag) res.setHeader("ETag", etag);
+  if (odataVersion) res.setHeader("OData-Version", odataVersion);
+
+  if (contentType?.includes("application/json")) {
+    const json = await upstream.json().catch(() => null);
+    res.send(json);
+    return;
+  }
+
+  const text = await upstream.text().catch(() => "");
+  res.send(text);
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<Json | ApiError>) {
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  try {
+    const auth = await getAuthUser(req);
+    if ("error" in auth) {
+      return res.status(401).json({ error: auth.error });
+    }
+
+    const mapped = await getUtenteStudio({
+      id: auth.user.id,
+      email: auth.user.email,
+    });
+
+    if ("error" in mapped) {
+      return res.status(400).json({ error: mapped.error });
+    }
+
+    const requesterUserId = mapped.utente.id;
+    const studioId = mapped.utente.studio_id;
+
+    const cfgRes = await getMicrosoft365Config(studioId);
+    if ("error" in cfgRes) {
+      return res.status(400).json({ error: cfgRes.error });
+    }
+
+    const clientId = cfgRes.cfg.client_id || "";
+    const tenantId = cfgRes.cfg.tenant_id || "common";
+    const clientSecret = getDecryptedClientSecret(cfgRes.cfg.client_secret);
+
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({
+        error: "Configurazione Microsoft 365 incompleta: client_id o client_secret mancanti",
       });
     }
 
-    const supabase = getSupabaseAdmin();
     const requestedConnectionId = readMicrosoftConnectionId(req);
-    const graphPath = readGraphPath(req);
-    const graphMethod = readGraphMethod(req);
-    const graphQuery = readGraphQuery(req);
+    const connections = await loadConnections(studioId, requesterUserId);
+    const selectedConnection = resolveConnection(connections, requestedConnectionId);
 
-    const userConnections = await loadUserConnections(supabase, userId);
-
-    if (!userConnections.length) {
+    if (requestedConnectionId && !selectedConnection) {
       return res.status(404).json({
-        error: "Nessuna connessione Microsoft configurata per questo utente",
+        error: "Connessione Microsoft non trovata o non abilitata",
+        details: {
+          studio_id: studioId,
+          user_id: requesterUserId,
+          microsoftConnectionId: requestedConnectionId,
+        },
       });
     }
 
-    const selectedConnection = resolveConnection(
-      userConnections,
-      requestedConnectionId
-    );
+    const effectiveConnectionId = selectedConnection?.id ?? null;
 
-    if (!selectedConnection) {
-      return res.status(404).json({
-        error: requestedConnectionId
-          ? "Connessione Microsoft non trovata o non abilitata"
-          : "Nessuna connessione Microsoft valida disponibile",
-      });
-    }
+    const tokenRow = await loadTokenRow({
+      studioId,
+      userId: requesterUserId,
+      microsoftConnectionId: effectiveConnectionId,
+    });
 
-    let cachedToken = await loadCachedTokenForConnection(
-      supabase,
-      userId,
-      selectedConnection
-    );
-
-    if (!cachedToken) {
+    if (!tokenRow?.token_cache_encrypted) {
       return res.status(401).json({
         error: "Token Microsoft non trovato per la connessione selezionata",
         details: {
-          connectionId: selectedConnection.id,
-          tenantId: selectedConnection.tenant_id ?? null,
+          studio_id: studioId,
+          user_id: requesterUserId,
+          microsoftConnectionId: effectiveConnectionId,
         },
       });
     }
 
-    if (isTokenExpired(cachedToken)) {
-      const refreshed = await refreshAccessToken({
-        connection: selectedConnection,
-        cachedToken,
-        supabase,
-        userId,
+    let serializedCache: string;
+    try {
+      serializedCache = decrypt(tokenRow.token_cache_encrypted);
+    } catch (e: any) {
+      return res.status(500).json({
+        error: "Impossibile decifrare la token cache Microsoft",
+        details: e?.message ?? String(e),
       });
-
-      if (refreshed?.access_token) {
-        cachedToken = refreshed;
-      }
     }
 
-    if (!cachedToken?.access_token) {
+    const msalApp = buildMsalApp({
+      clientId,
+      tenantId,
+      clientSecret,
+    });
+
+    const scopes = readRequestedScopes(req);
+
+    const tokenRes = await acquireAccessTokenFromCache({
+      msalApp,
+      serializedCache,
+      scopes,
+    });
+
+    if ("error" in tokenRes) {
       return res.status(401).json({
-        error: "Access token Microsoft non disponibile",
-        details: {
-          connectionId: selectedConnection.id,
-        },
+        error: tokenRes.error,
+        details: tokenRes.details,
       });
     }
 
+    await persistCacheIfChanged({
+      studioId,
+      userId: requesterUserId,
+      microsoftConnectionId: tokenRow.microsoft_connection_id ?? effectiveConnectionId,
+      oldSerialized: serializedCache,
+      newSerialized: tokenRes.newSerializedCache,
+    });
+
+    const graphPath = readGraphPath(req);
+    const graphMethod = readGraphMethod(req);
+    const graphQuery = readGraphQuery(req);
     const graphUrl = buildGraphUrl(graphPath, graphQuery);
 
     const upstream = await fetch(graphUrl, {
       method: graphMethod,
       headers: {
         ...readForwardHeaders(req),
-        Authorization: `Bearer ${cachedToken.access_token}`,
+        Authorization: `Bearer ${tokenRes.accessToken}`,
+        Accept: "application/json",
       },
       body: readForwardBody(req, graphMethod),
     });
 
-    const upstreamContentType = upstream.headers.get("content-type") || "";
-
-    if (upstreamContentType.includes("application/json")) {
-      const payload = await upstream.json().catch(() => null);
-      return setPassthroughResponse(res, upstream, payload);
-    }
-
-    const text = await upstream.text().catch(() => "");
-    return setPassthroughResponse(res, upstream, text);
-  } catch (error) {
-    console.error("Errore API /api/microsoft365/graph:", error);
-
+    return await sendUpstreamResponse(res, upstream);
+  } catch (e: any) {
+    console.error("[microsoft365/graph]", e);
     return res.status(500).json({
-      error: "Errore interno Microsoft Graph proxy",
-      details: error instanceof Error ? error.message : error,
+      error: e?.message || "Errore interno Microsoft Graph proxy",
     });
   }
 }
