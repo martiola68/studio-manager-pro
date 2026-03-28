@@ -551,6 +551,8 @@ export default function AgendaPage() {
   const [editingEventoId, setEditingEventoId] = useState<string | null>(null);
   const [editingGruppoEvento, setEditingGruppoEvento] = useState<string | null>(null);
 
+   const [savingEvento, setSavingEvento] = useState(false);
+
   // popup multipli
   const [moreEventsOpen, setMoreEventsOpen] = useState(false);
   const [moreEventsDate, setMoreEventsDate] = useState<Date | null>(null);
@@ -702,12 +704,12 @@ export default function AgendaPage() {
 
   const groupedEvents = useMemo(() => aggregateEventGroups(eventiRows), [eventiRows]);
 
-  const filteredEvents = useMemo(() => {
-    return groupedEvents.filter((e) => {
-      if (filtroUtenti.length === 0) return true;
-      return e.partecipanti.some((id) => filtroUtenti.includes(id));
-    });
-  }, [groupedEvents, filtroUtenti]);
+const filteredEvents = useMemo(() => {
+  return groupedEvents.filter((e) => {
+    if (filtroUtenti.length === 0) return true;
+    return filtroUtenti.includes(String(e.utente_id || ""));
+  });
+}, [groupedEvents, filtroUtenti]);
 
   const loggedUser = useMemo(
     () => utenti.find((u) => String(u.id) === String(currentUserId || "")) || null,
@@ -1393,8 +1395,11 @@ const participantUsers = participantIds
   }
 };
 
-   const handleSaveEvento = async () => {
-    const supabase = getSupabaseClient();
+  const handleSaveEvento = async () => {
+  if (savingEvento) return;
+
+  const supabase = getSupabaseClient();
+  setSavingEvento(true);
 
     try {
       if (!formData.titolo.trim()) {
@@ -3028,9 +3033,13 @@ const participantUsers = participantIds
                 Annulla
               </Button>
 
-              <Button type="submit" onClick={handleSaveEvento}>
-                {editingEventoId ? "Aggiorna Evento" : "Crea Evento"}
-              </Button>
+              <Button type="submit" onClick={handleSaveEvento} disabled={savingEvento}>
+  {savingEvento
+    ? "Salvataggio..."
+    : editingEventoId
+    ? "Aggiorna Evento"
+    : "Crea Evento"}
+</Button>
             </div>
           </DialogFooter>
         </DialogContent>
