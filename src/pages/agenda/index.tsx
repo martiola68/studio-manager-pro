@@ -587,6 +587,8 @@ export default function AgendaPage() {
     durata_giorni: 180,
   });
 
+  const [userFilterInitialized, setUserFilterInitialized] = useState(false);
+
   // ----------------------------------------------------
   // LOAD DATA
   // ----------------------------------------------------
@@ -712,12 +714,13 @@ export default function AgendaPage() {
     [utenti, currentUserId]
   );
 
-  useEffect(() => {
-    if (!currentUserId) return;
-    if (filtroUtenti.length > 0) return;
+ useEffect(() => {
+  if (!currentUserId) return;
+  if (userFilterInitialized) return;
 
-    setFiltroUtenti([String(currentUserId)]);
-  }, [currentUserId, filtroUtenti.length]);
+  setFiltroUtenti([String(currentUserId)]);
+  setUserFilterInitialized(true);
+}, [currentUserId, userFilterInitialized]);
 
   const teamsEvents = useMemo(() => {
     return groupedEvents
