@@ -599,7 +599,7 @@ export default function AgendaPage() {
   }, []);
 
   const loadData = async () => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseClient() as any;
 
     try {
       setLoading(true);
