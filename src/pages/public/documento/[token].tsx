@@ -77,6 +77,16 @@ function mapRowToForm(row: any): PublicDocumentoFormState {
   };
 }
 
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+];
+
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export default function PublicDocumentoPage() {
   const router = useRouter();
 
@@ -181,11 +191,31 @@ export default function PublicDocumentoPage() {
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
-    setSelectedFile(file);
+
     setErrMsg("");
     setOkMsg("");
-  }
 
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      setSelectedFile(null);
+      e.target.value = "";
+      setErrMsg("Formato file non ammesso. Caricare solo PDF, JPG, JPEG o PNG.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setSelectedFile(null);
+      e.target.value = "";
+      setErrMsg(`Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE_MB} MB.`);
+      return;
+    }
+
+    setSelectedFile(file);
+  }
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -461,9 +491,9 @@ export default function PublicDocumentoPage() {
                     onChange={handleFileChange}
                     className="w-full rounded-md border bg-white px-3 py-2"
                   />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Formati ammessi: PDF, JPG, JPEG, PNG
-                  </p>
+                 <p className="mt-1 text-xs text-slate-500">
+                  Formati ammessi: PDF, JPG, JPEG, PNG • Dimensione massima: {MAX_FILE_SIZE_MB} MB
+                      </p>
                   {selectedFile && (
                     <p className="mt-1 text-sm text-slate-700">
                       File selezionato: <strong>{selectedFile.name}</strong>
