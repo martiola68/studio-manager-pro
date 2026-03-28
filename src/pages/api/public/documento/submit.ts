@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
-
 const BUCKET_NAME = "allegati";
 
 const ALLOWED_FILE_TYPES = [
@@ -80,33 +79,6 @@ async function validateUploadedFile(
   return "Formato file non supportato.";
 }
 
-  if (
-    fileType === "image/jpeg" ||
-    fileType === "image/jpg" ||
-    fileType === "image/png"
-  ) {
-    try {
-      const metadata = await sharp(fileBuffer).metadata();
-
-      const width = metadata.width || 0;
-      const height = metadata.height || 0;
-
-      if (!width || !height) {
-        return "Impossibile leggere le dimensioni dell'immagine caricata.";
-      }
-
-      if (width < MIN_IMAGE_WIDTH || height < MIN_IMAGE_HEIGHT) {
-        return `L'immagine è troppo piccola. Dimensioni minime richieste: ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel.`;
-      }
-
-      return null;
-    } catch {
-      return "Il file immagine non è valido o risulta corrotto.";
-    }
-  }
-
-  return "Formato file non supportato.";
-}
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -116,25 +88,19 @@ export default async function handler(
   }
 
   try {
- const rawBody =
+    const rawBody =
       typeof req.body === "string"
         ? JSON.parse(req.body || "{}")
         : req.body || {};
 
     const token =
-      typeof rawBody.token === "string"
-        ? rawBody.token.trim()
-        : "";
+      typeof rawBody.token === "string" ? rawBody.token.trim() : "";
 
     const tipo_doc =
-      typeof rawBody.tipo_doc === "string"
-        ? rawBody.tipo_doc.trim()
-        : "";
+      typeof rawBody.tipo_doc === "string" ? rawBody.tipo_doc.trim() : "";
 
     const num_doc =
-      typeof rawBody.num_doc === "string"
-        ? rawBody.num_doc.trim()
-        : "";
+      typeof rawBody.num_doc === "string" ? rawBody.num_doc.trim() : "";
 
     const scadenza_doc =
       typeof rawBody.scadenza_doc === "string"
@@ -142,21 +108,15 @@ export default async function handler(
         : "";
 
     const fileName =
-      typeof rawBody.fileName === "string"
-        ? rawBody.fileName.trim()
-        : "";
+      typeof rawBody.fileName === "string" ? rawBody.fileName.trim() : "";
 
     const fileType =
-      typeof rawBody.fileType === "string"
-        ? rawBody.fileType.trim()
-        : "";
+      typeof rawBody.fileType === "string" ? rawBody.fileType.trim() : "";
 
     const fileBase64 =
-      typeof rawBody.fileBase64 === "string"
-        ? rawBody.fileBase64
-        : "";
+      typeof rawBody.fileBase64 === "string" ? rawBody.fileBase64 : "";
 
-        if (fileType && !ALLOWED_FILE_TYPES.includes(fileType)) {
+    if (fileType && !ALLOWED_FILE_TYPES.includes(fileType)) {
       return res.status(400).json({
         ok: false,
         error: "Formato file non ammesso. Caricare solo PDF, JPG, JPEG o PNG.",
