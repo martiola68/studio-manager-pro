@@ -1616,18 +1616,27 @@ const handleSaveEvento = async () => {
 
       let insertedRows: any[] = [];
 
-      if (userIdsToInsert.length > 0) {
-        const payloads = userIdsToInsert.map((utenteId) =>
-          buildBasePayload(
-            utenteId,
-            editingGruppoEvento,
-            startDateTimeISO,
-            endDateTimeISO,
-            teamsLink || null,
-            ownerStudioId,
-            ownerMicrosoftConnectionId
-          )
-        );
+     if (userIdsToInsert.length > 0) {
+  const payloads = userIdsToInsert.map((utenteId) =>
+    buildBasePayload(
+      utenteId,
+      editingGruppoEvento,
+      startDateTimeISO,
+      endDateTimeISO,
+      teamsLink || null,
+      ownerStudioId,
+      ownerMicrosoftConnectionId
+    )
+  );
+
+  const { data, error } = await supabase
+    .from("tbagenda")
+    .insert(payloads as any)
+    .select();
+
+  if (error) throw error;
+  insertedRows = data ?? [];
+}
 
         // QUI continua con il resto della tua logica già esistente
       }
