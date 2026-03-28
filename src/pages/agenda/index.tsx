@@ -1466,6 +1466,9 @@ const participantUsers = participantIds
       let teamsLink = formData.link_teams || "";
       let teamsJoinUrl: string | null = null;
 
+       const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
+       const ownerMicrosoftConnectionId = await getMicrosoftConnectionIdForUser(formData.utente_id);
+
       if (formData.riunione_teams) {
         if (teamsLink.trim().length > 0) {
           const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
@@ -1479,9 +1482,7 @@ const participantUsers = participantIds
             return;
           }
         } else if (!editingGruppoEvento) {
-          const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
-
-          const ownerMicrosoftConnectionId = await getMicrosoftConnectionIdForUser(formData.utente_id);
+         
 
           if (!ownerStudioId) {
             toast({
