@@ -707,7 +707,10 @@ export default function AgendaPage() {
 const filteredEvents = useMemo(() => {
   return groupedEvents.filter((e) => {
     if (filtroUtenti.length === 0) return true;
-    return filtroUtenti.includes(String(e.utente_id || ""));
+
+    return e.rows.some((row) =>
+      filtroUtenti.includes(String(row.utente_id || ""))
+    );
   });
 }, [groupedEvents, filtroUtenti]);
 
