@@ -96,6 +96,21 @@ export default async function handler(
     const token =
       typeof rawBody.token === "string" ? rawBody.token.trim() : "";
 
+     const citta_residenza =
+      typeof rawBody.citta_residenza === "string"
+        ? rawBody.citta_residenza.trim()
+        : "";
+
+    const indirizzo_residenza =
+      typeof rawBody.indirizzo_residenza === "string"
+        ? rawBody.indirizzo_residenza.trim()
+        : "";
+
+    const CAP =
+      typeof rawBody.CAP === "string"
+        ? rawBody.CAP.trim()
+        : "";
+
     const tipo_doc =
       typeof rawBody.tipo_doc === "string" ? rawBody.tipo_doc.trim() : "";
 
@@ -133,7 +148,14 @@ export default async function handler(
       return res.status(400).json({ ok: false, error: "Token mancante" });
     }
 
-    if (!tipo_doc || !num_doc || !scadenza_doc) {
+    if (
+      !citta_residenza ||
+      !indirizzo_residenza ||
+      !CAP ||
+      !tipo_doc ||
+      !num_doc ||
+      !scadenza_doc
+    ) {
       return res
         .status(400)
         .json({ ok: false, error: "Campi obbligatori mancanti" });
@@ -204,9 +226,12 @@ export default async function handler(
 
     const submittedAt = new Date().toISOString();
 
-    const { error: updateError } = await supabase
+  const { error: updateError } = await supabase
       .from("rapp_legali")
       .update({
+        citta_residenza,
+        indirizzo_residenza,
+        CAP,
         tipo_doc,
         num_doc: String(num_doc).trim(),
         scadenza_doc,
