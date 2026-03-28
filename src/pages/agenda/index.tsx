@@ -921,14 +921,18 @@ export default function AgendaPage() {
     updated_at: new Date().toISOString(),
   });
 
- const syncRowsToOutlook = async (rows) => {
+ const syncRowsToOutlook = async (
+  rows: Array<{
+    id: string;
+    utente_id: string | null;
+  }>
+) => {
   const supabase = getSupabaseClient();
 
   for (const row of rows) {
     if (!row?.id || !row.utente_id) continue;
 
     try {
-      // 🔴 1. Recupero connessione Microsoft
       const { data: connection } = await supabase
         .from("microsoft365_connections")
         .select("id")
@@ -941,12 +945,10 @@ export default function AgendaPage() {
         continue;
       }
 
-      // 🔴 2. Sync reale
       await calendarSyncService.syncEventToOutlook(
         String(row.utente_id),
         String(row.id)
       );
-
     } catch (syncError) {
       console.error("Errore sincronizzazione Outlook:", syncError);
     }
