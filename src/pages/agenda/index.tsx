@@ -1681,7 +1681,7 @@ const handleSaveEvento = async () => {
         title: "Successo",
         description: "Gruppo evento aggiornato",
       });
-    } else {
+       } else {
       if (formData.ricorrente) {
         const startDate = new Date(formData.data_inizio);
         const endDate = new Date(startDate);
@@ -1690,35 +1690,125 @@ const handleSaveEvento = async () => {
         const occurrences: Array<Record<string, unknown>> = [];
         let current = new Date(startDate);
 
-      while (current <= endDate) {
-  const gruppoEvento = crypto.randomUUID();
+        while (current <= endDate) {
+          const gruppoEvento = crypto.randomUUID();
 
-  const occurrenceStartDateTime = formData.tutto_giorno
-    ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
-    : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
+          const occurrenceStartDateTime = formData.tutto_giorno
+            ? `${format(current, "yyyy-MM-dd")}T00:00:00+00:00`
+            : `${format(current, "yyyy-MM-dd")}T${formData.ora_inizio}:00+00:00`;
 
-  const occurrenceEndDateTime = formData.tutto_giorno
-    ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
-    : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
+          const occurrenceEndDateTime = formData.tutto_giorno
+            ? `${format(current, "yyyy-MM-dd")}T23:59:59+00:00`
+            : `${format(current, "yyyy-MM-dd")}T${formData.ora_fine}:00+00:00`;
 
-  for (const utenteId of allParticipantIds) {
-    occurrences.push(
-      buildBasePayload(
-        utenteId,
-        gruppoEvento,
-        occurrenceStartDateTime,
-        occurrenceEndDateTime,
-        teamsLink || null,
-        ownerStudioId,
-        ownerMicrosoftConnectionId
-      )
-    );
-  }
+          for (const utenteId of allParticipantIds) {
+            occurrences.push(
+              buildBasePayload(
+                utenteId,
+                gruppoEvento,
+                occurrenceStartDateTime,
+                occurrenceEndDateTime,
+                teamsLink || null,
+                ownerStudioId,
+                ownerMicrosoftConnectionId
+              )
+            );
+          }
 
-  current.setDate(current.getDate() + formData.frequenza_giorni);
-}
+          current.setDate(current.getDate() + formData.frequenza_giorni);
+        }
+
+        const { data, error } = await supabase
+          .from("tbagenda")
+          .insert(occurrences as any)
+          .select();
+
+        if (error) throw error;
+
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
+
+        const organizerRows = (data ?? []).filter(
+          (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+        );
+
+        await syncRowsToOutlook(
+          organizerRows.map((row: any) => ({
+            id: String(row.id),
+            utente_id: row.utente_id ? String(row.utente_id) : null,
+          }))
+        );
+
+        toast({
+          title: "Successo",
+          description: `${data?.length ?? 0} righe evento create e sincronizzate`,
+        });
+      } else {
+        const gruppoEvento = crypto.randomUUID();
+
+        const payloads = allParticipantIds.map((utenteId) =>
+          buildBasePayload(
+            utenteId,
+            gruppoEvento,
+            startDateTimeISO,
+            endDateTimeISO,
+            teamsLink || null,
+            ownerStudioId,
+            ownerMicrosoftConnectionId
+          )
+        );
+
+        const { data, error } = await supabase
+          .from("tbagenda")
+          .insert(payloads as any)
+          .select();
+
+        if (error) throw error;
+
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
+
+        const organizerRows = (data ?? []).filter(
+          (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+        );
+
+        await syncRowsToOutlook(
+          organizerRows.map((row: any) => ({
+            id: String(row.id),
+            utente_id: row.utente_id ? String(row.utente_id) : null,
+          }))
+        );
+
+        if (formData.riunione_teams && teamsLink) {
+          await sendTeamsMessagesToParticipants(
+            formData.utente_id,
+            internalParticipantIds,
+            teamsLink,
+            formData.titolo,
+            formData.data_inizio,
+            formData.ora_inizio
+          );
+        }
+
+        toast({
+          title: "Successo",
+          description: "Evento gruppo creato e sincronizzato",
+        });
       }
     }
+
+    setDialogOpen(false);
+    resetForm();
+    await loadData();
+  } catch (error) {
+    console.error("Errore salvataggio evento:", error);
+    toast({
+      title: "Errore",
+      description: "Salvataggio fallito",
+      variant: "destructive",
+    });
+  } finally {
+    setSavingEvento(false);
+  }
+};
   } catch (error: any) {
     console.error("Errore salvataggio evento:", error);
 
@@ -1733,91 +1823,7 @@ const handleSaveEvento = async () => {
   }
 };
     
-          }
-
-          const { data, error } = await supabase.from("tbagenda").insert(occurrences as any).select();
-          if (error) throw error;
-
-        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
-
-        const organizerRows = (data ?? []).filter(
-  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
-);
-
-await syncRowsToOutlook(
-  organizerRows.map((row: any) => ({
-    id: String(row.id),
-    utente_id: row.utente_id ? String(row.utente_id) : null,
-  }))
-);
-
-          toast({
-            title: "Successo",
-            description: `${data?.length ?? 0} righe evento create e sincronizzate`,
-          });
-        } else {
-          const gruppoEvento = crypto.randomUUID();
-
-          const payloads = allParticipantIds.map((utenteId) =>
-           buildBasePayload(
-  utenteId,
-  gruppoEvento,
-  startDateTimeISO,
-  endDateTimeISO,
-  teamsLink || null,
-  ownerStudioId,
-  ownerMicrosoftConnectionId
-)
-          );
-
-          const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
-          if (error) throw error;
-
-        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
-          
-          const organizerRows = (data ?? []).filter(
-  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
-);
-
-await syncRowsToOutlook(
-  organizerRows.map((row: any) => ({
-    id: String(row.id),
-    utente_id: row.utente_id ? String(row.utente_id) : null,
-  }))
-);
-
-          if (formData.riunione_teams && teamsLink) {
-            await sendTeamsMessagesToParticipants(
-              formData.utente_id,
-              internalParticipantIds,
-              teamsLink,
-              formData.titolo,
-              formData.data_inizio,
-              formData.ora_inizio
-            );
-          }
-
-          toast({
-            title: "Successo",
-            description: "Evento gruppo creato e sincronizzato",
-          });
-        }
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      await loadData();
-    } catch (error) {
-      console.error("Errore salvataggio evento:", error);
-      toast({
-        title: "Errore",
-        description: "Salvataggio fallito",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteEvento = async () => {
+    const handleDeleteEvento = async () => {
     const supabase = getSupabaseClient();
 
     if (!eventoToDelete) return;
