@@ -998,15 +998,15 @@ const syncRowsToOutlook = async (
         console.warn("Connessione Microsoft non trovata per:", row.utente_id);
         continue;
       }
-
-      if ((calendarSyncService as any).deleteEventFromOutlook) {
-        await (calendarSyncService as any).deleteEventFromOutlook(
-          String(row.utente_id),
-          String(row.microsoft_event_id)
-        );
-      } else {
-        console.warn("deleteEventFromOutlook non presente in calendarSyncService");
-      }
+if ((calendarSyncService as any).deleteEventFromOutlook) {
+  await (calendarSyncService as any).deleteEventFromOutlook(
+    String(row.utente_id),
+    String(connection.id),
+    String(row.microsoft_event_id)
+  );
+} else {
+  console.warn("deleteEventFromOutlook non presente in calendarSyncService");
+}
     } catch (error) {
       console.error("Errore cancellazione Outlook:", error);
     }
@@ -1027,22 +1027,6 @@ const syncRowsToOutlook = async (
         console.error("Errore invio notifiche Teams: studioId non trovato.");
         return;
       }
-
-      const getMicrosoftConnectionIdForUser = async (ownerUserId: string) => {
-  if (!ownerUserId) return null;
-
-  const supabase = getSupabaseClient();
-
-  const { data, error } = await (supabase as any)
-    .from("microsoft365_connections")
-    .select("id")
-    .eq("utente_id", ownerUserId)
-    .eq("active", true)
-    .maybeSingle();
-
-  if (error || !data?.id) return null;
-  return String(data.id);
-};
 
       const { teamsService } = await import("@/services/teamsService");
 
@@ -1610,16 +1594,23 @@ const participantUsers = participantIds
 
         let insertedRows: any[] = [];
 
-        if (userIdsToInsert.length > 0) {
-          const payloads = userIdsToInsert.map((utenteId) =>
-       buildBasePayload(
-          );
+       if (userIdsToInsert.length > 0) {
+  const payloads = userIdsToInsert.map((utenteId) =>
+    buildBasePayload(
+      utenteId,
+      editingGruppoEvento,
+      startDateTimeISO,
+      endDateTimeISO,
+      teamsLink || null,
+      ownerStudioId,
+      ownerMicrosoftConnectionId
+    )
+  );
 
-          const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
-          if (error) throw error;
-          insertedRows = data ?? [];
-        }
-
+  const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
+  if (error) throw error;
+  insertedRows = data ?? [];
+}
         if (rowIdsToDelete.length > 0) {
           const rowsToDeleteFromOutlook = existingRows
   .filter((r) => rowIdsToDelete.includes(String(r.id)))
@@ -1675,13 +1666,14 @@ const participantUsers = participantIds
             for (const utenteId of allParticipantIds) {
               occurrences.push(
                 buildBasePayload(
-                  utenteId,
-                  gruppoEvento,
-                  occurrenceStartDateTime,
-                  occurrenceEndDateTime,
-                  teamsLink || null,
-                  ownerStudioId
-                )
+              utenteId,
+              gruppoEvento,
+              occurrenceStartDateTime,
+              occurrenceEndDateTime,
+                teamsLink || null,
+              ownerStudioId,
+                ownerMicrosoftConnectionId
+                  )
               );
             }
 
@@ -1709,14 +1701,15 @@ const participantUsers = participantIds
           const gruppoEvento = crypto.randomUUID();
 
           const payloads = allParticipantIds.map((utenteId) =>
-            buildBasePayload(
-              utenteId,
-              gruppoEvento,
-              startDateTimeISO,
-              endDateTimeISO,
-              teamsLink || null,
-              ownerStudioId
-            )
+           buildBasePayload(
+  utenteId,
+  gruppoEvento,
+  startDateTimeISO,
+  endDateTimeISO,
+  teamsLink || null,
+  ownerStudioId,
+  ownerMicrosoftConnectionId
+)
           );
 
           const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
@@ -2447,7 +2440,7 @@ const participantUsers = participantIds
                     className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted cursor-pointer"
                     onClick={() => setFiltroUtenti([])}
                   >
-                    <Checkbox checked={filtroUtenti.length === 0} onCheckedChange={() => setFiltroUtenti([])} />
+                    <Checkbox checked={filtroUtenti.length === 0} />
                     <span>Tutti gli utenti</span>
                   </div>
 
