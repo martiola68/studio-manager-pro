@@ -3,6 +3,16 @@ import { createClient } from "@supabase/supabase-js";
 
 const BUCKET_NAME = "allegati";
 
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+];
+
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export const config = {
   api: {
     bodyParser: {
@@ -68,6 +78,13 @@ export default async function handler(
         ? rawBody.fileBase64
         : "";
 
+        if (fileType && !ALLOWED_FILE_TYPES.includes(fileType)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Formato file non ammesso. Caricare solo PDF, JPG, JPEG o PNG.",
+      });
+    }
+
     console.log("PUBLIC DOCUMENT SUBMIT BODY", {
       hasBody: !!rawBody,
       keys: Object.keys(rawBody || {}),
@@ -119,6 +136,13 @@ export default async function handler(
       : String(fileBase64);
 
     const fileBuffer = Buffer.from(cleanBase64, "base64");
+
+    if (fileBuffer.length > MAX_FILE_SIZE_BYTES) {
+      return res.status(400).json({
+        ok: false,
+        error: `Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE_MB} MB.`,
+      });
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
