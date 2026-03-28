@@ -1563,8 +1563,6 @@ const participantUsers = participantIds
         teamsLink = "";
       }
 
-      const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
-
       if (editingGruppoEvento) {
         const existingRows = eventiRows.filter(
           (r) => String(r.gruppo_evento || r.id) === String(editingGruppoEvento)
