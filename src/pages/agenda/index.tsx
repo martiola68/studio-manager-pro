@@ -1637,13 +1637,16 @@ const participantUsers = participantIds
 
      await sendSingleNotifications(finalRows, formData.utente_id, internalParticipantIds);
 
-        await syncRowsToOutlook(
-          finalRows.map((row: any) => ({
-            id: String(row.id),
-            utente_id: row.utente_id ? String(row.utente_id) : null,
-          }))
-        );
+       const organizerRows = finalRows.filter(
+  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+);
 
+await syncRowsToOutlook(
+  organizerRows.map((row: any) => ({
+    id: String(row.id),
+    utente_id: row.utente_id ? String(row.utente_id) : null,
+  }))
+);
         toast({
           title: "Successo",
           description: "Gruppo evento aggiornato",
@@ -1691,12 +1694,16 @@ const participantUsers = participantIds
 
         await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
 
-          await syncRowsToOutlook(
-            (data ?? []).map((row: any) => ({
-              id: String(row.id),
-              utente_id: row.utente_id ? String(row.utente_id) : null,
-            }))
-          );
+        const organizerRows = (data ?? []).filter(
+  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+);
+
+await syncRowsToOutlook(
+  organizerRows.map((row: any) => ({
+    id: String(row.id),
+    utente_id: row.utente_id ? String(row.utente_id) : null,
+  }))
+);
 
           toast({
             title: "Successo",
@@ -1722,12 +1729,16 @@ const participantUsers = participantIds
 
         await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
           
-          await syncRowsToOutlook(
-            (data ?? []).map((row: any) => ({
-              id: String(row.id),
-              utente_id: row.utente_id ? String(row.utente_id) : null,
-            }))
-          );
+          const organizerRows = (data ?? []).filter(
+  (row: any) => String(row.utente_id || "") === String(formData.utente_id)
+);
+
+await syncRowsToOutlook(
+  organizerRows.map((row: any) => ({
+    id: String(row.id),
+    utente_id: row.utente_id ? String(row.utente_id) : null,
+  }))
+);
 
           if (formData.riunione_teams && teamsLink) {
             await sendTeamsMessagesToParticipants(
