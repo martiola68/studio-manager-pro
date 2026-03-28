@@ -921,19 +921,7 @@ export default function AgendaPage() {
     updated_at: new Date().toISOString(),
   });
 
- const syncRowsToOutlook = async (
-  rows: Array<{
-    id: string;
-    utente_id: string | null;
-  }>
-) => {
-  const supabase = getSupabaseClient();
-
-  for (const row of rows) {
-    if (!row?.id || !row.utente_id) continue;
-
-    try {
-      const syncRowsToOutlook = async (
+const syncRowsToOutlook = async (
   rows: Array<{
     id: string;
     utente_id: string | null;
@@ -966,30 +954,6 @@ export default function AgendaPage() {
     }
   }
 };
-  const deleteRowsFromOutlook = async (
-  rows: Array<{
-    id: string;
-    utente_id: string | null;
-    microsoft_connection_id?: string | null;
-    microsoft_event_id?: string | null;
-  }>
-) => {
-    for (const row of rows) {
-      if (!row.utente_id) continue;
-if (!row.microsoft_connection_id) continue;
-if (!row.microsoft_event_id) continue;
-
-try {
-  await calendarSyncService.deleteEventFromOutlook(
-    String(row.utente_id),
-    String(row.microsoft_connection_id),
-    String(row.microsoft_event_id)
-  );
-} catch (syncError) {
-  console.error("Errore cancellazione Outlook:", syncError);
-}
-    }
-  };
 
   const sendTeamsMessagesToParticipants = async (
     ownerUserId: string,
