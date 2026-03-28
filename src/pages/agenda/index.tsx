@@ -1809,19 +1809,6 @@ const handleSaveEvento = async () => {
     setSavingEvento(false);
   }
 };
-  } catch (error: any) {
-    console.error("Errore salvataggio evento:", error);
-
-    toast({
-      title: "Errore",
-      description:
-        error?.message || "Si è verificato un errore durante il salvataggio dell'evento.",
-      variant: "destructive",
-    });
-  } finally {
-    setSavingEvento(false);
-  }
-};
     
     const handleDeleteEvento = async () => {
     const supabase = getSupabaseClient();
