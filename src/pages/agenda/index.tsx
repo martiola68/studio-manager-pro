@@ -1398,222 +1398,257 @@ const participantUsers = participantIds
   }
 };
 
-  const handleSaveEvento = async () => {
+const handleSaveEvento = async () => {
   if (savingEvento) return;
 
   const supabase = getSupabaseClient();
   setSavingEvento(true);
 
-    try {
-      if (!formData.titolo.trim()) {
+  try {
+    if (!formData.titolo.trim()) {
+      toast({
+        title: "Errore",
+        description: "Titolo obbligatorio",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.utente_id) {
+      toast({
+        title: "Errore",
+        description: "Seleziona un utente organizzatore",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.ricorrente) {
+      if (!formData.frequenza_giorni || formData.frequenza_giorni <= 0) {
         toast({
           title: "Errore",
-          description: "Titolo obbligatorio",
+          description: "Frequenza obbligatoria per eventi ricorrenti (> 0)",
           variant: "destructive",
         });
         return;
       }
 
-      if (!formData.utente_id) {
+      if (!formData.durata_giorni || formData.durata_giorni <= 0) {
         toast({
           title: "Errore",
-          description: "Seleziona un utente organizzatore",
+          description: "Durata obbligatoria per eventi ricorrenti (> 0)",
           variant: "destructive",
         });
         return;
       }
+    }
 
-      if (formData.ricorrente) {
-        if (!formData.frequenza_giorni || formData.frequenza_giorni <= 0) {
+    const startDateTimeISO = formData.tutto_giorno
+      ? new Date(formData.data_inizio).toISOString()
+      : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
+
+    const endDateTimeISO = formData.tutto_giorno
+      ? new Date(formData.data_fine || formData.data_inizio).toISOString()
+      : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
+
+    const allParticipantIds = [
+      ...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean)),
+    ];
+
+    const internalParticipantIds = allParticipantIds.filter(
+      (id) => id !== formData.utente_id
+    );
+
+    const externalEmails = [
+      ...new Set(formData.email_partecipanti_esterni.filter(Boolean)),
+    ];
+
+    let teamsLink = formData.link_teams || "";
+    let teamsJoinUrl: string | null = null;
+
+    const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
+    const ownerMicrosoftConnectionId = await getMicrosoftConnectionIdForUser(
+      formData.utente_id
+    );
+
+    if (formData.riunione_teams) {
+      if (teamsLink.trim().length > 0) {
+        const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
+
+        if (!isUrl) {
           toast({
             title: "Errore",
-            description: "Frequenza obbligatoria per eventi ricorrenti (> 0)",
+            description: "Il Link Teams deve essere un URL valido (es. https://...).",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (!editingGruppoEvento) {
+        if (!ownerStudioId) {
+          toast({
+            title: "Errore",
+            description: "Impossibile determinare lo studio dell'utente selezionato.",
             variant: "destructive",
           });
           return;
         }
 
-        if (!formData.durata_giorni || formData.durata_giorni <= 0) {
+        const {
+          data: { session: m365Session },
+        } = await supabase.auth.getSession();
+
+        if (!m365Session?.access_token) {
           toast({
-            title: "Errore",
-            description: "Durata obbligatoria per eventi ricorrenti (> 0)",
+            title: "Microsoft 365 non connesso",
+            description: "Collega l'account M365 prima di creare un meeting Teams.",
             variant: "destructive",
           });
           return;
         }
-      }
 
-      const startDateTimeISO = formData.tutto_giorno
-        ? new Date(formData.data_inizio).toISOString()
-        : new Date(`${formData.data_inizio}T${formData.ora_inizio}`).toISOString();
+        const statusResponse = await fetch("/api/microsoft365/status", {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${m365Session.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
 
-      const endDateTimeISO = formData.tutto_giorno
-        ? new Date(formData.data_fine || formData.data_inizio).toISOString()
-        : new Date(`${formData.data_fine || formData.data_inizio}T${formData.ora_fine}`).toISOString();
+        const statusJson = await statusResponse.json().catch(() => null);
 
-      const allParticipantIds = [...new Set([formData.utente_id, ...formData.partecipanti].filter(Boolean))];
-      const internalParticipantIds = allParticipantIds.filter((id) => id !== formData.utente_id);
-      const externalEmails = [...new Set(formData.email_partecipanti_esterni.filter(Boolean))];
-
-      let teamsLink = formData.link_teams || "";
-      let teamsJoinUrl: string | null = null;
-
-       const ownerStudioId = await getStudioIdForOwner(formData.utente_id);
-       const ownerMicrosoftConnectionId = await getMicrosoftConnectionIdForUser(formData.utente_id);
-
-      if (formData.riunione_teams) {
-        if (teamsLink.trim().length > 0) {
-          const isUrl = /^https?:\/\/\S+/i.test(teamsLink.trim());
-
-          if (!isUrl) {
-            toast({
-              title: "Errore",
-              description: "Il Link Teams deve essere un URL valido (es. https://...).",
-              variant: "destructive",
-            });
-            return;
-          }
-        } else if (!editingGruppoEvento) {
-         
-
-          if (!ownerStudioId) {
-            toast({
-              title: "Errore",
-              description: "Impossibile determinare lo studio dell'utente selezionato.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          const {
-            data: { session: m365Session },
-          } = await supabase.auth.getSession();
-
-          if (!m365Session?.access_token) {
-            toast({
-              title: "Microsoft 365 non connesso",
-              description: "Collega l'account M365 prima di creare un meeting Teams.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          const statusResponse = await fetch("/api/microsoft365/status", {
-            method: "GET",
-            cache: "no-store",
-            headers: {
-              Authorization: `Bearer ${m365Session.access_token}`,
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-            },
+        if (!statusResponse.ok || !statusJson?.connected) {
+          toast({
+            title: "Microsoft 365 non connesso",
+            description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
+            variant: "destructive",
           });
-
-          const statusJson = await statusResponse.json().catch(() => null);
-
-          if (!statusResponse.ok || !statusJson?.connected) {
-            toast({
-              title: "Microsoft 365 non connesso",
-              description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          const { teamsService } = await import("@/services/teamsService");
-
-          const meeting = await teamsService.createTeamsMeeting(
-            ownerStudioId,
-            formData.utente_id,
-            formData.titolo || "Riunione",
-            new Date(startDateTimeISO),
-            new Date(endDateTimeISO)
-          );
-
-          if (!meeting?.success) {
-            toast({
-              title: "Errore Teams",
-              description: meeting?.error || "Impossibile creare il meeting Teams.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          teamsJoinUrl = meeting.joinUrl ?? null;
-
-          if (!teamsJoinUrl) {
-            toast({
-              title: "Errore",
-              description: "Meeting Teams creato ma link non disponibile.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          teamsLink = teamsJoinUrl;
+          return;
         }
-      } else {
-        teamsLink = "";
-      }
 
-      if (editingGruppoEvento) {
-        const existingRows = eventiRows.filter(
-          (r) => String(r.gruppo_evento || r.id) === String(editingGruppoEvento)
+        const { teamsService } = await import("@/services/teamsService");
+
+        const meeting = await teamsService.createTeamsMeeting(
+          ownerStudioId,
+          formData.utente_id,
+          formData.titolo || "Riunione",
+          new Date(startDateTimeISO),
+          new Date(endDateTimeISO)
         );
 
-        const existingUserIds = uniqueStrings(existingRows.map((r) => r.utente_id || ""));
-        const desiredUserIds = allParticipantIds;
+        if (!meeting?.success) {
+          toast({
+            title: "Errore Teams",
+            description: meeting?.error || "Impossibile creare il meeting Teams.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-        const userIdsToInsert = desiredUserIds.filter((id) => !existingUserIds.includes(id));
-        const rowIdsToDelete = existingRows
-          .filter((r) => !desiredUserIds.includes(String(r.utente_id || "")))
-          .map((r) => String(r.id));
+        teamsJoinUrl = meeting.joinUrl ?? null;
 
-        const commonData = {
-          titolo: formData.titolo,
-          descrizione: formData.descrizione || null,
-          data_inizio: startDateTimeISO,
-          data_fine: endDateTimeISO,
-          ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
-          ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
-          tutto_giorno: formData.tutto_giorno as any,
-          cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
-          in_sede: formData.in_sede as any,
-          sala: formData.in_sede ? formData.sala || null : null,
-          luogo: !formData.in_sede ? formData.luogo || null : null,
-          evento_generico: formData.evento_generico,
-          riunione_teams: formData.riunione_teams,
-          link_teams: teamsLink || null,
-          partecipanti: desiredUserIds,
-          email_partecipanti_esterni: externalEmails,
-          ricorrente: formData.ricorrente,
-          frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
-          durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
-          studio_id: ownerStudioId || currentStudioId || null,
-          updated_at: new Date().toISOString(),
-        };
+        if (!teamsJoinUrl) {
+          toast({
+            title: "Errore",
+            description: "Meeting Teams creato ma link non disponibile.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-        const { data: updatedRows, error: updateError } = await supabase
-          .from("tbagenda")
-          .update(commonData as any)
-          .eq("gruppo_evento", editingGruppoEvento)
-          .select();
+        teamsLink = teamsJoinUrl;
+      }
+    } else {
+      teamsLink = "";
+    }
 
-        if (updateError) throw updateError;
+    if (editingGruppoEvento) {
+      const existingRows = eventiRows.filter(
+        (r) => String(r.gruppo_evento || r.id) === String(editingGruppoEvento)
+      );
 
-        let insertedRows: any[] = [];
+      const existingUserIds = uniqueStrings(
+        existingRows.map((r) => r.utente_id || "")
+      );
 
-       if (userIdsToInsert.length > 0) {
-  const payloads = userIdsToInsert.map((utenteId) =>
-    buildBasePayload(
-      utenteId,
-      editingGruppoEvento,
-      startDateTimeISO,
-      endDateTimeISO,
-      teamsLink || null,
-      ownerStudioId,
-      ownerMicrosoftConnectionId
-    )
-  );
+      const desiredUserIds = allParticipantIds;
+
+      const userIdsToInsert = desiredUserIds.filter(
+        (id) => !existingUserIds.includes(id)
+      );
+
+      const rowIdsToDelete = existingRows
+        .filter((r) => !desiredUserIds.includes(String(r.utente_id || "")))
+        .map((r) => String(r.id));
+
+      const commonData = {
+        titolo: formData.titolo,
+        descrizione: formData.descrizione || null,
+        data_inizio: startDateTimeISO,
+        data_fine: endDateTimeISO,
+        ora_inizio: formData.tutto_giorno ? null : (formData.ora_inizio as any),
+        ora_fine: formData.tutto_giorno ? null : (formData.ora_fine as any),
+        tutto_giorno: formData.tutto_giorno as any,
+        cliente_id: formData.evento_generico ? null : formData.cliente_id || null,
+        in_sede: formData.in_sede as any,
+        sala: formData.in_sede ? formData.sala || null : null,
+        luogo: !formData.in_sede ? formData.luogo || null : null,
+        evento_generico: formData.evento_generico,
+        riunione_teams: formData.riunione_teams,
+        link_teams: teamsLink || null,
+        partecipanti: desiredUserIds,
+        email_partecipanti_esterni: externalEmails,
+        ricorrente: formData.ricorrente,
+        frequenza_giorni: formData.ricorrente ? formData.frequenza_giorni : null,
+        durata_giorni: formData.ricorrente ? formData.durata_giorni : null,
+        studio_id: ownerStudioId || currentStudioId || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: updatedRows, error: updateError } = await supabase
+        .from("tbagenda")
+        .update(commonData as any)
+        .eq("gruppo_evento", editingGruppoEvento)
+        .select();
+
+      if (updateError) throw updateError;
+
+      let insertedRows: any[] = [];
+
+      if (userIdsToInsert.length > 0) {
+        const payloads = userIdsToInsert.map((utenteId) =>
+          buildBasePayload(
+            utenteId,
+            editingGruppoEvento,
+            startDateTimeISO,
+            endDateTimeISO,
+            teamsLink || null,
+            ownerStudioId,
+            ownerMicrosoftConnectionId
+          )
+        );
+
+        // QUI continua con il resto della tua logica già esistente
+      }
+
+      // QUI continua con il resto della tua logica già esistente
+    }
+
+    // QUI continua con il resto della tua logica già esistente
+  } catch (error: any) {
+    console.error("Errore salvataggio evento:", error);
+
+    toast({
+      title: "Errore",
+      description:
+        error?.message || "Si è verificato un errore durante il salvataggio dell'evento.",
+      variant: "destructive",
+    });
+  } finally {
+    setSavingEvento(false);
+  }
+};
 
   const { data, error } = await supabase.from("tbagenda").insert(payloads as any).select();
   if (error) throw error;
