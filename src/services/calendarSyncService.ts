@@ -282,13 +282,90 @@ async function syncEventToOutlook(userId: string, eventoId: string): Promise<boo
     }
 
     // Verifica se l'utente ha Microsoft 365 configurato
-    const microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
-    const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
-    
-    if (!hasMicrosoft) {
-      console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook");
-      return false;
-    }
+  let microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
+
+if (!microsoftConnectionId) {
+  const { data: connection } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("id")
+    .eq("utente_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+
+  microsoftConnectionId = connection?.id || "";
+}
+
+const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
+
+if (!hasMicrosoft || !microsoftConnectionId) {
+  console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook", {
+    userId,
+    eventoId,
+    microsoftConnectionId,
+  });
+  return false;
+}
+3) Aggiorna anche createOutlookEvent()
+
+Quando crea correttamente l’evento Outlook, salva anche provider ed external_id.
+
+Prima
+await supabase
+  .from("tbagenda")
+  .update({
+    microsoft_event_id: response.id,
+    outlook_synced: true,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", appEvent.id);
+Dopo
+await supabase
+  .from("tbagenda")
+  .update({
+    microsoft_event_id: response.id,
+    external_id: response.id,
+    provider: "microsoft",
+    outlook_synced: true,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", appEvent.id);
+4) Fai lo stesso anche in updateOutlookEvent()
+
+Dopo la PATCH, aggiorna lo stato sync:
+
+await supabase
+  .from("tbagenda")
+  .update({
+    outlook_synced: true,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("id", appEvent.id);
+Quindi il problema vero era questo
+
+La sync Agenda → Outlook non partiva perché syncEventToOutlook() cerca microsoft_connection_id nell’evento, ma l’evento non lo salva.
+
+È per questo che non funzionavano:
+
+eventi normali
+eventi Teams
+update
+create
+
+Non era Teams. Era il legame con la connessione Microsoft.
+
+Ordine pratico per sistemarlo subito
+In index.tsx salva microsoft_connection_id dentro tbagenda
+In calendarSyncService.ts aggiungi fallback query sulla tabella microsoft365_connections
+In createOutlookEvent() salva anche provider ed external_id
+In updateOutlookEvent() marca outlook_synced = true
+
+Se vuoi, al prossimo messaggio ti riscrivo io i blocchi già pronti da incollare di:
+
+getMicrosoftConnectionIdForUser
+buildBasePayload
+syncEventToOutlook
+createOutlookEvent
+updateOutlookEvent
 
     // Mappa l'evento del DB all'interfaccia AppEvent
     const appEvent: AppEvent = {
