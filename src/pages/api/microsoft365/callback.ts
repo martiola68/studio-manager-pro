@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { decrypt, encrypt } from "@/lib/encryption365";
 import { ConfidentialClientApplication, LogLevel, AccountInfo } from "@azure/msal-node";
-import { getDecryptedClientSecret } from "../graph";
+import { getDecryptedClientSecret } from "./graph";
 
 function getBearerToken(req: NextApiRequest): string | null {
   const h = req.headers.authorization || "";
