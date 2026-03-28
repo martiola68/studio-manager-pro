@@ -305,7 +305,6 @@ if (!hasMicrosoft || !microsoftConnectionId) {
   });
   return false;
 }
-3) Aggiorna anche createOutlookEvent()
 
 Quando crea correttamente l’evento Outlook, salva anche provider ed external_id.
 
