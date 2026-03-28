@@ -933,7 +933,19 @@ export default function AgendaPage() {
     if (!row?.id || !row.utente_id) continue;
 
     try {
-      const { data: connection } = await supabase
+      const syncRowsToOutlook = async (
+  rows: Array<{
+    id: string;
+    utente_id: string | null;
+  }>
+) => {
+  const supabase = getSupabaseClient();
+
+  for (const row of rows) {
+    if (!row?.id || !row.utente_id) continue;
+
+    try {
+      const { data: connection } = await (supabase as any)
         .from("microsoft365_connections")
         .select("id")
         .eq("utente_id", row.utente_id)
@@ -954,7 +966,6 @@ export default function AgendaPage() {
     }
   }
 };
-
   const deleteRowsFromOutlook = async (
   rows: Array<{
     id: string;
