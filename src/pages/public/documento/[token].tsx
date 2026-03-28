@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type PublicDocumentoFormState = {
   id: string;
   nome_cognome: string;
+  citta_residenza: string;
+  indirizzo_residenza: string;
+  CAP: string;
   tipo_doc: string;
   num_doc: string;
   scadenza_doc: string;
@@ -19,6 +22,9 @@ type PublicDocumentoFormState = {
 const emptyForm: PublicDocumentoFormState = {
   id: "",
   nome_cognome: "",
+  citta_residenza: "",
+  indirizzo_residenza: "",
+  CAP: "",
   tipo_doc: "",
   num_doc: "",
   scadenza_doc: "",
@@ -57,6 +63,9 @@ function mapRowToForm(row: any): PublicDocumentoFormState {
   return {
     id: String(row?.id ?? ""),
     nome_cognome: row?.nome_cognome ?? "",
+    citta_residenza: row?.citta_residenza ?? "",
+    indirizzo_residenza: row?.indirizzo_residenza ?? "",
+    CAP: row?.CAP ?? "",
     tipo_doc: row?.tipo_doc ?? "",
     num_doc: row?.num_doc ?? "",
     scadenza_doc: normalizeDateForInput(row?.scadenza_doc),
@@ -163,7 +172,7 @@ export default function PublicDocumentoPage() {
 
     setForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "CAP" ? value.replace(/\D/g, "").slice(0, 5) : value,
     }));
 
     setErrMsg("");
@@ -184,6 +193,21 @@ export default function PublicDocumentoPage() {
 
     if (!submitToken || !form.id) {
       setErrMsg("Link non valido o record non identificato.");
+      return;
+    }
+
+    if (!form.citta_residenza.trim()) {
+      setErrMsg("Inserisci la città di residenza.");
+      return;
+    }
+
+    if (!form.indirizzo_residenza.trim()) {
+      setErrMsg("Inserisci l'indirizzo di residenza.");
+      return;
+    }
+
+    if (!form.CAP.trim()) {
+      setErrMsg("Inserisci il CAP.");
       return;
     }
 
@@ -221,6 +245,9 @@ export default function PublicDocumentoPage() {
         },
         body: JSON.stringify({
           token: submitToken,
+          citta_residenza: form.citta_residenza.trim(),
+          indirizzo_residenza: form.indirizzo_residenza.trim(),
+          CAP: form.CAP.trim(),
           tipo_doc: form.tipo_doc,
           num_doc: form.num_doc.trim(),
           scadenza_doc: form.scadenza_doc,
@@ -240,6 +267,9 @@ export default function PublicDocumentoPage() {
 
       setForm((prev) => ({
         ...prev,
+        citta_residenza: form.citta_residenza.trim(),
+        indirizzo_residenza: form.indirizzo_residenza.trim(),
+        CAP: form.CAP.trim(),
         allegato_doc: responseData?.path || prev.allegato_doc,
         public_doc_enabled: false,
         public_doc_submitted_at:
@@ -331,7 +361,8 @@ export default function PublicDocumentoPage() {
           <CardHeader>
             <CardTitle>Aggiornamento documento di riconoscimento</CardTitle>
             <p className="text-sm text-slate-600">
-              Caricare un documento di riconoscimento in corso di validità.
+              Caricare un documento di riconoscimento in corso di validità e
+              confermare i dati di residenza.
             </p>
           </CardHeader>
 
@@ -342,6 +373,43 @@ export default function PublicDocumentoPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Città residenza *
+                  </label>
+                  <input
+                    name="citta_residenza"
+                    value={form.citta_residenza}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    CAP *
+                  </label>
+                  <input
+                    name="CAP"
+                    value={form.CAP}
+                    onChange={handleChange}
+                    maxLength={5}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium">
+                    Indirizzo residenza *
+                  </label>
+                  <input
+                    name="indirizzo_residenza"
+                    value={form.indirizzo_residenza}
+                    onChange={handleChange}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+
                 <div>
                   <label className="mb-1 block text-sm font-medium">
                     Tipo documento *
