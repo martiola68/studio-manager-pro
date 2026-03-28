@@ -1107,16 +1107,7 @@ export default function NuovoRappresentantePage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div>
                     <Label htmlFor="tipo_doc">Tipo documento</Label>
-                    <Select
-                      value={form.tipo_doc}
-                      onValueChange={(value) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          tipo_doc: value as TipoDocumento,
-                        }))
-                      }
-                    >
-                    <Select
+                   <Select
   value={form.tipo_doc}
   onValueChange={(value) =>
     setForm((prev) => ({
