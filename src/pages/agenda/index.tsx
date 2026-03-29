@@ -1820,7 +1820,7 @@ const handleSaveEvento = async () => {
   }
 };
     
-  const handleDeleteEvento = async () => {
+ const handleDeleteEvento = async () => {
   const supabase = getSupabaseClient();
 
   if (!eventoToDelete) return;
@@ -1845,7 +1845,6 @@ const handleSaveEvento = async () => {
       (r) => String(r.gruppo_evento || r.id) === gruppoId
     );
 
-    // 1. DELETE OUTLOOK
     await deleteRowsFromOutlook(
       rowsToDelete.map((r) => ({
         id: String(r.id),
@@ -1855,7 +1854,6 @@ const handleSaveEvento = async () => {
       }))
     );
 
-    // 2. DELETE DB (più sicuro: per ID, non solo gruppo_evento)
     const ids = rowsToDelete.map((r) => r.id);
 
     const { error } = await supabase
@@ -1865,14 +1863,8 @@ const handleSaveEvento = async () => {
 
     if (error) throw error;
 
-    // 3. CLEAN UI (fondamentale per evitare evento fantasma)
+    // ✅ SOLO QUESTO
     setEventiRows((prev) => prev.filter((r) => !ids.includes(r.id)));
-
-    setFilteredEvents((prev) =>
-      prev.filter(
-        (e) => String(e.gruppo_evento || e.id) !== gruppoId
-      )
-    );
 
     setDeleteDialogOpen(false);
     setDialogOpen(false);
