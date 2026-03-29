@@ -83,27 +83,23 @@ function convertLocalToGraphDateTime(dateValue: string): string {
 
 /**
  * Helper: recupera connessione Microsoft attiva per utente
+ * Nel progetto la connessione è salvata su tbutenti.microsoft_connection_id
  */
 async function getActiveMicrosoftConnectionId(userId: string): Promise<string> {
   if (!userId) return "";
 
-const { data: utente } = await supabase
-  .from("tbutenti")
-  .select("microsoft_connection_id")
-  .eq("id", userId)
-  .maybeSingle();
-
-let microsoftConnectionId =
-  (evento as any)?.microsoft_connection_id ||
-  utente?.microsoft_connection_id ||
-  "";
+  const { data: utente, error } = await supabase
+    .from("tbutenti")
+    .select("microsoft_connection_id")
+    .eq("id", userId)
+    .maybeSingle();
 
   if (error) {
     console.error("❌ Errore recupero connessione Microsoft:", error);
     return "";
   }
 
-  return connection?.id || "";
+  return utente?.microsoft_connection_id || "";
 }
 
 /**
@@ -166,6 +162,7 @@ async function syncFromOutlook(
           ...eventData,
           utente_id: userId,
           microsoft_event_id: outlookEvent.id,
+          microsoft_connection_id: microsoftConnectionId || null,
           created_at: new Date().toISOString(),
           tutto_giorno: false,
           in_sede: true,
@@ -234,6 +231,7 @@ async function createOutlookEvent(
       .from("tbagenda")
       .update({
         microsoft_event_id: response.id,
+        microsoft_connection_id: microsoftConnectionId,
         external_id: response.id,
         provider: "microsoft",
         outlook_synced: true,
@@ -293,6 +291,7 @@ async function updateOutlookEvent(
     await supabase
       .from("tbagenda")
       .update({
+        microsoft_connection_id: microsoftConnectionId,
         outlook_synced: true,
         updated_at: new Date().toISOString(),
       })
