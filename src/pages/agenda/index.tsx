@@ -1333,11 +1333,16 @@ const sendSingleNotifications = async (
 
   const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
 
-  const targetUserIds = [...new Set(
-    (internalParticipantIds ?? [])
-      .filter((id) => id && String(id) !== String(ownerUserId))
-      .map((id) => String(id))
-  )];
+ const targetUserIds = [
+    ...new Set(
+      [
+        ...(internalParticipantIds ?? []),
+        ...rows.map((r) => String(r?.utente_id || "")),
+      ]
+        .filter((id) => id && String(id) !== String(ownerUserId))
+        .map((id) => String(id))
+    ),
+  ];
 
   const sentKeys = new Set<string>();
 
