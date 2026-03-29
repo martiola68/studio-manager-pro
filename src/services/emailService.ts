@@ -313,11 +313,7 @@ export async function sendEventNotification(
       });
     }
 
-    if (
-      data.clienteEmail &&
-      isValidEmail(data.clienteEmail) &&
-      !recipients.includes(data.clienteEmail)
-    ) {
+    if (data.clienteEmail && isValidEmail(data.clienteEmail) && !recipients.includes(data.clienteEmail)) {
       recipients.push(data.clienteEmail);
     }
 
@@ -331,36 +327,118 @@ export async function sendEventNotification(
       };
     }
 
-    const action = data.action || "created";
+   const action = data.action || "created";
 
-    const { data: result, error } = await supabase.functions.invoke(
-      "send-event-notification",
-      {
-        body: {
-          ...data,
-          action,
-          recipients,
-        },
-      }
-    );
+let subject = "";
+let intro = "";
 
-    if (error) {
-      return {
-        success: false,
-        sent: 0,
-        failed: 0,
-        total: recipients.length,
-        error: error.message,
-      };
+if (action === "created") {
+  subject = `📅 Nuovo evento: ${data.eventoTitolo}`;
+  intro = "È stato creato un nuovo evento.";
+} else if (action === "updated") {
+  subject = `✏️ Evento aggiornato: ${data.eventoTitolo}`;
+  intro = "L'evento è stato modificato.";
+} else {
+  subject = `❌ Evento annullato: ${data.eventoTitolo}`;
+  intro = "L'evento è stato annullato.";
+}
+
+const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .content { padding: 30px 20px; }
+    .box { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; }
+    .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+    .footer p { margin: 5px 0; }
+    ul { padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="content">
+      <p><strong>${intro}</strong></p>
+
+      <div class="box">
+        <p><strong>Titolo:</strong> ${data.eventoTitolo}</p>
+        <p><strong>Data:</strong> ${data.eventoData}</p>
+        <p><strong>Orario:</strong> ${data.eventoOraInizio} - ${data.eventoOraFine}</p>
+        <p><strong>Responsabile:</strong> ${data.responsabileNome}</p>
+        ${data.eventoLuogo ? `<p><strong>Luogo:</strong> ${data.eventoLuogo}</p>` : ""}
+        ${data.eventoDescrizione ? `<p><strong>Descrizione:</strong> ${data.eventoDescrizione}</p>` : ""}
+        ${data.link_teams ? `<p><strong>Link Teams:</strong> <a href="${data.link_teams}">${data.link_teams}</a></p>` : ""}
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by ProWork Studio M</p>
+      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
+    </div>
+  </div>
+</body>
+</html>
+`.trim();
+
+const text = `
+${intro}
+
+Titolo: ${data.eventoTitolo}
+Data: ${data.eventoData}
+Orario: ${data.eventoOraInizio} - ${data.eventoOraFine}
+Responsabile: ${data.responsabileNome}
+${data.eventoLuogo ? `Luogo: ${data.eventoLuogo}` : ""}
+${data.eventoDescrizione ? `Descrizione: ${data.eventoDescrizione}` : ""}
+${data.link_teams ? `Link Teams: ${data.link_teams}` : ""}
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Powered by ProWork Studio M
+Questa è una email automatica, non rispondere a questo messaggio
+`.trim();
+
+let sent = 0;
+let failed = 0;
+
+for (let i = 0; i < recipients.length; i++) {
+  const recipient = recipients[i];
+
+  try {
+    const result = await sendEmail({
+      to: recipient,
+      subject,
+      html,
+      text,
+      microsoftConnectionId: data.microsoftConnectionId,
+    });
+
+    if (result.success) {
+      sent++;
+    } else {
+      failed++;
     }
+  } catch {
+    failed++;
+  }
 
-    return {
-      success: true,
-      sent: recipients.length,
-      failed: 0,
-      total: recipients.length,
-      ...result,
-    };
+  if (i < recipients.length - 1) {
+    await sleep(300);
+  }
+}
+
+return {
+  success: sent > 0,
+  sent,
+  failed,
+  total: recipients.length,
+  error: failed > 0 ? `${failed} email non inviate` : undefined,
+};
+    
   } catch (error) {
     console.error("💥 Error sending event notification:", error);
     return {
@@ -397,4 +475,254 @@ export async function triggerEventReminders(): Promise<{
   } catch (error) {
     console.error("Error triggering reminders:", error);
     return {
-      success:
+      success: false,
+      events_processed: 0,
+      reminders_sent: 0,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function sendComunicazioneEmail(
+  data: ComunicazioneEmailData
+): Promise<{
+  success: boolean;
+  sent: number;
+  failed: number;
+  skipped: number;
+  error?: string;
+}> {
+  try {
+    const { supabase } = await import("@/lib/supabase/client");
+
+    let recipients: { email: string; nome: string }[] = [];
+
+    if (data.tipo === "singola" && data.destinatarioId) {
+      const { data: cliente, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("id", data.destinatarioId)
+        .eq("attivo", true)
+        .single();
+
+      if (error || !cliente?.email) {
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: "Cliente non trovato o senza email",
+        };
+      }
+
+      recipients.push({ email: cliente.email, nome: cliente.ragione_sociale });
+    } else if (data.tipo === "newsletter") {
+      const { data: clienti, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("attivo", true)
+        .eq("flag_mail_attivo", true)
+        .eq("flag_mail_newsletter", true);
+
+      if (error) {
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: error.message,
+        };
+      }
+
+      recipients = (clienti || [])
+        .filter((c) => c.email)
+        .map((c) => ({ email: c.email as string, nome: c.ragione_sociale }));
+    } else if (data.tipo === "scadenze") {
+      const { data: clienti, error } = await supabase
+        .from("tbclienti")
+        .select("email, ragione_sociale")
+        .eq("attivo", true)
+        .eq("flag_mail_attivo", true)
+        .eq("flag_mail_scadenze", true);
+
+      if (error) {
+        return {
+          success: false,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          error: error.message,
+        };
+      }
+
+      recipients = (clienti || [])
+        .filter((c) => c.email)
+        .map((c) => ({ email: c.email as string, nome: c.ragione_sociale }));
+    } else if (data.tipo === "interna") {
+      if (data.destinatariIds && data.destinatariIds.length > 0) {
+        const { data: utenti, error } = await supabase
+          .from("tbutenti")
+          .select("email, nome, cognome")
+          .in("id", data.destinatariIds)
+          .eq("attivo", true);
+
+        if (error) {
+          return {
+            success: false,
+            sent: 0,
+            failed: 0,
+            skipped: 0,
+            error: error.message,
+          };
+        }
+
+        recipients = (utenti || [])
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
+      } else {
+        const { data: utenti, error } = await supabase
+          .from("tbutenti")
+          .select("email, nome, cognome")
+          .eq("attivo", true);
+
+        if (error) {
+          return {
+            success: false,
+            sent: 0,
+            failed: 0,
+            skipped: 0,
+            error: error.message,
+          };
+        }
+
+        recipients = (utenti || [])
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email as string, nome: `${u.nome} ${u.cognome}` }));
+      }
+    }
+
+    if (recipients.length === 0) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        error: "Nessun destinatario valido trovato",
+      };
+    }
+
+    const validRecipients = recipients.filter((r) => isValidEmailFormat(r.email));
+    const invalidRecipients = recipients.filter((r) => !isValidEmailFormat(r.email));
+
+    if (validRecipients.length === 0) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: invalidRecipients.length,
+        error: "Nessuna email valida trovata",
+      };
+    }
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .content { padding: 30px 20px; }
+    .message { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; white-space: pre-wrap; }
+    .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+    .footer p { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="content">
+      <div class="message">
+        ${data.messaggio.replace(/\n/g, "<br>")}
+      </div>
+      ${data.allegati ? "<p><strong>Questa comunicazione contiene allegati</strong></p>" : ""}
+    </div>
+    <div class="footer">
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by ProWork Studio M</p>
+      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const textContent = `
+${data.oggetto}
+
+${data.messaggio}
+
+${data.allegati ? "📎 Questa comunicazione contiene allegati" : ""}
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Powered by ProWork Studio M
+Questa è una email automatica, non rispondere a questo messaggio
+    `.trim();
+
+    let sent = 0;
+    let failed = 0;
+
+    for (let i = 0; i < validRecipients.length; i++) {
+      const recipient = validRecipients[i];
+
+      try {
+        const result = await sendEmail({
+          to: recipient.email,
+          subject: data.oggetto,
+          html: htmlContent,
+          text: textContent,
+          microsoftConnectionId: data.microsoftConnectionId,
+        });
+
+        if (result.success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      } catch {
+        failed++;
+      }
+
+      if (i < validRecipients.length - 1) {
+        await sleep(500);
+      }
+    }
+
+    return {
+      success: sent > 0,
+      sent,
+      failed,
+      skipped: invalidRecipients.length,
+      error: failed > 0 ? `${failed} email non inviate` : undefined,
+    };
+  } catch (error) {
+    console.error("💥 Errore generale invio comunicazione:", error);
+    return {
+      success: false,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      error: error instanceof Error ? error.message : "Errore sconosciuto",
+    };
+  }
+}
+
+export const emailService = {
+  sendEventNotification,
+  triggerEventReminders,
+  sendEmail,
+  sendWelcomeEmail,
+  sendPasswordResetEmail,
+  sendComunicazioneEmail,
+};
