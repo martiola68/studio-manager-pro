@@ -6,6 +6,7 @@ import {
 import { microsoftGraphService } from "./microsoftGraphService";
 
 export interface EventEmailData {
+  action?: "created" | "updated" | "cancelled";
   eventoId: string;
   eventoTitolo: string;
   eventoData: string;
@@ -312,6 +313,10 @@ export async function sendEventNotification(
       });
     }
 
+    if (data.clienteEmail && isValidEmail(data.clienteEmail) && !recipients.includes(data.clienteEmail)) {
+      recipients.push(data.clienteEmail);
+    }
+
     if (recipients.length === 0) {
       return {
         success: false,
@@ -322,11 +327,14 @@ export async function sendEventNotification(
       };
     }
 
+    const action = data.action || "created";
+
     const { data: result, error } = await supabase.functions.invoke(
       "send-event-notification",
       {
         body: {
           ...data,
+          action,
           recipients,
         },
       }
