@@ -1333,20 +1333,25 @@ const sendSingleNotifications = async (
 
   const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
 
- const targetUserIds = [
-    ...new Set(
-      [
-        ...(internalParticipantIds ?? []),
-        ...rows.map((r) => String(r?.utente_id || "")),
-      ]
-        .filter((id) => id && String(id) !== String(ownerUserId))
-        .map((id) => String(id))
-    ),
-  ];
+const targetUserIds = [
+  ...new Set(
+    [
+      ...(internalParticipantIds ?? []),
+      ...rows.map((r) => String(r?.utente_id || "")),
+    ]
+      .filter(Boolean)
+      .map((id) => String(id))
+  ),
+];
 
-  const sentKeys = new Set<string>();
+const finalTargetUserIds =
+  targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
+    ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
+    : [String(ownerUserId)];
 
-  for (const userId of targetUserIds) {
+const sentKeys = new Set<string>();
+
+for (const userId of finalTargetUserIds) {
     const rowForUser = rows.find(
       (r) => String(r?.utente_id || "") === String(userId)
     );
@@ -1367,10 +1372,11 @@ const participantUsers = participantIds
   .filter((u): u is UtenteAgenda => Boolean(u));
 
     // 👉 ESCLUDO ORGANIZZATORE
-    const visibleParticipants = participantUsers.filter(
-      (u) => String(u!.id) !== String(ownerUserId)
-    );
+  const isOwnerFallback = String(userId) === String(ownerUserId);
 
+const visibleParticipants = participantUsers.filter((u) =>
+  isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
+);
     const payload = {
       ...rowForUser,
 
@@ -1814,70 +1820,83 @@ const handleSaveEvento = async () => {
   }
 };
     
-    const handleDeleteEvento = async () => {
-    const supabase = getSupabaseClient();
+  const handleDeleteEvento = async () => {
+  const supabase = getSupabaseClient();
 
-    if (!eventoToDelete) return;
+  if (!eventoToDelete) return;
 
-    try {
-      const gruppo = filteredEvents.find(
-        (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
-      );
+  try {
+    const gruppo = filteredEvents.find(
+      (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
+    );
 
-      if (!gruppo) {
-        toast({
-          title: "Errore",
-          description: "Evento non trovato",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const rowsToDelete = eventiRows.filter(
-        (r) => String(r.gruppo_evento || r.id) === String(gruppo.gruppo_evento)
-      );
-
-    await deleteRowsFromOutlook(
-  rowsToDelete.map((r) => ({
-    id: String(r.id),
-    utente_id: r.utente_id,
-    microsoft_connection_id: (r as any).microsoft_connection_id,
-    microsoft_event_id: r.microsoft_event_id
-  }))
-);
-
-      const { error } = await supabase
-        .from("tbagenda")
-        .delete()
-        .eq("gruppo_evento", gruppo.gruppo_evento);
-
-      if (error) throw error;
-
-      setEventiRows((prev) =>
-        prev.filter((r) => String(r.gruppo_evento || r.id) !== String(gruppo.gruppo_evento))
-      );
-
-      setDeleteDialogOpen(false);
-      setDialogOpen(false);
-      setEventoToDelete(null);
-      setEditingEventoId(null);
-      setEditingGruppoEvento(null);
-
-      toast({
-        title: "Evento eliminato",
-        description: "Il gruppo evento è stato eliminato con successo",
-      });
-    } catch (error) {
-      console.error("Errore eliminazione evento:", error);
+    if (!gruppo) {
       toast({
         title: "Errore",
-        description: "Impossibile eliminare l'evento",
+        description: "Evento non trovato",
         variant: "destructive",
       });
-      setDeleteDialogOpen(false);
-      setEventoToDelete(null);
+      return;
     }
-  };
+
+    const gruppoId = String(gruppo.gruppo_evento || gruppo.id);
+
+    const rowsToDelete = eventiRows.filter(
+      (r) => String(r.gruppo_evento || r.id) === gruppoId
+    );
+
+    // 1. DELETE OUTLOOK
+    await deleteRowsFromOutlook(
+      rowsToDelete.map((r) => ({
+        id: String(r.id),
+        utente_id: r.utente_id,
+        microsoft_connection_id: (r as any).microsoft_connection_id,
+        microsoft_event_id: r.microsoft_event_id,
+      }))
+    );
+
+    // 2. DELETE DB (più sicuro: per ID, non solo gruppo_evento)
+    const ids = rowsToDelete.map((r) => r.id);
+
+    const { error } = await supabase
+      .from("tbagenda")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+
+    // 3. CLEAN UI (fondamentale per evitare evento fantasma)
+    setEventiRows((prev) => prev.filter((r) => !ids.includes(r.id)));
+
+    setFilteredEvents((prev) =>
+      prev.filter(
+        (e) => String(e.gruppo_evento || e.id) !== gruppoId
+      )
+    );
+
+    setDeleteDialogOpen(false);
+    setDialogOpen(false);
+    setEventoToDelete(null);
+    setEditingEventoId(null);
+    setEditingGruppoEvento(null);
+
+    toast({
+      title: "Evento eliminato",
+      description: "Il gruppo evento è stato eliminato con successo",
+    });
+  } catch (error) {
+    console.error("Errore eliminazione evento:", error);
+
+    toast({
+      title: "Errore",
+      description: "Impossibile eliminare l'evento",
+      variant: "destructive",
+    });
+
+    setDeleteDialogOpen(false);
+    setEventoToDelete(null);
+  }
+};
 
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter((u) => u.settore === settore).map((u) => u.id);
