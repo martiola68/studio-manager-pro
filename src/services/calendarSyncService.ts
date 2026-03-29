@@ -333,6 +333,8 @@ async function syncEventToOutlook(
   eventoId: string
 ): Promise<boolean> {
   try {
+    console.log("🔄 syncEventToOutlook START", { userId, eventoId });
+
     const { data: evento, error } = await supabase
       .from("tbagenda")
       .select("*")
@@ -340,9 +342,17 @@ async function syncEventToOutlook(
       .single();
 
     if (error || !evento) {
-      console.error("Evento non trovato:", error);
+      console.error("❌ Evento non trovato:", error);
       return false;
     }
+
+    console.log("📌 Evento caricato", {
+      id: evento.id,
+      utente_id: evento.utente_id,
+      microsoft_event_id: evento.microsoft_event_id,
+      microsoft_connection_id: (evento as any)?.microsoft_connection_id || null,
+      outlook_synced: evento.outlook_synced,
+    });
 
     let microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
 
@@ -350,21 +360,16 @@ async function syncEventToOutlook(
       microsoftConnectionId = await getActiveMicrosoftConnectionId(userId);
     }
 
+    console.log("🔎 Connection risolta", {
+      userId,
+      eventoId,
+      microsoftConnectionId,
+    });
+
     if (!microsoftConnectionId) {
-      console.log("ℹ️  Nessuna connessione Microsoft attiva, skip sincronizzazione Outlook", {
+      console.warn("⚠️ Nessuna connessione Microsoft attiva trovata", {
         userId,
         eventoId,
-      });
-      return false;
-    }
-
-    const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
-
-    if (!hasMicrosoft) {
-      console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook", {
-        userId,
-        eventoId,
-        microsoftConnectionId,
       });
       return false;
     }
@@ -382,29 +387,53 @@ async function syncEventToOutlook(
       tutto_giorno: evento.tutto_giorno || false,
     };
 
+    console.log("📤 Payload appEvent", appEvent);
+
     if (evento.microsoft_event_id) {
+      console.log("📝 Tentativo update Outlook", {
+        userId,
+        microsoftConnectionId,
+        microsoftEventId: evento.microsoft_event_id,
+      });
+
       await updateOutlookEvent(
         userId,
         microsoftConnectionId,
         evento.microsoft_event_id,
         appEvent
       );
+
+      console.log("✅ Update Outlook completato");
       return true;
     }
 
-    await createOutlookEvent(userId, microsoftConnectionId, appEvent);
+    console.log("📅 Tentativo create Outlook", {
+      userId,
+      microsoftConnectionId,
+    });
+
+    const createdId = await createOutlookEvent(
+      userId,
+      microsoftConnectionId,
+      appEvent
+    );
+
+    console.log("✅ Create Outlook completato", {
+      createdId,
+      eventoId,
+    });
+
     return true;
   } catch (error: any) {
-    if (error.message?.includes("Microsoft 365 non configurato")) {
-      console.log("ℹ️  Sincronizzazione Outlook saltata: Microsoft 365 non configurato");
-      return false;
-    }
+    console.error("❌ Errore sincronizzazione evento Outlook:", {
+      message: error?.message || String(error),
+      stack: error?.stack || null,
+      raw: error,
+    });
 
-    console.error("Errore sincronizzazione evento:", error);
     return false;
   }
 }
-
 /**
  * Sincronizza tutti gli eventi (bidirezionale)
  */
