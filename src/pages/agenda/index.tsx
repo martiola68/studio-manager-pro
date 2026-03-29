@@ -1120,41 +1120,40 @@ if ((calendarSyncService as any).deleteEventFromOutlook) {
   };
 
   const renderUserPill = (user: UtenteBase, isOrganizer = false) => {
-    return (
-      <div
-        key={user.id}
-        className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
-          isOrganizer ? "bg-slate-50 border-slate-300 ring-1 ring-slate-200" : "bg-white"
-        }`}
-      >
-        <div className="h-8 w-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold">
-          {getInitials(user.nome, user.cognome)}
+  return (
+    <div
+      key={user.id}
+      className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${
+        isOrganizer ? "bg-slate-50 border-slate-300 ring-1 ring-slate-200" : "bg-white"
+      }`}
+    >
+      <div className="inline-flex max-w-[180px] items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 truncate">
+        {user.cognome} {user.nome}
+      </div>
+
+      <div className="min-w-0">
+        <div className="text-xs font-medium leading-none truncate">
+          {isOrganizer ? "Organizzatore" : "Partecipante"}
         </div>
 
-        <div className="min-w-0">
-          <div className="text-xs font-medium leading-none truncate">
-            {user.cognome} {user.nome}
-            {isOrganizer ? " • organizzatore" : ""}
-          </div>
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getSettoreBadgeClass(
+              user.settore
+            )}`}
+          >
+            {normalizeSettore(user.settore) || "Settore"}
+          </span>
 
-          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span
-              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getSettoreBadgeClass(
-                user.settore
-              )}`}
-            >
-              {normalizeSettore(user.settore) || "Settore"}
-            </span>
-
-            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
-              <CheckCircle2 className="h-3 w-3" />
-              Accettato
-            </span>
-          </div>
+          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-700 border-emerald-200">
+            <CheckCircle2 className="h-3 w-3" />
+            Accettato
+          </span>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderAdvancedTooltip = (evento: EventoGroup) => {
     const eventColors = getSettoreEventColor(evento.utente?.settore);
