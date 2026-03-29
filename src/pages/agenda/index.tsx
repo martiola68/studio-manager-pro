@@ -955,14 +955,23 @@ const syncRowsToOutlook = async (
     if (!row?.id || !row.utente_id) continue;
 
     try {
-      const { data: connection } = await (supabase as any)
-        .from("microsoft365_connections")
-        .select("id")
-        .eq("utente_id", row.utente_id)
-        .eq("active", true)
+      const { data: utente, error: utenteError } = await supabase
+        .from("tbutenti")
+        .select("microsoft_connection_id")
+        .eq("id", row.utente_id)
         .maybeSingle();
 
-      if (!connection?.id) {
+      if (utenteError) {
+        console.error(
+          "Errore recupero microsoft_connection_id da tbutenti:",
+          utenteError
+        );
+        continue;
+      }
+
+      const connectionId = utente?.microsoft_connection_id || null;
+
+      if (!connectionId) {
         console.warn("Utente senza connessione Microsoft:", row.utente_id);
         continue;
       }
@@ -994,11 +1003,19 @@ const deleteRowsFromOutlook = async (
       let connectionId = row.microsoft_connection_id || null;
 
       if (!connectionId) {
-        const { data: utente } = await supabase
+        const { data: utente, error: utenteError } = await supabase
           .from("tbutenti")
           .select("microsoft_connection_id")
           .eq("id", row.utente_id)
           .maybeSingle();
+
+        if (utenteError) {
+          console.error(
+            "Errore recupero microsoft_connection_id da tbutenti:",
+            utenteError
+          );
+          continue;
+        }
 
         connectionId = utente?.microsoft_connection_id || null;
       }
