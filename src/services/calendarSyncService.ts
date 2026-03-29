@@ -87,12 +87,16 @@ function convertLocalToGraphDateTime(dateValue: string): string {
 async function getActiveMicrosoftConnectionId(userId: string): Promise<string> {
   if (!userId) return "";
 
-  const { data: connection, error } = await (supabase as any)
-    .from("microsoft365_connections")
-    .select("id")
-    .eq("utente_id", userId)
-    .eq("active", true)
-    .maybeSingle();
+const { data: utente } = await supabase
+  .from("tbutenti")
+  .select("microsoft_connection_id")
+  .eq("id", userId)
+  .maybeSingle();
+
+let microsoftConnectionId =
+  (evento as any)?.microsoft_connection_id ||
+  utente?.microsoft_connection_id ||
+  "";
 
   if (error) {
     console.error("❌ Errore recupero connessione Microsoft:", error);
