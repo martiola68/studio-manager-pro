@@ -898,17 +898,16 @@ const filteredEvents = useMemo(() => {
 
   const supabase = getSupabaseClient();
 
-  const { data, error } = await (supabase as any)
-    .from("microsoft365_connections")
-    .select("id")
-    .eq("utente_id", ownerUserId)
-    .eq("active", true)
+  const { data, error } = await supabase
+    .from("tbutenti")
+    .select("microsoft_connection_id")
+    .eq("id", ownerUserId)
     .maybeSingle();
 
-  if (error || !data?.id) return null;
-  return String(data.id);
+  if (error || !data?.microsoft_connection_id) return null;
+  return String(data.microsoft_connection_id);
 };
-
+  
 const buildBasePayload = (
   utenteId: string,
   gruppoEvento: string,
@@ -978,7 +977,7 @@ const syncRowsToOutlook = async (
   }
 };
 
-  const deleteRowsFromOutlook = async (
+const deleteRowsFromOutlook = async (
   rows: Array<{
     id: string;
     utente_id: string | null;
@@ -992,32 +991,38 @@ const syncRowsToOutlook = async (
     if (!row?.microsoft_event_id || !row?.utente_id) continue;
 
     try {
-      const { data: connection } = await (supabase as any)
-        .from("microsoft365_connections")
-        .select("id")
-        .eq("utente_id", row.utente_id)
-        .eq("active", true)
-        .maybeSingle();
+      let connectionId = row.microsoft_connection_id || null;
 
-      if (!connection?.id) {
+      if (!connectionId) {
+        const { data: utente } = await supabase
+          .from("tbutenti")
+          .select("microsoft_connection_id")
+          .eq("id", row.utente_id)
+          .maybeSingle();
+
+        connectionId = utente?.microsoft_connection_id || null;
+      }
+
+      if (!connectionId) {
         console.warn("Connessione Microsoft non trovata per:", row.utente_id);
         continue;
       }
-if ((calendarSyncService as any).deleteEventFromOutlook) {
-  await (calendarSyncService as any).deleteEventFromOutlook(
-    String(row.utente_id),
-    String(connection.id),
-    String(row.microsoft_event_id)
-  );
-} else {
-  console.warn("deleteEventFromOutlook non presente in calendarSyncService");
-}
+
+      if ((calendarSyncService as any).deleteEventFromOutlook) {
+        await (calendarSyncService as any).deleteEventFromOutlook(
+          String(row.utente_id),
+          String(connectionId),
+          String(row.microsoft_event_id)
+        );
+      } else {
+        console.warn("deleteEventFromOutlook non presente in calendarSyncService");
+      }
     } catch (error) {
       console.error("Errore cancellazione Outlook:", error);
     }
   }
 };
-
+  
   const sendTeamsMessagesToParticipants = async (
     ownerUserId: string,
     internalParticipantIds: string[],
