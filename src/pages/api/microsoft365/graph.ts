@@ -340,19 +340,21 @@ export default async function handler(
       return res.status(401).json({ error: "Invalid session" });
     }
 
-    const sessionUserId = userData.user.id;
+   const authUserId = userData.user.id;
+const authUserEmail = userData.user.email || "";
 
-    const { data: sessionUserRow, error: sessionUserErr } = await supabaseAdmin
-      .from("tbutenti")
-      .select("id, studio_id")
-      .eq("id", sessionUserId)
-      .maybeSingle();
+const { data: sessionUserRow, error: sessionUserErr } = await supabaseAdmin
+  .from("tbutenti")
+  .select("id, studio_id, email")
+  .eq("email", authUserEmail)
+  .maybeSingle();
 
-    if (sessionUserErr || !sessionUserRow?.studio_id) {
-      return res.status(400).json({ error: "Studio non trovato" });
-    }
+if (sessionUserErr || !sessionUserRow?.studio_id || !sessionUserRow?.id) {
+  return res.status(400).json({ error: "Utente studio non trovato" });
+}
 
-    const sessionStudioId = String(sessionUserRow.studio_id);
+const sessionTbutentiId = String(sessionUserRow.id);
+const sessionStudioId = String(sessionUserRow.studio_id);
 
     const {
       endpoint,
@@ -366,10 +368,10 @@ export default async function handler(
       return res.status(400).json({ error: "Missing endpoint/method" });
     }
 
-    const effectiveUserId =
-      typeof requestedUserId === "string" && requestedUserId.trim()
-        ? requestedUserId.trim()
-        : sessionUserId;
+  const effectiveUserId =
+  typeof requestedUserId === "string" && requestedUserId.trim()
+    ? requestedUserId.trim()
+    : sessionTbutentiId;
 
     const { data: targetUserRow, error: targetUserErr } = await supabaseAdmin
       .from("tbutenti")
