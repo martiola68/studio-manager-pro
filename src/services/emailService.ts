@@ -327,36 +327,118 @@ export async function sendEventNotification(
       };
     }
 
-    const action = data.action || "created";
+   const action = data.action || "created";
 
-    const { data: result, error } = await supabase.functions.invoke(
-      "send-event-notification",
-      {
-        body: {
-          ...data,
-          action,
-          recipients,
-        },
-      }
-    );
+let subject = "";
+let intro = "";
 
-    if (error) {
-      return {
-        success: false,
-        sent: 0,
-        failed: 0,
-        total: recipients.length,
-        error: error.message,
-      };
+if (action === "created") {
+  subject = `📅 Nuovo evento: ${data.eventoTitolo}`;
+  intro = "È stato creato un nuovo evento.";
+} else if (action === "updated") {
+  subject = `✏️ Evento aggiornato: ${data.eventoTitolo}`;
+  intro = "L'evento è stato modificato.";
+} else {
+  subject = `❌ Evento annullato: ${data.eventoTitolo}`;
+  intro = "L'evento è stato annullato.";
+}
+
+const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+    .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .content { padding: 30px 20px; }
+    .box { background: #f9f9f9; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; margin: 20px 0; }
+    .footer { background: #f4f4f4; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #ddd; }
+    .footer p { margin: 5px 0; }
+    ul { padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="content">
+      <p><strong>${intro}</strong></p>
+
+      <div class="box">
+        <p><strong>Titolo:</strong> ${data.eventoTitolo}</p>
+        <p><strong>Data:</strong> ${data.eventoData}</p>
+        <p><strong>Orario:</strong> ${data.eventoOraInizio} - ${data.eventoOraFine}</p>
+        <p><strong>Responsabile:</strong> ${data.responsabileNome}</p>
+        ${data.eventoLuogo ? `<p><strong>Luogo:</strong> ${data.eventoLuogo}</p>` : ""}
+        ${data.eventoDescrizione ? `<p><strong>Descrizione:</strong> ${data.eventoDescrizione}</p>` : ""}
+        ${data.link_teams ? `<p><strong>Link Teams:</strong> <a href="${data.link_teams}">${data.link_teams}</a></p>` : ""}
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>Studio Manager Pro</strong> - Sistema Gestionale Integrato</p>
+      <p>Powered by ProWork Studio M</p>
+      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
+    </div>
+  </div>
+</body>
+</html>
+`.trim();
+
+const text = `
+${intro}
+
+Titolo: ${data.eventoTitolo}
+Data: ${data.eventoData}
+Orario: ${data.eventoOraInizio} - ${data.eventoOraFine}
+Responsabile: ${data.responsabileNome}
+${data.eventoLuogo ? `Luogo: ${data.eventoLuogo}` : ""}
+${data.eventoDescrizione ? `Descrizione: ${data.eventoDescrizione}` : ""}
+${data.link_teams ? `Link Teams: ${data.link_teams}` : ""}
+
+---
+Studio Manager Pro - Sistema Gestionale Integrato
+Powered by ProWork Studio M
+Questa è una email automatica, non rispondere a questo messaggio
+`.trim();
+
+let sent = 0;
+let failed = 0;
+
+for (let i = 0; i < recipients.length; i++) {
+  const recipient = recipients[i];
+
+  try {
+    const result = await sendEmail({
+      to: recipient,
+      subject,
+      html,
+      text,
+      microsoftConnectionId: data.microsoftConnectionId,
+    });
+
+    if (result.success) {
+      sent++;
+    } else {
+      failed++;
     }
+  } catch {
+    failed++;
+  }
 
-    return {
-      success: true,
-      sent: recipients.length,
-      failed: 0,
-      total: recipients.length,
-      ...result,
-    };
+  if (i < recipients.length - 1) {
+    await sleep(300);
+  }
+}
+
+return {
+  success: sent > 0,
+  sent,
+  failed,
+  total: recipients.length,
+  error: failed > 0 ? `${failed} email non inviate` : undefined,
+};
+    
   } catch (error) {
     console.error("💥 Error sending event notification:", error);
     return {
