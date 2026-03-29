@@ -1826,9 +1826,9 @@ const handleSaveEvento = async () => {
   if (!eventoToDelete) return;
 
   try {
-    const gruppo = filteredEvents.find(
-      (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
-    );
+    const gruppo = groupedEvents.find(
+  (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
+);
 
     if (!gruppo) {
       toast({
