@@ -55,6 +55,54 @@ function convertOutlookToLocal(dateTime: string): string {
 }
 
 /**
+ * Helper: Converte una data ISO/UTC in formato locale compatibile con Microsoft Graph
+ * Graph vuole dateTime senza offset quando è presente anche timeZone.
+ */
+function convertLocalToGraphDateTime(dateValue: string): string {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+
+  return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`;
+}
+
+/**
+ * Helper: recupera connessione Microsoft attiva per utente
+ */
+async function getActiveMicrosoftConnectionId(userId: string): Promise<string> {
+  if (!userId) return "";
+
+  const { data: connection, error } = await (supabase as any)
+    .from("microsoft365_connections")
+    .select("id")
+    .eq("utente_id", userId)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("❌ Errore recupero connessione Microsoft:", error);
+    return "";
+  }
+
+  return connection?.id || "";
+}
+
+/**
  * Sincronizza eventi da Outlook ad Agenda app
  */
 async function syncFromOutlook(
@@ -106,10 +154,7 @@ async function syncFromOutlook(
       };
 
       if (existing?.id) {
-        await supabase
-          .from("tbagenda")
-          .update(eventData)
-          .eq("id", existing.id);
+        await supabase.from("tbagenda").update(eventData).eq("id", existing.id);
 
         console.log(`✅ Aggiornato evento: ${outlookEvent.subject}`);
       } else {
@@ -150,11 +195,11 @@ async function createOutlookEvent(
     const outlookEvent = {
       subject: appEvent.titolo,
       start: {
-        dateTime: appEvent.data_inizio,
+        dateTime: convertLocalToGraphDateTime(appEvent.data_inizio),
         timeZone: "Europe/Rome",
       },
       end: {
-        dateTime: appEvent.data_fine,
+        dateTime: convertLocalToGraphDateTime(appEvent.data_fine),
         timeZone: "Europe/Rome",
       },
       isAllDay: appEvent.tutto_giorno || false,
@@ -214,11 +259,11 @@ async function updateOutlookEvent(
     const outlookEvent = {
       subject: appEvent.titolo,
       start: {
-        dateTime: appEvent.data_inizio,
+        dateTime: convertLocalToGraphDateTime(appEvent.data_inizio),
         timeZone: "Europe/Rome",
       },
       end: {
-        dateTime: appEvent.data_fine,
+        dateTime: convertLocalToGraphDateTime(appEvent.data_fine),
         timeZone: "Europe/Rome",
       },
       isAllDay: appEvent.tutto_giorno || false,
@@ -299,19 +344,20 @@ async function syncEventToOutlook(
     let microsoftConnectionId = (evento as any)?.microsoft_connection_id || "";
 
     if (!microsoftConnectionId) {
-      const { data: connection } = await (supabase as any)
-        .from("microsoft365_connections")
-        .select("id")
-        .eq("utente_id", userId)
-        .eq("active", true)
-        .maybeSingle();
+      microsoftConnectionId = await getActiveMicrosoftConnectionId(userId);
+    }
 
-      microsoftConnectionId = connection?.id || "";
+    if (!microsoftConnectionId) {
+      console.log("ℹ️  Nessuna connessione Microsoft attiva, skip sincronizzazione Outlook", {
+        userId,
+        eventoId,
+      });
+      return false;
     }
 
     const hasMicrosoft = await hasMicrosoft365(userId, microsoftConnectionId);
 
-    if (!hasMicrosoft || !microsoftConnectionId) {
+    if (!hasMicrosoft) {
       console.log("ℹ️  Microsoft 365 non configurato, skip sincronizzazione Outlook", {
         userId,
         eventoId,
