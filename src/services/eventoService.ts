@@ -23,6 +23,7 @@ export const eventoService = {
       console.error("Error fetching eventi:", error);
       return [];
     }
+
     return data || [];
   },
 
@@ -37,6 +38,7 @@ export const eventoService = {
       console.error("Error fetching evento:", error);
       return null;
     }
+
     return data;
   },
 
@@ -60,6 +62,7 @@ export const eventoService = {
       console.error("Error fetching eventi by utente:", error);
       return [];
     }
+
     return data || [];
   },
 
@@ -83,6 +86,7 @@ export const eventoService = {
       console.error("Error fetching eventi by cliente:", error);
       return [];
     }
+
     return data || [];
   },
 
@@ -108,6 +112,7 @@ export const eventoService = {
       console.error("Error fetching eventi by date range:", error);
       return [];
     }
+
     return data || [];
   },
 
@@ -123,44 +128,45 @@ export const eventoService = {
       throw error;
     }
 
-    // Invia notifica email dopo la creazione dell'evento
     if (data) {
       try {
-       await this.sendEventNotification(data, "updated");
+        await this.sendEventNotification(data, "created");
       } catch (emailError) {
         console.error("Error sending event notification:", emailError);
-        // Non bloccare la creazione dell'evento se l'invio email fallisce
       }
     }
 
     return data;
   },
 
- async sendEventNotification(
-  evento: EventoAgenda,
-  action: "created" | "updated" | "cancelled" = "created"
-): Promise<void> {
+  async sendEventNotification(
+    evento: EventoAgenda,
+    action: "created" | "updated" | "cancelled" = "created"
+  ): Promise<void> {
     try {
-      console.log("📧 Preparing to send event notification for:", evento.id);
+      console.log("📧 Preparing to send event notification for:", evento.id, action);
 
-      // Recupera i dati del responsabile
       if (!evento.utente_id) {
         console.error("❌ No utente_id found for evento");
         return;
       }
 
-      const { data: responsabile } = await supabase
+      const { data: responsabile, error: responsabileError } = await supabase
         .from("tbutenti")
         .select("nome, cognome, email")
         .eq("id", evento.utente_id)
         .single();
+
+      if (responsabileError) {
+        console.error("❌ Error fetching responsabile:", responsabileError);
+        return;
+      }
 
       if (!responsabile || !responsabile.email) {
         console.error("❌ Responsabile email not found");
         return;
       }
 
-      // Recupera i dati dei partecipanti (se presenti)
       let partecipantiEmails: string[] = [];
       let partecipantiNomi: string[] = [];
 
@@ -169,15 +175,17 @@ export const eventoService = {
         : [];
 
       if (partecipantiIds.length > 0) {
-        const { data: partecipanti } = await supabase
+        const { data: partecipanti, error: partecipantiError } = await supabase
           .from("tbutenti")
           .select("nome, cognome, email")
           .in("id", partecipantiIds);
 
-        if (partecipanti) {
+        if (partecipantiError) {
+          console.error("❌ Error fetching partecipanti:", partecipantiError);
+        } else if (partecipanti) {
           partecipantiEmails = partecipanti
-            .filter((p) => p.email)
-            .map((p) => p.email!);
+            .filter((p) => Boolean(p.email))
+            .map((p) => p.email as string);
 
           partecipantiNomi = partecipanti.map(
             (p) =>
@@ -188,28 +196,28 @@ export const eventoService = {
         }
       }
 
-      // Recupera i dati del cliente (se presente)
       let clienteEmail: string | undefined;
       let clienteNome: string | undefined;
 
       if (evento.cliente_id) {
-        const { data: cliente } = await supabase
+        const { data: cliente, error: clienteError } = await supabase
           .from("tbclienti")
           .select("ragione_sociale, email")
           .eq("id", evento.cliente_id)
           .single();
 
-        if (cliente && cliente.email) {
+        if (clienteError) {
+          console.error("❌ Error fetching cliente:", clienteError);
+        } else if (cliente && cliente.email) {
           clienteEmail = cliente.email;
           clienteNome = cliente.ragione_sociale || "Cliente";
         }
       }
 
-      // Helper per formattare data e ora
       const formatDate = (dateStr: string) => {
         try {
           return new Date(dateStr).toLocaleDateString("it-IT");
-        } catch (e) {
+        } catch {
           return dateStr;
         }
       };
@@ -220,36 +228,35 @@ export const eventoService = {
             hour: "2-digit",
             minute: "2-digit",
           });
-        } catch (e) {
+        } catch {
           return "00:00";
         }
       };
 
-      // Usa emailService per inviare la notifica
-     const emailData = {
-  action,
-  eventoId: evento.id,
-  eventoTitolo: evento.titolo || "Evento senza titolo",
-  eventoData: formatDate(evento.data_inizio),
-  eventoOraInizio: evento.ora_inizio
-    ? evento.ora_inizio.substring(0, 5)
-    : formatTime(evento.data_inizio),
-  eventoOraFine: evento.ora_fine
-    ? evento.ora_fine.substring(0, 5)
-    : formatTime(evento.data_fine),
-  eventoLuogo: evento.luogo || undefined,
-  eventoDescrizione: evento.descrizione || undefined,
-  responsabileEmail: responsabile.email,
-  responsabileNome:
-    `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
-    responsabile.email,
-  partecipantiEmails,
-  partecipantiNomi,
-  clienteEmail,
-  clienteNome,
-  riunione_teams: evento.riunione_teams || false,
-  link_teams: evento.link_teams || undefined,
-};
+      const emailData = {
+        action,
+        eventoId: evento.id,
+        eventoTitolo: evento.titolo || "Evento senza titolo",
+        eventoData: formatDate(evento.data_inizio),
+        eventoOraInizio: evento.ora_inizio
+          ? evento.ora_inizio.substring(0, 5)
+          : formatTime(evento.data_inizio),
+        eventoOraFine: evento.ora_fine
+          ? evento.ora_fine.substring(0, 5)
+          : formatTime(evento.data_fine),
+        eventoLuogo: evento.luogo || undefined,
+        eventoDescrizione: evento.descrizione || undefined,
+        responsabileEmail: responsabile.email,
+        responsabileNome:
+          `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
+          responsabile.email,
+        partecipantiEmails,
+        partecipantiNomi,
+        clienteEmail,
+        clienteNome,
+        riunione_teams: evento.riunione_teams || false,
+        link_teams: evento.link_teams || undefined,
+      };
 
       console.log("📧 Sending notification via emailService");
       const result = await emailService.sendEventNotification(emailData);
@@ -261,7 +268,6 @@ export const eventoService = {
       }
     } catch (error) {
       console.error("💥 Critical error in sendEventNotification:", error);
-      // Non bloccare la creazione/modifica dell'evento se l'email fallisce
     }
   },
 
@@ -281,15 +287,13 @@ export const eventoService = {
       throw error;
     }
 
-    // 🔔 AVVISA IL BADGE AGENDA (SUBITO dopo update OK)
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("agenda-updated"));
     }
 
-    // Invia notifica email dopo l'aggiornamento dell'evento
     if (data) {
       try {
-        await this.sendEventNotification(data, "created");
+        await this.sendEventNotification(data, "updated");
       } catch (emailError) {
         console.error("Error sending event notification:", emailError);
       }
@@ -298,24 +302,37 @@ export const eventoService = {
     return data;
   },
 
-async deleteEvento(id: string): Promise<boolean> {
-  const { data: evento } = await supabase
-    .from("tbagenda")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  const { error } = await supabase.from("tbagenda").delete().eq("id", id);
-
-  if (error) {
-    console.error("Error deleting evento:", error);
-    return false;
-  }
-
-  if (evento) {
+  async deleteEvento(id: string): Promise<boolean> {
     try {
-      await this.sendEventNotification(evento, "cancelled");
-    } catch (emailError) {
-      console.error("Error sending cancel event notification:", emailError);
+      const { data: evento, error: eventoError } = await supabase
+        .from("tbagenda")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (eventoError) {
+        console.error("Error fetching evento before delete:", eventoError);
+      }
+
+      const { error } = await supabase.from("tbagenda").delete().eq("id", id);
+
+      if (error) {
+        console.error("Error deleting evento:", error);
+        return false;
+      }
+
+      if (evento) {
+        try {
+          await this.sendEventNotification(evento, "cancelled");
+        } catch (emailError) {
+          console.error("Error sending cancel event notification:", emailError);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting evento:", error);
+      return false;
     }
-  }
+  },
+};
