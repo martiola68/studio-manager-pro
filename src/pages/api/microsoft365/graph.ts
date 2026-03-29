@@ -83,7 +83,8 @@ function isAllowedGraphUrl(urlStr: string): boolean {
 
 async function resolveMicrosoftConnection(
   studioId: string,
-  userId: string
+  userId: string,
+  requestedConnectionId?: string | null
 ): Promise<ResolvedConnection> {
   const { data: utente, error: utenteErr } = await supabaseAdmin
     .from("tbutenti")
@@ -97,7 +98,23 @@ async function resolveMicrosoftConnection(
 
   let connection: ConnectionRow | null = null;
 
-  if (utente.microsoft_connection_id) {
+  if (requestedConnectionId) {
+    const { data, error } = await supabaseAdmin
+      .from("microsoft365_connections")
+      .select(
+        "id, studio_id, nome_connessione, tenant_id, client_id, client_secret, enabled, connected_email, organizer_email, is_default, sort_order"
+      )
+      .eq("id", requestedConnectionId)
+      .eq("studio_id", studioId)
+      .eq("enabled", true)
+      .maybeSingle<ConnectionRow>();
+
+    if (!error && data) {
+      connection = data;
+    }
+  }
+
+  if (!connection && utente.microsoft_connection_id) {
     const { data, error } = await supabaseAdmin
       .from("microsoft365_connections")
       .select(
@@ -106,7 +123,7 @@ async function resolveMicrosoftConnection(
       .eq("id", utente.microsoft_connection_id)
       .eq("studio_id", studioId)
       .eq("enabled", true)
-      .single<ConnectionRow>();
+      .maybeSingle<ConnectionRow>();
 
     if (!error && data) {
       connection = data;
@@ -122,7 +139,7 @@ async function resolveMicrosoftConnection(
       .eq("studio_id", studioId)
       .eq("enabled", true)
       .eq("is_default", true)
-      .single<ConnectionRow>();
+      .maybeSingle<ConnectionRow>();
 
     if (!error && data) {
       connection = data;
@@ -139,7 +156,7 @@ async function resolveMicrosoftConnection(
       .eq("enabled", true)
       .order("sort_order", { ascending: true })
       .limit(1)
-      .single<ConnectionRow>();
+      .maybeSingle<ConnectionRow>();
 
     if (!error && data) {
       connection = data;
@@ -168,9 +185,14 @@ async function resolveMicrosoftConnection(
 
 async function acquireAccessToken(
   studioId: string,
-  userId: string
+  userId: string,
+  requestedConnectionId?: string | null
 ): Promise<{ accessToken: string; connection: ResolvedConnection }> {
-  const connection = await resolveMicrosoftConnection(studioId, userId);
+  const connection = await resolveMicrosoftConnection(
+    studioId,
+    userId,
+    requestedConnectionId
+  );
 
   let tokenRow: TokenRow | null = null;
 
@@ -180,11 +202,12 @@ async function acquireAccessToken(
       "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
     )
     .eq("studio_id", studioId)
-.eq("microsoft_connection_id", connection.id)
-.is("revoked_at", null)
-.order("updated_at", { ascending: false })
-.limit(1)
-.maybeSingle();
+    .eq("user_id", userId)
+    .eq("microsoft_connection_id", connection.id)
+    .is("revoked_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!strictTokenErr && strictTokenRow?.token_cache_encrypted) {
     tokenRow = strictTokenRow as TokenRow;
@@ -196,13 +219,14 @@ async function acquireAccessToken(
       .select(
         "token_cache_encrypted, scopes, revoked_at, microsoft_connection_id, updated_at"
       )
-     .eq("studio_id", studioId)
-.eq("microsoft_connection_id", connection.id)
-.is("revoked_at", null)
-.not("token_cache_encrypted", "is", null)
-.order("updated_at", { ascending: false })
-.limit(1)
-.maybeSingle();
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", connection.id)
+      .is("revoked_at", null)
+      .not("token_cache_encrypted", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!fallbackTokenErr && fallbackTokenRow?.token_cache_encrypted) {
       tokenRow = fallbackTokenRow as TokenRow;
@@ -224,11 +248,11 @@ async function acquireAccessToken(
   const oldSerializedCache = decrypt(tokenRow.token_cache_encrypted);
   let clientSecret = "";
 
-try {
-  clientSecret = decrypt(connection.client_secret);
-} catch {
-  clientSecret = connection.client_secret;
-}
+  try {
+    clientSecret = decrypt(connection.client_secret);
+  } catch {
+    clientSecret = connection.client_secret;
+  }
 
   const msalApp = new ConfidentialClientApplication({
     auth: {
@@ -283,12 +307,14 @@ try {
         updated_at: new Date().toISOString(),
         microsoft_connection_id: connection.id,
       })
-.eq("studio_id", studioId)
-.eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
+      .eq("studio_id", studioId)
+      .eq("user_id", userId)
+      .eq("microsoft_connection_id", tokenRow.microsoft_connection_id);
   }
 
   return { accessToken, connection };
 }
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -314,23 +340,49 @@ export default async function handler(
       return res.status(401).json({ error: "Invalid session" });
     }
 
-    const userId = userData.user.id;
+    const sessionUserId = userData.user.id;
 
-    const { data: uRow, error: uRowErr } = await supabaseAdmin
+    const { data: sessionUserRow, error: sessionUserErr } = await supabaseAdmin
       .from("tbutenti")
-      .select("studio_id")
-      .eq("id", userId)
+      .select("id, studio_id")
+      .eq("id", sessionUserId)
       .maybeSingle();
 
-    if (uRowErr || !uRow?.studio_id) {
+    if (sessionUserErr || !sessionUserRow?.studio_id) {
       return res.status(400).json({ error: "Studio non trovato" });
     }
 
-    const studioId = uRow.studio_id as string;
+    const sessionStudioId = String(sessionUserRow.studio_id);
 
-    const { endpoint, method, body } = req.body || {};
+    const {
+      endpoint,
+      method,
+      body,
+      userId: requestedUserId,
+      microsoftConnectionId,
+    } = req.body || {};
+
     if (!endpoint || !method) {
       return res.status(400).json({ error: "Missing endpoint/method" });
+    }
+
+    const effectiveUserId =
+      typeof requestedUserId === "string" && requestedUserId.trim()
+        ? requestedUserId.trim()
+        : sessionUserId;
+
+    const { data: targetUserRow, error: targetUserErr } = await supabaseAdmin
+      .from("tbutenti")
+      .select("id, studio_id")
+      .eq("id", effectiveUserId)
+      .maybeSingle();
+
+    if (targetUserErr || !targetUserRow?.studio_id) {
+      return res.status(400).json({ error: "Utente target non trovato" });
+    }
+
+    if (String(targetUserRow.studio_id) !== sessionStudioId) {
+      return res.status(403).json({ error: "Utente target fuori dallo studio" });
     }
 
     const url = normalizeGraphUrl(String(endpoint));
@@ -345,7 +397,11 @@ export default async function handler(
       return res.status(400).json({ error: "Metodo non supportato" });
     }
 
-    const { accessToken } = await acquireAccessToken(studioId, userId);
+    const { accessToken } = await acquireAccessToken(
+      sessionStudioId,
+      effectiveUserId,
+      microsoftConnectionId || null
+    );
 
     const graphRes = await fetch(url, {
       method: httpMethod,
@@ -389,4 +445,3 @@ export default async function handler(
     return res.status(500).json({ error: e?.message || String(e) });
   }
 }
-
