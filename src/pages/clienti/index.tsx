@@ -2161,112 +2161,102 @@ setErrors({});
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="referente_esterno">Referente esterno</Label>
-            <Input
-              id="referente_esterno"
-              value={formData.referente_esterno}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  referente_esterno: e.target.value,
-                })
-              }
-              placeholder="Nome referente esterno"
-            />
-          </div>
+        <div>
+  <Label htmlFor="referente_esterno">Referente esterno</Label>
+  <Input
+    id="referente_esterno"
+    value={formData.referente_esterno}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        referente_esterno: e.target.value,
+      })
+    }
+    placeholder="Nome referente esterno"
+  />
+</div>
 
-          <div>
-           <Label htmlFor="tipo_prestazione_id">
-  Tipo Prestazione <span className="text-red-500">*</span>
-</Label>
-            <Select
-              value={formData.tipo_prestazione_id || "none"}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  tipo_prestazione_id: value === "none" ? "" : value,
-                })
-              }
-            >
-              <Select
-  value={formData.tipo_prestazione_id || "none"}
-  onValueChange={(value) =>
-    setFormData({
-      ...formData,
-      tipo_prestazione_id: value === "none" ? "" : value,
-    })
-  }
->
-              <SelectTrigger className={errors.tipo_prestazione_id ? "border-red-500" : ""}>
-    <SelectValue placeholder="Seleziona prestazione" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="none">Nessuno</SelectItem>
-    {prestazioni.map((p) => (
-      <SelectItem key={p.id} value={p.id}>
-        {safeString(p.descrizione)}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-          </div>
+<div>
+  <Label htmlFor="tipo_prestazione_id">
+    Tipo Prestazione <span className="text-red-500">*</span>
+  </Label>
+  <Select
+    value={formData.tipo_prestazione_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        tipo_prestazione_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger
+      className={errors.tipo_prestazione_id ? "border-red-500" : ""}
+    >
+      <SelectValue placeholder="Seleziona prestazione" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {prestazioni.map((p) => (
+        <SelectItem key={p.id} value={p.id}>
+          {safeString(p.descrizione)}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
 
-          <div>
-       <Label htmlFor="tipo_redditi">
-  Tipo Redditi <span className="text-red-500">*</span>
-</Label>
-            <Select
-              value={formData.tipo_redditi || undefined}
-              onValueChange={(value: string) =>
-                setFormData({
-                  ...formData,
-                  tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
-                })
-              }
-            >
-              <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
-                <SelectValue placeholder="Seleziona tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="USC">USC</SelectItem>
-                <SelectItem value="USP">USP</SelectItem>
-                <SelectItem value="ENC">ENC</SelectItem>
-                <SelectItem value="UPF">UPF</SelectItem>
-                <SelectItem value="730">730</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+<div>
+  <Label htmlFor="tipo_redditi">
+    Tipo Redditi <span className="text-red-500">*</span>
+  </Label>
+  <Select
+    value={formData.tipo_redditi || undefined}
+    onValueChange={(value: string) =>
+      setFormData({
+        ...formData,
+        tipo_redditi: value as "USC" | "USP" | "ENC" | "UPF" | "730",
+      })
+    }
+  >
+    <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
+      <SelectValue placeholder="Seleziona tipo" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="USC">USC</SelectItem>
+      <SelectItem value="USP">USP</SelectItem>
+      <SelectItem value="ENC">ENC</SelectItem>
+      <SelectItem value="UPF">UPF</SelectItem>
+      <SelectItem value="730">730</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
 
-          <div className="md:col-span-2">
-            <Label htmlFor="cassetto_fiscale_id">
-              Referente Cassetto fiscale
-            </Label>
-            <Select
-              value={formData.cassetto_fiscale_id || "none"}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  cassetto_fiscale_id: value === "none" ? "" : value,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona referente" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nessuno</SelectItem>
-                {cassettiFiscali.map((cassetto) => (
-                  <SelectItem key={cassetto.id} value={cassetto.id}>
-                    {safeString(cassetto.nominativo)} (
-                    {safeString(cassetto.username)})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </TabsContent>
+<div className="md:col-span-2">
+  <Label htmlFor="cassetto_fiscale_id">Referente Cassetto fiscale</Label>
+  <Select
+    value={formData.cassetto_fiscale_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        cassetto_fiscale_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Seleziona referente" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {cassettiFiscali.map((cassetto) => (
+        <SelectItem key={cassetto.id} value={cassetto.id}>
+          {safeString(cassetto.nominativo)} ({safeString(cassetto.username)})
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+</div>
+</TabsContent>
 
       {/* COMUNICAZIONI */}
       <TabsContent value="comunicazioni" className="pt-4">
