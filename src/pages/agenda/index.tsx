@@ -412,14 +412,6 @@ const getSettoreEventColor = (
   return base;
 };
 
-  return {
-    border: "border-l-slate-500",
-    chip: "bg-slate-50 border-slate-200 text-slate-900",
-    subtle: "bg-slate-100 text-slate-800",
-    dot: "bg-slate-500",
-  };
-};
-
 const getEventoBadges = (evento: EventoGroup): EventoBadge[] => {
   const badges: EventoBadge[] = [];
 
@@ -751,7 +743,7 @@ const filteredEvents = useMemo(() => {
 }, [currentUserId, userFilterInitialized]);
 
 const teamsEvents = useMemo(() => {
-  const selectedIds = (selectedUserIds || []).map((id) => String(id));
+  const selectedIds = (filtroUtenti || []).map((id) => String(id));
 
   return groupedEvents
     .filter((e) => {
@@ -783,7 +775,7 @@ const teamsEvents = useMemo(() => {
       (a, b) =>
         safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime()
     );
-}, [groupedEvents, currentUserId, selectedUserIds]);
+}, [groupedEvents, currentUserId, filtroUtenti]);
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
