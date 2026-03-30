@@ -1534,82 +1534,85 @@ const handleSaveEvento = async () => {
           });
           return;
         }
-    } else if (!editingGruppoEvento) {
-  if (!ownerMicrosoftConnectionId) {
-    toast({
-      title: "Microsoft 365 non connesso",
-      description: "L'utente selezionato non ha una connessione Microsoft 365 attiva.",
-      variant: "destructive",
-    });
-    return;
-  }
+      } else if (!editingGruppoEvento) {
+        if (!ownerMicrosoftConnectionId) {
+          toast({
+            title: "Microsoft 365 non connesso",
+            description: "L'utente selezionato non ha una connessione Microsoft 365 attiva.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  const {
-    data: { session: m365Session },
-  } = await supabase.auth.getSession();
+        const {
+          data: { session: m365Session },
+        } = await supabase.auth.getSession();
 
-  if (!m365Session?.access_token) {
-    toast({
-      title: "Microsoft 365 non connesso",
-      description: "Collega l'account M365 prima di creare un meeting Teams.",
-      variant: "destructive",
-    });
-    return;
-  }
+        if (!m365Session?.access_token) {
+          toast({
+            title: "Microsoft 365 non connesso",
+            description: "Collega l'account M365 prima di creare un meeting Teams.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  const statusResponse = await fetch("/api/microsoft365/status", {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${m365Session.access_token}`,
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
+        const statusResponse = await fetch("/api/microsoft365/status", {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${m365Session.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
 
-  const statusJson = await statusResponse.json().catch(() => null);
+        const statusJson = await statusResponse.json().catch(() => null);
 
-  if (!statusResponse.ok || !statusJson?.connected) {
-    toast({
-      title: "Microsoft 365 non connesso",
-      description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
-      variant: "destructive",
-    });
-    return;
-  }
+        if (!statusResponse.ok || !statusJson?.connected) {
+          toast({
+            title: "Microsoft 365 non connesso",
+            description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  const { teamsService } = await import("@/services/teamsService");
+        const { teamsService } = await import("@/services/teamsService");
 
-  const meeting = await teamsService.createTeamsMeeting(
-    ownerMicrosoftConnectionId,
-    formData.utente_id,
-    formData.titolo || "Riunione",
-    new Date(startDateTimeISO),
-    new Date(endDateTimeISO)
-  );
+        const meeting = await teamsService.createTeamsMeeting(
+          ownerMicrosoftConnectionId,
+          formData.utente_id,
+          formData.titolo || "Riunione",
+          new Date(startDateTimeISO),
+          new Date(endDateTimeISO)
+        );
 
-  if (!meeting?.success) {
-    toast({
-      title: "Errore Teams",
-      description: meeting?.error || "Impossibile creare il meeting Teams.",
-      variant: "destructive",
-    });
-    return;
-  }
+        if (!meeting?.success) {
+          toast({
+            title: "Errore Teams",
+            description: meeting?.error || "Impossibile creare il meeting Teams.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  teamsJoinUrl = meeting.joinUrl ?? null;
+        teamsJoinUrl = meeting.joinUrl ?? null;
 
-  if (!teamsJoinUrl) {
-    toast({
-      title: "Errore",
-      description: "Meeting Teams creato ma link non disponibile.",
-      variant: "destructive",
-    });
-    return;
-  }
+        if (!teamsJoinUrl) {
+          toast({
+            title: "Errore",
+            description: "Meeting Teams creato ma link non disponibile.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  teamsLink = teamsJoinUrl;
-}
+        teamsLink = teamsJoinUrl;
+      }
+    } else {
+      teamsLink = "";
+    }
 
     if (editingGruppoEvento) {
       const existingRows = eventiRows.filter(
@@ -1708,12 +1711,11 @@ const handleSaveEvento = async () => {
 
       const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-     await sendSingleNotifications(
-  finalRows,
-  formData.utente_id,
-  internalParticipantIds,
-  "updated"
-);
+      await sendSingleNotifications(
+        finalRows,
+        formData.utente_id,
+        internalParticipantIds
+      );
 
       const organizerRows = finalRows.filter(
         (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1730,7 +1732,7 @@ const handleSaveEvento = async () => {
         title: "Successo",
         description: "Gruppo evento aggiornato",
       });
-       } else {
+    } else {
       if (formData.ricorrente) {
         const startDate = new Date(formData.data_inizio);
         const endDate = new Date(startDate);
@@ -1775,11 +1777,10 @@ const handleSaveEvento = async () => {
         if (error) throw error;
 
         await sendSingleNotifications(
-  data ?? [],
-  formData.utente_id,
-  internalParticipantIds,
-  "created"
-);
+          data ?? [],
+          formData.utente_id,
+          internalParticipantIds
+        );
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1818,7 +1819,11 @@ const handleSaveEvento = async () => {
 
         if (error) throw error;
 
-        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
+        await sendSingleNotifications(
+          data ?? [],
+          formData.utente_id,
+          internalParticipantIds
+        );
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
