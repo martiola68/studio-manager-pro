@@ -365,35 +365,52 @@ const getSettoreBadgeClass = (settore?: string | null) => {
   return "bg-slate-100 text-slate-700 border-slate-200";
 };
 
-const getSettoreEventColor = (settore?: string | null) => {
+const getSettoreEventColor = (
+  settore?: string | null,
+  isTeams?: boolean
+) => {
   const normalized = normalizeSettore(settore);
 
-  if (normalized === "Fiscale") {
+  const base =
+    normalized === "Fiscale"
+      ? {
+          border: "border-l-green-600",
+          chip: "bg-green-50 border-green-200 text-green-900",
+          subtle: "bg-green-100 text-green-800",
+          dot: "bg-green-600",
+        }
+      : normalized === "Lavoro"
+      ? {
+          border: "border-l-red-600",
+          chip: "bg-red-50 border-red-200 text-red-900",
+          subtle: "bg-red-100 text-red-800",
+          dot: "bg-red-600",
+        }
+      : normalized === "Consulenza"
+      ? {
+          border: "border-l-blue-600",
+          chip: "bg-blue-50 border-blue-200 text-blue-900",
+          subtle: "bg-blue-100 text-blue-800",
+          dot: "bg-blue-600",
+        }
+      : {
+          border: "border-l-slate-500",
+          chip: "bg-slate-50 border-slate-200 text-slate-900",
+          subtle: "bg-slate-100 text-slate-800",
+          dot: "bg-slate-500",
+        };
+
+  // 🔥 QUI LA LOGICA TEAMS
+  if (isTeams) {
     return {
-      border: "border-l-green-600",
-      chip: "bg-green-50 border-green-200 text-green-900",
-      subtle: "bg-green-100 text-green-800",
-      dot: "bg-green-600",
+      ...base,
+      border: "border-l-black", // bordo nero per tutti i Teams
+      chip: base.chip + " border border-black", // opzionale: bordo anche nel chip
     };
   }
 
-  if (normalized === "Lavoro") {
-    return {
-      border: "border-l-red-600",
-      chip: "bg-red-50 border-red-200 text-red-900",
-      subtle: "bg-red-100 text-red-800",
-      dot: "bg-red-600",
-    };
-  }
-
-  if (normalized === "Consulenza") {
-    return {
-      border: "border-l-blue-600",
-      chip: "bg-blue-50 border-blue-200 text-blue-900",
-      subtle: "bg-blue-100 text-blue-800",
-      dot: "bg-blue-600",
-    };
-  }
+  return base;
+};
 
   return {
     border: "border-l-slate-500",
