@@ -3,25 +3,14 @@ import { IncomingForm, type File as FormidableFile } from "formidable";
 import fs from "fs/promises";
 import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
-import { createClient } from "@supabase/supabase-js";
-import { normalizeCF } from "@/utils/codiceFiscale";
+import { createClient } from "@supabase/supabase-js"; // AGGIUNTO
+import { normalizeCF } from "@/utils/codiceFiscale"; // AGGIUNTO
 
 export const config = {
   api: {
     bodyParser: false,
   },
 };
-
-function getServerSupabase() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Variabili Supabase server mancanti");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
 
 function parseForm(
   req: NextApiRequest
@@ -48,32 +37,36 @@ async function extractTextFromPDF(buffer: Buffer) {
   return result?.text || "";
 }
 
-/* FIX MIRATO: estrazione CF/P.IVA dal testo */
-function extractCodiceFiscale(text: string): string | null {
+// AGGIUNTO
+function getServerSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Variabili Supabase server mancanti");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+// AGGIUNTO
+function extractCodiceFiscaleForCheck(text: string): string | null {
   if (!text) return null;
 
   const normalized = text.toUpperCase().replace(/\s+/g, " ");
 
-  // 1) prima prova a cercare una dicitura esplicita
-  const labeledMatch = normalized.match(
-    /CODICE\s+FISCALE[:\s]*([A-Z0-9]{11,16})/
-  );
-  if (labeledMatch?.[1]) {
-    return normalizeCF(labeledMatch[1]);
-  }
-
-  // 2) fallback CF persona fisica (16 caratteri)
-  const cf16Match = normalized.match(
+  // prova prima CF alfanumerico 16 caratteri
+  const cf16 = normalized.match(
     /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/
   );
-  if (cf16Match?.[0]) {
-    return normalizeCF(cf16Match[0]);
+  if (cf16?.[0]) {
+    return normalizeCF(cf16[0]);
   }
 
-  // 3) fallback società / P.IVA / CF numerico 11 cifre
-  const cf11Match = normalized.match(/\b\d{11}\b/);
-  if (cf11Match?.[0]) {
-    return cf11Match[0];
+  // fallback CF/PIVA numerico 11 cifre
+  const cf11 = normalized.match(/\b\d{11}\b/);
+  if (cf11?.[0]) {
+    return cf11[0];
   }
 
   return null;
@@ -101,7 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "text/plain" || originalFilename.endsWith(".txt")) {
       const text = buffer.toString("utf-8");
 
-      const codiceFiscale = extractCodiceFiscale(text);
+      // AGGIUNTO: solo controllo CF già presente
+      const codiceFiscale = extractCodiceFiscaleForCheck(text);
       if (codiceFiscale) {
         const supabase = getServerSupabase();
 
@@ -127,7 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
       const text = await extractTextFromPDF(buffer);
 
-      const codiceFiscale = extractCodiceFiscale(text);
+      // AGGIUNTO: solo controllo CF già presente
+      const codiceFiscale = extractCodiceFiscaleForCheck(text);
       if (codiceFiscale) {
         const supabase = getServerSupabase();
 
