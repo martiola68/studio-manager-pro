@@ -136,7 +136,8 @@ function buildCalendarViewUrl(rangeDays: number) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  console.log("[CALLBACK HIT]", req.method, req.url, req.query);
+  console.log("CALLBACK ARRIVATO QUI");
+
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
