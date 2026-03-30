@@ -1986,7 +1986,7 @@ setErrors({});
       <TabsContent value="riferimenti" className="space-y-6 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="utente_operatore_id">
+           <Label htmlFor="utente_operatore_id">
   Utente Fiscale <span className="text-red-500">*</span>
 </Label>
             <Select
@@ -2022,7 +2022,7 @@ setErrors({});
           </div>
 
           <div>
-            <Label htmlFor="utente_professionista_id">
+        <Label htmlFor="utente_professionista_id">
   Professionista Fiscale <span className="text-red-500">*</span>
 </Label>
             <Select
@@ -2177,7 +2177,7 @@ setErrors({});
           </div>
 
           <div>
-            <Label htmlFor="tipo_prestazione_id">
+           <Label htmlFor="tipo_prestazione_id">
   Tipo Prestazione <span className="text-red-500">*</span>
 </Label>
             <Select
@@ -2204,7 +2204,7 @@ setErrors({});
           </div>
 
           <div>
-            <Label htmlFor="tipo_redditi">
+       <Label htmlFor="tipo_redditi">
   Tipo Redditi <span className="text-red-500">*</span>
 </Label>
             <Select
