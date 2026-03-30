@@ -245,12 +245,8 @@ const toNotificationPayload = (e: Record<string, unknown>) => ({
   ...e,
 
   // 🔥 AGGIUNGI QUESTI
-  eventoInSede: Boolean((e as any)?.in_sede),
-  eventoLuogo:
-    (e as any)?.luogo ||
-    (e as any)?.sala ||
-    (e as any)?.location ||
-    "",
+eventoInSede: Boolean((e as any)?.in_sede),
+eventoLuogo: (e as any)?.sala ?? "",
 
   // già esistenti
   durata_giorni: (e as any)?.durata_giorni ?? null,
