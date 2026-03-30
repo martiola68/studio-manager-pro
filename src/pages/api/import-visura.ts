@@ -3,8 +3,7 @@ import { IncomingForm, type File as FormidableFile } from "formidable";
 import fs from "fs/promises";
 import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
-import { createClient } from "@supabase/supabase-js"; // AGGIUNTO
-import { normalizeCF } from "@/utils/codiceFiscale"; // AGGIUNTO
+import { createClient } from "@supabase/supabase-js";
 
 export const config = {
   api: {
@@ -37,7 +36,6 @@ async function extractTextFromPDF(buffer: Buffer) {
   return result?.text || "";
 }
 
-// AGGIUNTO
 function getServerSupabase() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -49,24 +47,22 @@ function getServerSupabase() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-// AGGIUNTO
-function extractCodiceFiscaleForCheck(text: string): string | null {
+// SOLO 11 CIFRE
+function extractCodiceFiscale11(text: string): string | null {
   if (!text) return null;
 
-  const normalized = text.toUpperCase().replace(/\s+/g, " ");
+  const normalized = text.replace(/\s+/g, " ").toUpperCase();
 
-  // prova prima CF alfanumerico 16 caratteri
-  const cf16 = normalized.match(
-    /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/
-  );
-  if (cf16?.[0]) {
-    return normalizeCF(cf16[0]);
+  // prova prima vicino alla dicitura "codice fiscale"
+  const labeledMatch = normalized.match(/CODICE\s+FISCALE[:\s]*([0-9]{11})\b/);
+  if (labeledMatch?.[1]) {
+    return labeledMatch[1];
   }
 
-  // fallback CF/PIVA numerico 11 cifre
-  const cf11 = normalized.match(/\b\d{11}\b/);
-  if (cf11?.[0]) {
-    return cf11[0];
+  // fallback: primo blocco di 11 cifre
+  const genericMatch = normalized.match(/\b[0-9]{11}\b/);
+  if (genericMatch?.[0]) {
+    return genericMatch[0];
   }
 
   return null;
@@ -94,8 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "text/plain" || originalFilename.endsWith(".txt")) {
       const text = buffer.toString("utf-8");
 
-      // AGGIUNTO: solo controllo CF già presente
-      const codiceFiscale = extractCodiceFiscaleForCheck(text);
+      const codiceFiscale = extractCodiceFiscale11(text);
       if (codiceFiscale) {
         const supabase = getServerSupabase();
 
@@ -121,8 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
       const text = await extractTextFromPDF(buffer);
 
-      // AGGIUNTO: solo controllo CF già presente
-      const codiceFiscale = extractCodiceFiscaleForCheck(text);
+      const codiceFiscale = extractCodiceFiscale11(text);
       if (codiceFiscale) {
         const supabase = getServerSupabase();
 
