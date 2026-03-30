@@ -412,14 +412,6 @@ const getSettoreEventColor = (
   return base;
 };
 
-  return {
-    border: "border-l-slate-500",
-    chip: "bg-slate-50 border-slate-200 text-slate-900",
-    subtle: "bg-slate-100 text-slate-800",
-    dot: "bg-slate-500",
-  };
-};
-
 const getEventoBadges = (evento: EventoGroup): EventoBadge[] => {
   const badges: EventoBadge[] = [];
 
