@@ -243,6 +243,16 @@ type FormDataState = {
 
 const toNotificationPayload = (e: Record<string, unknown>) => ({
   ...e,
+
+  // 🔥 AGGIUNGI QUESTI
+  eventoInSede: Boolean((e as any)?.in_sede),
+  eventoLuogo:
+    (e as any)?.luogo ||
+    (e as any)?.sala ||
+    (e as any)?.location ||
+    "",
+
+  // già esistenti
   durata_giorni: (e as any)?.durata_giorni ?? null,
   evento_generico: (e as any)?.evento_generico ?? null,
   frequenza_giorni: (e as any)?.frequenza_giorni ?? null,
