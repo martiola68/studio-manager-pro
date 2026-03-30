@@ -138,7 +138,7 @@ function buildCalendarViewUrl(rangeDays: number) {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log("CALLBACK ARRIVATO QUI");
 
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     // 1) Auth utente (Supabase access token)
