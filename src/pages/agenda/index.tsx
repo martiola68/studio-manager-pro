@@ -412,6 +412,14 @@ const getSettoreEventColor = (
   return base;
 };
 
+  return {
+    border: "border-l-slate-500",
+    chip: "bg-slate-50 border-slate-200 text-slate-900",
+    subtle: "bg-slate-100 text-slate-800",
+    dot: "bg-slate-500",
+  };
+};
+
 const getEventoBadges = (evento: EventoGroup): EventoBadge[] => {
   const badges: EventoBadge[] = [];
 
@@ -1055,47 +1063,41 @@ const deleteRowsFromOutlook = async (
   }
 };
   
-const sendTeamsMessagesToParticipants = async (
-  ownerUserId: string,
-  internalParticipantIds: string[],
-  teamsLink: string,
-  title: string,
-  date: string,
-  time: string
-) => {
-  try {
-    const microsoftConnectionId = await getMicrosoftConnectionIdForUser(ownerUserId);
+  const sendTeamsMessagesToParticipants = async (
+    ownerUserId: string,
+    internalParticipantIds: string[],
+    teamsLink: string,
+    title: string,
+    date: string,
+    time: string
+  ) => {
+    try {
+      const studioId = await getStudioIdForOwner(ownerUserId);
+      if (!studioId) {
+        console.error("Errore invio notifiche Teams: studioId non trovato.");
+        return;
+      }
 
-    if (!microsoftConnectionId) {
-      console.error("Errore invio notifiche Teams: microsoft_connection_id non trovato.");
-      return;
-    }
+      const { teamsService } = await import("@/services/teamsService");
 
-    const { teamsService } = await import("@/services/teamsService");
+      for (const pId of internalParticipantIds) {
+        const user = utenti.find((u) => u.id === pId);
 
-    for (const pId of internalParticipantIds) {
-      const user = utenti.find((u) => u.id === pId);
-
-      if (user?.email) {
-        const dmRes = await teamsService.sendDirectMessage(
-          microsoftConnectionId,
-          ownerUserId,
-          user.email,
-          {
+        if (user?.email) {
+          const dmRes = await teamsService.sendDirectMessage(studioId, ownerUserId, user.email, {
             content: `<strong>Nuova riunione Teams:</strong> ${title}<br><br>📅 ${date} alle ${time}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
             contentType: "html",
-          }
-        );
+          });
 
-        if (!dmRes?.success) {
-          console.error("Errore invio DM Teams:", (dmRes as any)?.error);
+          if (!dmRes?.success) {
+            console.error("Errore invio DM Teams:", (dmRes as any)?.error);
+          }
         }
       }
+    } catch (err) {
+      console.error("Errore invio notifiche Teams:", err);
     }
-  } catch (err) {
-    console.error("Errore invio notifiche Teams:", err);
-  }
-};
+  };
 
   // ----------------------------------------------------
   // UTILITIES UI / TOOLTIP
@@ -1442,10 +1444,10 @@ const sendSingleNotifications = async (
       ),
     };
 
-   await eventoService.sendEventNotification(
-  toNotificationPayload(payload as any) as any,
-  action
-);
+    await eventoService.sendEventNotification(
+      toNotificationPayload(payload as any) as any,
+      action
+    );
   }
 };
 
@@ -1535,10 +1537,10 @@ const handleSaveEvento = async () => {
           return;
         }
       } else if (!editingGruppoEvento) {
-        if (!ownerMicrosoftConnectionId) {
+        if (!ownerStudioId) {
           toast({
-            title: "Microsoft 365 non connesso",
-            description: "L'utente selezionato non ha una connessione Microsoft 365 attiva.",
+            title: "Errore",
+            description: "Impossibile determinare lo studio dell'utente selezionato.",
             variant: "destructive",
           });
           return;
@@ -1581,7 +1583,7 @@ const handleSaveEvento = async () => {
         const { teamsService } = await import("@/services/teamsService");
 
         const meeting = await teamsService.createTeamsMeeting(
-          ownerMicrosoftConnectionId,
+          ownerStudioId,
           formData.utente_id,
           formData.titolo || "Riunione",
           new Date(startDateTimeISO),
@@ -1711,11 +1713,12 @@ const handleSaveEvento = async () => {
 
       const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-      await sendSingleNotifications(
-        finalRows,
-        formData.utente_id,
-        internalParticipantIds
-      );
+     await sendSingleNotifications(
+  finalRows,
+  formData.utente_id,
+  internalParticipantIds,
+  "updated"
+);
 
       const organizerRows = finalRows.filter(
         (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1732,7 +1735,7 @@ const handleSaveEvento = async () => {
         title: "Successo",
         description: "Gruppo evento aggiornato",
       });
-    } else {
+       } else {
       if (formData.ricorrente) {
         const startDate = new Date(formData.data_inizio);
         const endDate = new Date(startDate);
@@ -1777,10 +1780,11 @@ const handleSaveEvento = async () => {
         if (error) throw error;
 
         await sendSingleNotifications(
-          data ?? [],
-          formData.utente_id,
-          internalParticipantIds
-        );
+  data ?? [],
+  formData.utente_id,
+  internalParticipantIds,
+  "created"
+);
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1819,11 +1823,7 @@ const handleSaveEvento = async () => {
 
         if (error) throw error;
 
-        await sendSingleNotifications(
-          data ?? [],
-          formData.utente_id,
-          internalParticipantIds
-        );
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1894,19 +1894,19 @@ const handleDeleteEvento = async () => {
       (r) => String(r.gruppo_evento || r.id) === gruppoId
     );
 
-  const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
-const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
-  (id) => String(id) !== ownerUserId
-);
+    const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
+    const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
+      (id) => String(id) !== ownerUserId
+    );
 
-if (ownerUserId && rowsToDelete.length > 0) {
-  await sendSingleNotifications(
-    rowsToDelete as any[],
-    ownerUserId,
-    cancellationParticipantIds,
-    "cancelled"
-  );
-}
+    if (ownerUserId && rowsToDelete.length > 0) {
+      await sendSingleNotifications(
+        rowsToDelete as any[],
+        ownerUserId,
+        cancellationParticipantIds,
+        "cancelled"
+      );
+    }
 
     await deleteRowsFromOutlook(
       rowsToDelete.map((r) => ({
