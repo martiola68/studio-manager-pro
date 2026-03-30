@@ -1055,41 +1055,47 @@ const deleteRowsFromOutlook = async (
   }
 };
   
-  const sendTeamsMessagesToParticipants = async (
-    ownerUserId: string,
-    internalParticipantIds: string[],
-    teamsLink: string,
-    title: string,
-    date: string,
-    time: string
-  ) => {
-    try {
-      const studioId = await getStudioIdForOwner(ownerUserId);
-      if (!studioId) {
-        console.error("Errore invio notifiche Teams: studioId non trovato.");
-        return;
-      }
+const sendTeamsMessagesToParticipants = async (
+  ownerUserId: string,
+  internalParticipantIds: string[],
+  teamsLink: string,
+  title: string,
+  date: string,
+  time: string
+) => {
+  try {
+    const microsoftConnectionId = await getMicrosoftConnectionIdForUser(ownerUserId);
 
-      const { teamsService } = await import("@/services/teamsService");
+    if (!microsoftConnectionId) {
+      console.error("Errore invio notifiche Teams: microsoft_connection_id non trovato.");
+      return;
+    }
 
-      for (const pId of internalParticipantIds) {
-        const user = utenti.find((u) => u.id === pId);
+    const { teamsService } = await import("@/services/teamsService");
 
-        if (user?.email) {
-          const dmRes = await teamsService.sendDirectMessage(studioId, ownerUserId, user.email, {
+    for (const pId of internalParticipantIds) {
+      const user = utenti.find((u) => u.id === pId);
+
+      if (user?.email) {
+        const dmRes = await teamsService.sendDirectMessage(
+          microsoftConnectionId,
+          ownerUserId,
+          user.email,
+          {
             content: `<strong>Nuova riunione Teams:</strong> ${title}<br><br>📅 ${date} alle ${time}<br><br><a href="${teamsLink}">Clicca qui per partecipare</a>`,
             contentType: "html",
-          });
-
-          if (!dmRes?.success) {
-            console.error("Errore invio DM Teams:", (dmRes as any)?.error);
           }
+        );
+
+        if (!dmRes?.success) {
+          console.error("Errore invio DM Teams:", (dmRes as any)?.error);
         }
       }
-    } catch (err) {
-      console.error("Errore invio notifiche Teams:", err);
     }
-  };
+  } catch (err) {
+    console.error("Errore invio notifiche Teams:", err);
+  }
+};
 
   // ----------------------------------------------------
   // UTILITIES UI / TOOLTIP
@@ -1436,10 +1442,10 @@ const sendSingleNotifications = async (
       ),
     };
 
-    await eventoService.sendEventNotification(
-      toNotificationPayload(payload as any) as any,
-      action
-    );
+   await eventoService.sendEventNotification(
+  toNotificationPayload(payload as any) as any,
+  action
+);
   }
 };
 
@@ -1528,85 +1534,82 @@ const handleSaveEvento = async () => {
           });
           return;
         }
-      } else if (!editingGruppoEvento) {
-        if (!ownerStudioId) {
-          toast({
-            title: "Errore",
-            description: "Impossibile determinare lo studio dell'utente selezionato.",
-            variant: "destructive",
-          });
-          return;
-        }
+    } else if (!editingGruppoEvento) {
+  if (!ownerMicrosoftConnectionId) {
+    toast({
+      title: "Microsoft 365 non connesso",
+      description: "L'utente selezionato non ha una connessione Microsoft 365 attiva.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-        const {
-          data: { session: m365Session },
-        } = await supabase.auth.getSession();
+  const {
+    data: { session: m365Session },
+  } = await supabase.auth.getSession();
 
-        if (!m365Session?.access_token) {
-          toast({
-            title: "Microsoft 365 non connesso",
-            description: "Collega l'account M365 prima di creare un meeting Teams.",
-            variant: "destructive",
-          });
-          return;
-        }
+  if (!m365Session?.access_token) {
+    toast({
+      title: "Microsoft 365 non connesso",
+      description: "Collega l'account M365 prima di creare un meeting Teams.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-        const statusResponse = await fetch("/api/microsoft365/status", {
-          method: "GET",
-          cache: "no-store",
-          headers: {
-            Authorization: `Bearer ${m365Session.access_token}`,
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
+  const statusResponse = await fetch("/api/microsoft365/status", {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${m365Session.access_token}`,
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
 
-        const statusJson = await statusResponse.json().catch(() => null);
+  const statusJson = await statusResponse.json().catch(() => null);
 
-        if (!statusResponse.ok || !statusJson?.connected) {
-          toast({
-            title: "Microsoft 365 non connesso",
-            description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
-            variant: "destructive",
-          });
-          return;
-        }
+  if (!statusResponse.ok || !statusJson?.connected) {
+    toast({
+      title: "Microsoft 365 non connesso",
+      description: "Collega l'account M365 in Impostazioni → Microsoft 365.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-        const { teamsService } = await import("@/services/teamsService");
+  const { teamsService } = await import("@/services/teamsService");
 
-        const meeting = await teamsService.createTeamsMeeting(
-          ownerStudioId,
-          formData.utente_id,
-          formData.titolo || "Riunione",
-          new Date(startDateTimeISO),
-          new Date(endDateTimeISO)
-        );
+  const meeting = await teamsService.createTeamsMeeting(
+    ownerMicrosoftConnectionId,
+    formData.utente_id,
+    formData.titolo || "Riunione",
+    new Date(startDateTimeISO),
+    new Date(endDateTimeISO)
+  );
 
-        if (!meeting?.success) {
-          toast({
-            title: "Errore Teams",
-            description: meeting?.error || "Impossibile creare il meeting Teams.",
-            variant: "destructive",
-          });
-          return;
-        }
+  if (!meeting?.success) {
+    toast({
+      title: "Errore Teams",
+      description: meeting?.error || "Impossibile creare il meeting Teams.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-        teamsJoinUrl = meeting.joinUrl ?? null;
+  teamsJoinUrl = meeting.joinUrl ?? null;
 
-        if (!teamsJoinUrl) {
-          toast({
-            title: "Errore",
-            description: "Meeting Teams creato ma link non disponibile.",
-            variant: "destructive",
-          });
-          return;
-        }
+  if (!teamsJoinUrl) {
+    toast({
+      title: "Errore",
+      description: "Meeting Teams creato ma link non disponibile.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-        teamsLink = teamsJoinUrl;
-      }
-    } else {
-      teamsLink = "";
-    }
+  teamsLink = teamsJoinUrl;
+}
 
     if (editingGruppoEvento) {
       const existingRows = eventiRows.filter(
@@ -1886,19 +1889,19 @@ const handleDeleteEvento = async () => {
       (r) => String(r.gruppo_evento || r.id) === gruppoId
     );
 
-    const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
-    const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
-      (id) => String(id) !== ownerUserId
-    );
+  const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
+const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
+  (id) => String(id) !== ownerUserId
+);
 
-    if (ownerUserId && rowsToDelete.length > 0) {
-      await sendSingleNotifications(
-        rowsToDelete as any[],
-        ownerUserId,
-        cancellationParticipantIds,
-        "cancelled"
-      );
-    }
+if (ownerUserId && rowsToDelete.length > 0) {
+  await sendSingleNotifications(
+    rowsToDelete as any[],
+    ownerUserId,
+    cancellationParticipantIds,
+    "cancelled"
+  );
+}
 
     await deleteRowsFromOutlook(
       rowsToDelete.map((r) => ({
