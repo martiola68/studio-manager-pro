@@ -751,7 +751,7 @@ const filteredEvents = useMemo(() => {
 }, [currentUserId, userFilterInitialized]);
 
 const teamsEvents = useMemo(() => {
-  const selectedIds = selectedUserIds.map((id) => String(id));
+  const selectedIds = (selectedUserIds || []).map((id) => String(id));
 
   return groupedEvents
     .filter((e) => {
@@ -771,10 +771,8 @@ const teamsEvents = useMemo(() => {
 
       if (!visibleForLoggedUser) return false;
 
-      // Nessun utente selezionato: mostra quelli visibili al loggato
       if (selectedIds.length === 0) return true;
 
-      // Con selezione attiva: l'evento deve appartenere/coinvolgere almeno uno degli utenti selezionati
       const matchesSelectedUser =
         selectedIds.includes(ownerId) ||
         participantIds.some((id) => selectedIds.includes(id));
