@@ -401,13 +401,13 @@ const getSettoreEventColor = (
         };
 
   // 🔥 QUI LA LOGICA TEAMS
-  if (isTeams) {
-    return {
-      ...base,
-      border: "border-l-black", // bordo nero per tutti i Teams
-      chip: base.chip + " border border-black", // opzionale: bordo anche nel chip
-    };
-  }
+if (isTeams) {
+  return {
+    ...base,
+    border: "border-l-black",
+    chip: base.chip + " border-2 border-black",
+  };
+}
 
   return base;
 };
