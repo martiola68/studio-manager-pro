@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeCF } from "@/utils/codiceFiscale";
 
 export const config = {
   api: {
@@ -41,42 +42,34 @@ function parseForm(
   });
 }
 
-async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+async function extractTextFromPDF(buffer: Buffer) {
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
   return result?.text || "";
 }
 
-function normalizeCF(value: string | null | undefined): string {
-  return String(value || "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .trim();
-}
-
 function extractCodiceFiscaleFromText(text: string): string | null {
   if (!text) return null;
 
-  const normalizedText = text
-    .replace(/\s+/g, " ")
-    .replace(/\u00A0/g, " ")
-    .trim();
+  const normalizedText = text.toUpperCase().replace(/\s+/g, " ");
 
-  const patterns = [
-    /codice\s+fiscale\s*[:\-]?\s*([A-Z0-9]{11,16})/i,
-    /c\.?\s*f\.?\s*[:\-]?\s*([A-Z0-9]{11,16})/i,
-    /\b([A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z])\b/i,
-    /\b([0-9]{11})\b/,
+  // Cerca prima diciture tipiche di visura
+  const labeledPatterns = [
+    /CODICE\s+FISCALE[:\s]+([A-Z0-9]{11,16})/i,
+    /C\.?F\.?[:\s]+([A-Z0-9]{11,16})/i,
   ];
 
-  for (const pattern of patterns) {
+  for (const pattern of labeledPatterns) {
     const match = normalizedText.match(pattern);
     if (match?.[1]) {
-      const cf = normalizeCF(match[1]);
-      if (cf.length === 16 || cf.length === 11) {
-        return cf;
-      }
+      return normalizeCF(match[1]);
     }
+  }
+
+  // Fallback: primo possibile CF italiano 16 caratteri
+  const genericMatch = normalizedText.match(/\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/);
+  if (genericMatch?.[0]) {
+    return normalizeCF(genericMatch[0]);
   }
 
   return null;
@@ -88,9 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: "Metodo non consentito" });
     }
 
-    const { fields, files } = await parseForm(req);
-
-    const studioId = Array.isArray(fields.studioId) ? fields.studioId[0] : fields.studioId;
+    const { files } = await parseForm(req);
     const uploaded = files.file;
     const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
 
@@ -98,13 +89,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "File mancante" });
     }
 
-    if (!studioId || typeof studioId !== "string") {
-      return res.status(400).json({ error: "studioId mancante" });
-    }
-
     const filepath = (file as any).filepath;
-    const originalFilename = String((file as any).originalFilename || "").toLowerCase();
-    const mimetype = String((file as any).mimetype || "");
+    const originalFilename = ((file as any).originalFilename || "").toLowerCase();
+    const mimetype = (file as any).mimetype || "";
     const buffer = await fs.readFile(filepath);
 
     let text = "";
@@ -119,46 +106,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const codiceFiscale = extractCodiceFiscaleFromText(text);
 
-    if (!codiceFiscale) {
-      return res.status(200).json({
-        text,
-        codiceFiscale: null,
-        alreadyExists: false,
-      });
-    }
+    if (codiceFiscale) {
+      const supabase = getServerSupabase();
 
-    const supabase = getServerSupabase();
+      const { data: existingCliente, error: existingError } = await supabase
+        .from("tbclienti")
+        .select("id, codice_fiscale")
+        .eq("codice_fiscale", codiceFiscale)
+        .limit(1)
+        .maybeSingle();
 
-    const { data: existingRows, error: existingError } = await supabase
-      .from("tbclienti")
-      .select("id, codice_fiscale")
-      .eq("studio_id", studioId)
-      .eq("codice_fiscale", codiceFiscale)
-      .limit(1);
+      if (existingError) {
+        throw existingError;
+      }
 
-    if (existingError) {
-      throw existingError;
-    }
-
-    const alreadyExists = !!existingRows?.length;
-
-    if (alreadyExists) {
-      return res.status(200).json({
-        error: "Soggetto già presente in anagrafica generale",
-        alreadyExists: true,
-        codiceFiscale,
-        text: null,
-      });
+      if (existingCliente) {
+        return res.status(200).json({
+          ok: false,
+          alreadyExists: true,
+          codiceFiscale,
+          message: "Soggetto già presente in anagrafica generale",
+        });
+      }
     }
 
     return res.status(200).json({
-      text,
-      codiceFiscale,
+      ok: true,
       alreadyExists: false,
+      codiceFiscale: codiceFiscale || null,
+      text,
     });
   } catch (err: any) {
-    console.error("Errore import visura anagrafiche:", err);
-
     return res.status(500).json({
       error: err?.message || "Errore import visura",
     });
