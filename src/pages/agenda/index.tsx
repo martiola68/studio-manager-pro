@@ -750,18 +750,22 @@ const filteredEvents = useMemo(() => {
   setUserFilterInitialized(true);
 }, [currentUserId, userFilterInitialized]);
 
-  const teamsEvents = useMemo(() => {
-    return groupedEvents
-      .filter(
-        (e) =>
-          Boolean(e.riunione_teams) &&
-          Boolean(String(e.link_teams || "").trim()) &&
-          Boolean(currentUserId) &&
-          (String(e.utente_id || "") === String(currentUserId) ||
-            e.partecipanti.some((id) => String(id) === String(currentUserId)))
-      )
-      .sort((a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime());
-  }, [groupedEvents, currentUserId]);
+const teamsEvents = allEvents.filter((evento) => {
+  // solo eventi Teams
+  if (!evento.riunione_teams) return false;
+
+  // utente loggato
+  const isOwner = String(evento.utente_id) === String(loggedUserId);
+
+  // utenti selezionati
+  const isSelected =
+    selectedUserIds.length === 0
+      ? true
+      : selectedUserIds.includes(String(evento.utente_id));
+
+  // 🔥 REGOLA CORRETTA
+  return isOwner && isSelected;
+});
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
