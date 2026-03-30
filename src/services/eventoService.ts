@@ -233,30 +233,35 @@ export const eventoService = {
         }
       };
 
-      const emailData = {
-        action,
-        eventoId: evento.id,
-        eventoTitolo: evento.titolo || "Evento senza titolo",
-        eventoData: formatDate(evento.data_inizio),
-        eventoOraInizio: evento.ora_inizio
-          ? evento.ora_inizio.substring(0, 5)
-          : formatTime(evento.data_inizio),
-        eventoOraFine: evento.ora_fine
-          ? evento.ora_fine.substring(0, 5)
-          : formatTime(evento.data_fine),
-        eventoLuogo: evento.luogo || undefined,
-        eventoDescrizione: evento.descrizione || undefined,
-        responsabileEmail: responsabile.email,
-        responsabileNome:
-          `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
-          responsabile.email,
-        partecipantiEmails,
-        partecipantiNomi,
-        clienteEmail,
-        clienteNome,
-        riunione_teams: evento.riunione_teams || false,
-        link_teams: evento.link_teams || undefined,
-      };
+   const emailData = {
+  action,
+  eventoId: evento.id,
+  eventoTitolo: evento.titolo || "Evento senza titolo",
+  eventoData: formatDate(evento.data_inizio),
+  eventoOraInizio: evento.ora_inizio
+    ? evento.ora_inizio.substring(0, 5)
+    : formatTime(evento.data_inizio),
+  eventoOraFine: evento.ora_fine
+    ? evento.ora_fine.substring(0, 5)
+    : formatTime(evento.data_fine),
+
+  eventoInSede: Boolean((evento as any).in_sede),
+  eventoLuogo: (evento as any).in_sede
+    ? ((evento as any).sala || undefined)
+    : ((evento as any).luogo || undefined),
+
+  eventoDescrizione: evento.descrizione || undefined,
+  responsabileEmail: responsabile.email,
+  responsabileNome:
+    `${responsabile.nome || ""} ${responsabile.cognome || ""}`.trim() ||
+    responsabile.email,
+  partecipantiEmails,
+  partecipantiNomi,
+  clienteEmail,
+  clienteNome,
+  riunione_teams: evento.riunione_teams || false,
+  link_teams: evento.link_teams || undefined,
+};
 
       console.log("📧 Sending notification via emailService");
       const result = await emailService.sendEventNotification(emailData);
