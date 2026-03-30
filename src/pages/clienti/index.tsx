@@ -1922,7 +1922,6 @@ setRappLegali(rappLegaliData);
     </Select>
   </div>
 </div>
-          </div>
 
           {/* Note */}
           <div className="md:col-span-2 mt-4">
