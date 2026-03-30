@@ -27,13 +27,97 @@ type DirectMessagePayload = {
   importance?: "normal" | "high" | "urgent";
 };
 
+type UserMicrosoftContext = {
+  studioId: string | null;
+  microsoftConnectionId: string | null;
+};
+
+async function getUserMicrosoftContext(
+  userId: string
+): Promise<UserMicrosoftContext> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("tbutenti")
+    .select("studio_id, microsoft_connection_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return {
+      studioId: null,
+      microsoftConnectionId: null,
+    };
+  }
+
+  return {
+    studioId: data.studio_id ? String(data.studio_id) : null,
+    microsoftConnectionId: data.microsoft_connection_id
+      ? String(data.microsoft_connection_id)
+      : null,
+  };
+}
+
+/**
+ * Risolve sempre la microsoft_connection_id corretta senza rompere
+ * la retrocompatibilità e senza rompere la logica multi-tenant.
+ *
+ * Supporta:
+ * - primo parametro = studioId
+ * - primo parametro = microsoftConnectionId
+ * - nessun parametro esplicito (fallback da userId)
+ */
+async function resolveMicrosoftConnectionId(
+  providedStudioOrConnectionId: string | null | undefined,
+  userId: string
+): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  const userCtx = await getUserMicrosoftContext(userId);
+
+  // Fallback immediato: se l'utente ha già la connection assegnata
+  // e non viene passato nulla, usiamo quella.
+  if (!providedStudioOrConnectionId) {
+    return userCtx.microsoftConnectionId ?? null;
+  }
+
+  const provided = String(providedStudioOrConnectionId);
+
+  // Se coincide già con la connection attuale dell'utente, ok.
+  if (
+    userCtx.microsoftConnectionId &&
+    provided === String(userCtx.microsoftConnectionId)
+  ) {
+    return userCtx.microsoftConnectionId;
+  }
+
+  // Se coincide con lo studio dell'utente, usa la connection assegnata all'utente.
+  if (userCtx.studioId && provided === String(userCtx.studioId)) {
+    return userCtx.microsoftConnectionId ?? null;
+  }
+
+  // Se il valore passato è proprio l'id di una connection valida, accettalo.
+  // Questo aiuta nei casi multi-tenant / doppia connessione / chiamate dirette.
+  const { data: connectionRow, error: connectionErr } = await supabase
+    .from("microsoft365_connections")
+    .select("id, enabled")
+    .eq("id", provided)
+    .maybeSingle();
+
+  if (!connectionErr && connectionRow?.id) {
+    return String(connectionRow.id);
+  }
+
+  // Ultimo fallback sicuro: connection dell'utente.
+  return userCtx.microsoftConnectionId ?? null;
+}
+
 /**
  * ✅ Overload retro-compatibile:
- * - Nuova firma: (studioId, userId, recipientEmail, message)
+ * - Nuova firma: (studioIdOrMicrosoftConnectionId, userId, recipientEmail, message)
  * - Vecchia firma: (userId, recipientEmail, message)
  */
 async function sendDirectMessage(
-  studioId: string,
+  studioIdOrMicrosoftConnectionId: string,
   userId: string,
   recipientEmail: string,
   message: DirectMessagePayload
@@ -50,14 +134,14 @@ async function sendDirectMessage(
   d?: any
 ): Promise<SendMessageResult> {
   try {
-    let studioId: string;
+    let studioIdOrMicrosoftConnectionId: string | null = null;
     let userId: string;
     let recipientEmail: string;
     let message: DirectMessagePayload;
 
-    // Nuova chiamata: (studioId, userId, recipientEmail, message)
+    // Nuova chiamata: (studioIdOrMicrosoftConnectionId, userId, recipientEmail, message)
     if (typeof d !== "undefined") {
-      studioId = a;
+      studioIdOrMicrosoftConnectionId = a;
       userId = b;
       recipientEmail = c;
       message = d;
@@ -66,90 +150,81 @@ async function sendDirectMessage(
       userId = a;
       recipientEmail = b;
       message = c;
-
-      // ✅ Recupero studioId dal DB (token owner = userId)
-      const supabase = getSupabaseClient();
-      const { data: uRow, error: uErr } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (uErr || !uRow?.studio_id) {
-        return {
-          success: false,
-          error: "Impossibile determinare studioId per invio DM Teams.",
-        };
-      }
-
-      studioId = uRow.studio_id as string;
     }
 
-    // 1) prova a trovare chat 1:1 esistente (best-effort)
-    const chats = await graphApiCall<{ value: any[] }>(
-  userId,
-  "/me/chats?$top=50",
-  {
-    microsoftConnectionId: studioId,
-  }
-);
-
-    // best-effort: prendo una oneOnOne (senza filtrare per destinatario: API non è banale senza espansioni)
-    let oneOnOne = (chats.value ?? []).find((c1) => c1?.chatType === "oneOnOne");
-
-    // recupero utente Microsoft corrente
-const me = await graphApiCall<any>(
-  userId,
-  "/me?$select=id,mail,userPrincipalName",
-  {
-    microsoftConnectionId: studioId,
-  }
-);
-
-const currentMicrosoftUser =
-  me?.id || me?.mail || me?.userPrincipalName;
-
-if (!currentMicrosoftUser) {
-  return {
-    success: false,
-    error: "Impossibile determinare l'utente Microsoft corrente.",
-  };
-}
-
-    // 2) se non trovata, crea chat 1:1
-if (!oneOnOne) {
-  try {
-   const created = await graphApiCall<any>(userId, "/chats", {
-  method: "POST",
-  microsoftConnectionId: studioId,
-  body: JSON.stringify({
-    chatType: "oneOnOne",
-    members: [
-      {
-        "@odata.type": "#microsoft.graph.aadUserConversationMember",
-        roles: ["owner"],
-        "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(currentMicrosoftUser)}')`,
-      },
-      {
-        "@odata.type": "#microsoft.graph.aadUserConversationMember",
-        roles: ["owner"],
-        "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(recipientEmail)}')`,
-      },
-    ],
-  }),
-});
-
-    oneOnOne = created;
-  } catch (err: any) {
-    console.warn(
-      "DM Teams non inviabile per destinatario non risolto:",
-      recipientEmail,
-      err
+    const microsoftConnectionId = await resolveMicrosoftConnectionId(
+      studioIdOrMicrosoftConnectionId,
+      userId
     );
 
-    return { success: true };
-  }
-}
+    if (!microsoftConnectionId) {
+      return {
+        success: false,
+        error:
+          "Impossibile determinare microsoftConnectionId per invio DM Teams.",
+      };
+    }
+
+    // 1) Prova a trovare una chat 1:1 esistente (best-effort)
+    const chats = await graphApiCall<{ value: any[] }>(userId, "/me/chats?$top=50", {
+      microsoftConnectionId,
+    });
+
+    let oneOnOne = (chats.value ?? []).find((chat) => chat?.chatType === "oneOnOne");
+
+    // 2) Recupero utente Microsoft corrente
+    const me = await graphApiCall<any>(userId, "/me?$select=id,mail,userPrincipalName", {
+      microsoftConnectionId,
+    });
+
+    const currentMicrosoftUser = me?.id || me?.mail || me?.userPrincipalName;
+
+    if (!currentMicrosoftUser) {
+      return {
+        success: false,
+        error: "Impossibile determinare l'utente Microsoft corrente.",
+      };
+    }
+
+    // 3) Se non trovata, crea chat 1:1
+    if (!oneOnOne) {
+      try {
+        const created = await graphApiCall<any>(userId, "/chats", {
+          method: "POST",
+          microsoftConnectionId,
+          body: JSON.stringify({
+            chatType: "oneOnOne",
+            members: [
+              {
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                roles: ["owner"],
+                "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(
+                  currentMicrosoftUser
+                )}')`,
+              },
+              {
+                "@odata.type": "#microsoft.graph.aadUserConversationMember",
+                roles: ["owner"],
+                "user@odata.bind": `https://graph.microsoft.com/v1.0/users('${encodeURIComponent(
+                  recipientEmail
+                )}')`,
+              },
+            ],
+          }),
+        });
+
+        oneOnOne = created;
+      } catch (err: any) {
+        console.warn(
+          "DM Teams non inviabile per destinatario non risolto:",
+          recipientEmail,
+          err
+        );
+
+        // Mantengo il comportamento best-effort già presente
+        return { success: true };
+      }
+    }
 
     if (!oneOnOne?.id) {
       return {
@@ -158,18 +233,18 @@ if (!oneOnOne) {
       };
     }
 
-    // 3) invia messaggio
-   await graphApiCall(userId, `/chats/${oneOnOne.id}/messages`, {
-  method: "POST",
-  microsoftConnectionId: studioId,
-  body: JSON.stringify({
-    body: {
-      contentType: message.contentType,
-      content: message.content,
-    },
-    importance: message.importance ?? "normal",
-  }),
-});
+    // 4) Invia messaggio
+    await graphApiCall(userId, `/chats/${oneOnOne.id}/messages`, {
+      method: "POST",
+      microsoftConnectionId,
+      body: JSON.stringify({
+        body: {
+          contentType: message.contentType,
+          content: message.content,
+        },
+        importance: message.importance ?? "normal",
+      }),
+    });
 
     return { success: true };
   } catch (error: any) {
@@ -181,16 +256,29 @@ if (!oneOnOne) {
 export const teamsService = {
   /**
    * Ottiene i team dell'utente
+   * Il primo parametro può essere:
+   * - studioId
+   * - microsoftConnectionId
    */
-  getUserTeams: async (studioId: string, userId: string): Promise<Team[]> => {
+  getUserTeams: async (
+    studioIdOrMicrosoftConnectionId: string,
+    userId: string
+  ): Promise<Team[]> => {
     try {
-   const response = await graphApiCall<{ value: Team[] }>(
-  userId,
-  "/me/joinedTeams",
-  {
-    microsoftConnectionId: studioId,
-  }
-);
+      const microsoftConnectionId = await resolveMicrosoftConnectionId(
+        studioIdOrMicrosoftConnectionId,
+        userId
+      );
+
+      if (!microsoftConnectionId) {
+        console.error("Impossibile determinare microsoftConnectionId per getUserTeams");
+        return [];
+      }
+
+      const response = await graphApiCall<{ value: Team[] }>(userId, "/me/joinedTeams", {
+        microsoftConnectionId,
+      });
+
       return response.value ?? [];
     } catch (error) {
       console.error("Error fetching user teams:", error);
@@ -200,20 +288,34 @@ export const teamsService = {
 
   /**
    * Ottiene i canali di un team
+   * Il primo parametro può essere:
+   * - studioId
+   * - microsoftConnectionId
    */
   getTeamChannels: async (
-    studioId: string,
+    studioIdOrMicrosoftConnectionId: string,
     userId: string,
     teamId: string
   ): Promise<Channel[]> => {
     try {
-     const response = await graphApiCall<{ value: Channel[] }>(
-  userId,
-  `/teams/${teamId}/channels`,
-  {
-    microsoftConnectionId: studioId,
-  }
-);
+      const microsoftConnectionId = await resolveMicrosoftConnectionId(
+        studioIdOrMicrosoftConnectionId,
+        userId
+      );
+
+      if (!microsoftConnectionId) {
+        console.error("Impossibile determinare microsoftConnectionId per getTeamChannels");
+        return [];
+      }
+
+      const response = await graphApiCall<{ value: Channel[] }>(
+        userId,
+        `/teams/${teamId}/channels`,
+        {
+          microsoftConnectionId,
+        }
+      );
+
       return response.value ?? [];
     } catch (error) {
       console.error(`Error fetching channels for team ${teamId}:`, error);
@@ -223,29 +325,46 @@ export const teamsService = {
 
   /**
    * Invia un messaggio a un canale Teams
+   * Il primo parametro può essere:
+   * - studioId
+   * - microsoftConnectionId
    */
   sendMessageToChannel: async (
-    studioId: string,
+    studioIdOrMicrosoftConnectionId: string,
     userId: string,
     teamId: string,
     channelId: string,
     messageHtml: string
   ): Promise<SendMessageResult> => {
     try {
-     await graphApiCall(
-  userId,
-  `/teams/${teamId}/channels/${channelId}/messages`,
-  {
-    method: "POST",
-    microsoftConnectionId: studioId,
-    body: JSON.stringify({
-      body: {
-        contentType: "html",
-        content: messageHtml,
-      },
-    }),
-  }
-);
+      const microsoftConnectionId = await resolveMicrosoftConnectionId(
+        studioIdOrMicrosoftConnectionId,
+        userId
+      );
+
+      if (!microsoftConnectionId) {
+        return {
+          success: false,
+          error:
+            "Impossibile determinare microsoftConnectionId per invio messaggio Teams.",
+        };
+      }
+
+      await graphApiCall(
+        userId,
+        `/teams/${teamId}/channels/${channelId}/messages`,
+        {
+          method: "POST",
+          microsoftConnectionId,
+          body: JSON.stringify({
+            body: {
+              contentType: "html",
+              content: messageHtml,
+            },
+          }),
+        }
+      );
+
       return { success: true };
     } catch (error: any) {
       console.error("Error sending message to Teams:", error);
@@ -255,29 +374,40 @@ export const teamsService = {
 
   /**
    * Crea un meeting Teams (OnlineMeeting) e ritorna joinUrl + id
-   * NOTE: per /me/onlineMeetings spesso serve scope OnlineMeetings.ReadWrite (delegato)
+   * Il primo parametro può essere:
+   * - studioId
+   * - microsoftConnectionId
    */
   createTeamsMeeting: async (
-    studioId: string,
+    studioIdOrMicrosoftConnectionId: string,
     userId: string,
     subject: string,
     startTime: Date,
     endTime: Date
   ): Promise<TeamsMeetingResult> => {
     try {
-     const response = await graphApiCall<any>(
-  userId,
-  "/me/onlineMeetings",
-  {
-    method: "POST",
-    microsoftConnectionId: studioId,
-    body: JSON.stringify({
-      subject,
-      startDateTime: startTime.toISOString(),
-      endDateTime: endTime.toISOString(),
-    }),
-  }
-);
+      const microsoftConnectionId = await resolveMicrosoftConnectionId(
+        studioIdOrMicrosoftConnectionId,
+        userId
+      );
+
+      if (!microsoftConnectionId) {
+        return {
+          success: false,
+          error:
+            "Impossibile determinare microsoftConnectionId per creare il meeting Teams.",
+        };
+      }
+
+      const response = await graphApiCall<any>(userId, "/me/onlineMeetings", {
+        method: "POST",
+        microsoftConnectionId,
+        body: JSON.stringify({
+          subject,
+          startDateTime: startTime.toISOString(),
+          endDateTime: endTime.toISOString(),
+        }),
+      });
 
       return {
         success: true,
