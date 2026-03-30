@@ -402,10 +402,16 @@ const getSettoreEventColor = (
 
   // 🔥 QUI LA LOGICA TEAMS
 if (isTeams) {
+  const chipNoBorderColor = base.chip
+    .replace("border-green-200", "")
+    .replace("border-red-200", "")
+    .replace("border-blue-200", "")
+    .replace("border-slate-200", "");
+
   return {
     ...base,
     border: "border-l-black",
-    chip: base.chip + " border-2 border-black",
+    chip: `${chipNoBorderColor} border-2 border-black`,
   };
 }
 
