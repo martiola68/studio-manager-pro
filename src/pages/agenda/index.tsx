@@ -1201,7 +1201,10 @@ const deleteRowsFromOutlook = async (
 };
 
   const renderAdvancedTooltip = (evento: EventoGroup) => {
-    const eventColors = getSettoreEventColor(evento.utente?.settore);
+    const eventColors = getSettoreEventColor(
+  evento.utente?.settore,
+  Boolean(evento.riunione_teams)
+);
     const badges = getEventoBadges(evento);
     const ownerId = String(evento.utente_id || "");
 
@@ -1346,7 +1349,10 @@ const deleteRowsFromOutlook = async (
   };
 
   const getEventClasses = (evento: EventoGroup) => {
-    const settoreColor = getSettoreEventColor(evento.utente?.settore);
+   const settoreColor = getSettoreEventColor(
+  evento.utente?.settore,
+  Boolean(evento.riunione_teams)
+);
 
     return {
       card: settoreColor.border,
