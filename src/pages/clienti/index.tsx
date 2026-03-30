@@ -2189,18 +2189,27 @@ setErrors({});
                 })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleziona prestazione" />
+              <Select
+  value={formData.tipo_prestazione_id || "none"}
+  onValueChange={(value) =>
+    setFormData({
+      ...formData,
+      tipo_prestazione_id: value === "none" ? "" : value,
+    })
+  }
+>
               <SelectTrigger className={errors.tipo_prestazione_id ? "border-red-500" : ""}>
-              <SelectContent>
-                <SelectItem value="none">Nessuno</SelectItem>
-                {prestazioni.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {safeString(p.descrizione)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <SelectValue placeholder="Seleziona prestazione" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="none">Nessuno</SelectItem>
+    {prestazioni.map((p) => (
+      <SelectItem key={p.id} value={p.id}>
+        {safeString(p.descrizione)}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
           </div>
 
           <div>
