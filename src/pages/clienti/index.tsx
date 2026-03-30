@@ -292,6 +292,8 @@ setFormData((prev) => ({
   const [prestazioni, setPrestazioni] = useState<PrestazioneRow[]>([]);
 const [loading, setLoading] = useState(true);
 
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
 const [vistaClienti, setVistaClienti] = useState<
   "clienti" | "elenco_generale"
 >("clienti");
@@ -630,21 +632,48 @@ setRappLegali(rappLegaliData);
     const supabase = getSupabaseClient();
 
     try {
-  if (
-    !formData.ragione_sociale ||
-    !formData.utente_operatore_id ||
-    !formData.utente_professionista_id ||
-    !formData.tipo_prestazione_id ||
-    !formData.tipo_redditi
-  ) {
-    toast({
-      title: "Errore",
-      description: "Compila tutti i campi obbligatori",
-      variant: "destructive",
-    });
-    return;
-  }
+ const newErrors: Record<string, boolean> = {};
+const missingFields: string[] = [];
 
+if (!formData.ragione_sociale) {
+  newErrors.ragione_sociale = true;
+  missingFields.push("Ragione Sociale");
+}
+
+if (!formData.utente_operatore_id) {
+  newErrors.utente_operatore_id = true;
+  missingFields.push("Utente Fiscale");
+}
+
+if (!formData.utente_professionista_id) {
+  newErrors.utente_professionista_id = true;
+  missingFields.push("Professionista Fiscale");
+}
+
+if (!formData.tipo_prestazione_id) {
+  newErrors.tipo_prestazione_id = true;
+  missingFields.push("Tipo Prestazione");
+}
+
+if (!formData.tipo_redditi) {
+  newErrors.tipo_redditi = true;
+  missingFields.push("Tipo Redditi");
+}
+
+if (missingFields.length > 0) {
+  setErrors(newErrors);
+
+  toast({
+    title: "Campi obbligatori mancanti",
+    description: missingFields.join(", "),
+    variant: "destructive",
+  });
+
+  return;
+}
+
+// reset errori se tutto ok
+setErrors({});
   const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
 
   if (codiceFiscalePulito) {
@@ -685,7 +714,7 @@ setRappLegali(rappLegaliData);
         citta: formData.citta || null,
         provincia: formData.provincia || null,
         rapp_legale_id: formData.rapp_legale_id || null,
-        email: null,
+        email: formData.email || null,
         attivo: formData.attivo,
 
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
@@ -1784,8 +1813,9 @@ setRappLegali(rappLegaliData);
               Ragione Sociale <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="ragione_sociale"
-              value={formData.ragione_sociale}
+ id="ragione_sociale"
+  className={errors.ragione_sociale ? "border-red-500" : ""}
+  value={formData.ragione_sociale}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -1893,7 +1923,7 @@ setRappLegali(rappLegaliData);
             </div>
           </div>
 
-         {/* Riga rappresentante legale */}
+       {/* Riga rappresentante legale + email */}
 <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
   <div className="col-span-12 md:col-span-6">
     <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
@@ -1920,6 +1950,19 @@ setRappLegali(rappLegaliData);
         ))}
       </SelectContent>
     </Select>
+  </div>
+
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="email">Email</Label>
+    <Input
+      id="email"
+      name="email"
+      type="email"
+      value={formData.email || ""}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, email: e.target.value }))
+      }
+    />
   </div>
 </div>
 
@@ -1955,7 +1998,7 @@ setRappLegali(rappLegaliData);
                 })
               }
             >
-              <SelectTrigger>
+             <SelectTrigger className={errors.utente_operatore_id ? "border-red-500" : ""}>
                 <SelectValue placeholder="Seleziona utente" />
               </SelectTrigger>
               <SelectContent>
@@ -1991,7 +2034,7 @@ setRappLegali(rappLegaliData);
                 })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className={errors.utente_professionista_id ? "border-red-500" : ""}>
                 <SelectValue placeholder="Seleziona professionista" />
               </SelectTrigger>
               <SelectContent>
@@ -2148,7 +2191,7 @@ setRappLegali(rappLegaliData);
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleziona prestazione" />
-              </SelectTrigger>
+              <SelectTrigger className={errors.tipo_prestazione_id ? "border-red-500" : ""}>
               <SelectContent>
                 <SelectItem value="none">Nessuno</SelectItem>
                 {prestazioni.map((p) => (
@@ -2173,7 +2216,7 @@ setRappLegali(rappLegaliData);
                 })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className={errors.tipo_redditi ? "border-red-500" : ""}>
                 <SelectValue placeholder="Seleziona tipo" />
               </SelectTrigger>
               <SelectContent>
