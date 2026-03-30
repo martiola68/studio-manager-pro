@@ -48,17 +48,35 @@ async function extractTextFromPDF(buffer: Buffer) {
   return result?.text || "";
 }
 
-/* 🔴 AGGIUNTA MINIMA: estrazione CF */
+/* FIX MIRATO: estrazione CF/P.IVA dal testo */
 function extractCodiceFiscale(text: string): string | null {
   if (!text) return null;
 
-  const normalized = text.toUpperCase();
+  const normalized = text.toUpperCase().replace(/\s+/g, " ");
 
-  const match = normalized.match(
+  // 1) prima prova a cercare una dicitura esplicita
+  const labeledMatch = normalized.match(
+    /CODICE\s+FISCALE[:\s]*([A-Z0-9]{11,16})/
+  );
+  if (labeledMatch?.[1]) {
+    return normalizeCF(labeledMatch[1]);
+  }
+
+  // 2) fallback CF persona fisica (16 caratteri)
+  const cf16Match = normalized.match(
     /\b[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]\b/
   );
+  if (cf16Match?.[0]) {
+    return normalizeCF(cf16Match[0]);
+  }
 
-  return match ? normalizeCF(match[0]) : null;
+  // 3) fallback società / P.IVA / CF numerico 11 cifre
+  const cf11Match = normalized.match(/\b\d{11}\b/);
+  if (cf11Match?.[0]) {
+    return cf11Match[0];
+  }
+
+  return null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -83,16 +101,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "text/plain" || originalFilename.endsWith(".txt")) {
       const text = buffer.toString("utf-8");
 
-      /* 🔴 CONTROLLO CF */
-      const cf = extractCodiceFiscale(text);
-      if (cf) {
+      const codiceFiscale = extractCodiceFiscale(text);
+      if (codiceFiscale) {
         const supabase = getServerSupabase();
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("tbclienti")
           .select("id")
-          .eq("codice_fiscale", cf)
+          .eq("codice_fiscale", codiceFiscale)
           .maybeSingle();
+
+        if (error) throw error;
 
         if (data) {
           return res.status(200).json({
@@ -108,16 +127,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (mimetype === "application/pdf" || originalFilename.endsWith(".pdf")) {
       const text = await extractTextFromPDF(buffer);
 
-      /* 🔴 CONTROLLO CF */
-      const cf = extractCodiceFiscale(text);
-      if (cf) {
+      const codiceFiscale = extractCodiceFiscale(text);
+      if (codiceFiscale) {
         const supabase = getServerSupabase();
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("tbclienti")
           .select("id")
-          .eq("codice_fiscale", cf)
+          .eq("codice_fiscale", codiceFiscale)
           .maybeSingle();
+
+        if (error) throw error;
 
         if (data) {
           return res.status(200).json({
