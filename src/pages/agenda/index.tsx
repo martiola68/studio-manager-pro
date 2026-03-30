@@ -1349,83 +1349,75 @@ const deleteRowsFromOutlook = async (
 const sendSingleNotifications = async (
   rows: any[],
   ownerUserId: string,
-  internalParticipantIds: string[]
+  internalParticipantIds: string[],
+  action: "created" | "updated" | "cancelled" = "created"
 ) => {
   const { eventoService } = await import("@/services/eventoService");
 
   const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
 
-const targetUserIds = [
-  ...new Set(
-    [
-      ...(internalParticipantIds ?? []),
-      ...rows.map((r) => String(r?.utente_id || "")),
-    ]
-      .filter(Boolean)
-      .map((id) => String(id))
-  ),
-];
+  const targetUserIds = [
+    ...new Set(
+      [
+        ...(internalParticipantIds ?? []),
+        ...rows.map((r) => String(r?.utente_id || "")),
+      ]
+        .filter(Boolean)
+        .map((id) => String(id))
+    ),
+  ];
 
-const finalTargetUserIds =
-  targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
-    ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
-    : [String(ownerUserId)];
+  const finalTargetUserIds =
+    targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
+      ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
+      : [String(ownerUserId)];
 
-const sentKeys = new Set<string>();
+  const sentKeys = new Set<string>();
 
-for (const userId of finalTargetUserIds) {
+  for (const userId of finalTargetUserIds) {
     const rowForUser = rows.find(
       (r) => String(r?.utente_id || "") === String(userId)
     );
 
     if (!rowForUser?.id) continue;
 
-    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}`;
+    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}:${action}`;
     if (sentKeys.has(dedupeKey)) continue;
 
     sentKeys.add(dedupeKey);
 
-    // 🔴 COSTRUZIONE DATI CORRETTI
+    const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
 
-   const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
+    const participantUsers = participantIds
+      .map((id) => utenti.find((u) => String(u.id) === String(id)))
+      .filter((u): u is UtenteAgenda => Boolean(u));
 
-const participantUsers = participantIds
-  .map((id) => utenti.find((u) => String(u.id) === String(id)))
-  .filter((u): u is UtenteAgenda => Boolean(u));
+    const isOwnerFallback = String(userId) === String(ownerUserId);
 
-    // 👉 ESCLUDO ORGANIZZATORE
-  const isOwnerFallback = String(userId) === String(ownerUserId);
+    const visibleParticipants = participantUsers.filter((u) =>
+      isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
+    );
 
-const visibleParticipants = participantUsers.filter((u) =>
-  isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
-);
     const payload = {
       ...rowForUser,
-
-      // ✅ FORZO RESPONSABILE CORRETTO
       utente_id: ownerUserId,
       utente: owner || rowForUser.utente,
-
-      responsabile_nome: owner
-        ? `${owner.nome} ${owner.cognome}`
-        : "",
-
-      // ✅ PARTECIPANTI SENZA ORGANIZZATORE
+      responsabile_nome: owner ? `${owner.nome} ${owner.cognome}` : "",
       partecipanti_notifica: visibleParticipants.map((u) => ({
-        id: u!.id,
-        nome: u!.nome,
-        cognome: u!.cognome,
-        email: u!.email,
-        settore: u!.settore ?? null,
+        id: u.id,
+        nome: u.nome,
+        cognome: u.cognome,
+        email: u.email,
+        settore: u.settore ?? null,
       })),
-
       partecipanti_nomi: visibleParticipants.map(
-        (u) => `${u!.nome} ${u!.cognome}`
+        (u) => `${u.nome} ${u.cognome}`
       ),
     };
 
     await eventoService.sendEventNotification(
-      toNotificationPayload(payload as any) as any
+      toNotificationPayload(payload as any) as any,
+      action
     );
   }
 };
@@ -1692,11 +1684,12 @@ const handleSaveEvento = async () => {
 
       const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-      await sendSingleNotifications(
-        finalRows,
-        formData.utente_id,
-        internalParticipantIds
-      );
+     await sendSingleNotifications(
+  finalRows,
+  formData.utente_id,
+  internalParticipantIds,
+  "updated"
+);
 
       const organizerRows = finalRows.filter(
         (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1757,7 +1750,12 @@ const handleSaveEvento = async () => {
 
         if (error) throw error;
 
-        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
+        await sendSingleNotifications(
+  data ?? [],
+  formData.utente_id,
+  internalParticipantIds,
+  "created"
+);
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1842,15 +1840,15 @@ const handleSaveEvento = async () => {
   }
 };
     
- const handleDeleteEvento = async () => {
+const handleDeleteEvento = async () => {
   const supabase = getSupabaseClient();
 
   if (!eventoToDelete) return;
 
   try {
     const gruppo = groupedEvents.find(
-  (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
-);
+      (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
+    );
 
     if (!gruppo) {
       toast({
@@ -1866,6 +1864,20 @@ const handleSaveEvento = async () => {
     const rowsToDelete = eventiRows.filter(
       (r) => String(r.gruppo_evento || r.id) === gruppoId
     );
+
+    const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
+    const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
+      (id) => String(id) !== ownerUserId
+    );
+
+    if (ownerUserId && rowsToDelete.length > 0) {
+      await sendSingleNotifications(
+        rowsToDelete as any[],
+        ownerUserId,
+        cancellationParticipantIds,
+        "cancelled"
+      );
+    }
 
     await deleteRowsFromOutlook(
       rowsToDelete.map((r) => ({
@@ -1885,7 +1897,6 @@ const handleSaveEvento = async () => {
 
     if (error) throw error;
 
-    // ✅ SOLO QUESTO
     setEventiRows((prev) => prev.filter((r) => !ids.includes(r.id)));
 
     setDeleteDialogOpen(false);
@@ -1911,7 +1922,6 @@ const handleSaveEvento = async () => {
     setEventoToDelete(null);
   }
 };
-
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter((u) => u.settore === settore).map((u) => u.id);
     const isSelected = ids.some((id) => formData.partecipanti.includes(id));
