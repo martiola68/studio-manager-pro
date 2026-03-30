@@ -591,7 +591,7 @@ setRappLegali(rappLegaliData);
       citta: clienteData.citta || "",
       provincia: clienteData.provincia || "",
       rapp_legale_id: clienteData.rapp_legale_id ?? "",
-      email: clienteData.email || "",
+      email: "",
       attivo: clienteData.attivo ?? true,
       cassetto_fiscale_id: clienteData.cassetto_fiscale_id || "",
 
@@ -641,16 +641,47 @@ setRappLegali(rappLegaliData);
     const supabase = getSupabaseClient();
 
     try {
-      if (!formData.ragione_sociale || !formData.email) {
-        toast({
-          title: "Errore",
-          description: "Compila tutti i campi obbligatori",
-          variant: "destructive",
-        });
-        return;
-      }
+    try {
+  if (
+    !formData.ragione_sociale ||
+    !formData.utente_operatore_id ||
+    !formData.utente_professionista_id ||
+    !formData.tipo_prestazione_id ||
+    !formData.tipo_redditi
+  ) {
+    toast({
+      title: "Errore",
+      description: "Compila tutti i campi obbligatori",
+      variant: "destructive",
+    });
+    return;
+  }
 
-      const base: Partial<ClienteInsert> = {
+  const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
+
+  if (codiceFiscalePulito) {
+    const { data: existingCliente, error: existingError } = await supabase
+      .from("tbclienti")
+      .select("id")
+      .eq("codice_fiscale", codiceFiscalePulito)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    if (
+      existingCliente &&
+      (!editingCliente || existingCliente.id !== editingCliente.id)
+    ) {
+      toast({
+        title: "Errore",
+        description: "Soggetto già presente in anagrafica generale",
+        variant: "destructive",
+      });
+      return;
+    }
+  }
+
+  const base: Partial<ClienteInsert> = {
         cod_cliente:
           formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
         tipo_cliente: formData.tipo_cliente,
@@ -666,7 +697,7 @@ setRappLegali(rappLegaliData);
         citta: formData.citta || null,
         provincia: formData.provincia || null,
         rapp_legale_id: formData.rapp_legale_id || null,
-        email: formData.email,
+        email: null,
         attivo: formData.attivo,
 
         cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
@@ -1874,46 +1905,35 @@ setRappLegali(rappLegaliData);
             </div>
           </div>
 
-          {/* Riga rappresentante legale + email */}
-          <div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
-            <div className="col-span-12 md:col-span-6">
-              <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
-              <Select
-                value={formData.rapp_legale_id || "none"}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    rapp_legale_id: value === "none" ? "" : value,
-                  }))
-                }
-              >
-                <SelectTrigger id="rapp_legale_id">
-                  <SelectValue placeholder="Seleziona rappresentante legale" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">
-                    Seleziona rappresentante legale
-                  </SelectItem>
-                  {rappLegali.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.nome_cognome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-12 md:col-span-6">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email || ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
-              />
+         {/* Riga rappresentante legale */}
+<div className="md:col-span-2 mt-4 grid grid-cols-12 gap-4">
+  <div className="col-span-12 md:col-span-6">
+    <Label htmlFor="rapp_legale_id">Rappresentante legale</Label>
+    <Select
+      value={formData.rapp_legale_id || "none"}
+      onValueChange={(value) =>
+        setFormData((prev) => ({
+          ...prev,
+          rapp_legale_id: value === "none" ? "" : value,
+        }))
+      }
+    >
+      <SelectTrigger id="rapp_legale_id">
+        <SelectValue placeholder="Seleziona rappresentante legale" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">
+          Seleziona rappresentante legale
+        </SelectItem>
+        {rappLegali.map((r) => (
+          <SelectItem key={r.id} value={r.id}>
+            {r.nome_cognome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
             </div>
           </div>
 
@@ -1937,7 +1957,9 @@ setRappLegali(rappLegaliData);
       <TabsContent value="riferimenti" className="space-y-6 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="utente_operatore_id">Utente Fiscale</Label>
+            <Label htmlFor="utente_operatore_id">
+  Utente Fiscale <span className="text-red-500">*</span>
+</Label>
             <Select
               value={formData.utente_operatore_id || "none"}
               onValueChange={(value) =>
@@ -1972,8 +1994,8 @@ setRappLegali(rappLegaliData);
 
           <div>
             <Label htmlFor="utente_professionista_id">
-              Professionista Fiscale
-            </Label>
+  Professionista Fiscale <span className="text-red-500">*</span>
+</Label>>
             <Select
               value={formData.utente_professionista_id || "none"}
               onValueChange={(value) =>
@@ -2126,7 +2148,9 @@ setRappLegali(rappLegaliData);
           </div>
 
           <div>
-            <Label htmlFor="tipo_prestazione_id">Tipo Prestazione</Label>
+            <Label htmlFor="tipo_prestazione_id">
+  Tipo Prestazione <span className="text-red-500">*</span>
+</Label>
             <Select
               value={formData.tipo_prestazione_id || "none"}
               onValueChange={(value) =>
@@ -2151,7 +2175,9 @@ setRappLegali(rappLegaliData);
           </div>
 
           <div>
-            <Label htmlFor="tipo_redditi">Tipo Redditi</Label>
+            <Label htmlFor="tipo_redditi">
+  Tipo Redditi <span className="text-red-500">*</span>
+</Label>
             <Select
               value={formData.tipo_redditi || undefined}
               onValueChange={(value: string) =>
