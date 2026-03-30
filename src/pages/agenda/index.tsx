@@ -750,22 +750,42 @@ const filteredEvents = useMemo(() => {
   setUserFilterInitialized(true);
 }, [currentUserId, userFilterInitialized]);
 
-const teamsEvents = allEvents.filter((evento) => {
-  // solo eventi Teams
-  if (!evento.riunione_teams) return false;
+const teamsEvents = useMemo(() => {
+  const selectedIds = selectedUserIds.map((id) => String(id));
 
-  // utente loggato
-  const isOwner = String(evento.utente_id) === String(loggedUserId);
+  return groupedEvents
+    .filter((e) => {
+      const isTeams =
+        Boolean(e.riunione_teams) &&
+        Boolean(String(e.link_teams || "").trim());
 
-  // utenti selezionati
-  const isSelected =
-    selectedUserIds.length === 0
-      ? true
-      : selectedUserIds.includes(String(evento.utente_id));
+      if (!isTeams) return false;
+      if (!currentUserId) return false;
 
-  // 🔥 REGOLA CORRETTA
-  return isOwner && isSelected;
-});
+      const ownerId = String(e.utente_id || "");
+      const participantIds = (e.partecipanti || []).map((id) => String(id));
+
+      const visibleForLoggedUser =
+        ownerId === String(currentUserId) ||
+        participantIds.includes(String(currentUserId));
+
+      if (!visibleForLoggedUser) return false;
+
+      // Nessun utente selezionato: mostra quelli visibili al loggato
+      if (selectedIds.length === 0) return true;
+
+      // Con selezione attiva: l'evento deve appartenere/coinvolgere almeno uno degli utenti selezionati
+      const matchesSelectedUser =
+        selectedIds.includes(ownerId) ||
+        participantIds.some((id) => selectedIds.includes(id));
+
+      return matchesSelectedUser;
+    })
+    .sort(
+      (a, b) =>
+        safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime()
+    );
+}, [groupedEvents, currentUserId, selectedUserIds]);
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
