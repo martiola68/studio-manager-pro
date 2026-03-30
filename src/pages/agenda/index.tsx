@@ -243,12 +243,6 @@ type FormDataState = {
 
 const toNotificationPayload = (e: Record<string, unknown>) => ({
   ...e,
-
-  // 🔥 AGGIUNGI QUESTI
-eventoInSede: Boolean((e as any)?.in_sede),
-eventoLuogo: (e as any)?.sala ?? "",
-
-  // già esistenti
   durata_giorni: (e as any)?.durata_giorni ?? null,
   evento_generico: (e as any)?.evento_generico ?? null,
   frequenza_giorni: (e as any)?.frequenza_giorni ?? null,
@@ -365,57 +359,42 @@ const getSettoreBadgeClass = (settore?: string | null) => {
   return "bg-slate-100 text-slate-700 border-slate-200";
 };
 
-const getSettoreEventColor = (
-  settore?: string | null,
-  isTeams?: boolean
-) => {
+const getSettoreEventColor = (settore?: string | null) => {
   const normalized = normalizeSettore(settore);
 
-  const base =
-    normalized === "Fiscale"
-      ? {
-          border: "border-l-green-600",
-          chip: "bg-green-50 border-green-200 text-green-900",
-          subtle: "bg-green-100 text-green-800",
-          dot: "bg-green-600",
-        }
-      : normalized === "Lavoro"
-      ? {
-          border: "border-l-red-600",
-          chip: "bg-red-50 border-red-200 text-red-900",
-          subtle: "bg-red-100 text-red-800",
-          dot: "bg-red-600",
-        }
-      : normalized === "Consulenza"
-      ? {
-          border: "border-l-blue-600",
-          chip: "bg-blue-50 border-blue-200 text-blue-900",
-          subtle: "bg-blue-100 text-blue-800",
-          dot: "bg-blue-600",
-        }
-      : {
-          border: "border-l-slate-500",
-          chip: "bg-slate-50 border-slate-200 text-slate-900",
-          subtle: "bg-slate-100 text-slate-800",
-          dot: "bg-slate-500",
-        };
+  if (normalized === "Fiscale") {
+    return {
+      border: "border-l-green-600",
+      chip: "bg-green-50 border-green-200 text-green-900",
+      subtle: "bg-green-100 text-green-800",
+      dot: "bg-green-600",
+    };
+  }
 
-  // 🔥 QUI LA LOGICA TEAMS
-if (isTeams) {
-  const chipNoBorderColor = base.chip
-    .replace("border-green-200", "")
-    .replace("border-red-200", "")
-    .replace("border-blue-200", "")
-    .replace("border-slate-200", "");
+  if (normalized === "Lavoro") {
+    return {
+      border: "border-l-red-600",
+      chip: "bg-red-50 border-red-200 text-red-900",
+      subtle: "bg-red-100 text-red-800",
+      dot: "bg-red-600",
+    };
+  }
+
+  if (normalized === "Consulenza") {
+    return {
+      border: "border-l-blue-600",
+      chip: "bg-blue-50 border-blue-200 text-blue-900",
+      subtle: "bg-blue-100 text-blue-800",
+      dot: "bg-blue-600",
+    };
+  }
 
   return {
-    ...base,
-    border: "border-l-black",
-    chip: `${chipNoBorderColor} border-2 border-black`,
+    border: "border-l-slate-500",
+    chip: "bg-slate-50 border-slate-200 text-slate-900",
+    subtle: "bg-slate-100 text-slate-800",
+    dot: "bg-slate-500",
   };
-}
-
-  return base;
 };
 
 const getEventoBadges = (evento: EventoGroup): EventoBadge[] => {
@@ -748,40 +727,18 @@ const filteredEvents = useMemo(() => {
   setUserFilterInitialized(true);
 }, [currentUserId, userFilterInitialized]);
 
-const teamsEvents = useMemo(() => {
-  const selectedIds = (filtroUtenti || []).map((id) => String(id));
-
-  return groupedEvents
-    .filter((e) => {
-      const isTeams =
-        Boolean(e.riunione_teams) &&
-        Boolean(String(e.link_teams || "").trim());
-
-      if (!isTeams) return false;
-      if (!currentUserId) return false;
-
-      const ownerId = String(e.utente_id || "");
-      const participantIds = (e.partecipanti || []).map((id) => String(id));
-
-      const visibleForLoggedUser =
-        ownerId === String(currentUserId) ||
-        participantIds.includes(String(currentUserId));
-
-      if (!visibleForLoggedUser) return false;
-
-      if (selectedIds.length === 0) return true;
-
-      const matchesSelectedUser =
-        selectedIds.includes(ownerId) ||
-        participantIds.some((id) => selectedIds.includes(id));
-
-      return matchesSelectedUser;
-    })
-    .sort(
-      (a, b) =>
-        safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime()
-    );
-}, [groupedEvents, currentUserId, filtroUtenti]);
+  const teamsEvents = useMemo(() => {
+    return groupedEvents
+      .filter(
+        (e) =>
+          Boolean(e.riunione_teams) &&
+          Boolean(String(e.link_teams || "").trim()) &&
+          Boolean(currentUserId) &&
+          (String(e.utente_id || "") === String(currentUserId) ||
+            e.partecipanti.some((id) => String(id) === String(currentUserId)))
+      )
+      .sort((a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime());
+  }, [groupedEvents, currentUserId]);
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
@@ -1221,10 +1178,7 @@ const deleteRowsFromOutlook = async (
 };
 
   const renderAdvancedTooltip = (evento: EventoGroup) => {
-    const eventColors = getSettoreEventColor(
-  evento.utente?.settore,
-  Boolean(evento.riunione_teams)
-);
+    const eventColors = getSettoreEventColor(evento.utente?.settore);
     const badges = getEventoBadges(evento);
     const ownerId = String(evento.utente_id || "");
 
@@ -1369,10 +1323,7 @@ const deleteRowsFromOutlook = async (
   };
 
   const getEventClasses = (evento: EventoGroup) => {
-   const settoreColor = getSettoreEventColor(
-  evento.utente?.settore,
-  Boolean(evento.riunione_teams)
-);
+    const settoreColor = getSettoreEventColor(evento.utente?.settore);
 
     return {
       card: settoreColor.border,
@@ -1398,75 +1349,83 @@ const deleteRowsFromOutlook = async (
 const sendSingleNotifications = async (
   rows: any[],
   ownerUserId: string,
-  internalParticipantIds: string[],
-  action: "created" | "updated" | "cancelled" = "created"
+  internalParticipantIds: string[]
 ) => {
   const { eventoService } = await import("@/services/eventoService");
 
   const owner = utenti.find((u) => String(u.id) === String(ownerUserId)) || null;
 
-  const targetUserIds = [
-    ...new Set(
-      [
-        ...(internalParticipantIds ?? []),
-        ...rows.map((r) => String(r?.utente_id || "")),
-      ]
-        .filter(Boolean)
-        .map((id) => String(id))
-    ),
-  ];
+const targetUserIds = [
+  ...new Set(
+    [
+      ...(internalParticipantIds ?? []),
+      ...rows.map((r) => String(r?.utente_id || "")),
+    ]
+      .filter(Boolean)
+      .map((id) => String(id))
+  ),
+];
 
-  const finalTargetUserIds =
-    targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
-      ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
-      : [String(ownerUserId)];
+const finalTargetUserIds =
+  targetUserIds.filter((id) => String(id) !== String(ownerUserId)).length > 0
+    ? targetUserIds.filter((id) => String(id) !== String(ownerUserId))
+    : [String(ownerUserId)];
 
-  const sentKeys = new Set<string>();
+const sentKeys = new Set<string>();
 
-  for (const userId of finalTargetUserIds) {
+for (const userId of finalTargetUserIds) {
     const rowForUser = rows.find(
       (r) => String(r?.utente_id || "") === String(userId)
     );
 
     if (!rowForUser?.id) continue;
 
-    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}:${action}`;
+    const dedupeKey = `${String(rowForUser.id)}:${String(userId)}`;
     if (sentKeys.has(dedupeKey)) continue;
 
     sentKeys.add(dedupeKey);
 
-    const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
+    // 🔴 COSTRUZIONE DATI CORRETTI
 
-    const participantUsers = participantIds
-      .map((id) => utenti.find((u) => String(u.id) === String(id)))
-      .filter((u): u is UtenteAgenda => Boolean(u));
+   const participantIds = toArrayOfStrings((rowForUser as any)?.partecipanti);
 
-    const isOwnerFallback = String(userId) === String(ownerUserId);
+const participantUsers = participantIds
+  .map((id) => utenti.find((u) => String(u.id) === String(id)))
+  .filter((u): u is UtenteAgenda => Boolean(u));
 
-    const visibleParticipants = participantUsers.filter((u) =>
-      isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
-    );
+    // 👉 ESCLUDO ORGANIZZATORE
+  const isOwnerFallback = String(userId) === String(ownerUserId);
 
+const visibleParticipants = participantUsers.filter((u) =>
+  isOwnerFallback ? true : String(u.id) !== String(ownerUserId)
+);
     const payload = {
       ...rowForUser,
+
+      // ✅ FORZO RESPONSABILE CORRETTO
       utente_id: ownerUserId,
       utente: owner || rowForUser.utente,
-      responsabile_nome: owner ? `${owner.nome} ${owner.cognome}` : "",
+
+      responsabile_nome: owner
+        ? `${owner.nome} ${owner.cognome}`
+        : "",
+
+      // ✅ PARTECIPANTI SENZA ORGANIZZATORE
       partecipanti_notifica: visibleParticipants.map((u) => ({
-        id: u.id,
-        nome: u.nome,
-        cognome: u.cognome,
-        email: u.email,
-        settore: u.settore ?? null,
+        id: u!.id,
+        nome: u!.nome,
+        cognome: u!.cognome,
+        email: u!.email,
+        settore: u!.settore ?? null,
       })),
+
       partecipanti_nomi: visibleParticipants.map(
-        (u) => `${u.nome} ${u.cognome}`
+        (u) => `${u!.nome} ${u!.cognome}`
       ),
     };
 
     await eventoService.sendEventNotification(
-      toNotificationPayload(payload as any) as any,
-      action
+      toNotificationPayload(payload as any) as any
     );
   }
 };
@@ -1733,12 +1692,11 @@ const handleSaveEvento = async () => {
 
       const finalRows = [...(updatedRows ?? []), ...insertedRows];
 
-     await sendSingleNotifications(
-  finalRows,
-  formData.utente_id,
-  internalParticipantIds,
-  "updated"
-);
+      await sendSingleNotifications(
+        finalRows,
+        formData.utente_id,
+        internalParticipantIds
+      );
 
       const organizerRows = finalRows.filter(
         (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1799,12 +1757,7 @@ const handleSaveEvento = async () => {
 
         if (error) throw error;
 
-        await sendSingleNotifications(
-  data ?? [],
-  formData.utente_id,
-  internalParticipantIds,
-  "created"
-);
+        await sendSingleNotifications(data ?? [], formData.utente_id, internalParticipantIds);
 
         const organizerRows = (data ?? []).filter(
           (row: any) => String(row.utente_id || "") === String(formData.utente_id)
@@ -1889,15 +1842,15 @@ const handleSaveEvento = async () => {
   }
 };
     
-const handleDeleteEvento = async () => {
+ const handleDeleteEvento = async () => {
   const supabase = getSupabaseClient();
 
   if (!eventoToDelete) return;
 
   try {
     const gruppo = groupedEvents.find(
-      (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
-    );
+  (e) => e.id === eventoToDelete || e.gruppo_evento === eventoToDelete
+);
 
     if (!gruppo) {
       toast({
@@ -1913,20 +1866,6 @@ const handleDeleteEvento = async () => {
     const rowsToDelete = eventiRows.filter(
       (r) => String(r.gruppo_evento || r.id) === gruppoId
     );
-
-    const ownerUserId = String(gruppo.utente_id || rowsToDelete[0]?.utente_id || "");
-    const cancellationParticipantIds = (gruppo.partecipanti || []).filter(
-      (id) => String(id) !== ownerUserId
-    );
-
-    if (ownerUserId && rowsToDelete.length > 0) {
-      await sendSingleNotifications(
-        rowsToDelete as any[],
-        ownerUserId,
-        cancellationParticipantIds,
-        "cancelled"
-      );
-    }
 
     await deleteRowsFromOutlook(
       rowsToDelete.map((r) => ({
@@ -1946,6 +1885,7 @@ const handleDeleteEvento = async () => {
 
     if (error) throw error;
 
+    // ✅ SOLO QUESTO
     setEventiRows((prev) => prev.filter((r) => !ids.includes(r.id)));
 
     setDeleteDialogOpen(false);
@@ -1971,6 +1911,7 @@ const handleDeleteEvento = async () => {
     setEventoToDelete(null);
   }
 };
+
   const handleSelezioneSettore = (settore: "Lavoro" | "Fiscale") => {
     const ids = utenti.filter((u) => u.settore === settore).map((u) => u.id);
     const isSelected = ids.some((id) => formData.partecipanti.includes(id));
