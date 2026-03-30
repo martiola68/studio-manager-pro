@@ -251,23 +251,12 @@ text = data.text || "";
   return;
 }
 
-const { cliente, rappresentanti, sociPersoneFisiche } = mapVisuraText(text);
+const { cliente } = mapVisuraText(text);
 
 console.log("VISURA_TEXT_START");
 console.log(text);
 console.log("VISURA_TEXT_END");
 console.log("VISURA_CLIENTE", cliente);
-
-    setFormData((prev) => ({
-  ...prev,
-  ragione_sociale: cliente.ragione_sociale || "",
-  partita_iva: cliente.partita_iva || "",
-  codice_fiscale: cliente.codice_fiscale || "",
-  indirizzo: cliente.indirizzo || "",
-  cap: cliente.cap || "",
-  citta: cliente.citta || "",
-  provincia: cliente.provincia || "",
-}));
 
 // =========================
 // POPOLA FORM (NO RESET)
@@ -640,7 +629,6 @@ setRappLegali(rappLegaliData);
   const handleSave = async () => {
     const supabase = getSupabaseClient();
 
-    try {
     try {
   if (
     !formData.ragione_sociale ||
@@ -1934,7 +1922,6 @@ setRappLegali(rappLegaliData);
     </Select>
   </div>
 </div>
-            </div>
           </div>
 
           {/* Note */}
@@ -1995,7 +1982,7 @@ setRappLegali(rappLegaliData);
           <div>
             <Label htmlFor="utente_professionista_id">
   Professionista Fiscale <span className="text-red-500">*</span>
-</Label>>
+</Label>
             <Select
               value={formData.utente_professionista_id || "none"}
               onValueChange={(value) =>
