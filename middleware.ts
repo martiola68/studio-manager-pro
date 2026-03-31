@@ -6,11 +6,12 @@ export function middleware(request: NextRequest) {
 
   // CONSENTI SOLO:
   const isPublicDocumento = url.pathname.startsWith("/public/documento");
-  const isApiPublic = url.pathname.startsWith("/api/public");
+const isPublicAV4 = url.pathname.startsWith("/public/av4"); // 👈 QUI
+const isApiPublic = url.pathname.startsWith("/api/public");
 
-  if (isPublicDocumento || isApiPublic) {
-    return NextResponse.next();
-  }
+if (isPublicDocumento || isPublicAV4 || isApiPublic) {
+  return NextResponse.next();
+}
 
   // BLOCCA TUTTO IL RESTO
   return NextResponse.redirect(new URL("/bloccato", request.url));
