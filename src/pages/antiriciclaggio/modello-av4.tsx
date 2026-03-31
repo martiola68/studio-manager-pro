@@ -1013,7 +1013,7 @@ function isDuplicateTitolare(
         cliente_id: form.cliente_id,
         av1_id: Number(form.av1_id),
         rapp_legale_id: form.rapp_legale_id || null,
-        microsoft_connection_id: form.microsoft_connection_id || null,
+        // microsoft_connection_id: form.microsoft_connection_id || null,
 
         dichiarante_nome_cognome: form.dichiarante_nome_cognome || null,
         dichiarante_codice_fiscale: form.dichiarante_codice_fiscale || null,
