@@ -1825,6 +1825,19 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     />
   </div>
 
+                 <div className="md:col-span-2">
+  {form.pdf_firmato_cliente && (
+    <a
+      href={form.pdf_firmato_cliente}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm text-sky-700 underline"
+    >
+      Apri PDF firmato caricato
+    </a>
+  )}
+</div>
+
   <div className="md:col-span-2 mt-2">
     <div className="mx-auto max-w-md pt-8 text-center">
       <div className="mx-auto mb-2 h-px w-full bg-black" />
@@ -1832,6 +1845,8 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
   </div>
 
+                 
+                 
  <div className="md:col-span-2 mt-4 whitespace-pre-line text-xs leading-5 text-gray-700">
   {noteAllegato}
 </div>
