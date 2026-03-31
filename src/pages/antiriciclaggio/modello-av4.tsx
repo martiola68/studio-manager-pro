@@ -1912,7 +1912,6 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
   )}
 
-    {form.pdf_firmato_cliente && (
 <div className="md:col-span-2">
   <button
     type="button"
