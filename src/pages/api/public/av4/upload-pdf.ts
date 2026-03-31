@@ -61,7 +61,9 @@ export default async function handler(
     }
 
     if (fileType !== "application/pdf") {
-      return res.status(400).json({ ok: false, error: "È consentito solo il formato PDF" });
+      return res
+        .status(400)
+        .json({ ok: false, error: "È consentito solo il formato PDF" });
     }
 
     const supabase = createClient(
@@ -71,7 +73,7 @@ export default async function handler(
 
     const { data: av4, error: av4Error } = await supabase
       .from("tbAV4")
-      .select("id, public_token, public_enabled")
+      .select("id, public_token, public_enabled, pdf_firmato_cliente")
       .eq("id", av4_id)
       .eq("public_token", token)
       .maybeSingle();
@@ -97,10 +99,14 @@ export default async function handler(
 
     const fileBuffer = Buffer.from(cleanBase64, "base64");
 
+    if (!fileBuffer || fileBuffer.length === 0) {
+      return res.status(400).json({ ok: false, error: "Contenuto file non valido" });
+    }
+
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, fileBuffer, {
-        contentType: fileType || "application/pdf",
+        contentType: "application/pdf",
         upsert: true,
       });
 
@@ -117,7 +123,7 @@ export default async function handler(
     const { error: updateError } = await supabase
       .from("tbAV4")
       .update({
-        pdf_firmato_cliente: publicUrl,
+        pdf_firmato_cliente: filePath,
       })
       .eq("id", av4.id)
       .eq("public_token", token);
