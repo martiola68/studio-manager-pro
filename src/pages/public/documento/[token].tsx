@@ -175,7 +175,7 @@ export default function PublicDocumentoPage() {
     };
   }, [router.isReady, token]);
 
-  useEffect(() => {
+//  useEffect(() => {
 //    if (!router.isReady || !token) return;
 //    if (typeof window === "undefined") return;
 
