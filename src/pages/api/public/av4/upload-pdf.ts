@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-const BUCKET_NAME = "documenti";
+const BUCKET_NAME = "promemoria-allegati";
 
 export const config = {
   api: {
