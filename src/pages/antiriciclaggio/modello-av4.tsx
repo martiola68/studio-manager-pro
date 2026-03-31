@@ -68,6 +68,7 @@ type FormState = {
   data_firma: string;
   luogo_firma_bis: string;
   data_firma_bis: string;
+  pdf_firmato_cliente: string;
 
   stato: string;
   versione: number;
@@ -139,6 +140,7 @@ const initialFormState = (
   data_firma: "",
   luogo_firma_bis: "",
   data_firma_bis: "",
+  pdf_firmato_cliente: "",
 
   stato: "bozza",
   versione: 1,
@@ -235,6 +237,7 @@ function mapDbRowToForm(row: any): FormState {
     data_firma: normalizeDateForInput(row?.data_firma),
     luogo_firma_bis: row?.luogo_firma_bis ?? "",
     data_firma_bis: normalizeDateForInput(row?.data_firma_bis),
+    pdf_firmato_cliente: row?.pdf_firmato_cliente ?? "",
 
     stato: row?.stato ?? "bozza",
     versione: Number(row?.versione ?? 1),
