@@ -302,9 +302,18 @@ export default function PublicAV4Page() {
         }
 
         const mapped = mapDbRowToForm(data);
-        setForm(mapped);
+       setForm(mapped);
         setAv4Id(mapped.id);
-        setSignedPdfUrl(mapped.pdf_firmato_cliente || "");
+
+        if (mapped.pdf_firmato_cliente) {
+          const { data: storageData } = supabase.storage
+            .from("documenti")
+            .getPublicUrl(mapped.pdf_firmato_cliente);
+
+          setSignedPdfUrl(storageData?.publicUrl || "");
+        } else {
+          setSignedPdfUrl("");
+        }
 
         if (mapped.compilato_da_cliente) {
           setAlreadySubmitted(true);
@@ -515,12 +524,13 @@ async function handleUploadSignedPdf(
         responseData?.error || "Errore durante il caricamento del PDF firmato."
       );
     }
-      const publicUrl = String(responseData?.publicUrl || "");
+      const savedPath = String(responseData?.path || "").trim();
+      const publicUrl = String(responseData?.publicUrl || "").trim();
 
       setSignedPdfUrl(publicUrl);
       setForm((prev) => ({
         ...prev,
-        pdf_firmato_cliente: publicUrl,
+        pdf_firmato_cliente: savedPath,
       }));
 
       alert("PDF firmato caricato correttamente.");
@@ -631,6 +641,7 @@ async function handleUploadSignedPdf(
         data_firma: form.data_firma || null,
         luogo_firma_bis: form.luogo_firma_bis || null,
         data_firma_bis: form.data_firma_bis || null,
+        pdf_firmato_cliente: form.pdf_firmato_cliente || null,
 
         compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),
