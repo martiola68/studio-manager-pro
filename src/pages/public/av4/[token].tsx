@@ -478,43 +478,61 @@ export default function PublicAV4Page() {
     window.print();
   }
 
-  async function handleUploadSignedPdf(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = e.target.files?.[0];
-    if (!file || !form.id) return;
+async function handleUploadSignedPdf(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
+  if (!file || !form.id) return;
 
-    if (file.type !== "application/pdf") {
-      alert("Seleziona un file PDF.");
-      return;
+  if (file.type !== "application/pdf") {
+    alert("Seleziona un file PDF.");
+    return;
+  }
+
+  try {
+    setUploadingPdf(true);
+
+    const fileBase64 = await fileToBase64(file);
+
+    const res = await fetch("/api/public/av4/upload-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        token,
+        av4_id: form.id,
+        fileName: file.name,
+        fileType: file.type,
+        fileBase64,
+      }),
+    });
+
+    const responseData = await res.json();
+
+    if (!res.ok || !responseData?.ok) {
+      throw new Error(
+        responseData?.error || "Errore durante il caricamento del PDF firmato."
+      );
     }
 
-    try {
-      setUploadingPdf(true);
+    const publicUrl = String(responseData?.publicUrl || "");
 
-      const fileBase64 = await fileToBase64(file);
+    setSignedPdfUrl(publicUrl);
+    setForm((prev) => ({
+      ...prev,
+      pdf_firmato_cliente: publicUrl,
+    }));
 
-      const res = await fetch("/api/public/av4/upload-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token,
-          av4_id: form.id,
-          fileName: file.name,
-          fileType: file.type,
-          fileBase64,
-        }),
-      });
-
-      const responseData = await res.json();
-
-      if (!res.ok || !responseData?.ok) {
-        throw new Error(
-          responseData?.error || "Errore durante il caricamento del PDF firmato."
-        );
-      }
+    alert("PDF firmato caricato correttamente.");
+  } catch (error: any) {
+    console.error("Errore upload PDF firmato:", error);
+    alert(error?.message || "Errore durante il caricamento del PDF firmato.");
+  } finally {
+    setUploadingPdf(false);
+    e.target.value = "";
+  }
+}
 
       const publicUrl = String(responseData?.publicUrl || "");
 
@@ -534,18 +552,7 @@ export default function PublicAV4Page() {
     }
   }
 
-      const { data } = supabase.storage.from("documenti").getPublicUrl(filePath);
-      const publicUrl = data?.publicUrl || "";
-
-      const { error: updateError } = await supabase
-        .from("tbAV4")
-        .update({
-          pdf_firmato_cliente: publicUrl,
-        })
-        .eq("id", form.id)
-        .eq("public_token", token);
-
-      if (updateError) {
+        if (updateError) {
         console.error("Errore salvataggio URL PDF firmato:", updateError);
         alert("PDF caricato ma non salvato correttamente.");
         return;
