@@ -176,51 +176,51 @@ export default function PublicDocumentoPage() {
   }, [router.isReady, token]);
 
   useEffect(() => {
-    if (!router.isReady || !token) return;
-    if (typeof window === "undefined") return;
+//    if (!router.isReady || !token) return;
+//    if (typeof window === "undefined") return;
 
-    const hiddenPath = "/documento";
-    const currentUrl = window.location.href;
+//    const hiddenPath = "/documento";
+//    const currentUrl = window.location.href;
 
-    try {
-      window.history.replaceState({ privateDocPage: true }, "", hiddenPath);
-      window.history.pushState({ privateDocPage: true }, "", hiddenPath);
-    } catch (error) {
-      console.error("Errore replaceState pagina documento pubblico:", error);
-    }
+//    try {
+//      window.history.replaceState({ privateDocPage: true }, "", hiddenPath);
+ //     window.history.pushState({ privateDocPage: true }, "", hiddenPath);
+ //   } catch (error) {
+ //     console.error("Errore replaceState pagina documento pubblico:", error);
+ //   }
 
-    const blockBack = () => {
-      try {
-        window.history.pushState({ privateDocPage: true }, "", hiddenPath);
-      } catch (error) {
-        console.error("Errore blocco back pagina documento pubblico:", error);
-      }
-    };
+ //   const blockBack = () => {
+  //    try {
+    //    window.history.pushState({ privateDocPage: true }, "", hiddenPath);
+    //  } catch (error) {
+    //    console.error("Errore blocco back pagina documento pubblico:", error);
+   //   }
+  //  };
 
-    const blockContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
+ //   const blockContextMenu = (e: MouseEvent) => {
+//      e.preventDefault();
+//    };
 
-    const blockCopy = (e: ClipboardEvent) => {
-      e.preventDefault();
-    };
+//    const blockCopy = (e: ClipboardEvent) => {
+//      e.preventDefault();
+//    };
 
-    window.addEventListener("popstate", blockBack);
-    document.addEventListener("contextmenu", blockContextMenu);
-    document.addEventListener("copy", blockCopy);
+//    window.addEventListener("popstate", blockBack);
+//    document.addEventListener("contextmenu", blockContextMenu);
+//    document.addEventListener("copy", blockCopy);
 
-    return () => {
-      window.removeEventListener("popstate", blockBack);
-      document.removeEventListener("contextmenu", blockContextMenu);
-      document.removeEventListener("copy", blockCopy);
+//    return () => {
+//      window.removeEventListener("popstate", blockBack);
+//      document.removeEventListener("contextmenu", blockContextMenu);
+//      document.removeEventListener("copy", blockCopy);
 
-      try {
-        window.history.replaceState({ privateDocPage: true }, "", currentUrl);
-      } catch {
-        // nessuna azione
-      }
-    };
-  }, [router.isReady, token]);
+//      try {
+//        window.history.replaceState({ privateDocPage: true }, "", currentUrl);
+//      } catch {
+//        // nessuna azione
+//      }
+//    };
+ // }, [router.isReady, token]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
