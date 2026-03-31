@@ -175,6 +175,53 @@ export default function PublicDocumentoPage() {
     };
   }, [router.isReady, token]);
 
+  useEffect(() => {
+    if (!router.isReady || !token) return;
+    if (typeof window === "undefined") return;
+
+    const hiddenPath = "/documento";
+    const currentUrl = window.location.href;
+
+    try {
+      window.history.replaceState({ privateDocPage: true }, "", hiddenPath);
+      window.history.pushState({ privateDocPage: true }, "", hiddenPath);
+    } catch (error) {
+      console.error("Errore replaceState pagina documento pubblico:", error);
+    }
+
+    const blockBack = () => {
+      try {
+        window.history.pushState({ privateDocPage: true }, "", hiddenPath);
+      } catch (error) {
+        console.error("Errore blocco back pagina documento pubblico:", error);
+      }
+    };
+
+    const blockContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const blockCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener("popstate", blockBack);
+    document.addEventListener("contextmenu", blockContextMenu);
+    document.addEventListener("copy", blockCopy);
+
+    return () => {
+      window.removeEventListener("popstate", blockBack);
+      document.removeEventListener("contextmenu", blockContextMenu);
+      document.removeEventListener("copy", blockCopy);
+
+      try {
+        window.history.replaceState({ privateDocPage: true }, "", currentUrl);
+      } catch {
+        // nessuna azione
+      }
+    };
+  }, [router.isReady, token]);
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
@@ -210,12 +257,15 @@ export default function PublicDocumentoPage() {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setSelectedFile(null);
       e.target.value = "";
-      setErrMsg(`Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE_MB} MB.`);
+      setErrMsg(
+        `Il file supera la dimensione massima consentita di ${MAX_FILE_SIZE_MB} MB.`
+      );
       return;
     }
 
     setSelectedFile(file);
   }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -312,7 +362,9 @@ export default function PublicDocumentoPage() {
       setOkMsg("Documento aggiornato correttamente.");
     } catch (error: any) {
       console.error("Errore salvataggio documento pubblico:", error);
-      setErrMsg(error?.message || "Errore durante il salvataggio del documento.");
+      setErrMsg(
+        error?.message || "Errore durante il salvataggio del documento."
+      );
     } finally {
       setSaving(false);
     }
@@ -360,6 +412,7 @@ export default function PublicDocumentoPage() {
             <CardContent className="space-y-3 text-slate-700">
               <p>Il documento di riconoscimento è stato caricato correttamente.</p>
               <p>Il collegamento è stato chiuso e non è più riutilizzabile.</p>
+              <p>La pagina non è più navigabile.</p>
             </CardContent>
           </Card>
         </div>
@@ -416,9 +469,7 @@ export default function PublicDocumentoPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    CAP *
-                  </label>
+                  <label className="mb-1 block text-sm font-medium">CAP *</label>
                   <input
                     name="CAP"
                     value={form.CAP}
@@ -450,12 +501,12 @@ export default function PublicDocumentoPage() {
                     onChange={handleChange}
                     className="w-full rounded-md border px-3 py-2"
                   >
-                   <option value="">Seleziona...</option>
+                    <option value="">Seleziona...</option>
                     <option value="---">---</option>
-                      <option value="Carta di identità">Carta di identità</option>
-                        <option value="Passaporto">Passaporto</option>
-                      <option value="Patente">Patente</option>
-                    </select>
+                    <option value="Carta di identità">Carta di identità</option>
+                    <option value="Passaporto">Passaporto</option>
+                    <option value="Patente">Patente</option>
+                  </select>
                 </div>
 
                 <div>
@@ -493,14 +544,16 @@ export default function PublicDocumentoPage() {
                     onChange={handleFileChange}
                     className="w-full rounded-md border bg-white px-3 py-2"
                   />
-                 <p className="mt-1 text-xs text-slate-500">
-                  Formati ammessi: PDF, JPG, JPEG, PNG • Dimensione massima: {MAX_FILE_SIZE_MB} MB
-                      </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Formati ammessi: PDF, JPG, JPEG, PNG • Dimensione massima:{" "}
+                    {MAX_FILE_SIZE_MB} MB
+                  </p>
 
                   <p className="mt-1 text-xs text-amber-700">
-                  Il documento deve essere completo e perfettamente leggibile, senza tagli, sfocature, riflessi o parti coperte.
-                    </p>
-                  
+                    Il documento deve essere completo e perfettamente leggibile,
+                    senza tagli, sfocature, riflessi o parti coperte.
+                  </p>
+
                   {selectedFile && (
                     <p className="mt-1 text-sm text-slate-700">
                       File selezionato: <strong>{selectedFile.name}</strong>
