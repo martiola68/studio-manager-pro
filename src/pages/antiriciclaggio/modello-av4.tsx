@@ -1913,20 +1913,26 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
   )}
 
     {form.pdf_firmato_cliente && (
-    <div className="md:col-span-2">
-      <button
-        type="button"
-        onClick={handleApriPdfFirmato}
-        className="rounded bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"
-      >
-        Apri PDF firmato
-      </button>
-      <p className="mt-2 text-xs text-gray-500 break-all">
-        Percorso file: {form.pdf_firmato_cliente}
-      </p>
-    </div>
-  )}
+<div className="md:col-span-2">
+  <button
+    type="button"
+    onClick={handleApriPdfFirmato}
+    className="rounded bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"
+  >
+    Apri PDF firmato
+  </button>
 
+  {form.pdf_firmato_cliente ? (
+    <p className="mt-2 break-all text-xs text-gray-500">
+      Percorso file: {form.pdf_firmato_cliente}
+    </p>
+  ) : (
+    <p className="mt-2 text-xs text-gray-500">
+      Nessun PDF firmato presente.
+    </p>
+  )}
+</div>
+  
   <div className="md:col-span-2">
     <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
       Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
