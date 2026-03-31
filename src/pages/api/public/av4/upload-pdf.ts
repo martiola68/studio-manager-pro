@@ -120,13 +120,16 @@ export default async function handler(
 
     const publicUrl = publicUrlData?.publicUrl || "";
 
-    const { error: updateError } = await supabase
-      .from("tbAV4")
-      .update({
-        pdf_firmato_cliente: filePath,
-      })
-      .eq("id", av4.id)
-      .eq("public_token", token);
+   const { error: updateError } = await supabase
+  .from("tbAV4")
+  .update({
+    pdf_firmato_cliente: filePath,
+    public_submitted_at: new Date().toISOString(),
+    public_enabled: false,
+    compilato_da_cliente: true,
+  })
+  .eq("id", av4.id)
+  .eq("public_token", token);
 
     if (updateError) {
       return res.status(500).json({ ok: false, error: updateError.message });
