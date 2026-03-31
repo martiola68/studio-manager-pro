@@ -1769,75 +1769,149 @@ function isDuplicateTitolare(
               </CardHeader>
 
               <CardContent>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Luogo firma</label>
-                    <input
-                      name="luogo_firma"
-                      value={form.luogo_firma}
-                      onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
-                    />
-                  </div>
+               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <div>
+    <label className="mb-1 block text-sm font-medium">Luogo</label>
+    <input
+      name="luogo_firma"
+      value={form.luogo_firma}
+      onChange={handleChange}
+      className="w-full rounded-md border px-3 py-2"
+    />
+  </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Data firma</label>
-                    <input
-                      type="date"
-                      name="data_firma"
-                      value={form.data_firma}
-                      onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
-                    />
-                  </div>
+  <div>
+    <label className="mb-1 block text-sm font-medium">Data</label>
+    <input
+      type="date"
+      name="data_firma"
+      value={form.data_firma}
+      onChange={handleChange}
+      className="w-full rounded-md border px-3 py-2"
+    />
+  </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Luogo firma bis</label>
-                    <input
-                      name="luogo_firma_bis"
-                      value={form.luogo_firma_bis}
-                      onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
-                    />
-                  </div>
+  <div className="md:col-span-2 mt-2">
+    <div className="mx-auto max-w-md pt-8 text-center">
+      <div className="mx-auto mb-2 h-px w-full bg-black" />
+      <div className="text-sm italic">Firma Cliente o Esecutore</div>
+    </div>
+  </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Data firma bis</label>
-                    <input
-                      type="date"
-                      name="data_firma_bis"
-                      value={form.data_firma_bis}
-                      onChange={handleChange}
-                      className="w-full rounded-md border px-3 py-2"
-                    />
-                  </div>
+  <div className="md:col-span-2 mt-4 whitespace-pre-line text-xs leading-5 text-gray-700">
+    {`punito con la
+reclusione da sei mesi a tre anni e con la multa da 10.000 euro a 30.000 euro, salvo che il fatto costituisca più grave reato.
+(Nota 3)
+Per “persone politicamente esposte” (art.1, co. 2, lett. dd), d.lgs. 231/2007), si intendono: le persone fisiche che occupano o hanno
+cessato di occupare da meno di un anno importanti cariche pubbliche, nonché i loro familiari e coloro che con i predetti soggetti
+intrattengono notoriamente stretti legami, come di seguito elencate:
+1) sono persone fisiche che occupano o hanno occupato importanti cariche pubbliche coloro che ricoprono o hanno ricoperto la carica
+di:
+1.1 Presidente della Repubblica, Presidente del Consiglio, Ministro, Vice-Ministro e Sottosegretario, Presidente di Regione, assessore
+regionale, Sindaco di capoluogo di provincia o città metropolitana, Sindaco di comune con popolazione non inferiore a 15.000
+abitanti nonché cariche analoghe in Stati esteri;
+1.2 deputato, senatore, parlamentare europeo, consigliere regionale nonché cariche analoghe in Stati esteri;
+1.3 membro degli organi direttivi centrali di partiti politici;
+1.4 giudice della Corte Costituzionale, magistrato della Corte di Cassazione o della Corte dei conti, consigliere di Stato e altri
+componenti del Consiglio di Giustizia Amministrativa per la Regione siciliana nonché cariche analoghe in Stati esteri;
+1.5 membro degli organi direttivi delle banche centrali e delle autorità indipendenti;
+1.6 ambasciatore, incaricato d'affari ovvero cariche equivalenti in Stati esteri, ufficiale di grado apicale delle forze armate ovvero
+cariche analoghe in Stati esteri;
+1.7 componente degli organi di amministrazione, direzione o controllo delle imprese controllate, anche indirettamente, dallo Stato
+italiano o da uno Stato estero ovvero partecipate, in misura prevalente o totalitaria, dalle Regioni, da comuni capoluoghi di
+provincia e città metropolitane e da comuni con popolazione complessivamente non inferiore a 15.000 abitanti;
+1.8 direttore generale di ASL e di azienda ospedaliera, di azienda ospedaliera universitaria e degli altri enti del servizio sanitario
+nazionale.
+1.9 direttore, vicedirettore e membro dell'organo di gestione o soggetto svolgenti funzioni equivalenti in organizzazioni internazionali;
+2) sono familiari di persone politicamente esposte: i genitori, il coniuge o la persona legata in unione civile o convivenza di fatto o istituti
+assimilabili alla persona politicamente esposta, i figli e i loro coniugi nonché le persone legate ai figli in unione civile o convivenza di
+fatto o istituti assimilabili;
+3) sono soggetti con i quali le persone politicamente esposte intrattengono notoriamente stretti legami: 3.1 le persone fisiche che, ai
+sensi del presente decreto detengono, congiuntamente alla persona politicamente esposta, la titolarità effettiva di enti giuridici, trust e
+istituti giuridici affini ovvero che intrattengono con la persona politicamente esposta stretti rapporti d’affari; 3.2 le persone fisiche che
+detengono solo formalmente il controllo totalitario di un’entità notoriamente costituita, di fatto, nell'interesse e a beneficio di una persona
+politicamente esposta.
+(Nota 4) - Per “titolare effettivo” si intende la persona fisica o le persone fisiche, diverse dal cliente, nell'interesse della quale o delle
+quali, in ultima istanza, il rapporto continuativo è instaurato, la prestazione professionale è resa o l'operazione è eseguita (art. 1, co. 2,
+lett. pp), d.lgs. 231/2007).
+Si indicano di seguito i criteri individuati dalla norma, ai fini della individuazione del titolare effettivo:
+Art. 20 del d.lgs. 231/2007 (Criteri per la determinazione della titolarità effettiva di clienti diversi dalle persone fisiche).
+1. Il titolare effettivo di clienti diversi dalle persone fisiche coincide con la persona fisica o le persone fisiche cui, in ultima istanza, è
+attribuibile la proprietà diretta o indiretta dell'ente ovvero il relativo controllo.
+2. Nel caso in cui il cliente sia una società di capitali: a) costituisce indicazione di proprietà diretta la titolarità di una partecipazione
+superiore al 25 per cento del capitale del cliente, detenuta da una persona fisica; b) costituisce indicazione di proprietà indiretta la
+titolarità di una percentuale di partecipazioni superiore al 25 per cento del capitale del cliente, posseduto per il tramite di società
+controllate, società fiduciarie o per interposta persona.
+3. Nelle ipotesi in cui l’esame dell'assetto proprietario non consenta di individuare in maniera univoca la persona fisica o le persone
+fisiche cui è attribuibile la proprietà diretta o indiretta dell’ente, il titolare effettivo coincide con la persona fisica o le persone fisiche
+cui, in ultima istanza, è attribuibile il controllo del medesimo in forza: a) del controllo della maggioranza dei voti esercitabili in assemblea
+ordinaria; b) del controllo di voti sufficienti per esercitare un'influenza dominante in assemblea ordinaria; c) dell'esistenza di particolari
+vincoli contrattuali che consentano di esercitare un’influenza dominante.
+4. Nel caso in cui il cliente sia una persona giuridica privata, di cui al decreto del Presidente della Repubblica 10 febbraio 2000, n.
+361, sono cumulativamente individuati, come titolari effettivi: a) i fondatori, ove in vita; b) i beneficiari, quando individuati o facilmente
+individuabili; c) i titolari di funzioni di rappresentanza legale, direzione e amministrazione.
+5. Qualora l’applicazione dei criteri di cui ai precedenti commi non consenta di individuare univocamente uno o più titolari effettivi, il
+titolare effettivo coincide con la persona fisica o le persone fisiche titolari conformemente ai rispettivi assetti organizzativi o statutari,
+di poteri di rappresentanza legale, amministrazione o direzione della società o del cliente comunque diverso dalla persona fisica.
+6. I soggetti obbligati conservano traccia delle verifiche effettuate ai fini dell'individuazione del titolare effettivo nonché, con specifico
+riferimento al titolare effettivo individuato ai sensi del comma 5, delle ragioni che non hanno consentito di individuare il titolare effettivo
+ai sensi dei commi 1, 2, 3 e 4 del presente articolo.`}
+  </div>
 
-                 {av4Id && (
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-green-700">
-                        AV4 salvato. ID pratica: {av4Id}
-                      </p>
-                    </div>
-                  )}
+  <div>
+    <label className="mb-1 block text-sm font-medium">Luogo</label>
+    <input
+      name="luogo_firma_bis"
+      value={form.luogo_firma_bis}
+      onChange={handleChange}
+      className="w-full rounded-md border px-3 py-2"
+    />
+  </div>
 
-                     {publicUrl && (
-                        <div className="md:col-span-2">
-                          <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
-                        <input
-                    value={publicUrl}
-                        readOnly
-                      className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
-                                />
-                        </div>
-                      )}
+  <div>
+    <label className="mb-1 block text-sm font-medium">Data</label>
+    <input
+      type="date"
+      name="data_firma_bis"
+      value={form.data_firma_bis}
+      onChange={handleChange}
+      className="w-full rounded-md border px-3 py-2"
+    />
+  </div>
 
-                  <div className="md:col-span-2">
-                    <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                      Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
-                      <strong>stampare</strong> o <strong>chiudere</strong> il modello.
-                    </div>
-                  </div>
-                </div>
+  <div className="md:col-span-2 mt-2">
+    <div className="mx-auto max-w-md pt-8 text-center">
+      <div className="mx-auto mb-2 h-px w-full bg-black" />
+      <div className="text-sm italic">Firma Cliente o Esecutore</div>
+    </div>
+  </div>
+
+  {av4Id && (
+    <div className="md:col-span-2">
+      <p className="text-sm text-green-700">
+        AV4 salvato. ID pratica: {av4Id}
+      </p>
+    </div>
+  )}
+
+  {publicUrl && (
+    <div className="md:col-span-2">
+      <label className="mb-1 block text-sm font-medium">Link pubblico AV4</label>
+      <input
+        value={publicUrl}
+        readOnly
+        className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+      />
+    </div>
+  )}
+
+  <div className="md:col-span-2">
+    <div className="rounded-md border bg-slate-50 px-4 py-3 text-sm text-slate-700">
+      Usa i pulsanti in alto a destra per <strong>salvare</strong>,{" "}
+      <strong>stampare</strong> o <strong>chiudere</strong> il modello.
+    </div>
+  </div>
+</div>
               </CardContent>
             </Card>
           </div>
