@@ -723,6 +723,28 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
+  function handleApriPdfFirmato() {
+  if (!form.pdf_firmato_cliente) {
+    alert("PDF firmato non presente.");
+    return;
+  }
+
+  const supabase = getSupabaseClient() as any;
+
+  const { data } = supabase.storage
+    .from("documenti")
+    .getPublicUrl(form.pdf_firmato_cliente);
+
+  const url = data?.publicUrl || "";
+
+  if (!url) {
+    alert("Impossibile aprire il PDF firmato.");
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 async function handleInvioPubblico() {
   if (!av4Id) {
     alert("Salva prima l'AV4.");
@@ -1887,6 +1909,21 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
         readOnly
         className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
       />
+    </div>
+  )}
+
+    {form.pdf_firmato_cliente && (
+    <div className="md:col-span-2">
+      <button
+        type="button"
+        onClick={handleApriPdfFirmato}
+        className="rounded bg-emerald-600 px-4 py-2 text-white shadow hover:bg-emerald-700"
+      >
+        Apri PDF firmato
+      </button>
+      <p className="mt-2 text-xs text-gray-500 break-all">
+        Percorso file: {form.pdf_firmato_cliente}
+      </p>
     </div>
   )}
 
