@@ -1896,7 +1896,6 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
       <strong>stampare</strong> o <strong>chiudere</strong> il modello.
     </div>
   </div>
-</div>
               </CardContent>
             </Card>
           </div>
