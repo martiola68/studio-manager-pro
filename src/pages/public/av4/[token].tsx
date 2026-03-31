@@ -243,6 +243,17 @@ function mapDbRowToForm(row: any): FormState {
   };
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function PublicAV4Page() {
   const router = useRouter();
   const token = useMemo(
@@ -478,22 +489,50 @@ export default function PublicAV4Page() {
       return;
     }
 
-    const supabase = getSupabaseClient() as any;
-
     try {
       setUploadingPdf(true);
 
-      const filePath = `av4-firmati/${form.id}/${Date.now()}-${file.name}`;
+      const fileBase64 = await fileToBase64(file);
 
-      const { error: uploadError } = await supabase.storage
-        .from("documenti")
-        .upload(filePath, file, { upsert: true });
+      const res = await fetch("/api/public/av4/upload-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          av4_id: form.id,
+          fileName: file.name,
+          fileType: file.type,
+          fileBase64,
+        }),
+      });
 
-      if (uploadError) {
-        console.error("Errore upload PDF firmato:", uploadError);
-        alert("Errore durante il caricamento del PDF firmato.");
-        return;
+      const responseData = await res.json();
+
+      if (!res.ok || !responseData?.ok) {
+        throw new Error(
+          responseData?.error || "Errore durante il caricamento del PDF firmato."
+        );
       }
+
+      const publicUrl = String(responseData?.publicUrl || "");
+
+      setSignedPdfUrl(publicUrl);
+      setForm((prev) => ({
+        ...prev,
+        pdf_firmato_cliente: publicUrl,
+      }));
+
+      alert("PDF firmato caricato correttamente.");
+    } catch (error: any) {
+      console.error("Errore upload PDF firmato:", error);
+      alert(error?.message || "Errore durante il caricamento del PDF firmato.");
+    } finally {
+      setUploadingPdf(false);
+      e.target.value = "";
+    }
+  }
 
       const { data } = supabase.storage.from("documenti").getPublicUrl(filePath);
       const publicUrl = data?.publicUrl || "";
