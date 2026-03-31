@@ -519,13 +519,17 @@ async function handleUploadSignedPdf(
 
     const responseData = await res.json();
 
+    console.log("RESPONSE API:", responseData);
+
     if (!res.ok || !responseData?.ok) {
       throw new Error(
         responseData?.error || "Errore durante il caricamento del PDF firmato."
       );
     }
-      const savedPath = String(responseData?.path || "").trim();
+      const savedPath = String(responseData?.path || "").trim(); 
       const publicUrl = String(responseData?.publicUrl || "").trim();
+
+     console.log("PATH SALVATO:", savedPath);
 
       setSignedPdfUrl(publicUrl);
       setForm((prev) => ({
