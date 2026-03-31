@@ -245,18 +245,20 @@ function mapDbRowToForm(row: any): FormState {
 
 export default function PublicAV4Page() {
   const router = useRouter();
-  const token = useMemo(
-    () => (typeof router.query.token === "string" ? router.query.token : ""),
-    [router.query.token]
-  );
+
+  const token = useMemo(() => {
+    return typeof router.query.token === "string" ? router.query.token : "";
+  }, [router.query.token]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+
   const [notFound, setNotFound] = useState(false);
   const [disabledLink, setDisabledLink] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
-  const [av4Id, setAv4Id] = useState<string | null>(null);
+
+  const [av4Id, setAv4Id] = useState<string>("");
   const [signedPdfUrl, setSignedPdfUrl] = useState("");
   const [form, setForm] = useState<FormState>(emptyForm);
 
@@ -285,18 +287,20 @@ export default function PublicAV4Page() {
           return;
         }
 
-        if (!data.public_enabled && !data.compilato_da_cliente) {
-          setDisabledLink(true);
-          return;
-        }
-
         const mapped = mapDbRowToForm(data);
         setForm(mapped);
         setAv4Id(mapped.id);
         setSignedPdfUrl(mapped.pdf_firmato_cliente || "");
 
-        if (mapped.compilato_da_cliente) {
+        if (mapped.compilato_da_cliente || mapped.public_submitted_at) {
           setAlreadySubmitted(true);
+          setDisabledLink(true);
+          return;
+        }
+
+        if (!mapped.public_enabled) {
+          setDisabledLink(true);
+          return;
         }
 
         if (!mapped.public_opened_at && mapped.id) {
@@ -333,6 +337,7 @@ export default function PublicAV4Page() {
       if (type === "checkbox" && name === "domanda1" && checked) {
         next.domanda2 = false;
       }
+
       if (type === "checkbox" && name === "domanda2" && checked) {
         next.domanda1 = false;
       }
@@ -471,33 +476,34 @@ export default function PublicAV4Page() {
     e: React.ChangeEvent<HTMLInputElement>
   ) {
     const file = e.target.files?.[0];
-    if (!file || !form.id) return;
+    if (!file || !form.id || alreadySubmitted) return;
 
-   const isPdf =
-  file.type === "application/pdf" ||
-  file.name.toLowerCase().endsWith(".pdf");
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
 
-if (!isPdf) {
-  alert("Seleziona un file PDF.");
-  return;
-}
+    if (!isPdf) {
+      alert("Seleziona un file PDF.");
+      return;
+    }
 
     const supabase = getSupabaseClient() as any;
 
     try {
       setUploadingPdf(true);
 
-      const filePath = `av4-firmati/${form.id}/${Date.now()}-${file.name}`;
+      const safeName = file.name.replace(/\s+/g, "_");
+      const filePath = `av4-firmati/${form.id}/${Date.now()}-${safeName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("documenti")
         .upload(filePath, file, { upsert: true });
 
-     if (uploadError) {
-  console.error("Errore upload PDF firmato:", uploadError);
-  alert(uploadError.message || "Errore durante il caricamento del PDF firmato.");
-  return;
-}
+      if (uploadError) {
+        console.error("Errore upload PDF firmato:", uploadError);
+        alert(uploadError.message || "Errore durante il caricamento del PDF firmato.");
+        return;
+      }
 
       const { data } = supabase.storage.from("documenti").getPublicUrl(filePath);
       const publicUrl = data?.publicUrl || "";
@@ -510,11 +516,11 @@ if (!isPdf) {
         .eq("id", form.id)
         .eq("public_token", token);
 
-     if (updateError) {
-  console.error("Errore salvataggio URL PDF firmato:", updateError);
-  alert(updateError.message || "PDF caricato ma non salvato correttamente.");
-  return;
-}
+      if (updateError) {
+        console.error("Errore salvataggio URL PDF firmato:", updateError);
+        alert(updateError.message || "PDF caricato ma non salvato correttamente.");
+        return;
+      }
 
       setSignedPdfUrl(publicUrl);
       setForm((prev) => ({
@@ -523,10 +529,10 @@ if (!isPdf) {
       }));
 
       alert("PDF firmato caricato correttamente.");
-   } catch (error: any) {
-  console.error("Errore upload PDF firmato:", error);
-  alert(error?.message || "Errore durante il caricamento del PDF firmato.");
-} finally {
+    } catch (error: any) {
+      console.error("Errore upload PDF firmato:", error);
+      alert(error?.message || "Errore durante il caricamento del PDF firmato.");
+    } finally {
       setUploadingPdf(false);
       e.target.value = "";
     }
@@ -556,12 +562,13 @@ if (!isPdf) {
       const titolari = data || [];
 
       if (!titolari.length) {
-        throw new Error(`Inserire e salvare almeno un titolare effettivo per la sezione ${sezione}.`);
+        throw new Error(
+          `Inserire e salvare almeno un titolare effettivo per la sezione ${sezione}.`
+        );
       }
 
       for (let i = 0; i < titolari.length; i++) {
         const titolare = titolari[i];
-
         if (!titolare?.codice_fiscale || !String(titolare.codice_fiscale).trim()) {
           throw new Error(
             `Codice fiscale obbligatorio per il titolare effettivo #${i + 1} della sezione ${sezione}.`
@@ -574,6 +581,11 @@ if (!isPdf) {
   async function handleSubmit() {
     if (!form.id) {
       alert("AV4 non trovato.");
+      return;
+    }
+
+    if (alreadySubmitted) {
+      alert("Questo AV4 risulta già completato.");
       return;
     }
 
@@ -644,12 +656,13 @@ if (!isPdf) {
 
       if (error) {
         console.error("Errore salvataggio pubblico AV4:", error);
-        alert("Errore durante il salvataggio.");
+        alert(error.message || "Errore durante il salvataggio.");
         return;
       }
 
       setAlreadySubmitted(true);
       setDisabledLink(true);
+
       alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
     } catch (err: any) {
       console.error("Errore imprevisto salvataggio pubblico:", err);
@@ -676,7 +689,7 @@ if (!isPdf) {
   if (notFound) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle>Link non valido</CardTitle>
@@ -690,10 +703,28 @@ if (!isPdf) {
     );
   }
 
-  if (disabledLink && !alreadySubmitted) {
+  if (alreadySubmitted) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-3xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compilazione completata</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-slate-700">
+              <p>Questo AV4 è già stato completato.</p>
+              <p>Il collegamento è stato chiuso e non è più riutilizzabile.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (disabledLink) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle>Link disattivato</CardTitle>
@@ -710,8 +741,8 @@ if (!isPdf) {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto max-w-5xl">
-        <Card>
-          <CardHeader>
+        <Card className="shadow-sm print:shadow-none">
+          <CardHeader className="no-print">
             <CardTitle>Modello AV4 pubblico</CardTitle>
             <p className="text-sm text-slate-600">
               Dichiarazione del cliente compilabile tramite collegamento riservato.
@@ -719,12 +750,6 @@ if (!isPdf) {
           </CardHeader>
 
           <CardContent>
-            {alreadySubmitted && (
-              <div className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                Questo AV4 risulta già completato. Il link non è più riutilizzabile.
-              </div>
-            )}
-
             <div id="print-area" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -741,102 +766,100 @@ if (!isPdf) {
                     civile, amministrativa e penale per dichiarazioni non veritiere.
                   </p>
 
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Cognome e nome</label>
-                        <input
-                          name="dichiarante_nome_cognome"
-                          value={form.dichiarante_nome_cognome}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Cognome e nome</label>
+                      <input
+                        name="dichiarante_nome_cognome"
+                        value={form.dichiarante_nome_cognome}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
-                        <input
-                          name="dichiarante_codice_fiscale"
-                          value={form.dichiarante_codice_fiscale}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
+                      <input
+                        name="dichiarante_codice_fiscale"
+                        value={form.dichiarante_codice_fiscale}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Luogo di nascita</label>
-                        <input
-                          name="dichiarante_luogo_nascita"
-                          value={form.dichiarante_luogo_nascita}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Luogo di nascita</label>
+                      <input
+                        name="dichiarante_luogo_nascita"
+                        value={form.dichiarante_luogo_nascita}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Data di nascita</label>
-                        <input
-                          type="date"
-                          name="dichiarante_data_nascita"
-                          value={form.dichiarante_data_nascita}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Data di nascita</label>
+                      <input
+                        type="date"
+                        name="dichiarante_data_nascita"
+                        value={form.dichiarante_data_nascita}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Indirizzo residenza</label>
-                        <input
-                          name="dichiarante_indirizzo_residenza"
-                          value={form.dichiarante_indirizzo_residenza}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Indirizzo residenza</label>
+                      <input
+                        name="dichiarante_indirizzo_residenza"
+                        value={form.dichiarante_indirizzo_residenza}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Città residenza</label>
-                        <input
-                          name="dichiarante_citta_residenza"
-                          value={form.dichiarante_citta_residenza}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Città residenza</label>
+                      <input
+                        name="dichiarante_citta_residenza"
+                        value={form.dichiarante_citta_residenza}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">CAP residenza</label>
-                        <input
-                          name="dichiarante_cap_residenza"
-                          value={form.dichiarante_cap_residenza}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">CAP residenza</label>
+                      <input
+                        name="dichiarante_cap_residenza"
+                        value={form.dichiarante_cap_residenza}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
+                    </div>
 
-                      <div>
-                        <label className="mb-1 block text-sm font-medium">Nazionalità</label>
-                        <input
-                          name="dichiarante_nazionalita"
-                          value={form.dichiarante_nazionalita}
-                          onChange={handleChange}
-                          className="w-full rounded-md border bg-gray-50 px-3 py-2"
-                          readOnly
-                        />
-                      </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Nazionalità</label>
+                      <input
+                        name="dichiarante_nazionalita"
+                        value={form.dichiarante_nazionalita}
+                        onChange={handleChange}
+                        className="w-full rounded-md border bg-gray-50 px-3 py-2"
+                        readOnly
+                      />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="mt-6">
+              <Card>
                 <CardHeader>
                   <CardTitle>Dichiarazioni del cliente</CardTitle>
                 </CardHeader>
@@ -850,7 +873,6 @@ if (!isPdf) {
                           name="domanda1"
                           checked={form.domanda1}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         Dati di nascita e residenza come da documento di identificazione allegato
                       </label>
@@ -863,7 +885,6 @@ if (!isPdf) {
                           name="domanda2"
                           checked={form.domanda2}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         Domicilio diverso rispetto al documento di identificazione allegato
                       </label>
@@ -871,8 +892,8 @@ if (!isPdf) {
 
                     <div>
                       <label className="mb-1 block text-sm font-medium">
-                        Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007, lo scopo e la natura
-                        della prestazione professionale richiesta sono
+                        Che, ai sensi dell’art.18, comma 1, lettera c), D.Lgs. 231/2007,
+                        lo scopo e la natura della prestazione professionale richiesta sono
                       </label>
                       <textarea
                         name="natura_prestazione"
@@ -880,7 +901,6 @@ if (!isPdf) {
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
                         rows={4}
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
@@ -893,7 +913,6 @@ if (!isPdf) {
                           name="domanda3"
                           checked={form.domanda3}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di non costituire persona politicamente esposta (estera o nazionale), ai sensi
                         dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007 oppure
@@ -907,7 +926,6 @@ if (!isPdf) {
                           name="domanda4"
                           checked={form.domanda4}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di non rivestire lo status di PPE da più di un anno
                       </label>
@@ -920,7 +938,6 @@ if (!isPdf) {
                           name="domanda5"
                           checked={form.domanda5}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di costituire persona politicamente esposta estera o nazionale, ai sensi
                         dell’art. 1, comma 2, lettera dd), del D.Lgs. 231/2007
@@ -938,7 +955,6 @@ if (!isPdf) {
                           onChange={handleChange}
                           className="w-full rounded-md border px-3 py-2"
                           rows={3}
-                          disabled={alreadySubmitted}
                         />
                       </div>
                     )}
@@ -959,7 +975,6 @@ if (!isPdf) {
                           name="domanda6"
                           checked={form.domanda6}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di agire in proprio e, quindi, l’inesistenza di un diverso titolare effettivo così
                         come previsto e definito dal D.Lgs. 231/2007
@@ -973,7 +988,6 @@ if (!isPdf) {
                           name="domanda7"
                           checked={form.domanda7}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di agire per conto dei seguenti titolari effettivi
                       </label>
@@ -983,9 +997,10 @@ if (!isPdf) {
                       <div className="rounded-lg border p-4">
                         <TitolariEffettiviForm
                           sezione="domanda7"
-                          av4_id={av4Id || ""}
+                          av4_id={av4Id}
                           studio_id={form.studio_id}
                           cliente_id={form.cliente_id}
+                          isPublic
                         />
                       </div>
                     )}
@@ -997,7 +1012,6 @@ if (!isPdf) {
                           name="domanda8"
                           checked={form.domanda8}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         di agire per conto della società/ente
                       </label>
@@ -1013,7 +1027,6 @@ if (!isPdf) {
                               value={form.nome_soc}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1023,7 +1036,6 @@ if (!isPdf) {
                               value={form.sede_legale}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1033,7 +1045,6 @@ if (!isPdf) {
                               value={form.indirizzo_sede}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1043,7 +1054,6 @@ if (!isPdf) {
                               value={form.reg_imprese}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1053,7 +1063,6 @@ if (!isPdf) {
                               value={form.num_reg_imprese}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1063,7 +1072,6 @@ if (!isPdf) {
                               value={form.cod_fiscale_soc}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                         </div>
@@ -1075,9 +1083,10 @@ if (!isPdf) {
                         <div className="rounded-lg border p-4">
                           <TitolariEffettiviForm
                             sezione="domanda8"
-                            av4_id={av4Id || ""}
+                            av4_id={av4Id}
                             studio_id={form.studio_id}
                             cliente_id={form.cliente_id}
+                            isPublic
                           />
                         </div>
                       </div>
@@ -1090,7 +1099,6 @@ if (!isPdf) {
                           name="domanda9"
                           checked={form.domanda9}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         (caso residuale, in assenza di controllo o partecipazioni rilevanti) di agire per conto della società/ente
                       </label>
@@ -1106,7 +1114,6 @@ if (!isPdf) {
                               value={form.nome_soc_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1116,7 +1123,6 @@ if (!isPdf) {
                               value={form.sede_legale_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1126,7 +1132,6 @@ if (!isPdf) {
                               value={form.indirizzo_sede_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1136,7 +1141,6 @@ if (!isPdf) {
                               value={form.reg_imprese_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1146,7 +1150,6 @@ if (!isPdf) {
                               value={form.num_reg_imprese_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div>
@@ -1156,7 +1159,6 @@ if (!isPdf) {
                               value={form.cod_fiscale_soc_bis}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                           <div className="md:col-span-2">
@@ -1168,7 +1170,6 @@ if (!isPdf) {
                               value={form.nome_soc_ter}
                               onChange={handleChange}
                               className="w-full rounded-md border px-3 py-2"
-                              disabled={alreadySubmitted}
                             />
                           </div>
                         </div>
@@ -1180,9 +1181,10 @@ if (!isPdf) {
                         <div className="rounded-lg border p-4">
                           <TitolariEffettiviForm
                             sezione="domanda9"
-                            av4_id={av4Id || ""}
+                            av4_id={av4Id}
                             studio_id={form.studio_id}
                             cliente_id={form.cliente_id}
+                            isPublic
                           />
                         </div>
                       </div>
@@ -1197,7 +1199,6 @@ if (!isPdf) {
                           name="domanda10"
                           checked={form.domanda10}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         che il/i titolare/i effettivo/i non costituisce/costituiscono persona/e politicamente esposta/e
                       </label>
@@ -1210,7 +1211,6 @@ if (!isPdf) {
                           name="domanda11"
                           checked={form.domanda11}
                           onChange={handleChange}
-                          disabled={alreadySubmitted}
                         />
                         che il/i titolari effettivi costituisce/costituiscono persona/e politicamente esposte estere o nazionali
                       </label>
@@ -1218,14 +1218,15 @@ if (!isPdf) {
 
                     {form.domanda11 && (
                       <div>
-                        <label className="mb-1 block text-sm font-medium">Specifica PPE titolari effettivi</label>
+                        <label className="mb-1 block text-sm font-medium">
+                          Specifica PPE titolari effettivi
+                        </label>
                         <textarea
                           name="specifica12"
                           value={form.specifica12}
                           onChange={handleChange}
                           className="w-full rounded-md border px-3 py-2"
                           rows={3}
-                          disabled={alreadySubmitted}
                         />
                       </div>
                     )}
@@ -1240,7 +1241,6 @@ if (!isPdf) {
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
                         rows={3}
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
@@ -1254,7 +1254,6 @@ if (!isPdf) {
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
                         rows={3}
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
@@ -1268,7 +1267,6 @@ if (!isPdf) {
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
                         rows={3}
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
@@ -1287,74 +1285,73 @@ if (!isPdf) {
                         value={form.specifica10d}
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Esercitata / svolta dal</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        Esercitata / svolta dal
+                      </label>
                       <input
                         name="specifica10e"
                         value={form.specifica10e}
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
-                        disabled={alreadySubmitted}
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Nell’ambito territoriale</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        Nell’ambito territoriale
+                      </label>
                       <input
                         name="specifica10f"
                         value={form.specifica10f}
                         onChange={handleChange}
                         className="w-full rounded-md border px-3 py-2"
-                        disabled={alreadySubmitted}
                       />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="mt-6">
+              <Card>
                 <CardHeader>
                   <CardTitle>Firma</CardTitle>
                 </CardHeader>
 
                 <CardContent>
-                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-  <div>
-    <label className="mb-1 block text-sm font-medium">Luogo</label>
-    <input
-      name="luogo_firma"
-      value={form.luogo_firma}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-      disabled={alreadySubmitted}
-    />
-  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Luogo</label>
+                      <input
+                        name="luogo_firma"
+                        value={form.luogo_firma}
+                        onChange={handleChange}
+                        className="w-full rounded-md border px-3 py-2"
+                      />
+                    </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Data</label>
-    <input
-      type="date"
-      name="data_firma"
-      value={form.data_firma}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-      disabled={alreadySubmitted}
-    />
-  </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Data</label>
+                      <input
+                        type="date"
+                        name="data_firma"
+                        value={form.data_firma}
+                        onChange={handleChange}
+                        className="w-full rounded-md border px-3 py-2"
+                      />
+                    </div>
 
-  <div className="md:col-span-2 mt-2">
-    <div className="mx-auto max-w-md pt-8 text-center">
-      <div className="mx-auto mb-2 h-px w-full bg-black" />
-      <div className="text-sm italic">Firma Cliente o Esecutore</div>
-    </div>
-  </div>
+                    <div className="md:col-span-2 mt-2">
+                      <div className="mx-auto max-w-md pt-8 text-center">
+                        <div className="mx-auto mb-2 h-px w-full border-t border-dashed border-black" />
+                        <div className="text-sm italic">Firma Cliente o Esecutore</div>
+                      </div>
+                    </div>
 
-  <div className="md:col-span-2 whitespace-pre-line text-xs leading-5 text-gray-700">
-    {`Allegato alla Dichiarazione del Cliente
+                    <div className="md:col-span-2 whitespace-pre-line text-xs leading-5 text-gray-700">
+{`Allegato alla Dichiarazione del Cliente
 
 (Nota 1)
 Per “riciclaggio” (art. 2, co. 4 e 5, d.lgs. 231/2007) si intende:
@@ -1386,92 +1383,90 @@ Per “persone politicamente esposte” (art.1, co. 2, lett. dd), d.lgs. 231/200
 2) sono familiari di persone politicamente esposte: i genitori, il coniuge o la persona legata in unione civile o convivenza di fatto o istituti assimilabili alla persona politicamente esposta, i figli e i loro coniugi nonché le persone legate ai figli in unione civile o convivenza di fatto o istituti assimilabili; 
 3) sono soggetti con i quali le persone politicamente esposte intrattengono notoriamente stretti legami: 3.1 le persone fisiche che, ai sensi del presente decreto detengono, congiuntamente alla persona politicamente esposta, la titolarità effettiva di enti giuridici, trust e istituti giuridici affini ovvero che intrattengono con la persona politicamente esposta stretti rapporti d’affari; 3.2 le persone fisiche che detengono solo formalmente il controllo totalitario di un’entità notoriamente costituita, di fatto, nell'interesse e a beneficio di una persona politicamente esposta.
 
-(Nota 4) - Per “titolare effettivo” si intende la persona fisica o le persone fisiche, diverse dal cliente, nell'interesse della quale o delle quali, in ultima istanza, il rapporto continuativo è instaurato, la prestazione professionale è resa o l'operazione è eseguita (art. 1, co. 2, lett. pp), d.lgs. 231/2007).
+(Nota 4)
+Per “titolare effettivo” si intende la persona fisica o le persone fisiche, diverse dal cliente, nell'interesse della quale o delle quali, in ultima istanza, il rapporto continuativo è instaurato, la prestazione professionale è resa o l'operazione è eseguita (art. 1, co. 2, lett. pp), d.lgs. 231/2007).
 Si indicano di seguito i criteri individuati dalla norma, ai fini della individuazione del titolare effettivo:
 
-Art. 20 del d.lgs.  231/2007 (Criteri per la determinazione della titolarità effettiva di clienti diversi dalle persone fisiche). 
+Art. 20 del d.lgs. 231/2007 (Criteri per la determinazione della titolarità effettiva di clienti diversi dalle persone fisiche).
 1. Il titolare effettivo di clienti diversi dalle persone fisiche coincide con la persona fisica o le persone fisiche cui, in ultima istanza, è attribuibile la proprietà diretta o indiretta dell'ente ovvero il relativo controllo.
 2. Nel caso in cui il cliente sia una società di capitali: a) costituisce indicazione di proprietà diretta la titolarità di una partecipazione superiore al 25 per cento del capitale del cliente, detenuta da una persona fisica; b) costituisce indicazione di proprietà indiretta la titolarità di una percentuale di partecipazioni superiore al 25 per cento del capitale del cliente, posseduto per il tramite di società controllate, società fiduciarie o per interposta persona.
 3. Nelle ipotesi in cui l’esame dell'assetto proprietario non consenta di individuare in maniera univoca la persona fisica o le persone fisiche cui è attribuibile la proprietà diretta o indiretta dell’ente, il titolare effettivo coincide con la persona fisica o le persone fisiche cui, in ultima istanza, è attribuibile il controllo del medesimo in forza: a) del controllo della maggioranza dei voti esercitabili in assemblea ordinaria; b) del controllo di voti sufficienti per esercitare un'influenza dominante in assemblea ordinaria; c) dell'esistenza di particolari vincoli contrattuali che consentano di esercitare un’influenza dominante.
 4. Nel caso in cui il cliente sia una persona giuridica privata, di cui al decreto del Presidente della Repubblica 10 febbraio 2000, n. 361, sono cumulativamente individuati, come titolari effettivi: a) i fondatori, ove in vita; b) i beneficiari, quando individuati o facilmente individuabili; c) i titolari di funzioni di rappresentanza legale, direzione e amministrazione.
 5. Qualora l’applicazione dei criteri di cui ai precedenti commi non consenta di individuare univocamente uno o più titolari effettivi, il titolare effettivo coincide con la persona fisica o le persone fisiche titolari conformemente ai rispettivi assetti organizzativi o statutari, di poteri di rappresentanza legale, amministrazione o direzione della società o del cliente comunque diverso dalla persona fisica.
 6. I soggetti obbligati conservano traccia delle verifiche effettuate ai fini dell'individuazione del titolare effettivo nonché, con specifico riferimento al titolare effettivo individuato ai sensi del comma 5, delle ragioni che non hanno consentito di individuare il titolare effettivo ai sensi dei commi 1, 2, 3 e 4 del presente articolo.`}
-  </div>
+                    </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Luogo</label>
-    <input
-      name="luogo_firma_bis"
-      value={form.luogo_firma_bis}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-      disabled={alreadySubmitted}
-    />
-  </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Luogo</label>
+                      <input
+                        name="luogo_firma_bis"
+                        value={form.luogo_firma_bis}
+                        onChange={handleChange}
+                        className="w-full rounded-md border px-3 py-2"
+                      />
+                    </div>
 
-  <div>
-    <label className="mb-1 block text-sm font-medium">Data</label>
-    <input
-      type="date"
-      name="data_firma_bis"
-      value={form.data_firma_bis}
-      onChange={handleChange}
-      className="w-full rounded-md border px-3 py-2"
-      disabled={alreadySubmitted}
-    />
-  </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Data</label>
+                      <input
+                        type="date"
+                        name="data_firma_bis"
+                        value={form.data_firma_bis}
+                        onChange={handleChange}
+                        className="w-full rounded-md border px-3 py-2"
+                      />
+                    </div>
 
-  <div className="md:col-span-2 mt-2">
-    <div className="mx-auto max-w-md pt-8 text-center">
-      <div className="mx-auto mb-2 h-px w-full bg-black" />
-      <div className="text-sm italic">Firma Cliente o Esecutore</div>
-    </div>
-  </div>
+                    <div className="md:col-span-2 mt-2">
+                      <div className="mx-auto max-w-md pt-8 text-center">
+                        <div className="mx-auto mb-2 h-px w-full border-t border-dashed border-black" />
+                        <div className="text-sm italic">Firma Cliente o Esecutore</div>
+                      </div>
+                    </div>
 
-  <div className="md:col-span-2 space-y-2">
-    <input
-      type="file"
-      accept="application/pdf"
-      onChange={handleUploadSignedPdf}
-      disabled={alreadySubmitted}
-      className="block w-full rounded-md border px-3 py-2"
-    />
+                    <div className="md:col-span-2 space-y-2 no-print">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handleUploadSignedPdf}
+                        className="block w-full rounded-md border px-3 py-2"
+                      />
 
-    {uploadingPdf && (
-      <p className="text-sm text-slate-600">Caricamento PDF firmato...</p>
-    )}
+                      {uploadingPdf && (
+                        <p className="text-sm text-slate-600">Caricamento PDF firmato...</p>
+                      )}
 
-    {signedPdfUrl && (
-      <a
-        href={signedPdfUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-sm text-sky-700 underline"
-      >
-        Apri PDF firmato caricato
-      </a>
-    )}
-  </div>
+                      {signedPdfUrl && (
+                        <a
+                          href={signedPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-sky-700 underline"
+                        >
+                          Apri PDF firmato caricato
+                        </a>
+                      )}
+                    </div>
 
-  <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">
-    <button
-      type="button"
-      onClick={handlePrintPdf}
-      className="rounded-md border border-slate-300 bg-white px-5 py-3 text-slate-700 shadow hover:bg-slate-50"
-    >
-      Stampa / Salva PDF
-    </button>
+                    <div className="md:col-span-2 flex flex-wrap gap-3 pt-2 no-print">
+                      <button
+                        type="button"
+                        onClick={handlePrintPdf}
+                        className="rounded-md border border-slate-300 bg-white px-5 py-3 text-slate-700 shadow hover:bg-slate-50"
+                      >
+                        Stampa / Salva PDF
+                      </button>
 
-    <button
-      type="button"
-      onClick={handleSubmit}
-      disabled={saving || alreadySubmitted}
-      className="rounded-md bg-sky-600 px-5 py-3 text-white shadow hover:bg-sky-700 disabled:opacity-50"
-    >
-      {saving ? "Salvataggio..." : "Salva e chiudi"}
-    </button>
-  </div>
-</div>
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="rounded-md bg-sky-600 px-5 py-3 text-white shadow hover:bg-sky-700 disabled:opacity-50"
+                      >
+                        {saving ? "Salvataggio..." : "Salva e chiudi"}
+                      </button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1480,13 +1475,37 @@ Art. 20 del d.lgs.  231/2007 (Criteri per la determinazione della titolarità ef
       </div>
 
       <style jsx global>{`
+        @page {
+          size: A4;
+          margin: 14mm;
+        }
+
         @media print {
+          html,
           body {
-            background: white !important;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
 
-          button,
-          input[type="file"] {
+          body * {
+            visibility: hidden !important;
+          }
+
+          #print-area,
+          #print-area * {
+            visibility: visible !important;
+          }
+
+          #print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+
+          .no-print,
+          .no-print * {
             display: none !important;
           }
 
@@ -1497,7 +1516,7 @@ Art. 20 del d.lgs.  231/2007 (Criteri per la determinazione della titolarità ef
 
           .bg-slate-50,
           .bg-white {
-            background: white !important;
+            background: #fff !important;
           }
 
           .border {
