@@ -630,6 +630,7 @@ export default function PublicAV4Page() {
         compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),
         public_enabled: false,
+        public_token: null,
       };
 
       const { error } = await supabase
@@ -644,9 +645,9 @@ export default function PublicAV4Page() {
         return;
       }
 
-      setAlreadySubmitted(true);
-      setDisabledLink(true);
       alert("AV4 completato correttamente. Il link non è più riutilizzabile.");
+      setNotFound(true);
+      return;
     } catch (err: any) {
       console.error("Errore imprevisto salvataggio pubblico:", err);
       alert(err?.message || "Errore durante il salvataggio.");
