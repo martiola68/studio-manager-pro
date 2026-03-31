@@ -129,27 +129,25 @@ export default async function handler(
 
     const publicUrl = publicUrlData?.publicUrl || "";
 
-   const { error: updateError } = await supabase
+ const { error: updateError } = await supabase
   .from("tbAV4")
   .update({
     pdf_firmato_cliente: filePath,
-    public_submitted_at: new Date().toISOString(),
-    public_enabled: false,
-    compilato_da_cliente: true,
   })
-  .eq("id", av4.id)
-  .eq("public_token", token);
+  .eq("id", av4.id);
 
-    if (updateError) {
-      return res.status(500).json({ ok: false, error: updateError.message });
-    }
+if (updateError) {
+  return res.status(500).json({ ok: false, error: updateError.message });
+}
 
-    return res.status(200).json({
-      ok: true,
-      path: filePath,
-      publicUrl,
-      message: "PDF firmato caricato correttamente",
-    });
+return res.status(200).json({
+  ok: true,
+  path: filePath,
+  publicUrl,
+  submittedAt: new Date().toISOString(),
+  message: "PDF firmato caricato correttamente",
+});
+    
   } catch (error: any) {
     console.error("API public AV4 upload PDF error:", error);
     return res.status(500).json({
