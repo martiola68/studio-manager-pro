@@ -71,12 +71,21 @@ export default async function handler(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    console.log("UPLOAD API BODY:", {
+  token,
+  av4_id,
+  fileName,
+  fileType,
+});
+
     const { data: av4, error: av4Error } = await supabase
       .from("tbAV4")
       .select("id, public_token, public_enabled, pdf_firmato_cliente")
       .eq("id", av4_id)
-      .eq("public_token", token)
+     // .eq("public_token", token)
       .maybeSingle();
+
+    console.log("UPLOAD API AV4 RESULT:", av4, av4Error);
 
     if (av4Error) {
       return res.status(500).json({ ok: false, error: av4Error.message });
