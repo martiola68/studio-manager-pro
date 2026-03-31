@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type PublicDocumentoFormState = {
   id: string;
@@ -175,53 +174,6 @@ export default function PublicDocumentoPage() {
     };
   }, [router.isReady, token]);
 
-//  useEffect(() => {
-//    if (!router.isReady || !token) return;
-//    if (typeof window === "undefined") return;
-
-//    const hiddenPath = "/documento";
-//    const currentUrl = window.location.href;
-
-//    try {
-//      window.history.replaceState({ privateDocPage: true }, "", hiddenPath);
- //     window.history.pushState({ privateDocPage: true }, "", hiddenPath);
- //   } catch (error) {
- //     console.error("Errore replaceState pagina documento pubblico:", error);
- //   }
-
- //   const blockBack = () => {
-  //    try {
-    //    window.history.pushState({ privateDocPage: true }, "", hiddenPath);
-    //  } catch (error) {
-    //    console.error("Errore blocco back pagina documento pubblico:", error);
-   //   }
-  //  };
-
- //   const blockContextMenu = (e: MouseEvent) => {
-//      e.preventDefault();
-//    };
-
-//    const blockCopy = (e: ClipboardEvent) => {
-//      e.preventDefault();
-//    };
-
-//    window.addEventListener("popstate", blockBack);
-//    document.addEventListener("contextmenu", blockContextMenu);
-//    document.addEventListener("copy", blockCopy);
-
-//    return () => {
-//      window.removeEventListener("popstate", blockBack);
-//      document.removeEventListener("contextmenu", blockContextMenu);
-//      document.removeEventListener("copy", blockCopy);
-
-//      try {
-//        window.history.replaceState({ privateDocPage: true }, "", currentUrl);
-//      } catch {
-//        // nessuna azione
-//      }
-//    };
- // }, [router.isReady, token]);
-
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) {
@@ -373,12 +325,10 @@ export default function PublicDocumentoPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-4xl">
-          <Card>
-            <CardContent className="py-10 text-center text-slate-600">
-              Caricamento pagina pubblica...
-            </CardContent>
-          </Card>
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="rounded-xl border border-slate-200 bg-white p-10 shadow-sm text-center text-slate-600">
+            Caricamento pagina pubblica...
+          </div>
         </div>
       </div>
     );
@@ -387,15 +337,13 @@ export default function PublicDocumentoPage() {
   if (notFound) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-4xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Link non valido</CardTitle>
-            </CardHeader>
-            <CardContent className="text-slate-700">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-xl font-semibold text-slate-900">Link non valido</h1>
+            <p className="mt-3 text-slate-700">
               Il collegamento richiesto non esiste oppure non è più disponibile.
-            </CardContent>
-          </Card>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -404,17 +352,16 @@ export default function PublicDocumentoPage() {
   if (completed) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-4xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Documento aggiornato</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-slate-700">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-xl font-semibold text-slate-900">
+              Documento aggiornato
+            </h1>
+            <div className="mt-3 space-y-2 text-slate-700">
               <p>Il documento di riconoscimento è stato caricato correttamente.</p>
               <p>Il collegamento è stato chiuso e non è più riutilizzabile.</p>
-              <p>La pagina non è più navigabile.</p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -423,15 +370,13 @@ export default function PublicDocumentoPage() {
   if (disabledLink) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-4xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Link disattivato</CardTitle>
-            </CardHeader>
-            <CardContent className="text-slate-700">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-xl font-semibold text-slate-900">Link disattivato</h1>
+            <p className="mt-3 text-slate-700">
               Questo collegamento è stato disattivato.
-            </CardContent>
-          </Card>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -439,17 +384,19 @@ export default function PublicDocumentoPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Aggiornamento documento di riconoscimento</CardTitle>
-            <p className="text-sm text-slate-600">
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-6 py-5">
+            <h1 className="text-xl font-semibold text-slate-900">
+              Aggiornamento documento di riconoscimento
+            </h1>
+            <p className="mt-1 text-sm text-slate-600">
               Caricare un documento di riconoscimento in corso di validità e
               confermare i dati di residenza.
             </p>
-          </CardHeader>
+          </div>
 
-          <CardContent>
+          <div className="p-6">
             <div className="mb-6 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               Intestatario richiesta: <strong>{form.nome_cognome || "—"}</strong>
             </div>
@@ -464,7 +411,7 @@ export default function PublicDocumentoPage() {
                     name="citta_residenza"
                     value={form.citta_residenza}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </div>
 
@@ -475,7 +422,7 @@ export default function PublicDocumentoPage() {
                     value={form.CAP}
                     onChange={handleChange}
                     maxLength={5}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </div>
 
@@ -487,7 +434,7 @@ export default function PublicDocumentoPage() {
                     name="indirizzo_residenza"
                     value={form.indirizzo_residenza}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </div>
 
@@ -499,7 +446,7 @@ export default function PublicDocumentoPage() {
                     name="tipo_doc"
                     value={form.tipo_doc}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   >
                     <option value="">Seleziona...</option>
                     <option value="---">---</option>
@@ -517,7 +464,7 @@ export default function PublicDocumentoPage() {
                     name="num_doc"
                     value={form.num_doc}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </div>
 
@@ -530,7 +477,7 @@ export default function PublicDocumentoPage() {
                     name="scadenza_doc"
                     value={form.scadenza_doc}
                     onChange={handleChange}
-                    className="w-full rounded-md border px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </div>
 
@@ -542,7 +489,7 @@ export default function PublicDocumentoPage() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={handleFileChange}
-                    className="w-full rounded-md border bg-white px-3 py-2"
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     Formati ammessi: PDF, JPG, JPEG, PNG • Dimensione massima:{" "}
@@ -575,8 +522,8 @@ export default function PublicDocumentoPage() {
                 </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
