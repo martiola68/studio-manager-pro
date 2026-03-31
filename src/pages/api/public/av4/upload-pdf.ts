@@ -132,7 +132,7 @@ export default async function handler(
  const { error: updateError } = await supabase
   .from("tbAV4")
   .update({
-    pdf_firmato_cliente: filePath,
+    allegato_pdf_cliente: filePath,
   })
   .eq("id", av4.id);
 
