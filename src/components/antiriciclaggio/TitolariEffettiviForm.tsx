@@ -114,9 +114,7 @@ export default function TitolariEffettiviForm({
 }: Props) {
   const supabase = getSupabaseClient() as any;
 
-  const [rappresentanti, setRappresentanti] = useState<any[]>([]);
   const [righe, setRighe] = useState<RigaTitolare[]>([]);
-  const [loadingRappresentanti, setLoadingRappresentanti] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -127,10 +125,6 @@ export default function TitolariEffettiviForm({
     () => storageKey(sezione, studio_id, cliente_id),
     [sezione, studio_id, cliente_id]
   );
-
-  useEffect(() => {
-    void loadRappresentanti();
-  }, [studio_id]);
 
   useEffect(() => {
     void initializeRows();
@@ -174,7 +168,10 @@ export default function TitolariEffettiviForm({
               cap_residenza: normalizeText(row?.cap_residenza),
               nazionalita: normalizeText(row?.nazionalita),
               error_codice_fiscale: "",
-              import_status: row?.import_status === "success" || row?.import_status === "not_found" ? row.import_status : "",
+              import_status:
+                row?.import_status === "success" || row?.import_status === "not_found"
+                  ? row.import_status
+                  : "",
               import_message: normalizeText(row?.import_message),
             }))
           );
@@ -220,31 +217,6 @@ export default function TitolariEffettiviForm({
     }
   }
 
-  async function loadRappresentanti() {
-    setLoadingRappresentanti(true);
-
-    try {
-      let query = supabase.from("rapp_legali").select("*").order("nome_cognome");
-
-      if (studio_id) {
-        query = query.eq("studio_id", studio_id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Errore caricamento rappresentanti:", error);
-        return;
-      }
-
-      setRappresentanti(data || []);
-    } catch (error) {
-      console.error("Errore imprevisto caricamento rappresentanti:", error);
-    } finally {
-      setLoadingRappresentanti(false);
-    }
-  }
-
   async function loadSavedTitolari(currentAv4Id: string): Promise<RigaTitolare[]> {
     const { data, error } = await supabase
       .from("tbAV4_titolari")
@@ -276,9 +248,8 @@ export default function TitolariEffettiviForm({
     }));
   }
 
-  function aggiungiRiga(mode?: SourceMode) {
-    const resolvedMode: SourceMode = publicMode ? "manual" : mode || "import";
-    setRighe((prev) => [...prev, emptyRiga(resolvedMode)]);
+  function aggiungiRiga() {
+    setRighe((prev) => [...prev, emptyRiga("manual")]);
   }
 
   async function eliminaRiga(index: number) {
@@ -340,54 +311,6 @@ export default function TitolariEffettiviForm({
     });
   }
 
-  function selezionaRappresentante(index: number, id: string) {
-    const normalizedSelectedId = normalizeId(id);
-
-    if (!normalizedSelectedId) {
-      updateRiga(index, {
-        rapp_legale_id: "",
-        nome_cognome: "",
-        codice_fiscale: "",
-        luogo_nascita: "",
-        data_nascita: "",
-        indirizzo_residenza: "",
-        citta_residenza: "",
-        cap_residenza: "",
-        nazionalita: "",
-        import_status: "",
-        import_message: "",
-      });
-      return;
-    }
-
-    const rapp = rappresentanti.find((r) => normalizeId(r.id) === normalizedSelectedId);
-    if (!rapp) return;
-
-    const next: RigaTitolare = {
-      ...righe[index],
-      rapp_legale_id: normalizeId(rapp.id),
-      source_mode: "import",
-      nome_cognome: normalizeText(rapp.nome_cognome),
-      codice_fiscale: normalizeCF(rapp.codice_fiscale),
-      luogo_nascita: normalizeText(rapp.luogo_nascita ?? rapp.comune_nascita),
-      data_nascita: normalizeDateForInput(rapp.data_nascita),
-      indirizzo_residenza: normalizeText(rapp.indirizzo_residenza),
-      citta_residenza: normalizeText(rapp.citta_residenza ?? rapp.comune_residenza),
-      cap_residenza: normalizeText(rapp.CAP),
-      nazionalita: normalizeText(rapp.nazionalita ?? rapp.cittadinanza),
-      error_codice_fiscale: "",
-      import_status: "success",
-      import_message: "Nominativo importato con successo",
-    };
-
-    if (isDuplicateTitolare(righe, next, index)) {
-      alert("Questo titolare effettivo è già presente.");
-      return;
-    }
-
-    updateRiga(index, next);
-  }
-
   async function importaDaCodiceFiscale(index: number) {
     const riga = righe[index];
     if (!riga) return;
@@ -436,7 +359,7 @@ export default function TitolariEffettiviForm({
           rapp_legale_id: "",
           source_mode: "manual",
           import_status: "not_found",
-          import_message: "Nominativo non presente in archivio",
+          import_message: "Nessun dato trovato, inerire i dati manualmente",
           error_codice_fiscale: "",
         });
         return;
@@ -456,7 +379,7 @@ export default function TitolariEffettiviForm({
         nazionalita: normalizeText(data.nazionalita ?? data.cittadinanza),
         error_codice_fiscale: "",
         import_status: "success",
-        import_message: "Nominativo importato con successo",
+        import_message: "Importazione avvenuta con successo",
       };
 
       if (isDuplicateTitolare(righe, next, index)) {
@@ -610,7 +533,6 @@ export default function TitolariEffettiviForm({
 
       if (!normalizeId(av4_id)) {
         persistDraft();
-        await loadRappresentanti();
         alert(
           "Titolari salvati in bozza. Ora puoi salvare il modello AV4 e poi premere di nuovo 'Salva titolari' per registrarli nella pratica."
         );
@@ -656,7 +578,6 @@ export default function TitolariEffettiviForm({
       clearDraft();
       const reloaded = await loadSavedTitolari(normalizeId(av4_id));
       setRighe(reloaded);
-      await loadRappresentanti();
 
       alert("Titolari salvati correttamente.");
     } catch (error: any) {
@@ -674,9 +595,7 @@ export default function TitolariEffettiviForm({
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="font-semibold">Titolari effettivi</h3>
 
-        {(loadingRappresentanti || loadingSaved) && (
-          <span className="text-sm text-gray-500">Caricamento...</span>
-        )}
+        {loadingSaved && <span className="text-sm text-gray-500">Caricamento...</span>}
       </div>
 
       {showDraftInfo && (
@@ -694,122 +613,71 @@ export default function TitolariEffettiviForm({
       )}
 
       {righe.map((riga, index) => {
-        const isManual = riga.source_mode === "manual";
-        const canEditFields = !isLocked && (publicMode || isManual);
-        const canEditCf = !isLocked && (publicMode || isManual);
+        const canEditFields = !isLocked;
 
         return (
           <div
             key={`${riga.id || "new"}-${index}`}
             className="mb-4 rounded-lg border border-sky-200 bg-sky-50/40 p-3"
           >
-            {!publicMode && !isManual && (
-              <div className="mb-3">
-                <label className="mb-1 block text-sm font-medium">Seleziona nominativo</label>
+            <div className="mb-3">
+              <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
 
-                <select
-                  value={normalizeId(riga.rapp_legale_id)}
-                  onChange={(e) => selezionaRappresentante(index, e.target.value)}
-                  className="w-full rounded border p-2"
-                  disabled={isLocked}
-                >
-                  <option value="">Seleziona</option>
-
-                  {rappresentanti.map((r) => (
-                    <option key={normalizeId(r.id)} value={normalizeId(r.id)}>
-                      {normalizeText(r.nome_cognome)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {publicMode && (
-              <div className="mb-3">
-                <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
-                <div className="flex flex-col gap-2 md:flex-row">
-                  <div className="flex-1">
-                    <input
-                      value={riga.codice_fiscale}
-                      onChange={(e) =>
-                        updateRiga(index, {
-                          codice_fiscale: e.target.value,
-                          import_status: "",
-                          import_message: "",
-                          rapp_legale_id: "",
-                        })
-                      }
-                      placeholder="Codice fiscale"
-                      className={`w-full rounded border p-2 ${
-                        riga.error_codice_fiscale ? "border-red-500" : ""
-                      }`}
-                      readOnly={!canEditCf}
-                    />
-                    {riga.error_codice_fiscale && (
-                      <p className="mt-1 text-xs text-red-600">{riga.error_codice_fiscale}</p>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => importaDaCodiceFiscale(index)}
-                    disabled={isLocked}
-                    className="rounded bg-sky-600 px-3 py-2 text-white disabled:bg-gray-400"
-                  >
-                    Importa da archivio
-                  </button>
-                </div>
-
-                {riga.import_status === "success" && (
-                  <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                    {riga.import_message || "Nominativo importato con successo"}
-                  </div>
-                )}
-
-                {riga.import_status === "not_found" && (
-                  <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {riga.import_message || "Nominativo non presente in archivio"}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {!publicMode && (
-                <div>
-                  <input
-                    value={riga.nome_cognome}
-                    onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
-                    placeholder="Cognome e nome"
-                    className="w-full rounded border p-2"
-                    readOnly={!canEditFields}
-                  />
-                </div>
-              )}
-
-              {!publicMode && (
-                <div>
+              <div className="flex flex-col gap-2 md:flex-row">
+                <div className="flex-1">
                   <input
                     value={riga.codice_fiscale}
-                    onChange={(e) => updateRiga(index, { codice_fiscale: e.target.value })}
+                    onChange={(e) =>
+                      updateRiga(index, {
+                        codice_fiscale: e.target.value,
+                        import_status: "",
+                        import_message: "",
+                        rapp_legale_id: "",
+                        source_mode: "manual",
+                      })
+                    }
                     placeholder="Codice fiscale"
                     className={`w-full rounded border p-2 ${
                       riga.error_codice_fiscale ? "border-red-500" : ""
                     }`}
-                    readOnly={!canEditCf}
-                    required
+                    readOnly={isLocked}
+                    autoFocus={index === righe.length - 1}
                   />
+
                   {riga.error_codice_fiscale && (
                     <p className="mt-1 text-xs text-red-600">{riga.error_codice_fiscale}</p>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => importaDaCodiceFiscale(index)}
+                  disabled={isLocked}
+                  className="rounded bg-sky-600 px-3 py-2 text-white disabled:bg-gray-400"
+                >
+                  Importa dati se presenti
+                </button>
+              </div>
+
+              {riga.import_status === "success" && (
+                <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {riga.import_message || "Importazione avvenuta con successo"}
+                </div>
               )}
 
+              {riga.import_status === "not_found" && (
+                <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {riga.import_message || "Nessun dato trovato, inerire i dati manualmente"}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               <input
                 value={riga.nome_cognome}
                 onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
                 placeholder="Cognome e nome"
-                className={`rounded border p-2 ${publicMode ? "md:col-span-2" : ""}`}
+                className="rounded border p-2"
                 readOnly={!canEditFields}
               />
 
@@ -878,36 +746,14 @@ export default function TitolariEffettiviForm({
 
       {!readOnly && (
         <div className="flex flex-wrap gap-3">
-          {publicMode ? (
-            <button
-              type="button"
-              onClick={() => aggiungiRiga("manual")}
-              className="rounded bg-gray-200 px-3 py-1"
-              disabled={saving}
-            >
-              + Aggiungi nominativo
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => aggiungiRiga("import")}
-                className="rounded bg-gray-200 px-3 py-1"
-                disabled={saving}
-              >
-                + Aggiungi da nominativo
-              </button>
-
-              <button
-                type="button"
-                onClick={() => aggiungiRiga("manual")}
-                className="rounded bg-gray-200 px-3 py-1"
-                disabled={saving}
-              >
-                + Aggiungi manualmente
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={aggiungiRiga}
+            className="rounded bg-gray-200 px-3 py-1"
+            disabled={saving}
+          >
+            + Aggiungi titolare
+          </button>
 
           <button
             type="button"
