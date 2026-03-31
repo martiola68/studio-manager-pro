@@ -515,25 +515,6 @@ async function handleUploadSignedPdf(
         responseData?.error || "Errore durante il caricamento del PDF firmato."
       );
     }
-
-    const publicUrl = String(responseData?.publicUrl || "");
-
-    setSignedPdfUrl(publicUrl);
-    setForm((prev) => ({
-      ...prev,
-      pdf_firmato_cliente: publicUrl,
-    }));
-
-    alert("PDF firmato caricato correttamente.");
-  } catch (error: any) {
-    console.error("Errore upload PDF firmato:", error);
-    alert(error?.message || "Errore durante il caricamento del PDF firmato.");
-  } finally {
-    setUploadingPdf(false);
-    e.target.value = "";
-  }
-}
-
       const publicUrl = String(responseData?.publicUrl || "");
 
       setSignedPdfUrl(publicUrl);
