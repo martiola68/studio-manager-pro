@@ -503,6 +503,9 @@ async function handleUploadSignedPdf(
 
     const fileBase64 = await fileToBase64(file);
 
+    console.log("UPLOAD AV4 TOKEN:", token);
+    console.log("UPLOAD AV4 ID:", form.id);
+
     const res = await fetch("/api/public/av4/upload-pdf", {
       method: "POST",
       headers: {
