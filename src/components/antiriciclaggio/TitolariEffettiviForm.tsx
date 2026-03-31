@@ -7,6 +7,8 @@ type Props = {
   av4_id?: string;
   studio_id: string;
   cliente_id: string;
+  publicMode?: boolean;
+  readOnly?: boolean;
 };
 
 type SourceMode = "import" | "manual";
@@ -24,6 +26,8 @@ type RigaTitolare = {
   cap_residenza: string;
   nazionalita: string;
   error_codice_fiscale?: string;
+  import_status?: "success" | "not_found" | "";
+  import_message?: string;
 };
 
 function emptyRiga(mode: SourceMode = "import"): RigaTitolare {
@@ -39,6 +43,8 @@ function emptyRiga(mode: SourceMode = "import"): RigaTitolare {
     cap_residenza: "",
     nazionalita: "",
     error_codice_fiscale: "",
+    import_status: "",
+    import_message: "",
   };
 }
 
@@ -103,6 +109,8 @@ export default function TitolariEffettiviForm({
   av4_id,
   studio_id,
   cliente_id,
+  publicMode = false,
+  readOnly = false,
 }: Props) {
   const supabase = getSupabaseClient() as any;
 
@@ -163,7 +171,9 @@ export default function TitolariEffettiviForm({
               citta_residenza: normalizeText(row?.citta_residenza),
               cap_residenza: normalizeText(row?.cap_residenza),
               nazionalita: normalizeText(row?.nazionalita),
-              error_codice_fiscale: "",
+             error_codice_fiscale: "",
+              import_status: "",
+              import_message: "",
             }))
           );
           setInitialized(true);
@@ -191,6 +201,8 @@ export default function TitolariEffettiviForm({
         codice_fiscale: normalizeCF(r.codice_fiscale),
         data_nascita: normalizeDateForInput(r.data_nascita),
         error_codice_fiscale: "",
+        import_status: r.import_status || "",
+        import_message: r.import_message || "",
       }));
       sessionStorage.setItem(draftKey, JSON.stringify(payload));
     } catch (error) {
@@ -256,7 +268,9 @@ export default function TitolariEffettiviForm({
       citta_residenza: normalizeText(row?.citta_residenza),
       cap_residenza: normalizeText(row?.cap_residenza),
       nazionalita: normalizeText(row?.nazionalita),
-      error_codice_fiscale: "",
+       error_codice_fiscale: "",
+      import_status: "",
+        import_message: "",
     }));
   }
 
@@ -340,6 +354,92 @@ export default function TitolariEffettiviForm({
       return;
     }
 
+    async function importaDaCodiceFiscale(index: number) {
+  const riga = righe[index];
+  if (!riga) return;
+
+  const codiceFiscale = normalizeCF(riga.codice_fiscale);
+
+  if (!codiceFiscale) {
+    updateRiga(index, {
+      error_codice_fiscale: "Codice fiscale obbligatorio",
+      import_status: "",
+      import_message: "",
+    });
+    return;
+  }
+
+  if (!isValidCF(codiceFiscale)) {
+    updateRiga(index, {
+      error_codice_fiscale: "Codice fiscale non valido",
+      import_status: "",
+      import_message: "",
+    });
+    return;
+  }
+
+  try {
+    let query = supabase
+      .from("rapp_legali")
+      .select("*")
+      .eq("codice_fiscale", codiceFiscale);
+
+    if (studio_id) {
+      query = query.eq("studio_id", studio_id);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error("Errore import da codice fiscale:", error);
+      alert(error.message || "Errore durante la ricerca del nominativo.");
+      return;
+    }
+
+    if (!data) {
+      updateRiga(index, {
+        rapp_legale_id: "",
+        source_mode: "manual",
+        import_status: "not_found",
+        import_message: "Dato non presente in archivio",
+        error_codice_fiscale: "",
+      });
+      return;
+    }
+
+    const next: RigaTitolare = {
+      ...righe[index],
+      rapp_legale_id: normalizeId(data.id),
+      source_mode: "import",
+      nome_cognome: normalizeText(data.nome_cognome),
+      codice_fiscale: normalizeCF(data.codice_fiscale),
+      luogo_nascita: normalizeText(data.luogo_nascita ?? data.comune_nascita),
+      data_nascita: normalizeDateForInput(data.data_nascita),
+      indirizzo_residenza: normalizeText(data.indirizzo_residenza),
+      citta_residenza: normalizeText(data.citta_residenza ?? data.comune_residenza),
+      cap_residenza: normalizeText(data.CAP),
+      nazionalita: normalizeText(data.nazionalita ?? data.cittadinanza),
+      error_codice_fiscale: "",
+      import_status: "success",
+      import_message: "Importazione avvenuta con successo",
+    };
+
+    if (isDuplicateTitolare(righe, next, index)) {
+      updateRiga(index, {
+        error_codice_fiscale: "Codice fiscale già presente",
+        import_status: "",
+        import_message: "",
+      });
+      return;
+    }
+
+    updateRiga(index, next);
+  } catch (error: any) {
+    console.error("Errore imprevisto import CF:", error);
+    alert(error?.message || "Errore durante l'importazione da codice fiscale.");
+  }
+}
+    
     const rapp = rappresentanti.find((r) => normalizeId(r.id) === normalizedSelectedId);
     if (!rapp) return;
 
@@ -355,7 +455,9 @@ export default function TitolariEffettiviForm({
       citta_residenza: normalizeText(rapp.citta_residenza ?? rapp.comune_residenza),
       cap_residenza: normalizeText(rapp.CAP),
       nazionalita: normalizeText(rapp.nazionalita ?? rapp.cittadinanza),
-      error_codice_fiscale: "",
+       error_codice_fiscale: "",
+        import_status: "success",
+        import_message: "Importazione avvenuta con successo",
     };
 
     if (isDuplicateTitolare(righe, next, index)) {
