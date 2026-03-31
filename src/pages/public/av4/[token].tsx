@@ -290,13 +290,15 @@ export default function PublicAV4Page() {
           return;
         }
 
-        const mapped = mapDbRowToForm(data);
+               const mapped = mapDbRowToForm(data);
         setForm(mapped);
         setAv4Id(mapped.id);
         setSignedPdfUrl(mapped.pdf_firmato_cliente || "");
 
-        if (mapped.compilato_da_cliente) {
+        if (mapped.compilato_da_cliente || mapped.public_submitted_at) {
           setAlreadySubmitted(true);
+          setDisabledLink(true);
+          return;
         }
 
         if (!mapped.public_opened_at && mapped.id) {
@@ -307,6 +309,7 @@ export default function PublicAV4Page() {
             })
             .eq("id", mapped.id);
         }
+        
       } catch (err) {
         console.error("Errore imprevisto AV4 pubblico:", err);
         setNotFound(true);
@@ -686,7 +689,24 @@ export default function PublicAV4Page() {
     );
   }
 
-  if (disabledLink && !alreadySubmitted) {
+   if (alreadySubmitted) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-10">
+        <div className="mx-auto max-w-5xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compilazione completata</CardTitle>
+            </CardHeader>
+            <CardContent className="text-slate-700">
+              Questo AV4 è già stato completato. Il collegamento non è più riutilizzabile.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (disabledLink) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-5xl">
@@ -1320,7 +1340,7 @@ export default function PublicAV4Page() {
                 <CardContent>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Luogo firma</label>
+                      <label className="mb-1 block text-sm font-medium">Luogo</label>
                       <input
                         name="luogo_firma"
                         value={form.luogo_firma}
@@ -1331,7 +1351,7 @@ export default function PublicAV4Page() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Data firma</label>
+                      <label className="mb-1 block text-sm font-medium">Data</label>
                       <input
                         type="date"
                         name="data_firma"
@@ -1343,7 +1363,7 @@ export default function PublicAV4Page() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Luogo firma bis</label>
+                      <label className="mb-1 block text-sm font-medium">Luogo</label>
                       <input
                         name="luogo_firma_bis"
                         value={form.luogo_firma_bis}
@@ -1354,7 +1374,7 @@ export default function PublicAV4Page() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">Data firma bis</label>
+                      <label className="mb-1 block text-sm font-medium">Data</label>
                       <input
                         type="date"
                         name="data_firma_bis"
@@ -1365,8 +1385,7 @@ export default function PublicAV4Page() {
                       />
                     </div>
 
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="block text-sm font-medium">Carica PDF firmato</label>
+                   <div className="md:col-span-2 space-y-2">
                       <input
                         type="file"
                         accept="application/pdf"
