@@ -291,15 +291,15 @@ export default function PublicAV4Page() {
         }
 
                const mapped = mapDbRowToForm(data);
+
+        if (mapped.compilato_da_cliente || mapped.public_submitted_at) {
+          setNotFound(true);
+          return;
+        }
+
         setForm(mapped);
         setAv4Id(mapped.id);
         setSignedPdfUrl(mapped.pdf_firmato_cliente || "");
-
-        if (mapped.compilato_da_cliente || mapped.public_submitted_at) {
-          setAlreadySubmitted(true);
-          setDisabledLink(true);
-          return;
-        }
 
         if (!mapped.public_opened_at && mapped.id) {
           await supabase
