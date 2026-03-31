@@ -73,6 +73,8 @@ type FormState = {
   stato: string;
   versione: number;
 
+  allegato_pdf_cliente: string;
+
   compilato_da_cliente: boolean;
   public_opened_at: string;
   public_submitted_at: string;
@@ -147,6 +149,7 @@ const emptyForm: FormState = {
 
   stato: "bozza",
   versione: 1,
+  allegato_pdf_cliente: "",
 
   compilato_da_cliente: false,
   public_opened_at: "",
@@ -236,6 +239,7 @@ function mapDbRowToForm(row: any): FormState {
     stato: row?.stato ?? "bozza",
     versione: Number(row?.versione ?? 1),
 
+    allegato_pdf_cliente: row?.allegato_pdf_cliente ?? "",
     compilato_da_cliente: !!row?.compilato_da_cliente,
     public_opened_at: row?.public_opened_at ?? "",
     public_submitted_at: row?.public_submitted_at ?? "",
@@ -535,10 +539,10 @@ async function handleUploadSignedPdf(
      console.log("PATH SALVATO:", savedPath);
 
       setSignedPdfUrl(publicUrl);
-      setForm((prev) => ({
-        ...prev,
-        pdf_firmato_cliente: savedPath,
-      }));
+    setForm((prev) => ({
+  ...prev,
+  allegato_pdf_cliente: savedPath,
+}));
 
       alert("PDF firmato caricato correttamente.");
     } catch (error) {
@@ -648,7 +652,7 @@ async function handleUploadSignedPdf(
         data_firma: form.data_firma || null,
         luogo_firma_bis: form.luogo_firma_bis || null,
         data_firma_bis: form.data_firma_bis || null,
-        pdf_firmato_cliente: form.pdf_firmato_cliente || null,
+        allegato_pdf_cliente: form.allegato_pdf_cliente || null,
 
         compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),
