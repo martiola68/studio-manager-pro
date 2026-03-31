@@ -12,7 +12,6 @@ const isApiPublic = url.pathname.startsWith("/api/public");
 if (isPublicDocumento || isPublicAV4 || isApiPublic) {
   return NextResponse.next();
 }
-
   // BLOCCA TUTTO IL RESTO
   return NextResponse.redirect(new URL("/bloccato", request.url));
 }
