@@ -524,28 +524,6 @@ async function handleUploadSignedPdf(
       }));
 
       alert("PDF firmato caricato correttamente.");
-    } catch (error: any) {
-      console.error("Errore upload PDF firmato:", error);
-      alert(error?.message || "Errore durante il caricamento del PDF firmato.");
-    } finally {
-      setUploadingPdf(false);
-      e.target.value = "";
-    }
-  }
-
-        if (updateError) {
-        console.error("Errore salvataggio URL PDF firmato:", updateError);
-        alert("PDF caricato ma non salvato correttamente.");
-        return;
-      }
-
-      setSignedPdfUrl(publicUrl);
-      setForm((prev) => ({
-        ...prev,
-        pdf_firmato_cliente: publicUrl,
-      }));
-
-      alert("PDF firmato caricato correttamente.");
     } catch (error) {
       console.error("Errore upload PDF firmato:", error);
       alert("Errore durante il caricamento del PDF firmato.");
