@@ -69,7 +69,8 @@ type FormState = {
   luogo_firma_bis: string;
   data_firma_bis: string;
   pdf_firmato_cliente: string;
-
+  allegato_pdf_cliente: "",
+  
   stato: string;
   versione: number;
 };
@@ -724,7 +725,7 @@ export default function ModelloAV4() {
   }
 
   function handleApriPdfFirmato() {
-  if (!form.allegato_pdf_client) {
+  if (!form.allegato_pdf_cliente) {
     alert("PDF firmato non presente.");
     return;
   }
@@ -733,7 +734,7 @@ export default function ModelloAV4() {
 
   const { data } = supabase.storage
     .from("documenti")
-    .getPublicUrl(form.allegato_pdf_client);
+    .getPublicUrl(form.allegato_pdf_cliente);
 
   const url = data?.publicUrl || "";
 
@@ -1921,9 +1922,9 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     Apri PDF firmato
   </button>
 
-  {form.allegato_pdf_client? (
+  {form.allegato_pdf_cliente? (
     <p className="mt-2 break-all text-xs text-gray-500">
-      Percorso file: {form.allegato_pdf_client}
+      Percorso file: {form.allegato_pdf_cliente}
     </p>
   ) : (
     <p className="mt-2 text-xs text-gray-500">
