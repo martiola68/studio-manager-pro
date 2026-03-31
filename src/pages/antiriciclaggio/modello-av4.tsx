@@ -733,7 +733,7 @@ export default function ModelloAV4() {
   const supabase = getSupabaseClient() as any;
 
   const { data } = supabase.storage
-    .from("documenti")
+    .from("promemoria-allegati")
     .getPublicUrl(form.allegato_pdf_cliente);
 
   const url = data?.publicUrl || "";
