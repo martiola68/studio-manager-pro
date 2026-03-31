@@ -630,9 +630,10 @@ export default function PublicAV4Page() {
         luogo_firma_bis: form.luogo_firma_bis || null,
         data_firma_bis: form.data_firma_bis || null,
 
-        compilato_da_cliente: true,
+       compilato_da_cliente: true,
         public_submitted_at: new Date().toISOString(),
         public_enabled: false,
+        public_token: null,
       };
 
       const { error } = await supabase
