@@ -142,6 +142,7 @@ const initialFormState = (
   luogo_firma_bis: "",
   data_firma_bis: "",
   pdf_firmato_cliente: "",
+  allegato_pdf_cliente: "",
 
   stato: "bozza",
   versione: 1,
