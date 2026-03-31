@@ -121,6 +121,8 @@ export default function TitolariEffettiviForm({
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  const isLocked = readOnly || saving;
+
   const draftKey = useMemo(
     () => storageKey(sezione, studio_id, cliente_id),
     [sezione, studio_id, cliente_id]
@@ -171,9 +173,9 @@ export default function TitolariEffettiviForm({
               citta_residenza: normalizeText(row?.citta_residenza),
               cap_residenza: normalizeText(row?.cap_residenza),
               nazionalita: normalizeText(row?.nazionalita),
-             error_codice_fiscale: "",
-              import_status: "",
-              import_message: "",
+              error_codice_fiscale: "",
+              import_status: row?.import_status === "success" || row?.import_status === "not_found" ? row.import_status : "",
+              import_message: normalizeText(row?.import_message),
             }))
           );
           setInitialized(true);
@@ -268,19 +270,21 @@ export default function TitolariEffettiviForm({
       citta_residenza: normalizeText(row?.citta_residenza),
       cap_residenza: normalizeText(row?.cap_residenza),
       nazionalita: normalizeText(row?.nazionalita),
-       error_codice_fiscale: "",
+      error_codice_fiscale: "",
       import_status: "",
-        import_message: "",
+      import_message: "",
     }));
   }
 
-  function aggiungiRiga(mode: SourceMode) {
-    setRighe((prev) => [...prev, emptyRiga(mode)]);
+  function aggiungiRiga(mode?: SourceMode) {
+    const resolvedMode: SourceMode = publicMode ? "manual" : mode || "import";
+    setRighe((prev) => [...prev, emptyRiga(resolvedMode)]);
   }
 
   async function eliminaRiga(index: number) {
     const riga = righe[index];
     if (!riga) return;
+    if (isLocked) return;
 
     const conferma = window.confirm("Vuoi eliminare questo titolare effettivo?");
     if (!conferma) return;
@@ -350,96 +354,12 @@ export default function TitolariEffettiviForm({
         citta_residenza: "",
         cap_residenza: "",
         nazionalita: "",
-      });
-      return;
-    }
-
-    async function importaDaCodiceFiscale(index: number) {
-  const riga = righe[index];
-  if (!riga) return;
-
-  const codiceFiscale = normalizeCF(riga.codice_fiscale);
-
-  if (!codiceFiscale) {
-    updateRiga(index, {
-      error_codice_fiscale: "Codice fiscale obbligatorio",
-      import_status: "",
-      import_message: "",
-    });
-    return;
-  }
-
-  if (!isValidCF(codiceFiscale)) {
-    updateRiga(index, {
-      error_codice_fiscale: "Codice fiscale non valido",
-      import_status: "",
-      import_message: "",
-    });
-    return;
-  }
-
-  try {
-    let query = supabase
-      .from("rapp_legali")
-      .select("*")
-      .eq("codice_fiscale", codiceFiscale);
-
-    if (studio_id) {
-      query = query.eq("studio_id", studio_id);
-    }
-
-    const { data, error } = await query.maybeSingle();
-
-    if (error) {
-      console.error("Errore import da codice fiscale:", error);
-      alert(error.message || "Errore durante la ricerca del nominativo.");
-      return;
-    }
-
-    if (!data) {
-      updateRiga(index, {
-        rapp_legale_id: "",
-        source_mode: "manual",
-        import_status: "not_found",
-        import_message: "Dato non presente in archivio",
-        error_codice_fiscale: "",
-      });
-      return;
-    }
-
-    const next: RigaTitolare = {
-      ...righe[index],
-      rapp_legale_id: normalizeId(data.id),
-      source_mode: "import",
-      nome_cognome: normalizeText(data.nome_cognome),
-      codice_fiscale: normalizeCF(data.codice_fiscale),
-      luogo_nascita: normalizeText(data.luogo_nascita ?? data.comune_nascita),
-      data_nascita: normalizeDateForInput(data.data_nascita),
-      indirizzo_residenza: normalizeText(data.indirizzo_residenza),
-      citta_residenza: normalizeText(data.citta_residenza ?? data.comune_residenza),
-      cap_residenza: normalizeText(data.CAP),
-      nazionalita: normalizeText(data.nazionalita ?? data.cittadinanza),
-      error_codice_fiscale: "",
-      import_status: "success",
-      import_message: "Importazione avvenuta con successo",
-    };
-
-    if (isDuplicateTitolare(righe, next, index)) {
-      updateRiga(index, {
-        error_codice_fiscale: "Codice fiscale già presente",
         import_status: "",
         import_message: "",
       });
       return;
     }
 
-    updateRiga(index, next);
-  } catch (error: any) {
-    console.error("Errore imprevisto import CF:", error);
-    alert(error?.message || "Errore durante l'importazione da codice fiscale.");
-  }
-}
-    
     const rapp = rappresentanti.find((r) => normalizeId(r.id) === normalizedSelectedId);
     if (!rapp) return;
 
@@ -455,9 +375,9 @@ export default function TitolariEffettiviForm({
       citta_residenza: normalizeText(rapp.citta_residenza ?? rapp.comune_residenza),
       cap_residenza: normalizeText(rapp.CAP),
       nazionalita: normalizeText(rapp.nazionalita ?? rapp.cittadinanza),
-       error_codice_fiscale: "",
-        import_status: "success",
-        import_message: "Importazione avvenuta con successo",
+      error_codice_fiscale: "",
+      import_status: "success",
+      import_message: "Nominativo importato con successo",
     };
 
     if (isDuplicateTitolare(righe, next, index)) {
@@ -468,51 +388,138 @@ export default function TitolariEffettiviForm({
     updateRiga(index, next);
   }
 
-async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
-  const codiceFiscale = normalizeCF(riga.codice_fiscale);
+  async function importaDaCodiceFiscale(index: number) {
+    const riga = righe[index];
+    if (!riga) return;
+    if (isLocked) return;
 
-  if (!codiceFiscale) {
-    throw new Error("Codice fiscale obbligatorio.");
+    const codiceFiscale = normalizeCF(riga.codice_fiscale);
+
+    if (!codiceFiscale) {
+      updateRiga(index, {
+        error_codice_fiscale: "Codice fiscale obbligatorio",
+        import_status: "",
+        import_message: "",
+      });
+      return;
+    }
+
+    if (!isValidCF(codiceFiscale)) {
+      updateRiga(index, {
+        error_codice_fiscale: "Codice fiscale non valido",
+        import_status: "",
+        import_message: "",
+      });
+      return;
+    }
+
+    try {
+      let query = supabase
+        .from("rapp_legali")
+        .select("*")
+        .eq("codice_fiscale", codiceFiscale);
+
+      if (studio_id) {
+        query = query.eq("studio_id", studio_id);
+      }
+
+      const { data, error } = await query.maybeSingle();
+
+      if (error) {
+        console.error("Errore import da codice fiscale:", error);
+        alert(error.message || "Errore durante la ricerca del nominativo.");
+        return;
+      }
+
+      if (!data) {
+        updateRiga(index, {
+          rapp_legale_id: "",
+          source_mode: "manual",
+          import_status: "not_found",
+          import_message: "Nominativo non presente in archivio",
+          error_codice_fiscale: "",
+        });
+        return;
+      }
+
+      const next: RigaTitolare = {
+        ...righe[index],
+        rapp_legale_id: normalizeId(data.id),
+        source_mode: "import",
+        nome_cognome: normalizeText(data.nome_cognome),
+        codice_fiscale: normalizeCF(data.codice_fiscale),
+        luogo_nascita: normalizeText(data.luogo_nascita ?? data.comune_nascita),
+        data_nascita: normalizeDateForInput(data.data_nascita),
+        indirizzo_residenza: normalizeText(data.indirizzo_residenza),
+        citta_residenza: normalizeText(data.citta_residenza ?? data.comune_residenza),
+        cap_residenza: normalizeText(data.CAP),
+        nazionalita: normalizeText(data.nazionalita ?? data.cittadinanza),
+        error_codice_fiscale: "",
+        import_status: "success",
+        import_message: "Nominativo importato con successo",
+      };
+
+      if (isDuplicateTitolare(righe, next, index)) {
+        updateRiga(index, {
+          error_codice_fiscale: "Codice fiscale già presente",
+          import_status: "",
+          import_message: "",
+        });
+        return;
+      }
+
+      updateRiga(index, next);
+    } catch (error: any) {
+      console.error("Errore imprevisto import CF:", error);
+      alert(error?.message || "Errore durante l'importazione da codice fiscale.");
+    }
   }
 
-  const { data: existing, error: existingError } = await supabase
-    .from("rapp_legali")
-    .select("id")
-    .eq("studio_id", studio_id)
-    .eq("codice_fiscale", codiceFiscale)
-    .maybeSingle();
+  async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
+    const codiceFiscale = normalizeCF(riga.codice_fiscale);
 
-  if (existingError) {
-    throw new Error(existingError.message || "Errore ricerca rappresentante legale.");
+    if (!codiceFiscale) {
+      throw new Error("Codice fiscale obbligatorio.");
+    }
+
+    const query = supabase.from("rapp_legali").select("id").eq("codice_fiscale", codiceFiscale);
+
+    const { data: existing, error: existingError } = studio_id
+      ? await query.eq("studio_id", studio_id).maybeSingle()
+      : await query.maybeSingle();
+
+    if (existingError) {
+      throw new Error(existingError.message || "Errore ricerca rappresentante legale.");
+    }
+
+    if (existing?.id) {
+      return normalizeId(existing.id);
+    }
+
+    const payload = {
+      studio_id: normalizeId(studio_id) || null,
+      nome_cognome: normalizeText(riga.nome_cognome),
+      codice_fiscale: codiceFiscale,
+      luogo_nascita: normalizeText(riga.luogo_nascita) || null,
+      data_nascita: normalizeDateForInput(riga.data_nascita) || null,
+      indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
+      citta_residenza: normalizeText(riga.citta_residenza) || null,
+      CAP: normalizeText(riga.cap_residenza) || null,
+      nazionalita: normalizeText(riga.nazionalita) || null,
+    };
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("rapp_legali")
+      .insert([payload])
+      .select("id")
+      .single();
+
+    if (insertError) {
+      throw new Error(insertError.message || "Errore inserimento in rapp_legali.");
+    }
+
+    return normalizeId(inserted.id);
   }
-
-  if (existing?.id) {
-    return normalizeId(existing.id);
-  }
-
-  const payload = {
-  studio_id: normalizeId(studio_id) || null,
-  nome_cognome: normalizeText(riga.nome_cognome),
-  codice_fiscale: codiceFiscale,
-  luogo_nascita: normalizeText(riga.luogo_nascita) || null,
-  data_nascita: normalizeDateForInput(riga.data_nascita) || null,
-  indirizzo_residenza: normalizeText(riga.indirizzo_residenza) || null,
-  citta_residenza: normalizeText(riga.citta_residenza) || null,
-  CAP: normalizeText(riga.cap_residenza) || null,
-  nazionalita: normalizeText(riga.nazionalita) || null,
-};
-  const { data: inserted, error: insertError } = await supabase
-    .from("rapp_legali")
-    .insert([payload])
-    .select("id")
-    .single();
-
-  if (insertError) {
-    throw new Error(insertError.message || "Errore inserimento in rapp_legali.");
-  }
-
-  return normalizeId(inserted.id);
-}
 
   function validateRows(): { ok: boolean; message?: string; normalizedRows: RigaTitolare[] } {
     const righeValide = righe
@@ -653,11 +660,11 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
 
       alert("Titolari salvati correttamente.");
     } catch (error: any) {
-  console.error("Errore imprevisto salvataggio titolari:", error);
-  alert(error?.message || "Errore durante il salvataggio dei titolari.");
-} finally {
-  setSaving(false);
-}
+      console.error("Errore imprevisto salvataggio titolari:", error);
+      alert(error?.message || "Errore durante il salvataggio dei titolari.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const showDraftInfo = !normalizeId(av4_id);
@@ -688,13 +695,15 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
 
       {righe.map((riga, index) => {
         const isManual = riga.source_mode === "manual";
+        const canEditFields = !isLocked && (publicMode || isManual);
+        const canEditCf = !isLocked && (publicMode || isManual);
 
         return (
           <div
             key={`${riga.id || "new"}-${index}`}
             className="mb-4 rounded-lg border border-sky-200 bg-sky-50/40 p-3"
           >
-            {!isManual && (
+            {!publicMode && !isManual && (
               <div className="mb-3">
                 <label className="mb-1 block text-sm font-medium">Seleziona nominativo</label>
 
@@ -702,6 +711,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
                   value={normalizeId(riga.rapp_legale_id)}
                   onChange={(e) => selezionaRappresentante(index, e.target.value)}
                   className="w-full rounded border p-2"
+                  disabled={isLocked}
                 >
                   <option value="">Seleziona</option>
 
@@ -714,49 +724,109 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
               </div>
             )}
 
+            {publicMode && (
+              <div className="mb-3">
+                <label className="mb-1 block text-sm font-medium">Codice fiscale</label>
+                <div className="flex flex-col gap-2 md:flex-row">
+                  <div className="flex-1">
+                    <input
+                      value={riga.codice_fiscale}
+                      onChange={(e) =>
+                        updateRiga(index, {
+                          codice_fiscale: e.target.value,
+                          import_status: "",
+                          import_message: "",
+                          rapp_legale_id: "",
+                        })
+                      }
+                      placeholder="Codice fiscale"
+                      className={`w-full rounded border p-2 ${
+                        riga.error_codice_fiscale ? "border-red-500" : ""
+                      }`}
+                      readOnly={!canEditCf}
+                    />
+                    {riga.error_codice_fiscale && (
+                      <p className="mt-1 text-xs text-red-600">{riga.error_codice_fiscale}</p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => importaDaCodiceFiscale(index)}
+                    disabled={isLocked}
+                    className="rounded bg-sky-600 px-3 py-2 text-white disabled:bg-gray-400"
+                  >
+                    Importa da archivio
+                  </button>
+                </div>
+
+                {riga.import_status === "success" && (
+                  <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                    {riga.import_message || "Nominativo importato con successo"}
+                  </div>
+                )}
+
+                {riga.import_status === "not_found" && (
+                  <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {riga.import_message || "Nominativo non presente in archivio"}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              <div>
-                
-                <input
+              {!publicMode && (
+                <div>
+                  <input
+                    value={riga.nome_cognome}
+                    onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
+                    placeholder="Cognome e nome"
+                    className="w-full rounded border p-2"
+                    readOnly={!canEditFields}
+                  />
+                </div>
+              )}
+
+              {!publicMode && (
+                <div>
+                  <input
+                    value={riga.codice_fiscale}
+                    onChange={(e) => updateRiga(index, { codice_fiscale: e.target.value })}
+                    placeholder="Codice fiscale"
+                    className={`w-full rounded border p-2 ${
+                      riga.error_codice_fiscale ? "border-red-500" : ""
+                    }`}
+                    readOnly={!canEditCf}
+                    required
+                  />
+                  {riga.error_codice_fiscale && (
+                    <p className="mt-1 text-xs text-red-600">{riga.error_codice_fiscale}</p>
+                  )}
+                </div>
+              )}
+
+              <input
                 value={riga.nome_cognome}
                 onChange={(e) => updateRiga(index, { nome_cognome: e.target.value })}
                 placeholder="Cognome e nome"
-                className="w-full rounded border p-2"
-                readOnly={!isManual}
-                />
-              </div>
-
-              <div>
-                <input
-                  value={riga.codice_fiscale}
-                  onChange={(e) => updateRiga(index, { codice_fiscale: e.target.value })}
-                  placeholder="Codice fiscale"
-                  className={`w-full rounded border p-2 ${
-                    riga.error_codice_fiscale ? "border-red-500" : ""
-                  }`}
-                  readOnly={!isManual}
-                  required
-                />
-                {riga.error_codice_fiscale && (
-                  <p className="mt-1 text-xs text-red-600">{riga.error_codice_fiscale}</p>
-                )}
-              </div>
+                className={`rounded border p-2 ${publicMode ? "md:col-span-2" : ""}`}
+                readOnly={!canEditFields}
+              />
 
               <input
                 value={riga.luogo_nascita}
                 onChange={(e) => updateRiga(index, { luogo_nascita: e.target.value })}
                 placeholder="Luogo nascita"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
 
               <input
                 type="date"
                 value={riga.data_nascita}
                 onChange={(e) => updateRiga(index, { data_nascita: e.target.value })}
-                placeholder="Data nascita"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
 
               <input
@@ -764,7 +834,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
                 onChange={(e) => updateRiga(index, { indirizzo_residenza: e.target.value })}
                 placeholder="Indirizzo residenza"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
 
               <input
@@ -772,7 +842,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
                 onChange={(e) => updateRiga(index, { citta_residenza: e.target.value })}
                 placeholder="Città residenza"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
 
               <input
@@ -780,7 +850,7 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
                 onChange={(e) => updateRiga(index, { cap_residenza: e.target.value })}
                 placeholder="CAP residenza"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
 
               <input
@@ -788,47 +858,67 @@ async function findOrCreateRappLegale(riga: RigaTitolare): Promise<string> {
                 onChange={(e) => updateRiga(index, { nazionalita: e.target.value })}
                 placeholder="Nazionalità"
                 className="rounded border p-2"
-                readOnly={!isManual}
+                readOnly={!canEditFields}
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => eliminaRiga(index)}
-              className="mt-3 text-red-600"
-            >
-              Elimina
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => eliminaRiga(index)}
+                disabled={saving}
+                className="mt-3 text-red-600 disabled:text-gray-400"
+              >
+                Elimina
+              </button>
+            )}
           </div>
         );
       })}
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => aggiungiRiga("import")}
-          className="rounded bg-gray-200 px-3 py-1"
-        >
-          + Aggiungi da nominativo
-        </button>
+      {!readOnly && (
+        <div className="flex flex-wrap gap-3">
+          {publicMode ? (
+            <button
+              type="button"
+              onClick={() => aggiungiRiga("manual")}
+              className="rounded bg-gray-200 px-3 py-1"
+              disabled={saving}
+            >
+              + Aggiungi nominativo
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => aggiungiRiga("import")}
+                className="rounded bg-gray-200 px-3 py-1"
+                disabled={saving}
+              >
+                + Aggiungi da nominativo
+              </button>
 
-        <button
-          type="button"
-          onClick={() => aggiungiRiga("manual")}
-          className="rounded bg-gray-200 px-3 py-1"
-        >
-          + Aggiungi manualmente
-        </button>
+              <button
+                type="button"
+                onClick={() => aggiungiRiga("manual")}
+                className="rounded bg-gray-200 px-3 py-1"
+                disabled={saving}
+              >
+                + Aggiungi manualmente
+              </button>
+            </>
+          )}
 
-        <button
-          type="button"
-          onClick={salvaTitolari}
-          disabled={saving}
-          className="rounded bg-blue-600 px-3 py-1 text-white disabled:bg-gray-400"
-        >
-          {saving ? "Salvataggio..." : "Salva titolari"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={salvaTitolari}
+            disabled={saving}
+            className="rounded bg-blue-600 px-3 py-1 text-white disabled:bg-gray-400"
+          >
+            {saving ? "Salvataggio..." : "Salva titolari"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
