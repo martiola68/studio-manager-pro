@@ -238,7 +238,7 @@ function mapDbRowToForm(row: any): FormState {
     luogo_firma_bis: row?.luogo_firma_bis ?? "",
     data_firma_bis: normalizeDateForInput(row?.data_firma_bis),
     pdf_firmato_cliente: row?.pdf_firmato_cliente ?? "",
-
+    allegato_pdf_cliente: row?.allegato_pdf_cliente ?? "",
     stato: row?.stato ?? "bozza",
     versione: Number(row?.versione ?? 1),
   };
@@ -724,7 +724,7 @@ export default function ModelloAV4() {
   }
 
   function handleApriPdfFirmato() {
-  if (!form.pdf_firmato_cliente) {
+  if (!form.allegato_pdf_client) {
     alert("PDF firmato non presente.");
     return;
   }
@@ -733,7 +733,7 @@ export default function ModelloAV4() {
 
   const { data } = supabase.storage
     .from("documenti")
-    .getPublicUrl(form.pdf_firmato_cliente);
+    .getPublicUrl(form.allegato_pdf_client);
 
   const url = data?.publicUrl || "";
 
@@ -1921,9 +1921,9 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     Apri PDF firmato
   </button>
 
-  {form.pdf_firmato_cliente ? (
+  {form.allegato_pdf_client? (
     <p className="mt-2 break-all text-xs text-gray-500">
-      Percorso file: {form.pdf_firmato_cliente}
+      Percorso file: {form.allegato_pdf_client}
     </p>
   ) : (
     <p className="mt-2 text-xs text-gray-500">
