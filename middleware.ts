@@ -4,16 +4,34 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const url = request.nextUrl;
 
-  // CONSENTI SOLO:
   const isPublicDocumento = url.pathname.startsWith("/public/documento");
-const isPublicAV4 = url.pathname.startsWith("/public/av4"); // 👈 QUI
-const isApiPublic = url.pathname.startsWith("/api/public");
+  const isApiPublic = url.pathname.startsWith("/api/public");
 
-if (isPublicDocumento || isPublicAV4 || isApiPublic) {
-  return NextResponse.next();
-}
-  // BLOCCA TUTTO IL RESTO
-  return NextResponse.redirect(new URL("/bloccato", request.url));
+  if (isPublicDocumento || isApiPublic) {
+    return NextResponse.next();
+  }
+
+  // BLOCCO TOTALE (NON redirect)
+  return new NextResponse(
+    `
+    <html>
+      <head>
+        <title>Accesso non consentito</title>
+      </head>
+      <body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
+        <div style="text-align:center;">
+          <h2>Accesso non consentito</h2>
+        </div>
+      </body>
+    </html>
+    `,
+    {
+      status: 403,
+      headers: {
+        "content-type": "text/html",
+      },
+    }
+  );
 }
 
 export const config = {
