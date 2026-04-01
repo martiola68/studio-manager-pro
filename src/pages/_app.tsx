@@ -13,13 +13,11 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   // Pagine pubbliche: niente layout
- const isPublicPage =
+const isPublicPage =
   router.pathname === "/login" ||
   router.pathname === "/auth/callback" ||
   router.pathname === "/404" ||
-  router.pathname.startsWith("/public/") ||
-  router.pathname === "/documento/[token]" ||
-  router.pathname === "/compilazione-av4/[token]";
+  router.pathname.startsWith("/public/");
 
   return (
     <ThemeProvider>
