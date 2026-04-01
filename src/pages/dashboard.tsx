@@ -64,6 +64,19 @@ const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
 
+    useEffect(() => {
+  const checkAuth = async () => {
+    const { data } = await supabase.auth.getSession()
+
+    if (!data.session) {
+      window.location.href = "/login"
+    }
+      }
+
+  checkAuth()
+}, [])
+  
+
   /**
    * ✅ Load profile + alerts + dashboard data ONLY when:
    * - auth check is ready
