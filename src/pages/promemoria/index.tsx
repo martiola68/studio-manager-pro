@@ -94,7 +94,7 @@ export default function PromemoriaPage() {
 
   // NUOVO: Stato per filtro destinatario
     // NUOVO: Stato per filtro destinatario
-  const [filtroDestinatario, setFiltroDestinatario] = useState<string>("tutti");
+  const [filtroDestinatario, setFiltroDestinatario] = useState<string>("");
 
   // NUOVO: flag per responsabili di settore
   const [visualizzaTuttiSettore, setVisualizzaTuttiSettore] = useState(false);
@@ -165,10 +165,12 @@ export default function PromemoriaPage() {
       
       if (userProfile) {
         setCurrentUser(userProfile);
-        if (userProfile.responsabile !== true) {
-          setVisualizzaTuttiSettore(false);
-        }
-      }
+          setFiltroDestinatario(userProfile.id);
+
+            if (userProfile.responsabile !== true) {
+              setVisualizzaTuttiSettore(false);
+              }
+            }
       
       // Determina se l'utente è responsabile
       const isResponsabile = userProfile?.responsabile === true;
@@ -618,19 +620,19 @@ export default function PromemoriaPage() {
       <div className="mb-4 flex flex-wrap items-center gap-6">
         <div className="flex items-center gap-4">
           <Label className="text-sm font-medium">Filtra per Destinatario:</Label>
-          <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
+        <Select value={filtroDestinatario} onValueChange={setFiltroDestinatario}>
             <SelectTrigger className="w-64">
-              <SelectValue placeholder="Tutti i destinatari" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="tutti">Tutti i destinatari</SelectItem>
-              {utenti.map(u => (
+              <SelectValue placeholder="Seleziona destinatario" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutti i destinatari</SelectItem>
+                {utenti.map(u => (
                 <SelectItem key={u.id} value={u.id}>
-                  {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {u.nome} {u.cognome} {u.settore ? `(${u.settore})` : ''}
+              </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -676,16 +678,16 @@ export default function PromemoriaPage() {
         <TableBody>
           {promemoria
             .filter((p) => {
-              if (visualizzaTuttiSettore && isResponsabileSettore) {
-                if (p.settore !== currentUser?.settore) return false;
-              }
+                if (visualizzaTuttiSettore && isResponsabileSettore) {
+                  return p.settore === currentUser?.settore;
+                      }
 
-              if (filtroDestinatario !== "tutti") {
-                return p.destinatario_id === filtroDestinatario;
-              }
+                        if (filtroDestinatario === "tutti") {
+                    return true;
+                        }
 
-              return true;
-            })
+                    return p.destinatario_id === filtroDestinatario;
+                    })
             .sort((a, b) => {
               const prioritaDiff =
                 getPrioritaOrder(a.priorita) - getPrioritaOrder(b.priorita);
@@ -832,15 +834,15 @@ export default function PromemoriaPage() {
 
           {promemoria.filter((p) => {
             if (visualizzaTuttiSettore && isResponsabileSettore) {
-              if (p.settore !== currentUser?.settore) return false;
-            }
+              return p.settore === currentUser?.settore;
+              }
 
-            if (filtroDestinatario !== "tutti") {
+                if (filtroDestinatario === "tutti") {
+                return true;
+                  }
+
               return p.destinatario_id === filtroDestinatario;
-            }
-
-            return true;
-          }).length === 0 && (
+                  }).length === 0 && (
             <TableRow>
               <TableCell colSpan={12} className="text-center py-8 text-gray-500">
                 Nessun promemoria trovato
