@@ -10,6 +10,10 @@ type Cliente = {
   ragione_sociale?: string | null;
   codice_fiscale?: string | null;
   utente_operatore_id?: string | null;
+  utente_operatore?: {
+    nome?: string | null;
+    cognome?: string | null;
+  } | null;
 };
 
 type AV4Info = {
@@ -290,10 +294,14 @@ export default function AntiriciclaggioPage() {
           AV4Generato,
           tbclienti (
             id,
-            cod_cliente,
-            ragione_sociale,
-            utente_operatore_id
-          ),
+          cod_cliente,
+          ragione_sociale,
+          utente_operatore_id,
+          utente_operatore:tbutenti!tbclienti_utente_operatore_id_fkey (
+          nome,
+          cognome
+            )
+            ),
           av4_info:tbAV4 (
             id,
             av1_id,
@@ -967,7 +975,7 @@ useEffect(() => {
               <tr>
                 <th className="p-3 text-left">Stato</th>
                 <th className="p-3 text-left">Cliente</th>
-                <th className="p-3 text-left">Codice fiscale</th>
+                <th className="p-3 text-left">Utente di riferimento</th>
                 <th className="p-3 text-left">Data verifica</th>
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
@@ -1046,7 +1054,11 @@ useEffect(() => {
                       </td>
 
                       <td className="p-3">{nomeCliente}</td>
-                     <td className="p-3">{cliente?.utente_operatore_id || "-"}</td>
+                     <td className="p-3">
+                      {cliente?.utente_operatore
+                        ? `${cliente.utente_operatore.nome || ""} ${cliente.utente_operatore.cognome || ""}`.trim() || "-"
+                          : "-"}
+                        </td>
                       <td className="p-3">{formatDate(row.DataVerifica)}</td>
                       <td
                         className={`p-3 ${getScadenzaCellClassName(
