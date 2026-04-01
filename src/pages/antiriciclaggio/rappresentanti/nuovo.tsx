@@ -659,7 +659,7 @@ export default function NuovoRappresentantePage() {
         return;
       }
 
-      const url = `${window.location.origin}/public/documento/${token}`;
+      const url = `${window.location.origin}/documento/${token}`;
       setPublicDocUrl(url);
 
       const {
