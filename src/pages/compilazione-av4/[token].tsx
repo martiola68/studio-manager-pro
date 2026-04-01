@@ -259,6 +259,15 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 export default function PublicAV4Page() {
+   useEffect(() => {
+    const supabase = getSupabaseClient()
+    supabase.auth.signOut()
+
+    window.history.pushState(null, "", window.location.href)
+    window.onpopstate = function () {
+      window.history.go(1)
+    }
+  }, [])
   const router = useRouter();
   const token = useMemo(
     () => (typeof router.query.token === "string" ? router.query.token : ""),
