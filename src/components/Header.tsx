@@ -91,11 +91,11 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
             <Menu className="h-6 w-6" />
           </Button>
 
-          {studio?.logo_url ? (
-            <img src={studio.logo_url} alt="Logo Studio" className="h-12 w-auto object-contain" />
-          ) : (
-            <img src="/logo-elma.png" alt="ELMA Software" className="h-12 w-auto object-contain" />
-          )}
+        <img
+  src="/logo-app.png"
+  alt="Studio Manager Pro"
+  className="h-12 w-auto object-contain"
+/>
 
           <div>
             <h1 className="text-xl font-bold text-gray-900">
