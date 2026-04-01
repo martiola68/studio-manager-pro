@@ -381,16 +381,20 @@ if (status === "warning") return "font-semibold text-yellow-600";
 
   const handleCloseAccess = () => {
     clearAmlTimers();
-    closeTimeoutModal();
-    clearAccessState();
+closeTimeoutModal();
+clearAccessState();
 
-    setRows([]);
-    setWorkingId(null);
+// 🔥 AGGIUNGI QUESTO
+setSocietaFilter("");
+setSelectedSocieta(null);
 
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem(AML_SESSION_KEY);
-      window.location.reload();
-    }
+setRows([]);
+setWorkingId(null);
+
+if (typeof window !== "undefined") {
+  sessionStorage.removeItem(AML_SESSION_KEY);
+  sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+}
   };
 
   const startWarningPhase = () => {
