@@ -141,4 +141,5 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
       )}
     </div>
   </header>
-);
+  );
+}
