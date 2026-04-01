@@ -385,11 +385,11 @@ export default function ScadenzeIvaPage() {
                       scadenza.conferma_riga ? "bg-green-100 hover:bg-green-100" : "hover:bg-green-50"
                         }`}
                       >
-                     <td
-                        className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
-                          scadenza.conferma_riga ? "bg-green-100" : ""
+                    <td
+                      className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+                        scadenza.conferma_riga ? "!bg-green-100" : "!bg-white"
                           }`}
-                        >
+                          >
                         {scadenza.nominativo}
                       </td>
                       <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
