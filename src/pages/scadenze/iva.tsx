@@ -379,7 +379,12 @@ export default function ScadenzeIvaPage() {
                   </tr>
                 ) : (
                   filteredScadenze.map((scadenza) => (
-                    <tr key={scadenza.id} className="border-b transition-colors hover:bg-green-50">
+                   <tr
+                    key={scadenza.id}
+                    className={`border-b transition-colors ${
+                      scadenza.conferma_riga ? "bg-green-100 hover:bg-green-100" : "hover:bg-green-50"
+                        }`}
+                      >
                       <td className="p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px]">
                         {scadenza.nominativo}
                       </td>
