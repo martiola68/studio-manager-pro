@@ -88,10 +88,15 @@ const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 export default function PublicDocumentoPage() {
 
-  useEffect(() => {
-  const supabase = getSupabaseClient()
-  supabase.auth.signOut()
-}, [])
+    useEffect(() => {
+    const supabase = getSupabaseClient()
+    supabase.auth.signOut()
+
+    window.history.pushState(null, "", window.location.href)
+    window.onpopstate = function () {
+      window.history.go(1)
+    }
+  }, [])
   
   const router = useRouter();
 
