@@ -1007,7 +1007,7 @@ useEffect(() => {
               <tr>
                 <th className="p-3 text-left">Stato</th>
                 <th className="p-3 text-left">Cliente</th>
-                <th className="p-3 text-left">Codice fiscale</th>
+                <th className="p-3 text-left">Utente di riferimento</th>
                 <th className="p-3 text-left">Data verifica</th>
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
