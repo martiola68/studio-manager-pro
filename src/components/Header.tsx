@@ -92,7 +92,7 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
           </Button>
 
         <img
-  src="/logo-app.png"
+  src="/logo-elma.png"
   alt="Studio Manager Pro"
   className="h-12 w-auto object-contain"
 />
