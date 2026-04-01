@@ -85,54 +85,66 @@ export default function Header({ onMenuToggle, title }: HeaderProps) {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
-            <Menu className="h-6 w-6" />
-          </Button>
+   <div className="flex items-center justify-between w-full">
 
-        <img
-  src="/logo-elma.png"
-  alt="Studio Manager Pro"
-  className="h-12 w-auto object-contain"
-/>
+  {/* SINISTRA */}
+  <div className="flex items-center gap-4">
+    <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
+      <Menu className="h-6 w-6" />
+    </Button>
 
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              Studio Manager Pro
-            </h1>
-            <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
-          </div>
-        </div>
+    <img
+      src="/logo-elma.png"
+      alt="Studio Manager Pro"
+      className="h-12 w-auto object-contain"
+    />
 
-        {currentUser && (
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">
-                {currentUser.nome} {currentUser.cognome}
-              </p>
-              <p className="text-xs text-gray-500">
-                {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
-              </p>
-            </div>
+    <div>
+      <h1 className="text-xl font-bold text-gray-900">
+        Studio Manager Pro
+      </h1>
+      <p className="text-sm text-gray-500">Sistema Gestionale Integrato</p>
+    </div>
+  </div>
 
-            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-5 w-5 text-blue-600" />
-            </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-gray-600 hover:text-red-600"
-              aria-label="Logout"
-              title="Logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+  {/* CENTRO */}
+  {currentUser && (
+    <div className="flex-1 flex justify-center">
+      <div className="text-sm text-gray-700 font-medium">
+        Utente: {currentUser.nome} {currentUser.cognome}
+        {studio?.ragione_sociale && (
+          <> - {studio.ragione_sociale}</>
         )}
       </div>
-    </header>
-  );
-}
+    </div>
+  )}
+
+  {/* DESTRA */}
+  {currentUser && (
+    <div className="flex items-center gap-4">
+      <div className="text-right">
+        <p className="text-sm font-semibold text-gray-900">
+          {currentUser.nome} {currentUser.cognome}
+        </p>
+        <p className="text-xs text-gray-500">
+          {currentUser.tipo_utente === "Admin" ? "Amministratore" : "Utente"}
+        </p>
+      </div>
+
+      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+        <User className="h-5 w-5 text-blue-600" />
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleLogout}
+        className="text-gray-600 hover:text-red-600"
+        aria-label="Logout"
+        title="Logout"
+      >
+        <LogOut className="h-5 w-5" />
+      </Button>
+    </div>
+  )}
+</div>
