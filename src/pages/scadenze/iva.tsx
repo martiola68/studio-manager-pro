@@ -380,16 +380,24 @@ export default function ScadenzeIvaPage() {
                 ) : (
                   filteredScadenze.map((scadenza) => (
                    <tr
-                    key={scadenza.id}
-                    className={`border-b transition-colors ${
-                      scadenza.conferma_riga ? "bg-green-100 hover:bg-green-100" : "hover:bg-green-50"
-                        }`}
-                      >
-                    <td
-                      className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
-                        scadenza.conferma_riga ? "!bg-green-100" : "!bg-white"
-                          }`}
+                      key={scadenza.id}
+                        className={`border-b transition-colors ${
+                        scadenza.conferma_riga
+                          ? "bg-green-100 hover:bg-green-100"
+                            : scadenza.mod_definitivo
+                            ? "bg-orange-100 hover:bg-orange-100"
+                            : "hover:bg-green-50"
+                                  }`}
                           >
+                    <td
+                        className={`p-2 align-middle sticky-col-cell border-r font-medium min-w-[200px] ${
+                          scadenza.conferma_riga
+                          ? "!bg-green-100"
+                          : scadenza.mod_definitivo
+                          ? "!bg-orange-100"
+                          : "!bg-white"
+                              }`}
+                                >
                         {scadenza.nominativo}
                       </td>
                       <td className="p-2 align-middle min-w-[180px]">{scadenza.professionista}</td>
