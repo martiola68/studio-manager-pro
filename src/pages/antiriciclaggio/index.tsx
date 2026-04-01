@@ -9,6 +9,7 @@ type Cliente = {
   cod_cliente?: string | null;
   ragione_sociale?: string | null;
   codice_fiscale?: string | null;
+  utente_operatore_id?: string | null;
 };
 
 type AV4Info = {
@@ -291,7 +292,7 @@ export default function AntiriciclaggioPage() {
             id,
             cod_cliente,
             ragione_sociale,
-            codice_fiscale
+            utente_operatore_id
           ),
           av4_info:tbAV4 (
             id,
@@ -935,7 +936,7 @@ useEffect(() => {
               <tr>
                 <th className="p-3 text-left">Stato</th>
                 <th className="p-3 text-left">Cliente</th>
-                <th className="p-3 text-left">Codice fiscale</th>
+                <th className="p-3 text-left">Utente fiscale</th>
                 <th className="p-3 text-left">Data verifica</th>
                 <th className="p-3 text-left">Scadenza verifica</th>
                 <th className="p-3 text-center">AV1 conferma</th>
@@ -1045,7 +1046,7 @@ useEffect(() => {
                       </td>
 
                       <td className="p-3">{nomeCliente}</td>
-                      <td className="p-3">{cliente?.codice_fiscale || "-"}</td>
+                     <td className="p-3">{cliente?.utente_operatore_id || "-"}</td>
                       <td className="p-3">{formatDate(row.DataVerifica)}</td>
                       <td
                         className={`p-3 ${getScadenzaCellClassName(
