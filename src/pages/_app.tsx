@@ -17,7 +17,9 @@ export default function App({ Component, pageProps }: AppProps) {
   router.pathname === "/login" ||
   router.pathname === "/auth/callback" ||
   router.pathname === "/404" ||
-  router.pathname.startsWith("/public/");
+  router.pathname.startsWith("/public/") ||
+  router.pathname === "/documento/[token]" ||
+  router.pathname === "/compilazione-av4/[token]";
 
   return (
     <ThemeProvider>
