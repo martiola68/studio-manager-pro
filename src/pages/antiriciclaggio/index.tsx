@@ -124,9 +124,10 @@ export default function AntiriciclaggioPage() {
       (scadenza.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (diffDays < 0) return "expired";
-    if (diffDays <= 90) return "warning";
-    return "ok";
+if (diffDays <= 0) return "expired";     // 🔴
+if (diffDays <= 10) return "urgent";     // 🟠
+if (diffDays <= 45) return "warning";    // 🟡
+return "ok";
   };
 
   const getAV4Info = (row: AV1Row): AV4Info | null => {
@@ -159,8 +160,9 @@ export default function AntiriciclaggioPage() {
   const getScadenzaCellClassName = (dateString?: string | null) => {
     const status = getScadenzaStatus(dateString);
 
-    if (status === "expired") return "font-bold text-red-700";
-    if (status === "warning") return "font-semibold text-orange-600";
+if (status === "expired") return "font-bold text-red-700";
+if (status === "urgent") return "font-bold text-orange-600";
+if (status === "warning") return "font-semibold text-yellow-600";
 
     return "";
   };
