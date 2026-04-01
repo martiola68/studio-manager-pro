@@ -452,15 +452,17 @@ export default function AntiriciclaggioPage() {
 useEffect(() => {
     if (typeof window === "undefined") return;
 
-    sessionStorage.removeItem(AML_SESSION_KEY);
-    sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+    const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
+    const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
 
-    setUnlockedSocietaId(null);
-    setSocietaFilter("");
-    setSelectedSocieta(null);
-    setRows([]);
+    if (savedUnlocked) {
+      setUnlockedSocietaId(savedUnlocked);
+    }
+
+    if (savedSelected) {
+      setSocietaFilter(savedSelected);
+    }
   }, []);
-
    useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
       setSelectedSocieta(null);
