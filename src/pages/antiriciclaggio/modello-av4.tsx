@@ -808,7 +808,7 @@ if (!form.microsoft_connection_id) {
       return;
     }
 
-    url = `${window.location.origin}/public/av4/${token}`;
+    url = `${window.location.origin}/compilazione-av4/${token}`;
     setPublicUrl(url);
 
     const { data: rappRow, error: rappError } = await supabase
