@@ -17,8 +17,8 @@ const isPublicPage =
   router.pathname === "/login" ||
   router.pathname === "/auth/callback" ||
   router.pathname === "/404" ||
-  router.pathname.startsWith("/public/");
-
+  router.asPath.startsWith("/documento/") ||
+  router.asPath.startsWith("/compilazione-av4/");
   return (
     <ThemeProvider>
       <StudioProvider>
