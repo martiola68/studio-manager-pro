@@ -75,6 +75,8 @@ type FormState = {
   versione: number;
 };
 
+const nomeOperatore = session?.user?.email || "";
+
 const initialFormState = (
   studioId = "",
   av1Id = "",
@@ -870,7 +872,7 @@ async function handleInvioPubblico() {
           <ol style="padding-left: 18px;">
             <li>apra il link;</li>
             <li>compili i dati richiesti;</li>
-            <li>salvi o stampi il PDF;</li>
+            <li>salvi e stampi il PDF;</li>
             <li>firmi il documento;</li>
             <li>ricarichi il PDF firmato;</li>
             <li>clicchi su "Salva e chiudi".</li>
@@ -878,7 +880,7 @@ async function handleInvioPubblico() {
 
           <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
 
-          <p>Cordiali saluti,<br/>Studio Manager Pro</p>
+          <p>Cordiali saluti,<br/>${nomeOperatore}</p>
         </div>
       `,
     });
