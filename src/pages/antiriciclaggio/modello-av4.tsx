@@ -758,15 +758,20 @@ async function handleInvioPubblico() {
     return;
   }
 
-if (!form.rapp_legale_id) {
-  alert("Rappresentante legale non valorizzato.");
-  return;
-}
+  if (!form.rapp_legale_id) {
+    alert("Rappresentante legale non valorizzato.");
+    return;
+  }
 
-if (!form.microsoft_connection_id) {
-  alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
-  return;
-}
+  if (!form.microsoft_connection_id) {
+    alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
+    return;
+  }
+
+  if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
+    alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
+    return;
+  }
 
   const supabase = getSupabaseClient() as any;
 
@@ -792,7 +797,6 @@ if (!form.microsoft_connection_id) {
       compilato_da_cliente: false,
     };
 
-    // Riattiva questa riga SOLO se il nome colonna è esatto nel DB
     // updatePayload.av4_inviato_cl = true;
 
     const { error: updateError } = await supabase
@@ -808,7 +812,7 @@ if (!form.microsoft_connection_id) {
       return;
     }
 
-    url = `${window.location.origin}/compilazione-av4/${token}`;
+    url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
     setPublicUrl(url);
 
     const { data: rappRow, error: rappError } = await supabase
@@ -848,18 +852,18 @@ if (!form.microsoft_connection_id) {
       return;
     }
 
- await sendEmailViaMicrosoft(userId, {
-  microsoftConnectionId: form.microsoft_connection_id,
-  to: destinatario,
-  subject,
-  html: `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Gentile ${nomeDestinatario},</p>
+    await sendEmailViaMicrosoft(userId, {
+      microsoftConnectionId: form.microsoft_connection_id,
+      to: destinatario,
+      subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+          <p>Gentile ${nomeDestinatario},</p>
 
           <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
 
           <p>
-            <a href="${url}" target="_blank">${url}</a>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">Apri il link per inserimento/modifica dei dati</a>
           </p>
 
           <p><strong>Istruzioni rapide:</strong></p>
