@@ -843,7 +843,20 @@ async function handleInvioPubblico() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    const nomeOperatore = session?.user?.email || "";
+    let nomeOperatore = session?.user?.email || "";
+
+if (session?.user?.email) {
+  const { data: userRow } = await supabase
+    .from("tbutenti") // ⚠️ cambia nome se diverso
+    .select("nome, cognome")
+    .eq("email", session.user.email)
+    .single();
+
+  if (userRow) {
+    nomeOperatore =
+      [userRow.nome, userRow.cognome].filter(Boolean).join(" ").trim();
+  }
+}
 
     userId = session?.user?.id ?? null;
 
