@@ -726,16 +726,16 @@ export default function ModelloAV4() {
   }
 
   function handleApriPdfFirmato() {
-  if (!form.allegato_pdf_cliente) {
-    alert("PDF firmato non presente.");
-    return;
-  }
+ if (!form.pdf_firmato_cliente && !form.allegato_pdf_cliente) {
+  alert("PDF firmato non presente.");
+  return;
+}
 
   const supabase = getSupabaseClient() as any;
 
   const { data } = supabase.storage
-    .from("promemoria-allegati")
-    .getPublicUrl(form.allegato_pdf_cliente);
+    .from("messaggi-allegati")
+   .getPublicUrl(form.pdf_firmato_cliente || form.allegato_pdf_cliente)
 
   const url = data?.publicUrl || "";
 
