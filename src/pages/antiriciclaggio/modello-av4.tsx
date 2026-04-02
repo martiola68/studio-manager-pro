@@ -726,23 +726,25 @@ export default function ModelloAV4() {
   }
 
   function handleApriPdfFirmato() {
- if (!form.pdf_firmato_cliente && !form.allegato_pdf_cliente) {
-  alert("PDF firmato non presente.");
-  return;
-}
+  if (!form.allegato_pdf_cliente) {
+    alert("PDF firmato non presente.");
+    return;
+  }
 
   const supabase = getSupabaseClient() as any;
 
   const { data } = supabase.storage
     .from("messaggi-allegati")
-   .getPublicUrl(form.pdf_firmato_cliente || form.allegato_pdf_cliente)
+    .getPublicUrl(form.allegato_pdf_cliente);
 
   const url = data?.publicUrl || "";
 
-  if (!url) {
-    alert("Impossibile aprire il PDF firmato.");
-    return;
+  if (url) {
+    window.open(url, "_blank");
+  } else {
+    alert("Errore apertura PDF.");
   }
+}
 
   window.open(url, "_blank", "noopener,noreferrer");
 }
