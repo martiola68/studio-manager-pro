@@ -75,8 +75,6 @@ type FormState = {
   versione: number;
 };
 
-const nomeOperatore = session?.user?.email || "";
-
 const initialFormState = (
   studioId = "",
   av1Id = "",
@@ -844,6 +842,8 @@ async function handleInvioPubblico() {
     const {
       data: { session },
     } = await supabase.auth.getSession();
+
+    const nomeOperatore = session?.user?.email || "";
 
     userId = session?.user?.id ?? null;
 
