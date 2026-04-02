@@ -745,8 +745,6 @@ export default function ModelloAV4() {
     alert("Errore apertura PDF.");
   }
 }
-
-  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 async function handleInvioPubblico() {
