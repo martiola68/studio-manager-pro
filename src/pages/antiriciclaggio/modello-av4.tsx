@@ -745,7 +745,6 @@ export default function ModelloAV4() {
     alert("Errore apertura PDF.");
   }
 }
-}
 
 async function handleInvioPubblico() {
   if (!av4Id) {
