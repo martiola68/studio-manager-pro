@@ -725,7 +725,7 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
-  function handleApriPdfFirmato() {
+ function handleApriPdfFirmato() {
   if (!form.allegato_pdf_cliente) {
     alert("PDF firmato non presente.");
     return;
