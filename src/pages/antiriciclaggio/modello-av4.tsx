@@ -3,6 +3,9 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
@@ -279,6 +282,11 @@ export default function ModelloAV4() {
   const [publicUrl, setPublicUrl] = useState("");
 
   const [form, setForm] = useState<FormState>(initialFormState());
+
+   const masterPasswordGate = useMasterPasswordGate({
+    studioId: form.studio_id,
+    onUnlocked: async () => {},
+  });
 
   function clearRappresentanteFields() {
     setForm((prev) => ({
@@ -727,24 +735,26 @@ export default function ModelloAV4() {
   }
 
 function handleApriPdfFirmato() {
-  if (!form.allegato_pdf_cliente) {
-    alert("PDF firmato non presente.");
-    return;
-  }
+  masterPasswordGate.requireUnlock(async () => {
+    if (!form.allegato_pdf_cliente) {
+      alert("PDF firmato non presente.");
+      return;
+    }
 
-  const supabase = getSupabaseClient() as any;
+    const supabase = getSupabaseClient() as any;
 
-  const { data } = supabase.storage
-    .from("messaggi-allegati")
-    .getPublicUrl(form.allegato_pdf_cliente);
+    const { data } = supabase.storage
+      .from("messaggi-allegati")
+      .getPublicUrl(form.allegato_pdf_cliente);
 
-  const url = data?.publicUrl || "";
+    const url = data?.publicUrl || "";
 
-  if (url) {
-    window.open(url, "_blank");
-  } else {
-    alert("Errore apertura PDF.");
-  }
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      alert("Errore apertura PDF.");
+    }
+  });
 }
   
 async function handleInvioPubblico() {
@@ -1960,6 +1970,15 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
           </div>
         </div>
       </div>
+
+       <MasterPasswordDialog
+        open={masterPasswordGate.open}
+        onOpenChange={masterPasswordGate.setOpen}
+        password={masterPasswordGate.password}
+        onPasswordChange={masterPasswordGate.setPassword}
+        onUnlock={masterPasswordGate.handleUnlock}
+        loading={masterPasswordGate.unlocking}
+      />
       
     </div>
   );
