@@ -1613,8 +1613,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
       in qualità di legale rappresentante, munito dei necessari poteri, e attesta che il/i titolare/i effettivi sono:
     </div>
 
-    {av4Id && (
-      <div className="rounded-lg border p-4">
+    <div className="rounded-lg border p-4">
       <TitolariEffettiviForm
         sezione="domanda8"
         av4_id={av4Id || ""}
@@ -1622,7 +1621,6 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
         cliente_id={form.cliente_id}
       />
     </div>
-    )}
   </div>
 )}
 
