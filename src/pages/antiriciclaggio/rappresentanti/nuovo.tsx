@@ -809,96 +809,7 @@ export default function NuovoRappresentantePage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    setOkMsg(null);
-    setErrMsg(null);
-
-    if (!studioId) {
-      setErrMsg("studio_id non disponibile: impossibile salvare.");
-      return;
-    }
-
-    if (!canSave) {
-      setErrMsg(
-        "Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri)."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const payload = {
-        ...(isEditMode ? { id: recordId } : {}),
-        studio_id: studioId,
-        nome_cognome: form.nome_cognome.trim(),
-        codice_fiscale: cf,
-        luogo_nascita: form.luogo_nascita.trim() || null,
-        data_nascita: form.data_nascita || null,
-        citta_residenza: form.citta_residenza.trim() || null,
-        indirizzo_residenza: form.indirizzo_residenza.trim() || null,
-        CAP: form.cap.trim() || null,
-        nazionalita: form.nazionalita.trim() || null,
-        email: form.email.trim() || null,
-        tipo_doc: form.tipo_doc === "__NONE__" ? null : form.tipo_doc,
-        num_doc: form.tipo_doc === "__NONE__" ? null : form.num_doc.trim() || null,
-        scadenza_doc: form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
-        allegato_doc: form.allegato_doc || null,
-        microsoft_connection_id: form.microsoft_connection_id || null,
-        rappresentante_legale: form.rappresentante_legale ?? false,
-      };
-
-      const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = response.headers.get("content-type") || "";
-      let result: any = null;
-
-      if (contentType.includes("application/json")) {
-        result = await response.json();
-      } else {
-        const text = await response.text();
-        throw new Error(
-          `Endpoint ${url} non restituisce JSON. Risposta ricevuta: ${text.slice(0, 200)}`
-        );
-      }
-
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Errore salvataggio rappresentante legale");
-      }
-
-      const savedId = result?.data?.id || result?.id || result?.record?.id || "";
-
-      if (!isEditMode && from === "av4" && clienteIdFromQuery && savedId) {
-        const supabase = getSupabaseClient() as any;
-
-        const { error: updateClienteError } = await supabase
-          .from("tbclienti")
-          .update({ rapp_legale_id: savedId })
-          .eq("id", clienteIdFromQuery);
-
-        if (updateClienteError) {
-          throw new Error(
-            `Rappresentante salvato ma errore aggiornamento cliente: ${updateClienteError.message}`
-          );
-        }
-
-        if (returnTo) {
-          const sep = returnTo.includes("?") ? "&" : "?";
-          await router.push(`${returnTo}${sep}rapp_saved=1`);
-          return;
-        }
-
-       async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
   setOkMsg(null);
@@ -936,14 +847,18 @@ export default function NuovoRappresentantePage() {
           nazionalita: form.nazionalita.trim() || null,
           email: form.email.trim() || null,
           tipo_doc: form.tipo_doc === "__NONE__" ? null : form.tipo_doc,
-          num_doc: form.tipo_doc === "__NONE__" ? null : form.num_doc.trim() || null,
-          scadenza_doc: form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
+          num_doc:
+            form.tipo_doc === "__NONE__" ? null : form.num_doc.trim() || null,
+          scadenza_doc:
+            form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
           allegato_doc: form.allegato_doc || null,
           microsoft_connection_id: form.microsoft_connection_id || null,
           rappresentante_legale: form.rappresentante_legale ?? false,
         };
 
-        const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
+        const url = isEditMode
+          ? "/api/rapp-legali/update"
+          : "/api/rapp-legali/save";
 
         const response = await fetch(url, {
           method: "POST",
@@ -966,10 +881,13 @@ export default function NuovoRappresentantePage() {
         }
 
         if (!response.ok || !result?.ok) {
-          throw new Error(result?.error || "Errore salvataggio rappresentante legale");
+          throw new Error(
+            result?.error || "Errore salvataggio rappresentante legale"
+          );
         }
 
-        const savedId = result?.data?.id || result?.id || result?.record?.id || "";
+        const savedId =
+          result?.data?.id || result?.id || result?.record?.id || "";
 
         if (!isEditMode && from === "av4" && clienteIdFromQuery && savedId) {
           const supabase = getSupabaseClient() as any;
@@ -1002,7 +920,9 @@ export default function NuovoRappresentantePage() {
             fallbackParams.set("id", av4IdFromQuery);
           }
 
-          await router.push(`/antiriciclaggio/modello-av4?${fallbackParams.toString()}`);
+          await router.push(
+            `/antiriciclaggio/modello-av4?${fallbackParams.toString()}`
+          );
           return;
         }
 
