@@ -80,14 +80,19 @@ export default function AntiriciclaggioPage() {
     Math.floor(AML_WARNING_MS / 1000)
   );
 
-  useEffect(() => {
-  sessionStorage.removeItem(AML_SESSION_KEY);
-  localStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+ useEffect(() => {
+  if (typeof window === "undefined") return;
 
-  setUnlockedSocietaId(null);
-  setSelectedSocieta(null);
-  setSocietaFilter("");
-  setRows([]);
+  const savedUnlocked = sessionStorage.getItem(AML_SESSION_KEY);
+  const savedSelected = sessionStorage.getItem(AML_SELECTED_SOCIETA_KEY);
+
+  if (savedSelected) {
+    setSocietaFilter(savedSelected);
+  }
+
+  if (savedUnlocked) {
+    setUnlockedSocietaId(savedUnlocked);
+  }
 }, []);
 
   const inactivityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -474,10 +479,6 @@ if (typeof window !== "undefined") {
     void init();
   }, []);
 
-useEffect(() => {
-    if (typeof window === "undefined") return;
- 
-  }, []);
    useEffect(() => {
     if (!societaFilter || societaOptions.length === 0) {
       setSelectedSocieta(null);
