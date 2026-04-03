@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
+
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
+
 import {
   isValidCF,
   normalizeCF,
@@ -227,6 +232,11 @@ export default function NuovoRappresentantePage() {
 
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const masterPasswordGate = useMasterPasswordGate({
+  studioId,
+  onUnlocked: async () => {},
+});
 
   /* =========================================================
      LOAD STUDIO ID
@@ -888,28 +898,123 @@ export default function NuovoRappresentantePage() {
           return;
         }
 
-        const fallbackParams = new URLSearchParams({
-          av1_id: av1IdFromQuery || "",
-          cliente_id: clienteIdFromQuery || "",
-          studio_id: studioId || "",
-          rapp_saved: "1",
+       async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+
+  setOkMsg(null);
+  setErrMsg(null);
+
+  if (!studioId) {
+    setErrMsg("studio_id non disponibile: impossibile salvare.");
+    return;
+  }
+
+  if (!canSave) {
+    setErrMsg(
+      "Compila almeno Nome e Cognome e un Codice Fiscale valido (16 caratteri)."
+    );
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    await runProtectedSubmit({
+      encryptionEnabled: true,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      action: async () => {
+        const payload = {
+          ...(isEditMode ? { id: recordId } : {}),
+          studio_id: studioId,
+          nome_cognome: form.nome_cognome.trim(),
+          codice_fiscale: cf,
+          luogo_nascita: form.luogo_nascita.trim() || null,
+          data_nascita: form.data_nascita || null,
+          citta_residenza: form.citta_residenza.trim() || null,
+          indirizzo_residenza: form.indirizzo_residenza.trim() || null,
+          CAP: form.cap.trim() || null,
+          nazionalita: form.nazionalita.trim() || null,
+          email: form.email.trim() || null,
+          tipo_doc: form.tipo_doc === "__NONE__" ? null : form.tipo_doc,
+          num_doc: form.tipo_doc === "__NONE__" ? null : form.num_doc.trim() || null,
+          scadenza_doc: form.tipo_doc === "__NONE__" ? null : form.scadenza_doc || null,
+          allegato_doc: form.allegato_doc || null,
+          microsoft_connection_id: form.microsoft_connection_id || null,
+          rappresentante_legale: form.rappresentante_legale ?? false,
+        };
+
+        const url = isEditMode ? "/api/rapp-legali/update" : "/api/rapp-legali/save";
+
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
         });
 
-        if (av4IdFromQuery) {
-          fallbackParams.set("id", av4IdFromQuery);
+        const contentType = response.headers.get("content-type") || "";
+        let result: any = null;
+
+        if (contentType.includes("application/json")) {
+          result = await response.json();
+        } else {
+          const text = await response.text();
+          throw new Error(
+            `Endpoint ${url} non restituisce JSON. Risposta ricevuta: ${text.slice(0, 200)}`
+          );
         }
 
-        await router.push(`/antiriciclaggio/modello-av4?${fallbackParams.toString()}`);
-        return;
-      }
+        if (!response.ok || !result?.ok) {
+          throw new Error(result?.error || "Errore salvataggio rappresentante legale");
+        }
 
-      await router.push("/antiriciclaggio/rappresentanti?saved=1");
-    } catch (error: any) {
-      setErrMsg(error?.message || "Errore salvataggio rappresentante legale");
-    } finally {
-      setLoading(false);
-    }
+        const savedId = result?.data?.id || result?.id || result?.record?.id || "";
+
+        if (!isEditMode && from === "av4" && clienteIdFromQuery && savedId) {
+          const supabase = getSupabaseClient() as any;
+
+          const { error: updateClienteError } = await supabase
+            .from("tbclienti")
+            .update({ rapp_legale_id: savedId })
+            .eq("id", clienteIdFromQuery);
+
+          if (updateClienteError) {
+            throw new Error(
+              `Rappresentante salvato ma errore aggiornamento cliente: ${updateClienteError.message}`
+            );
+          }
+
+          if (returnTo) {
+            const sep = returnTo.includes("?") ? "&" : "?";
+            await router.push(`${returnTo}${sep}rapp_saved=1`);
+            return;
+          }
+
+          const fallbackParams = new URLSearchParams({
+            av1_id: av1IdFromQuery || "",
+            cliente_id: clienteIdFromQuery || "",
+            studio_id: studioId || "",
+            rapp_saved: "1",
+          });
+
+          if (av4IdFromQuery) {
+            fallbackParams.set("id", av4IdFromQuery);
+          }
+
+          await router.push(`/antiriciclaggio/modello-av4?${fallbackParams.toString()}`);
+          return;
+        }
+
+        await router.push("/antiriciclaggio/rappresentanti?saved=1");
+      },
+    });
+  } catch (error: any) {
+    setErrMsg(error?.message || "Errore salvataggio rappresentante legale");
+  } finally {
+    setLoading(false);
   }
+}
 
   function handleCancel() {
     if (from === "av4" && returnTo) {
@@ -1276,6 +1381,14 @@ export default function NuovoRappresentantePage() {
           )}
         </CardContent>
       </Card>
+      <MasterPasswordDialog
+  open={masterPasswordGate.open}
+  onOpenChange={masterPasswordGate.setOpen}
+  password={masterPasswordGate.password}
+  onPasswordChange={masterPasswordGate.setPassword}
+  onUnlock={masterPasswordGate.handleUnlock}
+  loading={masterPasswordGate.unlocking}
+/>
     </div>
   );
 }
