@@ -5,6 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  copyProtectedValue,
+  revealProtectedValue,
+  runProtectedSubmit,
+} from "@/lib/security/masterPasswordActions";
+import {
   TableBody,
   TableCell,
   TableHead,
@@ -260,21 +265,14 @@ export default function CassettiFiscaliPage() {
     }, 10000);
   };
 
- const copyToClipboard = (text: string | null | undefined, label: string) => {
-  if (!text) return;
-
-  if (encryptionEnabled && !hasKey() && isEncrypted(text)) {
-    masterPasswordGate.requireUnlock(async () => {
-      const key = getStoredEncryptionKey();
-      const plainText =
-        key && isEncrypted(text) ? decryptData(text, key) : text;
-
-      doCopy(plainText, label);
-    });
-    return;
-  }
-
-  doCopy(text, label);
+const copyToClipboard = (text: string | null | undefined, label: string) => {
+  copyProtectedValue({
+    value: text,
+    label,
+    encryptionEnabled,
+    requireUnlock: masterPasswordGate.requireUnlock,
+    doCopy,
+  });
 };
 
  const togglePasswordVisibility = (
@@ -282,90 +280,94 @@ export default function CassettiFiscaliPage() {
   field: "pw1" | "pw2" | "pin" | "pw_init",
   forceShow?: boolean
 ) => {
-  if (encryptionEnabled && !hasKey()) {
-    masterPasswordGate.requireUnlock(async () => {
+  const currentValue =
+    field === "pw1"
+      ? cassetti.find((x) => x.id === id)?.password1
+      : field === "pw2"
+      ? cassetti.find((x) => x.id === id)?.password2
+      : field === "pin"
+      ? cassetti.find((x) => x.id === id)?.pin
+      : cassetti.find((x) => x.id === id)?.pw_iniziale;
+
+  revealProtectedValue({
+    value: currentValue,
+    encryptionEnabled,
+    requireUnlock: masterPasswordGate.requireUnlock,
+    onReveal: () => {
       const k = `${id}_${field}`;
+
       setVisiblePasswords((prev) => ({
         ...prev,
-        [k]: true,
+        [k]: forceShow ? true : !prev[k],
       }));
 
-      setTimeout(() => {
-        setVisiblePasswords((prev) => ({ ...prev, [k]: false }));
-      }, 30000);
-    });
-    return;
-  }
+      const willShow = forceShow ? true : !visiblePasswords[k];
 
-  const k = `${id}_${field}`;
-  setVisiblePasswords((prev) => ({
-    ...prev,
-    [k]: forceShow ? true : !prev[k],
-  }));
-
-  const willShow = forceShow ? true : !visiblePasswords[k];
-
-  if (willShow) {
-    setTimeout(() => {
-      setVisiblePasswords((prev) => ({ ...prev, [k]: false }));
-    }, 30000);
-  }
+      if (willShow) {
+        setTimeout(() => {
+          setVisiblePasswords((prev) => ({
+            ...prev,
+            [k]: false,
+          }));
+        }, 30000);
+      }
+    },
+  });
 };
 
-   const doSubmit = async (values: FormValues) => {
-    try {
-    if (encryptionEnabled && !hasKey()) {
-  masterPasswordGate.requireUnlock(async () => {
-    await doSubmit(values);
-  });
-  return;
-}
+  const doSubmit = async (values: FormValues) => {
+  try {
+    await runProtectedSubmit({
+      encryptionEnabled,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      action: async () => {
+        let dataToSave: any = { ...values };
 
-      let dataToSave: any = { ...values };
+        if (encryptionEnabled) {
+          const encrypted = await encryptCassettoPasswords({
+            username: values.username,
+            password1: values.password1,
+            password2: values.password2,
+            pin: values.pin,
+            pw_iniziale: values.pw_iniziale,
+          });
+          dataToSave = { ...values, ...encrypted };
+        }
 
-      if (encryptionEnabled) {
-       const encrypted = await encryptCassettoPasswords({
-  username: values.username,
-  password1: values.password1,
-  password2: values.password2,
-  pin: values.pin,
-  pw_iniziale: values.pw_iniziale,
-});
-        dataToSave = { ...values, ...encrypted };
-      }
+        if (editingCassetto) {
+          await cassettiFiscaliService.update(editingCassetto.id, dataToSave);
+          toast({ title: "Successo", description: "Cassetto fiscale aggiornato" });
+        } else {
+          await cassettiFiscaliService.create(dataToSave);
+          toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
+        }
 
-      if (editingCassetto) {
-        await cassettiFiscaliService.update(editingCassetto.id, dataToSave);
-        toast({ title: "Successo", description: "Cassetto fiscale aggiornato" });
-      } else {
-        await cassettiFiscaliService.create(dataToSave);
-        toast({ title: "Successo", description: "Nuovo cassetto fiscale creato" });
-      }
+        form.reset({
+          nominativo: "",
+          username: "",
+          password1: "",
+          pw_attiva1: true,
+          password2: "",
+          pw_attiva2: false,
+          pin: "",
+          pw_iniziale: "",
+          note: "",
+        });
 
-      form.reset({
-        nominativo: "",
-        username: "",
-        password1: "",
-        pw_attiva1: true,
-        password2: "",
-        pw_attiva2: false,
-        pin: "",
-        pw_iniziale: "",
-        note: "",
-      });
-
-      setDialogOpen(false);
-      setEditingCassetto(null);
-      await loadCassetti();
-    } catch (error) {
-      console.error("Errore salvataggio:", error);
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: "Impossibile salvare i dati",
-      });
-    }
-  };
+        setDialogOpen(false);
+        setEditingCassetto(null);
+        await loadCassetti();
+      },
+    });
+  } catch (error) {
+    console.error("Errore salvataggio:", error);
+    toast({
+      variant: "destructive",
+      title: "Errore",
+      description: "Impossibile salvare i dati",
+    });
+  }
+};
 
   const onSubmit = async (values: FormValues) => {
     await doSubmit(values);
