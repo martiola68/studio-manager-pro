@@ -1712,8 +1712,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
       in qualità di legale rappresentante, munito dei necessari poteri, e attesta che ai sensi dell’articolo 20, comma 4, D.Lgs. 231/2007, i titolari effettivi sono:
     </div>
 
-    {av4Id && (
-       <div className="rounded-lg border p-4">
+    <div className="rounded-lg border p-4">
       <TitolariEffettiviForm
         sezione="domanda9"
         av4_id={av4Id || ""}
