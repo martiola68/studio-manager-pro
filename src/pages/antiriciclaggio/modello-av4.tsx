@@ -69,7 +69,7 @@ type FormState = {
   luogo_firma_bis: string;
   data_firma_bis: string;
   pdf_firmato_cliente: string;
-  allegato_pdf_cliente: "",
+  allegato_pdf_cliente: string;
   
   stato: string;
   versione: number;
@@ -1156,9 +1156,9 @@ function isDuplicateTitolare(
           `/antiriciclaggio/modello-av4?studio_id=${form.studio_id}&av1_id=${form.av1_id}&cliente_id=${form.cliente_id}&id=${savedId}`
         );
       }
-    } catch (error) {
+     } catch (error: any) {
       console.error("Errore imprevisto salvataggio AV4:", error);
-      alert("Errore durante il salvataggio AV4.");
+      alert(error?.message || "Errore durante il salvataggio AV4.");
     } finally {
       setLoading(false);
     }
@@ -1613,14 +1613,14 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
 
     {av4Id && (
-      <div className="rounded-lg border p-4">
-        <TitolariEffettiviForm
-          sezione="domanda8"
-          av4_id={av4Id}
-          studio_id={form.studio_id}
-          cliente_id={form.cliente_id}
-        />
-      </div>
+     <div className="rounded-lg border p-4">
+      <TitolariEffettiviForm
+        sezione="domanda8"
+        av4_id={av4Id || ""}
+        studio_id={form.studio_id}
+        cliente_id={form.cliente_id}
+      />
+    </div>
     )}
   </div>
 )}
@@ -1713,14 +1713,13 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
 
     {av4Id && (
       <div className="rounded-lg border p-4">
-        <TitolariEffettiviForm
-          sezione="domanda9"
-          av4_id={av4Id}
-          studio_id={form.studio_id}
-          cliente_id={form.cliente_id}
-        />
-      </div>
-    )}
+      <TitolariEffettiviForm
+        sezione="domanda9"
+        av4_id={av4Id || ""}
+        studio_id={form.studio_id}
+        cliente_id={form.cliente_id}
+      />
+    </div>    )}
   </div>
 )}
                   <div className="font-semibold">PPE titolari effettivi</div>
