@@ -509,6 +509,187 @@ export async function migrateAllClientiToEncrypted(
   }
 }
 
+* Encrypt contatto sensitive data
+ */
+export async function encryptContattoSensitiveData(contatto: {
+  cell?: string | null;
+  tel?: string | null;
+  altro_telefono?: string | null;
+  email?: string | null;
+  pec?: string | null;
+  email_secondaria?: string | null;
+  email_altro?: string | null;
+  note?: string | null;
+}): Promise<{
+  cell?: string | null;
+  tel?: string | null;
+  altro_telefono?: string | null;
+  email?: string | null;
+  pec?: string | null;
+  email_secondaria?: string | null;
+  email_altro?: string | null;
+  note?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    cell: contatto.cell ? encryptData(contatto.cell, key) : null,
+    tel: contatto.tel ? encryptData(contatto.tel, key) : null,
+    altro_telefono: contatto.altro_telefono
+      ? encryptData(contatto.altro_telefono, key)
+      : null,
+    email: contatto.email ? encryptData(contatto.email, key) : null,
+    pec: contatto.pec ? encryptData(contatto.pec, key) : null,
+    email_secondaria: contatto.email_secondaria
+      ? encryptData(contatto.email_secondaria, key)
+      : null,
+    email_altro: contatto.email_altro
+      ? encryptData(contatto.email_altro, key)
+      : null,
+    note: contatto.note ? encryptData(contatto.note, key) : null,
+  };
+}
+
+/**
+ * Decrypt contatto sensitive data
+ */
+export async function decryptContattoSensitiveData(contatto: {
+  cell?: string | null;
+  tel?: string | null;
+  altro_telefono?: string | null;
+  email?: string | null;
+  pec?: string | null;
+  email_secondaria?: string | null;
+  email_altro?: string | null;
+  note?: string | null;
+}): Promise<{
+  cell?: string | null;
+  tel?: string | null;
+  altro_telefono?: string | null;
+  email?: string | null;
+  pec?: string | null;
+  email_secondaria?: string | null;
+  email_altro?: string | null;
+  note?: string | null;
+}> {
+  const key = getStoredEncryptionKey();
+  if (!key) {
+    throw new Error("Cassetti locked - unlock first");
+  }
+
+  return {
+    cell:
+      contatto.cell && isEncrypted(contatto.cell)
+        ? decryptData(contatto.cell, key)
+        : contatto.cell,
+    tel:
+      contatto.tel && isEncrypted(contatto.tel)
+        ? decryptData(contatto.tel, key)
+        : contatto.tel,
+    altro_telefono:
+      contatto.altro_telefono && isEncrypted(contatto.altro_telefono)
+        ? decryptData(contatto.altro_telefono, key)
+        : contatto.altro_telefono,
+    email:
+      contatto.email && isEncrypted(contatto.email)
+        ? decryptData(contatto.email, key)
+        : contatto.email,
+    pec:
+      contatto.pec && isEncrypted(contatto.pec)
+        ? decryptData(contatto.pec, key)
+        : contatto.pec,
+    email_secondaria:
+      contatto.email_secondaria && isEncrypted(contatto.email_secondaria)
+        ? decryptData(contatto.email_secondaria, key)
+        : contatto.email_secondaria,
+    email_altro:
+      contatto.email_altro && isEncrypted(contatto.email_altro)
+        ? decryptData(contatto.email_altro, key)
+        : contatto.email_altro,
+    note:
+      contatto.note && isEncrypted(contatto.note)
+        ? decryptData(contatto.note, key)
+        : contatto.note,
+  };
+}
+
+/**
+ * Migrate all contatti for studio
+ */
+export async function migrateAllContattiToEncrypted(
+  studioId: string
+): Promise<{ success: boolean; migrated: number; errors: number }> {
+  try {
+    const key = getStoredEncryptionKey();
+    if (!key) {
+      throw new Error("Cassetti locked - unlock first");
+    }
+
+    const { data: contatti, error: fetchError } = await supabase
+      .from("tbcontatti")
+      .select("*")
+      .eq("studio_id", studioId);
+
+    if (fetchError) throw fetchError;
+    if (!contatti) return { success: true, migrated: 0, errors: 0 };
+
+    let migrated = 0;
+    let errors = 0;
+
+    for (const contatto of contatti) {
+      const needsMigration =
+        (contatto.cell && !isEncrypted(contatto.cell)) ||
+        (contatto.tel && !isEncrypted(contatto.tel)) ||
+        (contatto.altro_telefono && !isEncrypted(contatto.altro_telefono)) ||
+        (contatto.email && !isEncrypted(contatto.email)) ||
+        (contatto.pec && !isEncrypted(contatto.pec)) ||
+        (contatto.email_secondaria && !isEncrypted(contatto.email_secondaria)) ||
+        (contatto.email_altro && !isEncrypted(contatto.email_altro)) ||
+        (contatto.note && !isEncrypted(contatto.note));
+
+      if (!needsMigration) {
+        continue;
+      }
+
+      try {
+        const encrypted = await encryptContattoSensitiveData({
+          cell: contatto.cell,
+          tel: contatto.tel,
+          altro_telefono: contatto.altro_telefono,
+          email: contatto.email,
+          pec: contatto.pec,
+          email_secondaria: contatto.email_secondaria,
+          email_altro: contatto.email_altro,
+          note: contatto.note,
+        });
+
+        const { error: updateError } = await supabase
+          .from("tbcontatti")
+          .update({
+            ...encrypted,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contatto.id)
+          .eq("studio_id", studioId);
+
+        if (updateError) throw updateError;
+        migrated++;
+      } catch (error) {
+        errors++;
+        console.error(`Failed to migrate contatto ${contatto.id}:`, error);
+      }
+    }
+
+    return { success: true, migrated, errors };
+  } catch (error) {
+    console.error("Migrate all contatti error:", error);
+    return { success: false, migrated: 0, errors: 0 };
+  }
+}
+
 /**
  * Encrypt credenziali accesso passwords
  */
