@@ -265,9 +265,16 @@ export async function migrateCassettoToEncrypted(
     if (!cassetto) throw new Error("Cassetto not found");
 
     // Check if already encrypted
-    if (isEncrypted(cassetto.password1)) {
-      return { success: true }; // Already encrypted
-    }
+   const needsMigration =
+  (cassetto.username && !isEncrypted(cassetto.username)) ||
+  (cassetto.password1 && !isEncrypted(cassetto.password1)) ||
+  (cassetto.password2 && !isEncrypted(cassetto.password2)) ||
+  (cassetto.pin && !isEncrypted(cassetto.pin)) ||
+  (cassetto.pw_iniziale && !isEncrypted(cassetto.pw_iniziale));
+
+if (!needsMigration) {
+  return { success: true };
+}
 
     // Encrypt passwords
    const encryptedPasswords = await encryptCassettoPasswords({
@@ -326,9 +333,16 @@ export async function migrateAllCassettiToEncrypted(
 
     for (const cassetto of cassetti) {
       // Skip if already encrypted
-      if (isEncrypted(cassetto.password1)) {
-        continue;
-      }
+    const needsMigration =
+  (cassetto.username && !isEncrypted(cassetto.username)) ||
+  (cassetto.password1 && !isEncrypted(cassetto.password1)) ||
+  (cassetto.password2 && !isEncrypted(cassetto.password2)) ||
+  (cassetto.pin && !isEncrypted(cassetto.pin)) ||
+  (cassetto.pw_iniziale && !isEncrypted(cassetto.pw_iniziale));
+
+if (!needsMigration) {
+  continue;
+}
 
       const result = await migrateCassettoToEncrypted(cassetto.id, studioId);
       if (result.success) {
