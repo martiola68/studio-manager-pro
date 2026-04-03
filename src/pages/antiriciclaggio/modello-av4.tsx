@@ -758,156 +758,166 @@ function handleApriPdfFirmato() {
 }
   
 async function handleInvioPubblico() {
-  if (!av4Id) {
-    alert("Salva prima l'AV4.");
-    return;
-  }
-
-  if (!form.studio_id) {
-    alert("Studio non valorizzato.");
-    return;
-  }
-
-  if (!form.rapp_legale_id) {
-    alert("Rappresentante legale non valorizzato.");
-    return;
-  }
-
-  if (!form.microsoft_connection_id) {
-    alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
-    return;
-  }
-
-  if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
-    alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
-    return;
-  }
-
-  const supabase = getSupabaseClient() as any;
-
-  let token = "";
-  let url = "";
-  let destinatario = "";
-  let nomeDestinatario = "Cliente";
-  let userId: string | null = null;
-  const subject = "Compilazione Modello AV4";
-
-  try {
-    setLoading(true);
-
-    token =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    const updatePayload: any = {
-      public_token: token,
-      public_enabled: true,
-      public_sent_at: new Date().toISOString(),
-      compilato_da_cliente: false,
-    };
-
-    // updatePayload.av4_inviato_cl = true;
-
-    const { error: updateError } = await supabase
-      .from("tbAV4")
-      .update(updatePayload)
-      .eq("id", av4Id);
-
-    if (updateError) {
-      console.error("Errore aggiornamento AV4 pubblico:", updateError);
-      alert(
-        `Errore durante la generazione del link pubblico: ${updateError.message || "update tbAV4 fallito"}`
-      );
+  masterPasswordGate.requireUnlock(async () => {
+    if (!av4Id) {
+      alert("Salva prima l'AV4.");
       return;
     }
 
-    url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
-    setPublicUrl(url);
-
-    const { data: rappRow, error: rappError } = await supabase
-      .from("rapp_legali")
-      .select("email, nome_cognome")
-      .eq("id", form.rapp_legale_id)
-      .single();
-
-    if (rappError) {
-      console.error("Errore recupero email rappresentante:", rappError);
-      alert(
-        `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
-      );
+    if (!form.studio_id) {
+      alert("Studio non valorizzato.");
       return;
     }
 
-    destinatario = rappRow?.email?.trim() || "";
-    nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
-
-    if (!destinatario) {
-      alert(
-        `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
-      );
+    if (!form.rapp_legale_id) {
+      alert("Rappresentante legale non valorizzato.");
       return;
     }
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    if (!form.microsoft_connection_id) {
+      alert("Connessione Microsoft non valorizzata per il rappresentante selezionato.");
+      return;
+    }
 
-    let nomeOperatore = session?.user?.email || "";
+    if (!process.env.NEXT_PUBLIC_PUBLIC_APP_URL) {
+      alert("Variabile NEXT_PUBLIC_PUBLIC_APP_URL non configurata.");
+      return;
+    }
 
-if (session?.user?.email) {
-  const { data: userRow } = await supabase
-    .from("tbutenti") // ⚠️ cambia nome se diverso
-    .select("nome, cognome")
-    .eq("email", session.user.email)
-    .single();
+    const supabase = getSupabaseClient() as any;
 
-  if (userRow) {
-    nomeOperatore =
-      [userRow.nome, userRow.cognome].filter(Boolean).join(" ").trim();
-  }
+    let token = "";
+    let url = "";
+    let destinatario = "";
+    let nomeDestinatario = "Cliente";
+    let userId: string | null = null;
+    const subject = "Compilazione Modello AV4";
+
+    try {
+      setLoading(true);
+
+      token =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      const updatePayload: any = {
+        public_token: token,
+        public_enabled: true,
+        public_sent_at: new Date().toISOString(),
+        compilato_da_cliente: false,
+      };
+
+      // updatePayload.av4_inviato_cl = true;
+
+      const { error: updateError } = await supabase
+        .from("tbAV4")
+        .update(updatePayload)
+        .eq("id", av4Id);
+
+      if (updateError) {
+        console.error("Errore aggiornamento AV4 pubblico:", updateError);
+        alert(
+          `Errore durante la generazione del link pubblico: ${updateError.message || "update tbAV4 fallito"}`
+        );
+        return;
+      }
+
+      url = `${process.env.NEXT_PUBLIC_PUBLIC_APP_URL}/compilazione-av4/${token}`;
+      setPublicUrl(url);
+
+      const { data: rappRow, error: rappError } = await supabase
+        .from("rapp_legali")
+        .select("email, nome_cognome")
+        .eq("id", form.rapp_legale_id)
+        .single();
+
+      if (rappError) {
+        console.error("Errore recupero email rappresentante:", rappError);
+        alert(
+          `Link pubblico generato, ma non è stato possibile recuperare l'email del rappresentante legale: ${rappError.message}\n${url}`
+        );
+        return;
+      }
+
+      destinatario = rappRow?.email?.trim() || "";
+      nomeDestinatario = rappRow?.nome_cognome?.trim() || "Cliente";
+
+      if (!destinatario) {
+        alert(
+          `Link pubblico generato, ma il rappresentante legale non ha un indirizzo email valorizzato.\n${url}`
+        );
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      let nomeOperatore = session?.user?.email || "";
+
+      if (session?.user?.email) {
+        const { data: userRow } = await supabase
+          .from("tbutenti") // ⚠️ cambia nome se diverso
+          .select("nome, cognome")
+          .eq("email", session.user.email)
+          .single();
+
+        if (userRow) {
+          nomeOperatore =
+            [userRow.nome, userRow.cognome].filter(Boolean).join(" ").trim();
+        }
+      }
+
+      userId = session?.user?.id ?? null;
+
+      if (!userId) {
+        alert(
+          `Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
+        );
+        return;
+      }
+
+      await sendEmailViaMicrosoft(userId, {
+        microsoftConnectionId: form.microsoft_connection_id,
+        to: destinatario,
+        subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+            <p>Gentile ${nomeDestinatario},</p>
+
+            <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
+
+            <p>
+              <a href="${url}" target="_blank" rel="noopener noreferrer">Apri il link per inserimento/modifica dei dati</a>
+            </p>
+
+            <p><strong>Istruzioni rapide:</strong></p>
+            <ol style="padding-left: 18px;">
+              <li>apra il link;</li>
+              <li>compili i dati richiesti;</li>
+              <li>salvi e stampi il PDF;</li>
+              <li>firmi il documento;</li>
+              <li>ricarichi il PDF firmato;</li>
+              <li>clicchi su "Salva e chiudi".</li>
+            </ol>
+
+            <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
+
+            <p>Cordiali saluti,<br/>${nomeOperatore}</p>
+          </div>
+        `,
+      });
+    } catch (error: any) {
+      console.error("Errore invio pubblico AV4:", error);
+      alert(
+        `Errore durante la generazione del link pubblico: ${error?.message || "errore sconosciuto"}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  });
 }
-
-    userId = session?.user?.id ?? null;
-
-    if (!userId) {
-      alert(
-        `Link pubblico generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-      );
-      return;
-    }
-
-    await sendEmailViaMicrosoft(userId, {
-      microsoftConnectionId: form.microsoft_connection_id,
-      to: destinatario,
-      subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-          <p>Gentile ${nomeDestinatario},</p>
-
-          <p>può compilare il <strong>Modello AV4</strong> tramite il seguente collegamento riservato:</p>
-
-          <p>
-            <a href="${url}" target="_blank" rel="noopener noreferrer">Apri il link per inserimento/modifica dei dati</a>
-          </p>
-
-          <p><strong>Istruzioni rapide:</strong></p>
-          <ol style="padding-left: 18px;">
-            <li>apra il link;</li>
-            <li>compili i dati richiesti;</li>
-            <li>salvi e stampi il PDF;</li>
-            <li>firmi il documento;</li>
-            <li>ricarichi il PDF firmato;</li>
-            <li>clicchi su "Salva e chiudi".</li>
-          </ol>
-
-          <p>⚠️ Il link sarà disattivato dopo l’invio.</p>
-
-          <p>Cordiali saluti,<br/>${nomeOperatore}</p>
-        </div>
-      `,
-    });
-
     const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
       studio_id: form.studio_id,
       tipo_comunicazione: "invio_av4",
