@@ -164,11 +164,13 @@ export function areCassettiUnlocked(): boolean {
  * Encrypt cassetto passwords
  */
 export async function encryptCassettoPasswords(cassetto: {
+  username?: string | null;
   password1?: string | null;
   password2?: string | null;
   pin?: string | null;
   pw_iniziale?: string | null;
 }): Promise<{
+  username?: string | null;
   password1?: string | null;
   password2?: string | null;
   pin?: string | null;
@@ -176,8 +178,8 @@ export async function encryptCassettoPasswords(cassetto: {
 }> {
   const key = getStoredEncryptionKey();
   if (!key) {
-    // Master Password not configured → Return plaintext
     return {
+      username: cassetto.username,
       password1: cassetto.password1,
       password2: cassetto.password2,
       pin: cassetto.pin,
@@ -186,6 +188,7 @@ export async function encryptCassettoPasswords(cassetto: {
   }
 
   return {
+    username: cassetto.username ? encryptData(cassetto.username, key) : null,
     password1: cassetto.password1 ? encryptData(cassetto.password1, key) : null,
     password2: cassetto.password2 ? encryptData(cassetto.password2, key) : null,
     pin: cassetto.pin ? encryptData(cassetto.pin, key) : null,
@@ -197,11 +200,13 @@ export async function encryptCassettoPasswords(cassetto: {
  * Decrypt cassetto passwords
  */
 export async function decryptCassettoPasswords(cassetto: {
+  username?: string | null;
   password1?: string | null;
   password2?: string | null;
   pin?: string | null;
   pw_iniziale?: string | null;
 }): Promise<{
+  username?: string | null;
   password1?: string | null;
   password2?: string | null;
   pin?: string | null;
@@ -213,21 +218,28 @@ export async function decryptCassettoPasswords(cassetto: {
   }
 
   return {
-    password1: cassetto.password1 && isEncrypted(cassetto.password1)
-      ? decryptData(cassetto.password1, key)
-      : cassetto.password1,
-    password2: cassetto.password2 && isEncrypted(cassetto.password2)
-      ? decryptData(cassetto.password2, key)
-      : cassetto.password2,
-    pin: cassetto.pin && isEncrypted(cassetto.pin)
-      ? decryptData(cassetto.pin, key)
-      : cassetto.pin,
-    pw_iniziale: cassetto.pw_iniziale && isEncrypted(cassetto.pw_iniziale)
-      ? decryptData(cassetto.pw_iniziale, key)
-      : cassetto.pw_iniziale,
+    username:
+      cassetto.username && isEncrypted(cassetto.username)
+        ? decryptData(cassetto.username, key)
+        : cassetto.username,
+    password1:
+      cassetto.password1 && isEncrypted(cassetto.password1)
+        ? decryptData(cassetto.password1, key)
+        : cassetto.password1,
+    password2:
+      cassetto.password2 && isEncrypted(cassetto.password2)
+        ? decryptData(cassetto.password2, key)
+        : cassetto.password2,
+    pin:
+      cassetto.pin && isEncrypted(cassetto.pin)
+        ? decryptData(cassetto.pin, key)
+        : cassetto.pin,
+    pw_iniziale:
+      cassetto.pw_iniziale && isEncrypted(cassetto.pw_iniziale)
+        ? decryptData(cassetto.pw_iniziale, key)
+        : cassetto.pw_iniziale,
   };
 }
-
 /**
  * Migrate existing plaintext passwords to encrypted
  */
@@ -258,12 +270,13 @@ export async function migrateCassettoToEncrypted(
     }
 
     // Encrypt passwords
-    const encryptedPasswords = await encryptCassettoPasswords({
-      password1: cassetto.password1,
-      password2: cassetto.password2,
-      pin: cassetto.pin,
-      pw_iniziale: cassetto.pw_iniziale,
-    });
+   const encryptedPasswords = await encryptCassettoPasswords({
+  username: cassetto.username,
+  password1: cassetto.password1,
+  password2: cassetto.password2,
+  pin: cassetto.pin,
+  pw_iniziale: cassetto.pw_iniziale,
+});
 
     // Update cassetto
     const { error: updateError } = await supabase
