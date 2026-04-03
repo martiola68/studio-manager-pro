@@ -60,10 +60,7 @@ import {
 import {
   isEncryptionEnabled,
   encryptCassettoPasswords,
-  unlockCassetti,
 } from "@/services/encryptionService";
-
-import { isEncrypted, decryptData, getStoredEncryptionKey } from "@/lib/encryption";
 
 const formSchema = z.object({
   nominativo: z.string().min(2, "Il nominativo è obbligatorio"),
