@@ -1,5 +1,6 @@
 "use client";
-
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,12 +74,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-type PendingAction =
-  | { type: "reveal"; payload: { id: string; field: "pw1" | "pw2" | "pin" | "pw_init" } }
-  | { type: "copy"; payload: { text: string; label: string } }
-  | { type: "submit"; payload: { values: FormValues } }
-  | null;
-
 function hasKey() {
   return Boolean(getStoredEncryptionKey());
 }
@@ -106,11 +101,15 @@ export default function CassettiFiscaliPage() {
 
   // Encryption (non blocca la UI)
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
-  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
-  const [unlockPassword, setUnlockPassword] = useState("");
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-
+  
   const { toast } = useToast();
+
+  const masterPasswordGate = useMasterPasswordGate({
+  studioId,
+  onUnlocked: async () => {
+    await loadCassetti();
+  },
+});
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -252,11 +251,6 @@ export default function CassettiFiscaliPage() {
     if (checked) form.setValue("pw_attiva1", false);
   };
 
-  const requireUnlock = (action: PendingAction) => {
-    setPendingAction(action);
-    setUnlockDialogOpen(true);
-  };
-
   const doCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({ description: `${label} copiata negli appunti`, duration: 2000 });
@@ -266,101 +260,66 @@ export default function CassettiFiscaliPage() {
     }, 10000);
   };
 
-  const copyToClipboard = (text: string | null | undefined, label: string) => {
-    if (!text) return;
+ const copyToClipboard = (text: string | null | undefined, label: string) => {
+  if (!text) return;
 
-    if (encryptionEnabled && !hasKey() && isEncrypted(text)) {
-      requireUnlock({ type: "copy", payload: { text, label } });
-      return;
-    }
+  if (encryptionEnabled && !hasKey() && isEncrypted(text)) {
+    masterPasswordGate.requireUnlock(async () => {
+      const key = getStoredEncryptionKey();
+      const plainText =
+        key && isEncrypted(text) ? decryptData(text, key) : text;
 
-    doCopy(text, label);
-  };
+      doCopy(plainText, label);
+    });
+    return;
+  }
 
-  const togglePasswordVisibility = (
-    id: string,
-    field: "pw1" | "pw2" | "pin" | "pw_init",
-    forceShow?: boolean
-  ) => {
-    if (encryptionEnabled && !hasKey()) {
-      requireUnlock({ type: "reveal", payload: { id, field } });
-      return;
-    }
+  doCopy(text, label);
+};
 
-    const k = `${id}_${field}`;
-    setVisiblePasswords((prev) => ({
-      ...prev,
-      [k]: forceShow ? true : !prev[k],
-    }));
+ const togglePasswordVisibility = (
+  id: string,
+  field: "pw1" | "pw2" | "pin" | "pw_init",
+  forceShow?: boolean
+) => {
+  if (encryptionEnabled && !hasKey()) {
+    masterPasswordGate.requireUnlock(async () => {
+      const k = `${id}_${field}`;
+      setVisiblePasswords((prev) => ({
+        ...prev,
+        [k]: true,
+      }));
 
-    const willShow = forceShow ? true : !visiblePasswords[k];
-
-    if (willShow) {
       setTimeout(() => {
         setVisiblePasswords((prev) => ({ ...prev, [k]: false }));
       }, 30000);
-    }
-  };
+    });
+    return;
+  }
 
-  const handleUnlock = async () => {
+  const k = `${id}_${field}`;
+  setVisiblePasswords((prev) => ({
+    ...prev,
+    [k]: forceShow ? true : !prev[k],
+  }));
+
+  const willShow = forceShow ? true : !visiblePasswords[k];
+
+  if (willShow) {
+    setTimeout(() => {
+      setVisiblePasswords((prev) => ({ ...prev, [k]: false }));
+    }, 30000);
+  }
+};
+
+   const doSubmit = async (values: FormValues) => {
     try {
-      if (!studioId) return;
-
-      const result = await unlockCassetti(studioId, unlockPassword);
-
-      if (!result.success) {
-        toast({
-          variant: "destructive",
-          title: "Errore",
-          description: result.error || "Password errata",
-        });
-        return;
-      }
-
-      setUnlockDialogOpen(false);
-      setUnlockPassword("");
-
-      toast({
-        title: "🔓 Sbloccato",
-        description: "Ora puoi visualizzare/copiare/salvare i campi cifrati.",
-      });
-
-      await loadCassetti();
-
-      const next = pendingAction;
-      setPendingAction(null);
-
-      if (!next) return;
-
-      if (next.type === "reveal") {
-        const { id, field } = next.payload;
-        togglePasswordVisibility(id, field, true);
-    } else if (next.type === "copy") {
-  const { text, label } = next.payload;
-  const key = getStoredEncryptionKey();
-  const plainText =
-    key && text && isEncrypted(text) ? decryptData(text, key) : text;
-
-  doCopy(plainText, label);
-} else if (next.type === "submit") {
-        await doSubmit(next.payload.values);
-      }
-    } catch (error) {
-      console.error("Unlock error:", error);
-      toast({
-        variant: "destructive",
-        title: "Errore",
-        description: "Impossibile sbloccare i cassetti",
-      });
-    }
-  };
-
-  const doSubmit = async (values: FormValues) => {
-    try {
-      if (encryptionEnabled && !hasKey()) {
-        requireUnlock({ type: "submit", payload: { values } });
-        return;
-      }
+    if (encryptionEnabled && !hasKey()) {
+  masterPasswordGate.requireUnlock(async () => {
+    await doSubmit(values);
+  });
+  return;
+}
 
       let dataToSave: any = { ...values };
 
@@ -564,9 +523,9 @@ export default function CassettiFiscaliPage() {
         </Button>
 
         {encryptionEnabled && !hasKey() && (
-          <Button variant="outline" onClick={() => setUnlockDialogOpen(true)}>
-            <Unlock className="mr-2 h-4 w-4" /> Sblocca
-          </Button>
+       <Button variant="outline" onClick={() => masterPasswordGate.setOpen(true)}>
+  <Unlock className="mr-2 h-4 w-4" /> Sblocca
+</Button>
         )}
 
         <Button
@@ -741,43 +700,15 @@ export default function CassettiFiscaliPage() {
         </div>
       </div>
 
-      {/* Unlock Dialog (on-demand, non blocca la lista) */}
-      <Dialog open={unlockDialogOpen} onOpenChange={setUnlockDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>🔒 Sblocca Dati Cifrati</DialogTitle>
-            <DialogDescription>
-              Inserisci la Master Password per visualizzare/copiare/salvare i campi cifrati.
-              <br />
-              <span className="text-sm text-orange-600 mt-2 block">
-                💡 Se non l’hai configurata: <strong>Impostazioni → Dati Studio</strong>
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Master Password</label>
-              <Input
-                type="password"
-                value={unlockPassword}
-                onChange={(e) => setUnlockPassword(e.target.value)}
-                placeholder="Inserisci Master Password"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleUnlock();
-                }}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={handleUnlock}>
-              <Unlock className="mr-2 h-4 w-4" /> Sblocca
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+   {/* Master Password Dialog */}
+<MasterPasswordDialog
+  open={masterPasswordGate.open}
+  onOpenChange={masterPasswordGate.setOpen}
+  password={masterPasswordGate.password}
+  onPasswordChange={masterPasswordGate.setPassword}
+  onUnlock={masterPasswordGate.handleUnlock}
+  loading={masterPasswordGate.unlocking}
+/>
       {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
