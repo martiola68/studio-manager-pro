@@ -4,7 +4,7 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
-import MasterPasswordDialog from "@/components/security/MasterPasswordDialog";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
