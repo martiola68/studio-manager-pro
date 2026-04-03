@@ -283,15 +283,17 @@ export default function ModelloAV4() {
 
   const [form, setForm] = useState<FormState>(initialFormState());
 
-   const {
-    isDialogOpen: isMasterPasswordDialogOpen,
-    isSubmitting: isMasterPasswordSubmitting,
-    openDialog: openMasterPasswordDialog,
-    closeDialog: closeMasterPasswordDialog,
-    runProtectedAction,
-    handlePasswordConfirmed,
+    const {
+    open: isMasterPasswordDialogOpen,
+    setOpen: setMasterPasswordDialogOpen,
+    password: masterPassword,
+    setPassword: setMasterPassword,
+    unlocking: isMasterPasswordSubmitting,
+    requireUnlock,
+    handleUnlock,
+    resetUnlockState,
   } = useMasterPasswordGate();
-
+  
   function clearRappresentanteFields() {
     setForm((prev) => ({
       ...prev,
@@ -759,10 +761,10 @@ async function apriPdfFirmatoProtected() {
   }
 }
 
-  function handleApriPdfFirmato() {
-  runProtectedAction(apriPdfFirmatoProtected);
+function handleApriPdfFirmato() {
+  requireUnlock(apriPdfFirmatoProtected);
 }
-
+  
 async function handleInvioPubblico() {
   if (!av4Id) {
     alert("Salva prima l'AV4.");
@@ -1981,9 +1983,12 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
       </div>
          <MasterPasswordDialog
         open={isMasterPasswordDialogOpen}
-        loading={isMasterPasswordSubmitting}
-        onClose={closeMasterPasswordDialog}
-        onConfirm={handlePasswordConfirmed}
+        setOpen={setMasterPasswordDialogOpen}
+        password={masterPassword}
+        setPassword={setMasterPassword}
+        unlocking={isMasterPasswordSubmitting}
+        onUnlock={handleUnlock}
+        onClose={resetUnlockState}
       />
     </div>
   );
