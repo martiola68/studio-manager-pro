@@ -3,6 +3,9 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { mapVisuraText } from "@/utils/visuraMapper";
 import type { Database } from "@/integrations/supabase/types";
 
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +61,6 @@ import {
   isEncryptionLocked,
   encryptClienteSensitiveData,
   decryptClienteSensitiveData,
-  unlockCassetti,
   lockCassetti,
 } from "@/services/encryptionService";
 
@@ -217,6 +219,14 @@ export default function ClientiPage() {
   const { toast } = useToast();
   const { studioId } = useStudio();
 
+  const masterPasswordGate = useMasterPasswordGate({
+  studioId: studioId || "",
+  onUnlocked: async () => {
+    setEncryptionLocked(false);
+    await loadData();
+  },
+});
+
 const [importingVisura, setImportingVisura] = useState(false);
 const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -322,8 +332,6 @@ const [searchTerm, setSearchTerm] = useState("");
 
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionLocked, setEncryptionLocked] = useState(true);
-  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
-  const [unlockPassword, setUnlockPassword] = useState("");
 
   const clientiConCassetto = useMemo(
     () => clienti.filter((c) => !!c.cassetto_fiscale_id).length,
@@ -628,136 +636,129 @@ setRappLegali(rappLegaliData);
     });
   };
 
-  const handleSave = async () => {
-    const supabase = getSupabaseClient();
+const handleSave = async () => {
+  const supabase = getSupabaseClient();
 
-    try {
- const newErrors: Record<string, boolean> = {};
-const missingFields: string[] = [];
+  try {
+    const newErrors: Record<string, boolean> = {};
+    const missingFields: string[] = [];
 
-if (!formData.ragione_sociale) {
-  newErrors.ragione_sociale = true;
-  missingFields.push("Ragione Sociale");
-}
+    if (!formData.ragione_sociale) {
+      newErrors.ragione_sociale = true;
+      missingFields.push("Ragione Sociale");
+    }
 
-if (!formData.utente_operatore_id) {
-  newErrors.utente_operatore_id = true;
-  missingFields.push("Utente Fiscale");
-}
+    if (!formData.utente_operatore_id) {
+      newErrors.utente_operatore_id = true;
+      missingFields.push("Utente Fiscale");
+    }
 
-if (!formData.utente_professionista_id) {
-  newErrors.utente_professionista_id = true;
-  missingFields.push("Professionista Fiscale");
-}
+    if (!formData.utente_professionista_id) {
+      newErrors.utente_professionista_id = true;
+      missingFields.push("Professionista Fiscale");
+    }
 
-if (!formData.tipo_prestazione_id) {
-  newErrors.tipo_prestazione_id = true;
-  missingFields.push("Tipo Prestazione");
-}
+    if (!formData.tipo_prestazione_id) {
+      newErrors.tipo_prestazione_id = true;
+      missingFields.push("Tipo Prestazione");
+    }
 
-if (!formData.tipo_redditi) {
-  newErrors.tipo_redditi = true;
-  missingFields.push("Tipo Redditi");
-}
+    if (!formData.tipo_redditi) {
+      newErrors.tipo_redditi = true;
+      missingFields.push("Tipo Redditi");
+    }
 
-if (missingFields.length > 0) {
-  setErrors(newErrors);
+    if (missingFields.length > 0) {
+      setErrors(newErrors);
 
-  toast({
-    title: "Campi obbligatori mancanti",
-    description: missingFields.join(", "),
-    variant: "destructive",
-  });
-
-  return;
-}
-
-// reset errori se tutto ok
-setErrors({});
-  const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
-
-  if (codiceFiscalePulito) {
-    const { data: existingCliente, error: existingError } = await supabase
-      .from("tbclienti")
-      .select("id")
-      .eq("codice_fiscale", codiceFiscalePulito)
-      .maybeSingle();
-
-    if (existingError) throw existingError;
-
-    if (
-      existingCliente &&
-      (!editingCliente || existingCliente.id !== editingCliente.id)
-    ) {
       toast({
-        title: "Errore",
-        description: "Soggetto già presente in anagrafica generale",
+        title: "Campi obbligatori mancanti",
+        description: missingFields.join(", "),
         variant: "destructive",
       });
+
       return;
     }
-  }
 
-  const base: Partial<ClienteInsert> = {
-        cod_cliente:
-          formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
-        tipo_cliente: formData.tipo_cliente,
-        tipologia_cliente: formData.tipologia_cliente,
-        settore_fiscale: formData.settore_fiscale,
-        settore_lavoro: formData.settore_lavoro,
-        settore_consulenza: formData.settore_consulenza,
-        ragione_sociale: formData.ragione_sociale,
-        partita_iva: formData.partita_iva || null,
-        codice_fiscale: formData.codice_fiscale || null,
-        indirizzo: formData.indirizzo || null,
-        cap: formData.cap || null,
-        citta: formData.citta || null,
-        provincia: formData.provincia || null,
-        rapp_legale_id: formData.rapp_legale_id || null,
-        email: formData.email || null,
-        attivo: formData.attivo,
+    setErrors({});
 
-        cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+    await runProtectedSubmit({
+      encryptionEnabled,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      action: async () => {
+        const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
 
-        matricola_inps: formData.matricola_inps || null,
-        pat_inail: formData.pat_inail || null,
-        codice_ditta_ce: formData.codice_ditta_ce || null,
+        if (codiceFiscalePulito) {
+          const { data: existingCliente, error: existingError } = await supabase
+            .from("tbclienti")
+            .select("id")
+            .eq("codice_fiscale", codiceFiscalePulito)
+            .maybeSingle();
 
-        utente_operatore_id: formData.utente_operatore_id || null,
-        utente_professionista_id: formData.utente_professionista_id || null,
-        utente_payroll_id: formData.utente_payroll_id || null,
-        professionista_payroll_id: formData.professionista_payroll_id || null,
+          if (existingError) throw existingError;
 
-        contatto1_id: formData.contatto1_id || null,
-        referente_esterno: formData.referente_esterno || null,
+          if (
+            existingCliente &&
+            (!editingCliente || existingCliente.id !== editingCliente.id)
+          ) {
+            toast({
+              title: "Errore",
+              description: "Soggetto già presente in anagrafica generale",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
 
-        tipo_prestazione_id: formData.tipo_prestazione_id || null,
-        tipo_redditi: formData.tipo_redditi || null,
+        const base: Partial<ClienteInsert> = {
+          cod_cliente:
+            formData.cod_cliente || `CL-${Date.now().toString().slice(-6)}`,
+          tipo_cliente: formData.tipo_cliente,
+          tipologia_cliente: formData.tipologia_cliente,
+          settore_fiscale: formData.settore_fiscale,
+          settore_lavoro: formData.settore_lavoro,
+          settore_consulenza: formData.settore_consulenza,
+          ragione_sociale: formData.ragione_sociale,
+          partita_iva: formData.partita_iva || null,
+          codice_fiscale: formData.codice_fiscale || null,
+          indirizzo: formData.indirizzo || null,
+          cap: formData.cap || null,
+          citta: formData.citta || null,
+          provincia: formData.provincia || null,
+          rapp_legale_id: formData.rapp_legale_id || null,
+          email: formData.email || null,
+          attivo: formData.attivo,
+          cassetto_fiscale_id: formData.cassetto_fiscale_id || null,
+          matricola_inps: formData.matricola_inps || null,
+          pat_inail: formData.pat_inail || null,
+          codice_ditta_ce: formData.codice_ditta_ce || null,
+          utente_operatore_id: formData.utente_operatore_id || null,
+          utente_professionista_id: formData.utente_professionista_id || null,
+          utente_payroll_id: formData.utente_payroll_id || null,
+          professionista_payroll_id: formData.professionista_payroll_id || null,
+          contatto1_id: formData.contatto1_id || null,
+          referente_esterno: formData.referente_esterno || null,
+          tipo_prestazione_id: formData.tipo_prestazione_id || null,
+          tipo_redditi: formData.tipo_redditi || null,
+          note: formData.note || null,
+          flag_mail_attivo: formData.flag_mail_attivo,
+          flag_mail_scadenze: formData.flag_mail_scadenze,
+          flag_mail_newsletter: formData.flag_mail_newsletter,
+          flag_iva: scadenzari.iva,
+          flag_cu: scadenzari.cu,
+          flag_bilancio: scadenzari.bilancio,
+          flag_lipe: scadenzari.lipe,
+          flag_esterometro: scadenzari.esterometro,
+          flag_proforma: scadenzari.proforma,
+          flag_fiscali: scadenzari.fiscali,
+          flag_770: scadenzari.modello_770,
+          flag_ccgg: scadenzari.ccgg,
+          flag_imu: scadenzari.imu,
+        };
 
-        note: formData.note || null,
+        let dataToSave: Partial<ClienteInsert> = base;
 
-        flag_mail_attivo: formData.flag_mail_attivo,
-        flag_mail_scadenze: formData.flag_mail_scadenze,
-        flag_mail_newsletter: formData.flag_mail_newsletter,
-
-        // scadenzari
-        flag_iva: scadenzari.iva,
-        flag_cu: scadenzari.cu,
-        flag_bilancio: scadenzari.bilancio,
-        flag_lipe: scadenzari.lipe,
-        flag_esterometro: scadenzari.esterometro,
-        flag_proforma: scadenzari.proforma,
-        flag_fiscali: scadenzari.fiscali,
-        flag_770: scadenzari.modello_770,
-        flag_ccgg: scadenzari.ccgg,
-        flag_imu: scadenzari.imu,
-      };
-
-      let dataToSave: Partial<ClienteInsert> = base;
-
-      // encrypt se abilitato + sbloccato
-      if (encryptionEnabled && !encryptionLocked) {
-        try {
+        if (encryptionEnabled) {
           const encrypted = await encryptClienteSensitiveData({
             codice_fiscale: dataToSave.codice_fiscale ?? null,
             partita_iva: dataToSave.partita_iva ?? null,
@@ -767,57 +768,51 @@ setErrors({});
             note: dataToSave.note ?? null,
           });
           dataToSave = { ...dataToSave, ...encrypted };
-        } catch (error) {
-          console.error("Encryption error:", error);
-          toast({
-            title: "Errore Encryption",
-            description:
-              "Impossibile cifrare i dati. Verifica di aver sbloccato la protezione.",
-            variant: "destructive",
-          });
-          return;
         }
-      }
 
-      if (editingCliente) {
-        const updateData: ClienteUpdate = dataToSave as ClienteUpdate;
-        const { error } = await supabase
-          .from("tbclienti")
-          .update(updateData)
-          .eq("id", editingCliente.id);
+        if (editingCliente) {
+          const updateData: ClienteUpdate = dataToSave as ClienteUpdate;
+          const { error } = await supabase
+            .from("tbclienti")
+            .update(updateData)
+            .eq("id", editingCliente.id);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        toast({
-          title: "Successo",
-          description: "Cliente aggiornato con successo",
-        });
-      } else {
-        const insertData: ClienteInsert = dataToSave as ClienteInsert;
-        const { error } = await supabase.from("tbclienti").insert(insertData);
-        if (error) throw error;
+          toast({
+            title: "Successo",
+            description: "Cliente aggiornato con successo",
+          });
+        } else {
+          const insertData: ClienteInsert = dataToSave as ClienteInsert;
+          const { error } = await supabase.from("tbclienti").insert(insertData);
+          if (error) throw error;
 
-        toast({ title: "Successo", description: "Cliente creato con successo" });
-      }
+          toast({
+            title: "Successo",
+            description: "Cliente creato con successo",
+          });
+        }
 
-      setIsDialogOpen(false);
-      resetForm();
-      loadData();
-    } catch (error: unknown) {
-      console.error("Errore salvataggio cliente:", error);
-      const message =
-        error && typeof error === "object" && "message" in error
-          ? String((error as { message: unknown }).message)
-          : "Impossibile salvare il cliente";
+        setIsDialogOpen(false);
+        resetForm();
+        await loadData();
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Errore salvataggio cliente:", error);
+    const message =
+      error && typeof error === "object" && "message" in error
+        ? String((error as { message: unknown }).message)
+        : "Impossibile salvare il cliente";
 
-      toast({
-        title: "Errore",
-        description: message,
-        variant: "destructive",
-      });
-    }
-  };
-
+    toast({
+      title: "Errore",
+      description: message,
+      variant: "destructive",
+    });
+  }
+};
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
     const supabase = getSupabaseClient();
@@ -1107,40 +1102,7 @@ setErrors({});
     }
   };
 
-  const handleUnlockCassetti = () => setShowUnlockDialog(true);
-
-  const handleConfirmUnlock = async () => {
-    try {
-      const result = await unlockCassetti(studioId || "", unlockPassword);
-      if (result.success) {
-        setEncryptionLocked(false);
-        setShowUnlockDialog(false);
-        setUnlockPassword("");
-        toast({
-          title: "Sbloccato",
-          description: "Dati sensibili sbloccati con successo",
-        });
-        loadData();
-      } else {
-        toast({
-          title: "Errore",
-          description: result.error || "Password errata",
-          variant: "destructive",
-        });
-      }
-    } catch (e: unknown) {
-      const message =
-        e && typeof e === "object" && "message" in e
-          ? String((e as { message: unknown }).message)
-          : "Errore durante lo sblocco";
-
-      toast({
-        title: "Errore",
-        description: message,
-        variant: "destructive",
-      });
-    }
-  };
+  const handleUnlockCassetti = () => masterPasswordGate.setOpen(true);
 
   const handleLockCassetti = () => {
     lockCassetti();
@@ -2429,31 +2391,14 @@ setErrors({});
 </Dialog>
 
 {/* DIALOG SBLOCCO */}
-<Dialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Sblocca Dati Sensibili</DialogTitle>
-    </DialogHeader>
-
-    <div className="space-y-4 py-4">
-      <p className="text-sm text-muted-foreground">
-        Inserisci la password principale dello studio per visualizzare e
-        modificare i dati sensibili (CF, P.IVA, ecc).
-      </p>
-
-      <div className="space-y-2">
-        <Label htmlFor="unlock-password">Password Principale</Label>
-        <Input
-          id="unlock-password"
-          type="password"
-          value={unlockPassword}
-          onChange={(e) => setUnlockPassword(e.target.value)}
-          placeholder="Inserisci password..."
-        />
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
+<MasterPasswordDialog
+  open={masterPasswordGate.open}
+  onOpenChange={masterPasswordGate.setOpen}
+  password={masterPasswordGate.password}
+  onPasswordChange={masterPasswordGate.setPassword}
+  onUnlock={masterPasswordGate.handleUnlock}
+  loading={masterPasswordGate.unlocking}
+/>
 </div>
 );
 }
