@@ -324,12 +324,13 @@ export default function CassettiFiscaliPage() {
       let dataToSave: any = { ...values };
 
       if (encryptionEnabled) {
-        const encrypted = await encryptCassettoPasswords({
-          password1: values.password1,
-          password2: values.password2,
-          pin: values.pin,
-          pw_iniziale: values.pw_iniziale,
-        });
+       const encrypted = await encryptCassettoPasswords({
+  username: values.username,
+  password1: values.password1,
+  password2: values.password2,
+  pin: values.pin,
+  pw_iniziale: values.pw_iniziale,
+});
         dataToSave = { ...values, ...encrypted };
       }
 
