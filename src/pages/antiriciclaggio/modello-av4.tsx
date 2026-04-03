@@ -747,10 +747,6 @@ function handleApriPdfFirmato() {
   }
 }
   
-function handleApriPdfFirmato() {
-  requireUnlock(apriPdfFirmatoProtected);
-}
-  
 async function handleInvioPubblico() {
   if (!av4Id) {
     alert("Salva prima l'AV4.");
