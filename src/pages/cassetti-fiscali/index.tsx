@@ -4,6 +4,7 @@ import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getStoredEncryptionKey } from "@/services/encryptionService";
 import {
   copyProtectedValue,
   revealProtectedValue,
