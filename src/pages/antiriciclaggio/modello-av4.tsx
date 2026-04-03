@@ -3,9 +3,6 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
-import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
-import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
@@ -283,17 +280,6 @@ export default function ModelloAV4() {
 
   const [form, setForm] = useState<FormState>(initialFormState());
 
-    const {
-    open: isMasterPasswordDialogOpen,
-    setOpen: setMasterPasswordDialogOpen,
-    password: masterPassword,
-    setPassword: setMasterPassword,
-    unlocking: isMasterPasswordSubmitting,
-    requireUnlock,
-    handleUnlock,
-    resetUnlockState,
-  } = useMasterPasswordGate();
-  
   function clearRappresentanteFields() {
     setForm((prev) => ({
       ...prev,
@@ -740,7 +726,7 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
-async function apriPdfFirmatoProtected() {
+function handleApriPdfFirmato() {
   if (!form.allegato_pdf_cliente) {
     alert("PDF firmato non presente.");
     return;
@@ -760,7 +746,7 @@ async function apriPdfFirmatoProtected() {
     alert("Errore apertura PDF.");
   }
 }
-
+  
 function handleApriPdfFirmato() {
   requireUnlock(apriPdfFirmatoProtected);
 }
@@ -1632,7 +1618,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
 
     {av4Id && (
-     <div className="rounded-lg border p-4">
+      <div className="rounded-lg border p-4">
       <TitolariEffettiviForm
         sezione="domanda8"
         av4_id={av4Id || ""}
@@ -1731,14 +1717,14 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
     </div>
 
     {av4Id && (
-      <div className="rounded-lg border p-4">
+       <div className="rounded-lg border p-4">
       <TitolariEffettiviForm
         sezione="domanda9"
         av4_id={av4Id || ""}
         studio_id={form.studio_id}
         cliente_id={form.cliente_id}
       />
-    </div>    )}
+    </div>
   </div>
 )}
                   <div className="font-semibold">PPE titolari effettivi</div>
@@ -1981,15 +1967,7 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
           </div>
         </div>
       </div>
-         <MasterPasswordDialog
-        open={isMasterPasswordDialogOpen}
-        setOpen={setMasterPasswordDialogOpen}
-        password={masterPassword}
-        setPassword={setMasterPassword}
-        unlocking={isMasterPasswordSubmitting}
-        onUnlock={handleUnlock}
-        onClose={resetUnlockState}
-      />
+      
     </div>
   );
 }
