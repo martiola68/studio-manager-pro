@@ -509,7 +509,8 @@ export async function migrateAllClientiToEncrypted(
   }
 }
 
-* Encrypt contatto sensitive data
+/**
+ * Encrypt contatto sensitive data
  */
 export async function encryptContattoSensitiveData(contatto: {
   cell?: string | null;
