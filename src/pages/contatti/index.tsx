@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,17 +27,61 @@ import {
   Phone,
   Mail,
   Smartphone,
-  User
+  User,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
 
+import {
+  isEncryptionEnabled,
+  isEncryptionLocked,
+  encryptContattoSensitiveData,
+  decryptContattoSensitiveData,
+  lockCassetti,
+} from "@/services/encryptionService";
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+
 type Contatto = Database["public"]["Tables"]["tbcontatti"]["Row"];
+
+type FormDataState = {
+  cognome: string;
+  nome: string;
+  cell: string;
+  tel: string;
+  altro_telefono: string;
+  email: string;
+  pec: string;
+  email_secondaria: string;
+  email_altro: string;
+  contatto_principale: string;
+  note: string;
+};
+
+const initialFormData: FormDataState = {
+  cognome: "",
+  nome: "",
+  cell: "",
+  tel: "",
+  altro_telefono: "",
+  email: "",
+  pec: "",
+  email_secondaria: "",
+  email_altro: "",
+  contatto_principale: "",
+  note: "",
+};
 
 export default function ContattiPage() {
   const router = useRouter();
   const { toast } = useToast();
+
+  const [studioId, setStudioId] = useState("");
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
+  const [encryptionLockedState, setEncryptionLockedState] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [contatti, setContatti] = useState<Contatto[]>([]);
@@ -51,38 +95,102 @@ export default function ContattiPage() {
   const [importing, setImporting] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
 
-  const [formData, setFormData] = useState({
-    cognome: "",
-    nome: "",
-    cell: "",
-    tel: "",
-    altro_telefono: "",
-    email: "",
-    pec: "",
-    email_secondaria: "",
-    email_altro: "",
-    contatto_principale: "",
-    note: ""
+  const [formData, setFormData] = useState<FormDataState>(initialFormData);
+
+  const masterPasswordGate = useMasterPasswordGate({
+    studioId,
+    onUnlocked: async () => {
+      setEncryptionLockedState(false);
+      await loadContatti();
+    },
   });
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   useEffect(() => {
-    checkAuthAndLoad();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void checkAuthAndLoad();
   }, []);
 
   useEffect(() => {
     filterContatti();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contatti, searchQuery, letterFilter]);
+
+  const resolveStudioId = async (): Promise<string> => {
+    const supabase = getSupabaseClient();
+
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("studio_id");
+      if (cached) {
+        return cached;
+      }
+    }
+
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) throw error;
+    if (!session?.user?.email) {
+      throw new Error("Utente non autenticato");
+    }
+
+    const { data, error: utenteError } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("email", session.user.email)
+      .single();
+
+    if (utenteError) throw utenteError;
+
+    const sid = data?.studio_id ? String(data.studio_id) : "";
+    if (!sid) {
+      throw new Error("studio_id non disponibile");
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("studio_id", sid);
+    }
+
+    return sid;
+  };
+
+  const hydrateContatti = async (rows: Contatto[], enabled: boolean): Promise<Contatto[]> => {
+    if (!enabled || isEncryptionLocked()) {
+      return rows;
+    }
+
+    const decrypted = await Promise.all(
+      rows.map(async (c) => {
+        try {
+          return {
+            ...c,
+            ...(await decryptContattoSensitiveData({
+              cell: c.cell,
+              tel: c.tel,
+              altro_telefono: c.altro_telefono,
+              email: c.email,
+              pec: c.pec,
+              email_secondaria: c.email_secondaria,
+              email_altro: c.email_altro,
+              note: c.note,
+            })),
+          } as Contatto;
+        } catch {
+          return c;
+        }
+      })
+    );
+
+    return decrypted;
+  };
 
   const checkAuthAndLoad = async () => {
     try {
       const supabase = getSupabaseClient();
       const {
         data: { session },
-        error
+        error,
       } = await supabase.auth.getSession();
 
       if (error) throw error;
@@ -92,24 +200,47 @@ export default function ContattiPage() {
         return;
       }
 
-      await loadContatti();
+      const sid = await resolveStudioId();
+      setStudioId(sid);
+
+      const enabled = await isEncryptionEnabled(sid);
+      setEncryptionEnabled(enabled);
+      setEncryptionLockedState(isEncryptionLocked());
+
+      await loadContatti(sid, enabled);
     } catch (error) {
       console.error("Errore:", error);
       router.push("/login");
     }
   };
 
-  const loadContatti = async () => {
+  const loadContatti = async (
+    studioIdOverride?: string,
+    encryptionEnabledOverride?: boolean
+  ) => {
     try {
       setLoading(true);
+
+      const sid = studioIdOverride || studioId;
+      const enabled =
+        typeof encryptionEnabledOverride === "boolean"
+          ? encryptionEnabledOverride
+          : sid
+          ? await isEncryptionEnabled(sid)
+          : false;
+
+      setEncryptionEnabled(enabled);
+      setEncryptionLockedState(isEncryptionLocked());
+
       const data = await contattoService.getContatti();
-      setContatti(data);
+      const hydrated = await hydrateContatti(data, enabled);
+      setContatti(hydrated);
     } catch (error) {
       console.error("Errore caricamento contatti:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i contatti",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -126,66 +257,39 @@ export default function ContattiPage() {
         const nome = (c.nome || "").toLowerCase();
         const email = (c.email || "").toLowerCase();
         const cell = (c.cell || "").toLowerCase();
-        return cognome.includes(query) || nome.includes(query) || email.includes(query) || cell.includes(query);
+
+        return (
+          cognome.includes(query) ||
+          nome.includes(query) ||
+          email.includes(query) ||
+          cell.includes(query)
+        );
       });
     }
 
     if (letterFilter) {
-      filtered = filtered.filter((c) => (c.cognome || "").toUpperCase().startsWith(letterFilter));
+      filtered = filtered.filter((c) =>
+        (c.cognome || "").toUpperCase().startsWith(letterFilter)
+      );
     }
 
     setFilteredContatti(filtered);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const dataToSave = {
-        cognome: formData.cognome,
-        nome: formData.nome || "",
-        cell: formData.cell || null,
-        tel: formData.tel || null,
-        altro_telefono: formData.altro_telefono || null,
-        email: formData.email || null,
-        pec: formData.pec || null,
-        email_secondaria: formData.email_secondaria || null,
-        email_altro: formData.email_altro || null,
-        contatto_principale: formData.contatto_principale || null,
-        note: formData.note || null
-      };
-
-      if (editingContatto) {
-        await contattoService.updateContatto(editingContatto.id, dataToSave);
-        toast({
-          title: "Successo",
-          description: "Contatto aggiornato con successo"
-        });
-      } else {
-        await contattoService.createContatto(dataToSave);
-        toast({
-          title: "Successo",
-          description: "Contatto creato con successo"
-        });
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      await loadContatti();
-    } catch (error) {
-      console.error("Errore salvataggio:", error);
-      toast({
-        title: "Errore",
-        description: "Impossibile salvare il contatto",
-        variant: "destructive"
-      });
-    }
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingContatto(null);
   };
 
-  const handleEdit = (contatto: Contatto) => {
+  const handleOpenNew = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (contatto: Contatto) => {
     setEditingContatto(contatto);
     setFormData({
-      cognome: contatto.cognome,
+      cognome: contatto.cognome || "",
       nome: contatto.nome || "",
       cell: contatto.cell || "",
       tel: contatto.tel || "",
@@ -195,9 +299,100 @@ export default function ContattiPage() {
       email_secondaria: contatto.email_secondaria || "",
       email_altro: contatto.email_altro || "",
       contatto_principale: contatto.contatto_principale || "",
-      note: contatto.note || ""
+      note: contatto.note || "",
     });
     setDialogOpen(true);
+  };
+
+  const handleEdit = async (contatto: Contatto) => {
+    if (encryptionEnabled && isEncryptionLocked()) {
+      masterPasswordGate.requireUnlock(async () => {
+        await loadContatti();
+        const fresh = await contattoService.getContatti();
+        const enabled = studioId ? await isEncryptionEnabled(studioId) : false;
+        const hydrated = await hydrateContatti(fresh, enabled);
+        const found = hydrated.find((x) => x.id === contatto.id);
+
+        if (found) {
+          openEditDialog(found);
+        }
+      });
+      return;
+    }
+
+    openEditDialog(contatto);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const run = async () => {
+      try {
+        let dataToSave: any = {
+          cognome: formData.cognome,
+          nome: formData.nome || "",
+          cell: formData.cell || null,
+          tel: formData.tel || null,
+          altro_telefono: formData.altro_telefono || null,
+          email: formData.email || null,
+          pec: formData.pec || null,
+          email_secondaria: formData.email_secondaria || null,
+          email_altro: formData.email_altro || null,
+          contatto_principale: formData.contatto_principale || null,
+          note: formData.note || null,
+        };
+
+        if (encryptionEnabled) {
+          const encrypted = await encryptContattoSensitiveData({
+            cell: dataToSave.cell,
+            tel: dataToSave.tel,
+            altro_telefono: dataToSave.altro_telefono,
+            email: dataToSave.email,
+            pec: dataToSave.pec,
+            email_secondaria: dataToSave.email_secondaria,
+            email_altro: dataToSave.email_altro,
+            note: dataToSave.note,
+          });
+
+          dataToSave = {
+            ...dataToSave,
+            ...encrypted,
+          };
+        }
+
+        if (editingContatto) {
+          await contattoService.updateContatto(editingContatto.id, dataToSave);
+          toast({
+            title: "Successo",
+            description: "Contatto aggiornato con successo",
+          });
+        } else {
+          await contattoService.createContatto(dataToSave);
+          toast({
+            title: "Successo",
+            description: "Contatto creato con successo",
+          });
+        }
+
+        setDialogOpen(false);
+        resetForm();
+        await loadContatti();
+      } catch (error) {
+        console.error("Errore salvataggio:", error);
+        toast({
+          title: "Errore",
+          description: "Impossibile salvare il contatto",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (encryptionEnabled && isEncryptionLocked()) {
+      masterPasswordGate.requireUnlock(run);
+      return;
+    }
+
+    await run();
   };
 
   const handleDelete = async (id: string) => {
@@ -207,7 +402,7 @@ export default function ContattiPage() {
       await contattoService.deleteContatto(id);
       toast({
         title: "Successo",
-        description: "Contatto eliminato con successo"
+        description: "Contatto eliminato con successo",
       });
       await loadContatti();
     } catch (error) {
@@ -215,26 +410,19 @@ export default function ContattiPage() {
       toast({
         title: "Errore",
         description: "Impossibile eliminare il contatto",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      cognome: "",
-      nome: "",
-      cell: "",
-      tel: "",
-      altro_telefono: "",
-      email: "",
-      pec: "",
-      email_secondaria: "",
-      email_altro: "",
-      contatto_principale: "",
-      note: ""
+  const handleLock = async () => {
+    lockCassetti();
+    setEncryptionLockedState(true);
+    await loadContatti();
+    toast({
+      title: "Bloccato",
+      description: "Dati sensibili bloccati",
     });
-    setEditingContatto(null);
   };
 
   const downloadTemplate = () => {
@@ -249,7 +437,7 @@ export default function ContattiPage() {
       "email_secondaria",
       "email_altro",
       "contatto_principale",
-      "note"
+      "note",
     ];
 
     const exampleRows = [
@@ -264,11 +452,14 @@ export default function ContattiPage() {
         "mario.privato@email.it",
         "ufficio@email.it",
         "Dott. Bianchi",
-        "Contatto importante"
-      ]
+        "Contatto importante",
+      ],
     ];
 
-    const csvContent = [headers.join(","), ...exampleRows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...exampleRows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -278,7 +469,7 @@ export default function ContattiPage() {
 
     toast({
       title: "Template scaricato",
-      description: "Compila il file CSV seguendo l'esempio fornito"
+      description: "Compila il file CSV seguendo l'esempio fornito",
     });
   };
 
@@ -286,17 +477,21 @@ export default function ContattiPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+    if (
+      !file.name.endsWith(".csv") &&
+      !file.name.endsWith(".xlsx") &&
+      !file.name.endsWith(".xls")
+    ) {
       toast({
         title: "Formato non valido",
         description: "Seleziona un file Excel (.xlsx, .xls) o CSV",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setCsvFile(file);
-    parseFile(file);
+    void parseFile(file);
   };
 
   const parseFile = async (file: File) => {
@@ -306,13 +501,15 @@ export default function ContattiPage() {
         const workbook = XLSX.read(buffer, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+        });
 
         if (jsonData.length < 2) {
           toast({
             title: "File vuoto",
             description: "Il file Excel non contiene dati",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
@@ -328,7 +525,7 @@ export default function ContattiPage() {
           "email_secondaria",
           "email_altro",
           "contatto_principale",
-          "note"
+          "note",
         ];
 
         const excelRows = jsonData.slice(1).map((row: any[], index) => {
@@ -348,14 +545,18 @@ export default function ContattiPage() {
           toast({
             title: "File vuoto",
             description: "Il file CSV non contiene dati",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
 
-        const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+        const headers = lines[0]
+          .split(",")
+          .map((h) => h.trim().replace(/"/g, ""));
         const csvRows = lines.slice(1).map((line, index) => {
-          const values = line.split(",").map((v) => v.trim().replace(/"/g, ""));
+          const values = line
+            .split(",")
+            .map((v) => v.trim().replace(/"/g, ""));
           const row: any = { _lineNumber: index + 2 };
           headers.forEach((header, i) => {
             row[header] = values[i] || "";
@@ -370,7 +571,7 @@ export default function ContattiPage() {
       toast({
         title: "Errore",
         description: "Impossibile leggere il file",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -378,14 +579,18 @@ export default function ContattiPage() {
   const validateContatto = (row: any): { valid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
-    if (!row.cognome?.trim()) errors.push("Cognome/Denominazione obbligatorio");
+    if (!row.cognome?.trim()) {
+      errors.push("Cognome/Denominazione obbligatorio");
+    }
 
-    [row.email, row.pec, row.email_secondaria, row.email_altro].forEach((email, idx) => {
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        const fieldNames = ["Email", "PEC", "Email secondaria", "Email altro"];
-        errors.push(`${fieldNames[idx]} non valida`);
+    [row.email, row.pec, row.email_secondaria, row.email_altro].forEach(
+      (email, idx) => {
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          const fieldNames = ["Email", "PEC", "Email secondaria", "Email altro"];
+          errors.push(`${fieldNames[idx]} non valida`);
+        }
       }
-    });
+    );
 
     return { valid: errors.length === 0, errors };
   };
@@ -395,7 +600,7 @@ export default function ContattiPage() {
       toast({
         title: "Nessun dato",
         description: "Carica un file CSV prima di importare",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -411,12 +616,14 @@ export default function ContattiPage() {
 
         if (!validation.valid) {
           errors++;
-          errorDetails.push(`Riga ${row._lineNumber}: ${validation.errors.join(", ")}`);
+          errorDetails.push(
+            `Riga ${row._lineNumber}: ${validation.errors.join(", ")}`
+          );
           continue;
         }
 
         try {
-          const contattoData = {
+          let contattoData: any = {
             cognome: row.cognome.trim(),
             nome: row.nome?.trim() || "",
             cell: row.cell?.trim() || null,
@@ -427,8 +634,26 @@ export default function ContattiPage() {
             email_secondaria: row.email_secondaria?.trim() || null,
             email_altro: row.email_altro?.trim() || null,
             contatto_principale: row.contatto_principale?.trim() || null,
-            note: row.note?.trim() || null
+            note: row.note?.trim() || null,
           };
+
+          if (encryptionEnabled) {
+            const encrypted = await encryptContattoSensitiveData({
+              cell: contattoData.cell,
+              tel: contattoData.tel,
+              altro_telefono: contattoData.altro_telefono,
+              email: contattoData.email,
+              pec: contattoData.pec,
+              email_secondaria: contattoData.email_secondaria,
+              email_altro: contattoData.email_altro,
+              note: contattoData.note,
+            });
+
+            contattoData = {
+              ...contattoData,
+              ...encrypted,
+            };
+          }
 
           await contattoService.createContatto(contattoData);
           imported++;
@@ -446,7 +671,7 @@ export default function ContattiPage() {
       toast({
         title: "Importazione completata",
         description: `✅ Importati: ${imported} | ❌ Errori: ${errors}`,
-        duration: 6000
+        duration: 6000,
       });
 
       setImportDialogOpen(false);
@@ -458,7 +683,7 @@ export default function ContattiPage() {
       toast({
         title: "Errore",
         description: "Errore durante l'importazione",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setImporting(false);
@@ -473,9 +698,9 @@ export default function ContattiPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="inline-block h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
           <p className="text-gray-600">Caricamento...</p>
         </div>
       </div>
@@ -485,34 +710,74 @@ export default function ContattiPage() {
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="mb-6 md:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rubrica Contatti</h1>
-            <p className="text-sm md:text-base text-gray-500 mt-1">Gestisci i contatti della rubrica</p>
+            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+              Rubrica Contatti
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 md:text-base">
+              Gestisci i contatti della rubrica
+            </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            {encryptionEnabled && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (encryptionLockedState) {
+                    masterPasswordGate.setOpen(true);
+                  } else {
+                    void handleLock();
+                  }
+                }}
+                className={
+                  encryptionLockedState
+                    ? "border-orange-600 text-orange-600"
+                    : "border-green-600 text-green-600"
+                }
+              >
+                {encryptionLockedState ? (
+                  <>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Sblocca Dati
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="mr-2 h-4 w-4" />
+                    Blocca Dati
+                  </>
+                )}
+              </Button>
+            )}
+
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                <Button
+                  variant="outline"
+                  className="w-full border-green-600 text-green-600 hover:bg-green-50 sm:w-auto"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Importa Excel
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+              <DialogContent className="mx-4 max-h-[90vh] max-w-4xl overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Importazione Contatti da Excel/CSV</DialogTitle>
-                  <DialogDescription>Carica un file Excel (.xlsx, .xls) o CSV per importare più contatti contemporaneamente</DialogDescription>
+                  <DialogDescription>
+                    Carica un file Excel (.xlsx, .xls) o CSV per importare più
+                    contatti contemporaneamente
+                  </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                     <div className="flex items-start gap-3">
-                      <FileSpreadsheet className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <FileSpreadsheet className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
                       <div className="text-sm text-blue-900">
-                        <p className="font-semibold mb-2">📋 Come funziona:</p>
-                        <ol className="list-decimal list-inside space-y-1">
+                        <p className="mb-2 font-semibold">📋 Come funziona:</p>
+                        <ol className="list-inside list-decimal space-y-1">
                           <li>Scarica il template CSV aggiornato</li>
                           <li>Compila il file seguendo l'esempio</li>
                           <li>Carica il file compilato</li>
@@ -522,7 +787,7 @@ export default function ContattiPage() {
                   </div>
 
                   <Button onClick={downloadTemplate} variant="outline" className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Scarica Template CSV
                   </Button>
 
@@ -539,9 +804,15 @@ export default function ContattiPage() {
 
                   {previewData.length > 0 && (
                     <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button onClick={handleImport} disabled={importing} className="flex-1 bg-green-600 hover:bg-green-700">
-                          {importing ? "Importazione..." : `Importa ${previewData.length} Contatti`}
+                      <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+                        <Button
+                          onClick={handleImport}
+                          disabled={importing}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          {importing
+                            ? "Importazione..."
+                            : `Importa ${previewData.length} Contatti`}
                         </Button>
                       </div>
                     </div>
@@ -558,26 +829,36 @@ export default function ContattiPage() {
               }}
             >
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                  onClick={handleOpenNew}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
                   Nuovo Contatto
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+              <DialogContent className="mx-4 max-h-[90vh] max-w-4xl overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}</DialogTitle>
-                  <DialogDescription>Inserisci i dati del contatto. I campi contrassegnati con * sono obbligatori.</DialogDescription>
+                  <DialogTitle>
+                    {editingContatto ? "Modifica Contatto" : "Nuovo Contatto"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Inserisci i dati del contatto. I campi contrassegnati con *
+                    sono obbligatori.
+                  </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="cognome">Cognome/Denominazione *</Label>
                       <Input
                         id="cognome"
                         value={formData.cognome}
-                        onChange={(e) => setFormData({ ...formData, cognome: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cognome: e.target.value })
+                        }
                         required
                         placeholder="Es. Rossi o Nome Azienda"
                       />
@@ -587,20 +868,24 @@ export default function ContattiPage() {
                       <Input
                         id="nome"
                         value={formData.nome}
-                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nome: e.target.value })
+                        }
                         placeholder="Es. Mario"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="cell">Cellulare</Label>
                       <Input
                         id="cell"
                         type="tel"
                         value={formData.cell}
-                        onChange={(e) => setFormData({ ...formData, cell: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cell: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -609,19 +894,26 @@ export default function ContattiPage() {
                         id="tel"
                         type="tel"
                         value={formData.tel}
-                        onChange={(e) => setFormData({ ...formData, tel: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, tel: e.target.value })
+                        }
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="altro_telefono">Altro Telefono</Label>
                       <Input
                         id="altro_telefono"
                         type="tel"
                         value={formData.altro_telefono}
-                        onChange={(e) => setFormData({ ...formData, altro_telefono: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            altro_telefono: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -630,19 +922,23 @@ export default function ContattiPage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="pec">PEC</Label>
                       <Input
                         id="pec"
                         type="email"
                         value={formData.pec}
-                        onChange={(e) => setFormData({ ...formData, pec: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, pec: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -651,27 +947,41 @@ export default function ContattiPage() {
                         id="email_secondaria"
                         type="email"
                         value={formData.email_secondaria}
-                        onChange={(e) => setFormData({ ...formData, email_secondaria: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            email_secondaria: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="email_altro">Email Altro</Label>
                       <Input
                         id="email_altro"
                         type="email"
                         value={formData.email_altro}
-                        onChange={(e) => setFormData({ ...formData, email_altro: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, email_altro: e.target.value })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contatto_principale">Contatto Principale</Label>
+                      <Label htmlFor="contatto_principale">
+                        Contatto Principale
+                      </Label>
                       <Input
                         id="contatto_principale"
                         value={formData.contatto_principale}
-                        onChange={(e) => setFormData({ ...formData, contatto_principale: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            contatto_principale: e.target.value,
+                          })
+                        }
                         placeholder="Es. Segretaria, Responsabile..."
                       />
                     </div>
@@ -682,16 +992,26 @@ export default function ContattiPage() {
                     <Textarea
                       id="note"
                       value={formData.note}
-                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, note: e.target.value })
+                      }
                       rows={3}
                     />
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-4">
-                    <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row">
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
                       {editingContatto ? "Aggiorna" : "Salva"} Contatto
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                      className="w-full sm:w-auto"
+                    >
                       Annulla
                     </Button>
                   </div>
@@ -704,16 +1024,18 @@ export default function ContattiPage() {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-base md:text-lg">Ricerca e Filtri</CardTitle>
+          <CardTitle className="text-base md:text-lg">
+            Ricerca e Filtri
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
             <Input
               placeholder="Cerca per nome, cognome, email o telefono..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-12"
+              className="h-12 pl-10"
             />
           </div>
 
@@ -732,7 +1054,7 @@ export default function ContattiPage() {
                 variant={letterFilter === letter ? "default" : "outline"}
                 size="sm"
                 onClick={() => setLetterFilter(letter)}
-                className="w-10 h-10"
+                className="h-10 w-10"
               >
                 {letter}
               </Button>
@@ -745,9 +1067,9 @@ export default function ContattiPage() {
         {filteredContatti.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <UserCircle className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg">Nessun contatto trovato</p>
-              <p className="text-gray-400 text-sm mt-2">
+              <UserCircle className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+              <p className="text-lg text-gray-500">Nessun contatto trovato</p>
+              <p className="mt-2 text-sm text-gray-400">
                 {searchQuery || letterFilter
                   ? "Prova a modificare i filtri di ricerca"
                   : "Inizia aggiungendo il tuo primo contatto"}
@@ -756,24 +1078,27 @@ export default function ContattiPage() {
           </Card>
         ) : (
           filteredContatti.map((contatto) => (
-            <Card key={contatto.id} className="hover:shadow-md transition-shadow">
+            <Card key={contatto.id} className="transition-shadow hover:shadow-md">
               <CardContent className="p-3">
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-lg md:text-xl">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-lg font-bold text-white md:h-16 md:w-16 md:text-xl">
                       {getInitials(contatto.nome || "", contatto.cognome)}
                     </div>
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">
+                        <h3 className="truncate text-base font-bold text-gray-900 md:text-lg">
                           {contatto.cognome} {contatto.nome}
                         </h3>
                         {contatto.contatto_principale && (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 mt-1">
-                            <User className="h-3 w-3 mr-1" />
+                          <Badge
+                            variant="secondary"
+                            className="mt-1 bg-blue-100 text-blue-800"
+                          >
+                            <User className="mr-1 h-3 w-3" />
                             {contatto.contatto_principale}
                           </Badge>
                         )}
@@ -783,7 +1108,7 @@ export default function ContattiPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleEdit(contatto)}
+                          onClick={() => void handleEdit(contatto)}
                           className="h-10 w-10"
                           title="Modifica"
                         >
@@ -792,8 +1117,8 @@ export default function ContattiPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(contatto.id)}
-                          className="h-10 w-10 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => void handleDelete(contatto.id)}
+                          className="h-10 w-10 text-red-600 hover:bg-red-50 hover:text-red-700"
                           title="Elimina"
                         >
                           <Trash2 className="h-5 w-5" />
@@ -801,11 +1126,11 @@ export default function ContattiPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
                       {contatto.email && (
                         <a
                           href={`mailto:${contatto.email}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
                         >
                           <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
                           <span className="truncate">{contatto.email}</span>
@@ -815,7 +1140,7 @@ export default function ContattiPage() {
                       {contatto.pec && (
                         <a
                           href={`mailto:${contatto.pec}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
                         >
                           <Mail className="h-4 w-4 flex-shrink-0 text-amber-500 group-hover:text-blue-600" />
                           <span className="truncate">PEC: {contatto.pec}</span>
@@ -825,17 +1150,19 @@ export default function ContattiPage() {
                       {contatto.email_secondaria && (
                         <a
                           href={`mailto:${contatto.email_secondaria}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors group"
+                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-blue-600"
                         >
                           <Mail className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-blue-600" />
-                          <span className="truncate">{contatto.email_secondaria}</span>
+                          <span className="truncate">
+                            {contatto.email_secondaria}
+                          </span>
                         </a>
                       )}
 
                       {contatto.cell && (
                         <a
                           href={`tel:${contatto.cell}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
+                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
                         >
                           <Smartphone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
                           <span>{contatto.cell}</span>
@@ -845,7 +1172,7 @@ export default function ContattiPage() {
                       {contatto.tel && (
                         <a
                           href={`tel:${contatto.tel}`}
-                          className="flex items-center gap-2 text-sm text-gray-700 hover:text-green-600 transition-colors group"
+                          className="group flex items-center gap-2 text-sm text-gray-700 transition-colors hover:text-green-600"
                         >
                           <Phone className="h-4 w-4 flex-shrink-0 text-gray-400 group-hover:text-green-600" />
                           <span>{contatto.tel}</span>
@@ -854,9 +1181,10 @@ export default function ContattiPage() {
                     </div>
 
                     {contatto.note && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          <span className="font-semibold">Note:</span> {contatto.note}
+                      <div className="mt-3 border-t pt-3">
+                        <p className="line-clamp-2 text-sm text-gray-600">
+                          <span className="font-semibold">Note:</span>{" "}
+                          {contatto.note}
                         </p>
                       </div>
                     )}
@@ -867,6 +1195,15 @@ export default function ContattiPage() {
           ))
         )}
       </div>
+
+      <MasterPasswordDialog
+        open={masterPasswordGate.open}
+        onOpenChange={masterPasswordGate.setOpen}
+        password={masterPasswordGate.password}
+        onPasswordChange={masterPasswordGate.setPassword}
+        onUnlock={masterPasswordGate.handleUnlock}
+        loading={masterPasswordGate.unlocking}
+      />
     </div>
   );
 }
