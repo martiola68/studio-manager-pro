@@ -335,10 +335,14 @@ export default function CassettiFiscaliPage() {
       if (next.type === "reveal") {
         const { id, field } = next.payload;
         togglePasswordVisibility(id, field, true);
-      } else if (next.type === "copy") {
-        const { text, label } = next.payload;
-        doCopy(text, label);
-      } else if (next.type === "submit") {
+    } else if (next.type === "copy") {
+  const { text, label } = next.payload;
+  const key = getStoredEncryptionKey();
+  const plainText =
+    key && text && isEncrypted(text) ? decryptData(text, key) : text;
+
+  doCopy(plainText, label);
+} else if (next.type === "submit") {
         await doSubmit(next.payload.values);
       }
     } catch (error) {
