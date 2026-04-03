@@ -965,65 +965,8 @@ async function handleInvioPubblico() {
     }
   });
 }
-    const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
-      studio_id: form.studio_id,
-      tipo_comunicazione: "invio_av4",
-      cliente_id: form.cliente_id || null,
-      rapp_legale_id: form.rapp_legale_id || null,
-      av4_id: av4Id,
-      destinatario_email: destinatario,
-      oggetto: subject,
-      body_preview: `Invio AV4 a ${destinatario}. Link pubblico: ${url}`,
-      stato_invio: "inviata",
-      data_invio: new Date().toISOString(),
-      utente_id: userId,
-      public_token: token,
-      note: "Invio AV4 al cliente da modello AV4",
-    });
-
-    if (logError) {
-      console.error("Errore salvataggio log tbAMLComunicazioni AV4:", logError);
-      alert(
-        `Email AV4 inviata a ${destinatario}, ma il log comunicazioni non è stato salvato: ${logError.message}`
-      );
-      return;
-    }
-
-    alert(`Link pubblico generato e email inviata correttamente a ${destinatario}.`);
-  } catch (error: any) {
-    console.error("Errore invio pubblico AV4:", error);
-
-    try {
-      if (form.studio_id && av4Id) {
-        await supabase.from("tbAMLComunicazioni").insert({
-          studio_id: form.studio_id,
-          tipo_comunicazione: "invio_av4",
-          cliente_id: form.cliente_id || null,
-          rapp_legale_id: form.rapp_legale_id || null,
-          av4_id: av4Id,
-          destinatario_email: destinatario || null,
-          oggetto: subject,
-          body_preview: `Errore invio AV4 a ${destinatario || "-"}.`,
-          stato_invio: "errore",
-          data_invio: new Date().toISOString(),
-          utente_id: userId,
-          public_token: token || null,
-          note: error?.message || "Errore durante invio pubblico AV4",
-        });
-      }
-    } catch (logError) {
-      console.error("Errore salvataggio log errore tbAMLComunicazioni AV4:", logError);
-    }
-
-    alert(
-      `Errore durante la generazione del link pubblico: ${error?.message || "errore sconosciuto"}`
-    );
-  } finally {
-    setLoading(false);
-  }
-}
-
-function normalizeCf(value: string) {
+  
+  function normalizeCf(value: string) {
   return (value || "").trim().toUpperCase();
 }
 
