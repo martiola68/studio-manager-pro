@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
+
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import MasterPasswordDialog from "@/components/security/MasterPasswordDialog";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
@@ -278,6 +282,15 @@ export default function ModelloAV4() {
   const [publicUrl, setPublicUrl] = useState("");
 
   const [form, setForm] = useState<FormState>(initialFormState());
+
+   const {
+    isDialogOpen: isMasterPasswordDialogOpen,
+    isSubmitting: isMasterPasswordSubmitting,
+    openDialog: openMasterPasswordDialog,
+    closeDialog: closeMasterPasswordDialog,
+    runProtectedAction,
+    handlePasswordConfirmed,
+  } = useMasterPasswordGate();
 
   function clearRappresentanteFields() {
     setForm((prev) => ({
@@ -725,7 +738,7 @@ export default function ModelloAV4() {
     router.push(`/antiriciclaggio/stampa-av4?id=${av4Id}`);
   }
 
- function handleApriPdfFirmato() {
+async function apriPdfFirmatoProtected() {
   if (!form.allegato_pdf_cliente) {
     alert("PDF firmato non presente.");
     return;
@@ -744,6 +757,10 @@ export default function ModelloAV4() {
   } else {
     alert("Errore apertura PDF.");
   }
+}
+
+  function handleApriPdfFirmato() {
+  runProtectedAction(apriPdfFirmatoProtected);
 }
 
 async function handleInvioPubblico() {
@@ -1962,6 +1979,12 @@ Il titolare effettivo è individuato sulla base di proprietà (>25%), controllo 
           </div>
         </div>
       </div>
+         <MasterPasswordDialog
+        open={isMasterPasswordDialogOpen}
+        loading={isMasterPasswordSubmitting}
+        onClose={closeMasterPasswordDialog}
+        onConfirm={handlePasswordConfirmed}
+      />
     </div>
   );
 }
