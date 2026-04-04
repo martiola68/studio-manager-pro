@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, User, Users, Trash2 } from "lucide-react";
+import { Search, Plus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -52,9 +52,19 @@ export function ChatSidebar({
 
   const filtered = conversazioni.filter((c) => {
     if (c.tipo === "gruppo") {
-      return c.titolo?.toLowerCase().includes(search.toLowerCase());
+      const titoloMatch = c.titolo?.toLowerCase().includes(search.toLowerCase());
+
+      const partecipantiMatch =
+        c.partecipanti?.some((p) => {
+          const nomeCompleto = `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`
+            .trim()
+            .toLowerCase();
+          return nomeCompleto.includes(search.toLowerCase());
+        }) || false;
+
+      return !!titoloMatch || partecipantiMatch;
     }
-    
+
     const altroUtente = c.partecipanti?.find(
       (p) => p.tbutenti?.email !== currentUserEmail
     )?.tbutenti;
@@ -62,7 +72,7 @@ export function ChatSidebar({
     const nome = altroUtente
       ? `${altroUtente.nome} ${altroUtente.cognome}`
       : "Chat";
-    
+
     return nome.toLowerCase().includes(search.toLowerCase());
   });
 
@@ -74,11 +84,11 @@ export function ChatSidebar({
         isGroup: true,
       };
     }
-    
+
     const partner = conv.partecipanti?.find(
       (p) => p.tbutenti?.email !== currentUserEmail
     )?.tbutenti;
-    
+
     if (partner) {
       return {
         nome: `${partner.nome} ${partner.cognome}`,
@@ -86,12 +96,24 @@ export function ChatSidebar({
         isGroup: false,
       };
     }
-    
+
     return {
       nome: "Utente sconosciuto",
       initials: "?",
       isGroup: false,
     };
+  };
+
+  const getGroupParticipantsLabel = (conv: ConversazioneConDettagli) => {
+    if (conv.tipo !== "gruppo") return "";
+
+    const names =
+      conv.partecipanti
+        ?.filter((p) => p.tbutenti && p.tbutenti.email !== currentUserEmail)
+        .map((p) => `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`.trim())
+        .filter(Boolean) || [];
+
+    return names.join(", ");
   };
 
   return (
@@ -103,6 +125,7 @@ export function ChatSidebar({
             <Plus className="h-5 w-5" />
           </Button>
         </div>
+
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -123,7 +146,8 @@ export function ChatSidebar({
           ) : (
             filtered.map((conv) => {
               const displayInfo = getDisplayInfo(conv);
-              
+              const groupParticipantsLabel = getGroupParticipantsLabel(conv);
+
               return (
                 <button
                   key={conv.id}
@@ -142,22 +166,28 @@ export function ChatSidebar({
                       )}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 overflow-hidden min-w-0">
                     <div className="flex items-center justify-between mb-1 gap-2">
                       <span className="font-semibold truncate text-sm flex items-center gap-1 flex-1 min-w-0">
-                        <span className={cn(
-                          "truncate",
-                          currentUserId && currentUserId !== conv.creato_da ? "text-red-600" : "text-black dark:text-white"
-                        )}>
+                        <span
+                          className={cn(
+                            "truncate",
+                            currentUserId && currentUserId !== conv.creato_da
+                              ? "text-red-600"
+                              : "text-black dark:text-white"
+                          )}
+                        >
                           {displayInfo.nome}
                         </span>
+
                         {displayInfo.isGroup && (
                           <span className="text-xs text-muted-foreground shrink-0">
                             ({conv.partecipanti?.length || 0})
                           </span>
                         )}
                       </span>
+
                       {conv.ultimo_messaggio && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                           {formatDistanceToNow(new Date(conv.ultimo_messaggio.created_at!), {
@@ -167,15 +197,23 @@ export function ChatSidebar({
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center justify-between gap-2">
-                      <p className={cn(
-                        "text-xs truncate flex-1 min-w-0",
-                        (conv.non_letti || 0) > 0 ? "font-bold text-foreground" : "text-muted-foreground"
-                      )}>
-                        {conv.ultimo_messaggio?.testo || "Nessun messaggio"}
+                      <p
+                        className={cn(
+                          "text-xs truncate flex-1 min-w-0",
+                          conv.tipo === "gruppo"
+                            ? "text-muted-foreground"
+                            : (conv.non_letti || 0) > 0
+                            ? "font-bold text-foreground"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {conv.tipo === "gruppo"
+                          ? groupParticipantsLabel || "Nessun partecipante"
+                          : conv.ultimo_messaggio?.testo || "Nessun messaggio"}
                       </p>
-                      
+
                       {(conv.non_letti || 0) > 0 && (
                         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                           {conv.non_letti}
