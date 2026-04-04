@@ -535,7 +535,7 @@ export default function ModelloAV1Page() {
   };
 
 const handleOpenFirmato = async () => {
-    await runProtectedSubmit(async () => {
+    requireUnlock(async () => {
       try {
         if (!formData.allegato_av1_firmato) return;
 
@@ -561,7 +561,7 @@ const handleOpenFirmato = async () => {
   };
 
  const handleRemoveFirmato = async () => {
-    await runProtectedSubmit(async () => {
+    requireUnlock(async () => {
       setFormData((prev) => ({
         ...prev,
         allegato_av1_firmato: "",
@@ -570,7 +570,7 @@ const handleOpenFirmato = async () => {
   };
   
  const handleRinnovoVerifica = async () => {
-    await runProtectedSubmit(async () => {
+   requireUnlock(async () => {
       const today = new Date().toISOString().split("T")[0];
       const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
       const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
@@ -629,7 +629,7 @@ const handleOpenFirmato = async () => {
   };
 
     const handleSave = async () => {
-    await runProtectedSubmit(async () => {
+    requireUnlock(async () => {
       if (!formData.studio_id) {
         alert("Studio non disponibile.");
         return;
