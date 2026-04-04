@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+
+import { sendEmailViaMicrosoft } from "@/services/microsoftEmailService";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +57,7 @@ interface Utente {
   settore: string | null;
   responsabile: boolean | null;
   studio_id: string | null;
+  microsoft_connection_id?: string | null;
 }
 
 interface TipoPromemoria {
