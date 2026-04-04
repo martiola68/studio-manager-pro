@@ -518,7 +518,9 @@ export function ChatArea({
       <AlertDialog open={deleteChatDialogOpen} onOpenChange={setDeleteChatDialogOpen}>
         <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Conversazione</AlertDialogTitle>
+            <AlertDialogTitle>
+  {conversationType === "gruppo" ? "Elimina Gruppo" : "Elimina Conversazione"}
+</AlertDialogTitle>
             <AlertDialogDescription>
               Sei sicuro di voler eliminare l'intera conversazione con{" "}
               <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
