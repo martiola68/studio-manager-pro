@@ -537,30 +537,27 @@ export default function PromemoriaPage() {
       throw new Error("Email del creatore del promemoria non disponibile.");
     }
 
-    const response = await fetch("/api/promemoria/richiesta-confronto-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to: creatore.email,
-        creatoreNome: `${creatore.nome || ""} ${creatore.cognome || ""}`.trim(),
-        destinatarioNome: `${currentUser?.nome || ""} ${currentUser?.cognome || ""}`.trim(),
-        promemoriaTitolo: promemoriaItem.titolo || "",
-        promemoriaDescrizione: promemoriaItem.descrizione || "",
-        motivazione,
-        dataScadenza: promemoriaItem.data_scadenza || null,
-        destinatarioOriginale: destinatario
-          ? `${destinatario.nome || ""} ${destinatario.cognome || ""}`.trim()
-          : "",
-      }),
-    });
+    const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.error || "Errore invio email richiesta confronto.");
-    }
-  };
+      const response = await fetch("/api/promemoria/richiesta-confronto-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({
+          promemoriaId: selectedPromemoria?.id,
+          motivazione: motivazioneConfronto,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.details || result.error || "Impossibile inviare la richiesta di confronto.");
+      }
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
