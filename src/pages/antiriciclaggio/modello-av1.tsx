@@ -286,18 +286,18 @@ export default function ModelloAV1Page() {
   const [error, setError] = useState<string | null>(null);
 
     const {
-    isOpen: masterPasswordOpen,
-    setIsOpen: setMasterPasswordOpen,
+    open: masterPasswordOpen,
+    setOpen: setMasterPasswordOpen,
     password: masterPassword,
     setPassword: setMasterPassword,
-    error: masterPasswordError,
-    loading: masterPasswordLoading,
-    handleConfirm: handleMasterPasswordConfirm,
-    runProtectedSubmit,
+    unlocking: masterPasswordLoading,
+    requireUnlock,
+    handleUnlock: handleMasterPasswordConfirm,
+    resetUnlockState,
   } = useMasterPasswordGate({
     studioId: formData.studio_id || "",
   });
-
+  
   const punteggioPrestazione = useMemo(
     () =>
       normalizeScore(
@@ -500,7 +500,7 @@ export default function ModelloAV1Page() {
   };
 
   const handleUploadFirmato = async (file: File) => {
-    await runProtectedSubmit(async () => {
+   requireUnlock(async () => {
       try {
         if (!formData.studio_id) {
           alert("Studio non disponibile.");
