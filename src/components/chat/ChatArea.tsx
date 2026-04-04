@@ -117,6 +117,9 @@ export function ChatArea({
       }
     );
 
+    const canDeleteConversation =
+  conversationType === "gruppo" ? currentUserId === creatorId : true;
+
     return () => {
       if (channel) {
         messaggioService.unsubscribeFromMessaggi(channel);
@@ -275,7 +278,7 @@ export function ChatArea({
           </span>
         </div>
 
-      <DropdownMenu modal={false}>
+  <DropdownMenu modal={false}>
   <DropdownMenuTrigger asChild>
     <Button variant="ghost" size="icon" className="shrink-0">
       <MoreVertical className="h-5 w-5" />
@@ -296,7 +299,7 @@ export function ChatArea({
       </DropdownMenuItem>
     )}
 
-    {currentUserId === creatorId && (
+    {canDeleteConversation && (
       <DropdownMenuItem
         onSelect={() => {
           setTimeout(() => {
