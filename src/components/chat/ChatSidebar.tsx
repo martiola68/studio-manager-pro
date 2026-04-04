@@ -168,11 +168,13 @@ export function ChatSidebar({
                   </Avatar>
 
                   <div className="flex-1 overflow-hidden min-w-0">
-                    <div className="flex items-center justify-between mb-1 gap-2">
-                      <span className="font-semibold truncate text-sm flex items-center gap-1 flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1 gap-2">
+                      <div className="flex items-start gap-1 flex-1 min-w-0">
                         <span
                           className={cn(
-                            "truncate",
+                            displayInfo.isGroup
+                              ? "font-semibold text-sm leading-snug break-words whitespace-normal"
+                              : "font-semibold text-sm truncate",
                             currentUserId && currentUserId !== conv.creato_da
                               ? "text-red-600"
                               : "text-black dark:text-white"
@@ -182,11 +184,11 @@ export function ChatSidebar({
                         </span>
 
                         {displayInfo.isGroup && (
-                          <span className="text-xs text-muted-foreground shrink-0">
+                          <span className="text-xs text-muted-foreground shrink-0 mt-[2px]">
                             ({conv.partecipanti?.length || 0})
                           </span>
                         )}
-                      </span>
+                      </div>
 
                       {conv.ultimo_messaggio && (
                         <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
@@ -198,28 +200,38 @@ export function ChatSidebar({
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <p
-                        className={cn(
-                          "text-xs truncate flex-1 min-w-0",
-                          conv.tipo === "gruppo"
-                            ? "text-muted-foreground"
-                            : (conv.non_letti || 0) > 0
-                            ? "font-bold text-foreground"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {conv.tipo === "gruppo"
-                          ? groupParticipantsLabel || "Nessun partecipante"
-                          : conv.ultimo_messaggio?.testo || "Nessun messaggio"}
+                    {conv.tipo === "gruppo" ? (
+                      <p className="text-xs text-muted-foreground whitespace-normal break-words leading-snug">
+                        {groupParticipantsLabel || "Nessun partecipante"}
                       </p>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={cn(
+                            "text-xs truncate flex-1 min-w-0",
+                            (conv.non_letti || 0) > 0
+                              ? "font-bold text-foreground"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {conv.ultimo_messaggio?.testo || "Nessun messaggio"}
+                        </p>
 
-                      {(conv.non_letti || 0) > 0 && (
+                        {(conv.non_letti || 0) > 0 && (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                            {conv.non_letti}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {conv.tipo === "gruppo" && (conv.non_letti || 0) > 0 && (
+                      <div className="mt-2 flex justify-end">
                         <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                           {conv.non_letti}
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </button>
               );
