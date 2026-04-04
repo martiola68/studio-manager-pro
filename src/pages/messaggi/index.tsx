@@ -398,7 +398,7 @@ const openEditGroupDialog = async () => {
   if (!conv || conv.tipo !== "gruppo") return;
 
   const { data, error } = await supabase
-    .from("tbconversazione_partecipanti")
+  .from("tbconversazione_partecipanti" as any)
     .select("utente_id")
     .eq("conversazione_id", conv.id);
 
