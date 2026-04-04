@@ -57,7 +57,8 @@ export default function AccessoPortaliPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCredenziale, setEditingCredenziale] = useState<CredenzialeAccesso | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [studioId, setStudioId] = useState<string>("");
+  
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
   const [showPin, setShowPin] = useState<{ [key: string]: boolean }>({});
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
@@ -71,12 +72,12 @@ export default function AccessoPortaliPage() {
     note: "",
   });
 
-  const masterPasswordGate = useMasterPasswordGate({
-    studioId: userId || "",
-    onUnlocked: async () => {
-      await fetchCredenziali();
-    },
-  });
+const masterPasswordGate = useMasterPasswordGate({
+  studioId,
+  onUnlocked: async () => {
+    await fetchCredenziali();
+  },
+});
 
   useEffect(() => {
     void checkAuth();
@@ -84,32 +85,38 @@ export default function AccessoPortaliPage() {
   }, []);
 
   useEffect(() => {
-    if (userId) {
-      void refreshEncryptionEnabled();
-      void fetchCredenziali();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  if (typeof window !== "undefined") {
+    setStudioId(localStorage.getItem("studio_id") || "");
+  }
+}, []);
+
+  useEffect(() => {
+  if (userId && studioId) {
+    void refreshEncryptionEnabled();
+    void fetchCredenziali();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [userId, studioId]);
 
   useEffect(() => {
     filterCredenziali();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, credenziali]);
 
-  const refreshEncryptionEnabled = async () => {
-    try {
-      if (!userId) {
-        setEncryptionEnabled(false);
-        return;
-      }
-
-      const enabled = await isEncryptionEnabled(userId);
-      setEncryptionEnabled(Boolean(enabled));
-    } catch (e) {
-      console.error("Errore controllo cifratura:", e);
+ const refreshEncryptionEnabled = async () => {
+  try {
+    if (!studioId) {
       setEncryptionEnabled(false);
+      return;
     }
-  };
+
+    const enabled = await isEncryptionEnabled(studioId);
+    setEncryptionEnabled(Boolean(enabled));
+  } catch (e) {
+    console.error("Errore controllo cifratura:", e);
+    setEncryptionEnabled(false);
+  }
+};
 
   const checkAuth = async () => {
     try {
