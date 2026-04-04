@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import TitolariEffettiviForm from "@/components/antiriciclaggio/TitolariEffettiviForm";
 
+import { isEncryptionEnabled } from "@/services/encryptionService";
+
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 
@@ -282,11 +284,26 @@ export default function ModelloAV4() {
   const [publicUrl, setPublicUrl] = useState("");
 
   const [form, setForm] = useState<FormState>(initialFormState());
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
    const masterPasswordGate = useMasterPasswordGate({
     studioId: form.studio_id,
     onUnlocked: async () => {},
   });
+
+  async function refreshEncryptionEnabled(studioId: string) {
+  try {
+    if (!studioId) {
+      setEncryptionEnabled(false);
+      return;
+    }
+  const enabled = await isEncryptionEnabled(studioId);
+    setEncryptionEnabled(Boolean(enabled));
+  } catch (e) {
+    console.error("Errore controllo cifratura:", e);
+    setEncryptionEnabled(false);
+  }
+}
 
   function clearRappresentanteFields() {
     setForm((prev) => ({
@@ -553,6 +570,14 @@ export default function ModelloAV4() {
     }
   }, [router.isReady, router.query.rapp_saved, form.cliente_id]);
 
+  useEffect(() => {
+  if (form.studio_id) {
+    void refreshEncryptionEnabled(form.studio_id);
+  } else {
+    setEncryptionEnabled(false);
+  }
+}, [form.studio_id]);
+
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
@@ -735,6 +760,28 @@ export default function ModelloAV4() {
   }
 
 function handleApriPdfFirmato() {
+  if (!encryptionEnabled) {
+    if (!form.allegato_pdf_cliente) {
+      alert("PDF firmato non presente.");
+      return;
+    }
+
+    const supabase = getSupabaseClient() as any;
+
+    const { data } = supabase.storage
+      .from("messaggi-allegati")
+      .getPublicUrl(form.allegato_pdf_cliente);
+
+    const url = data?.publicUrl || "";
+
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      alert("Errore apertura PDF.");
+    }
+    return;
+  }
+
   masterPasswordGate.requireUnlock(async () => {
     if (!form.allegato_pdf_cliente) {
       alert("PDF firmato non presente.");
@@ -758,7 +805,7 @@ function handleApriPdfFirmato() {
 }
   
 async function handleInvioPubblico() {
-  masterPasswordGate.requireUnlock(async () => {
+  const runAction = async () => {
     if (!av4Id) {
       alert("Salva prima l'AV4.");
       return;
@@ -963,7 +1010,14 @@ async function handleInvioPubblico() {
     } finally {
       setLoading(false);
     }
-  });
+  };
+
+  if (!encryptionEnabled) {
+    await runAction();
+    return;
+  }
+
+  masterPasswordGate.requireUnlock(runAction);
 }
   
   function normalizeCf(value: string) {
