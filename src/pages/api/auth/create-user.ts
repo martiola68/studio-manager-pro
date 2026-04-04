@@ -129,7 +129,7 @@ export default async function handler(
       microsoft_connection_id: microsoft_connection_id || null,
     };
 
-    const { error: upsertError } = await supabaseAdmin
+  const { error: upsertError } = await supabaseAdmin
       .from("tbutenti")
       .upsert(payload, { onConflict: "id" });
 
@@ -141,11 +141,27 @@ export default async function handler(
       });
     }
 
+    // Invio email di primo accesso / impostazione password
+    const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/callback`
+      }
+    );
+
+    if (resetError) {
+      console.error("Errore invio email creazione utente:", resetError);
+      return res.status(500).json({
+        error: "Utente creato ma email non inviata",
+        details: resetError.message,
+      });
+    }
+
     return res.status(200).json({
       success: true,
       userId: newUserId,
-      password: passwordGenerata,
-      email: authData.user.email,
+      email,
+      message: "Utente creato ed email inviata con successo",
     });
   } catch (error: any) {
     console.error("Errore API create-user:", error);
