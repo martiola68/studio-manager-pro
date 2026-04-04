@@ -499,9 +499,21 @@ export function ChatArea({
         <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Messaggio</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler eliminare questo messaggio? Questa azione è irreversibile.
-            </AlertDialogDescription>
+          <AlertDialogDescription>
+  {conversationType === "gruppo" ? (
+    <>
+      Sei sicuro di voler eliminare il gruppo <strong>{partnerName}</strong>?
+      Tutti i messaggi e gli allegati verranno eliminati permanentemente.
+      Questa azione è irreversibile.
+    </>
+  ) : (
+    <>
+      Sei sicuro di voler eliminare l'intera conversazione con{" "}
+      <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
+      eliminati permanentemente. Questa azione è irreversibile.
+    </>
+  )}
+</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="w-full sm:w-auto">Annulla</AlertDialogCancel>
@@ -536,7 +548,7 @@ export function ChatArea({
               }}
               className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Elimina Conversazione
+              {conversationType === "gruppo" ? "Elimina Gruppo" : "Elimina Conversazione"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
