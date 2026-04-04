@@ -92,12 +92,13 @@ export function ChatArea({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizza i messaggi iniziali / caricati dal parent
+  const canDeleteConversation =
+    conversationType === "gruppo" ? currentUserId === creatorId : true;
+
   useEffect(() => {
     setLocalMessages(messaggi);
   }, [messaggi, conversazioneId]);
 
-  // Realtime subscription per la conversazione attiva
   useEffect(() => {
     if (!conversazioneId) return;
 
@@ -116,9 +117,6 @@ export function ChatArea({
         window.dispatchEvent(new Event("messaggi-updated"));
       }
     );
-
-    const canDeleteConversation =
-  conversationType === "gruppo" ? currentUserId === creatorId : true;
 
     return () => {
       if (channel) {
@@ -278,42 +276,42 @@ export function ChatArea({
           </span>
         </div>
 
-  <DropdownMenu modal={false}>
-  <DropdownMenuTrigger asChild>
-    <Button variant="ghost" size="icon" className="shrink-0">
-      <MoreVertical className="h-5 w-5" />
-    </Button>
-  </DropdownMenuTrigger>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="shrink-0">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
 
-  <DropdownMenuContent align="end">
-    {conversationType === "gruppo" && canEditGroup && onEditGroup && (
-      <DropdownMenuItem
-        onSelect={() => {
-          setTimeout(() => {
-            onEditGroup();
-          }, 0);
-        }}
-      >
-        <Pencil className="h-4 w-4 mr-2" />
-        Modifica gruppo
-      </DropdownMenuItem>
-    )}
+          <DropdownMenuContent align="end">
+            {conversationType === "gruppo" && canEditGroup && onEditGroup && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  setTimeout(() => {
+                    onEditGroup();
+                  }, 0);
+                }}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Modifica gruppo
+              </DropdownMenuItem>
+            )}
 
-    {canDeleteConversation && (
-      <DropdownMenuItem
-        onSelect={() => {
-          setTimeout(() => {
-            setDeleteChatDialogOpen(true);
-          }, 0);
-        }}
-        className="text-red-600"
-      >
-        <Trash2 className="h-4 w-4 mr-2" />
-        {conversationType === "gruppo" ? "Elimina gruppo" : "Elimina conversazione"}
-      </DropdownMenuItem>
-    )}
-  </DropdownMenuContent>
-</DropdownMenu>
+            {canDeleteConversation && (
+              <DropdownMenuItem
+                onSelect={() => {
+                  setTimeout(() => {
+                    setDeleteChatDialogOpen(true);
+                  }, 0);
+                }}
+                className="text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {conversationType === "gruppo" ? "Elimina gruppo" : "Elimina conversazione"}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div
@@ -364,36 +362,36 @@ export function ChatArea({
                         {msg.testo}
                       </p>
 
-                     {msg.allegati && msg.allegati.length > 0 && (
-  <div className="mt-2 space-y-1">
-    {msg.allegati.map((att) => {
-      if (!att.url) {
-        return (
-          <div
-            key={att.id}
-            className="flex items-center gap-2 text-xs opacity-70 break-all"
-          >
-            <Paperclip className="h-3 w-3 shrink-0" />
-            <span className="truncate">{att.nome_file}</span>
-          </div>
-        );
-      }
+                      {msg.allegati && msg.allegati.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {msg.allegati.map((att) => {
+                            if (!att.url) {
+                              return (
+                                <div
+                                  key={att.id}
+                                  className="flex items-center gap-2 text-xs opacity-70 break-all"
+                                >
+                                  <Paperclip className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{att.nome_file}</span>
+                                </div>
+                              );
+                            }
 
-      return (
-        <a
-          key={att.id}
-          href={att.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-xs underline hover:no-underline break-all"
-        >
-          <Paperclip className="h-3 w-3 shrink-0" />
-          <span className="truncate">{att.nome_file}</span>
-        </a>
-      );
-    })}
-  </div>
-)}
+                            return (
+                              <a
+                                key={att.id}
+                                href={att.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-xs underline hover:no-underline break-all"
+                              >
+                                <Paperclip className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{att.nome_file}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
 
                       <p
                         className={cn(
@@ -502,21 +500,9 @@ export function ChatArea({
         <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Elimina Messaggio</AlertDialogTitle>
-          <AlertDialogDescription>
-  {conversationType === "gruppo" ? (
-    <>
-      Sei sicuro di voler eliminare il gruppo <strong>{partnerName}</strong>?
-      Tutti i messaggi e gli allegati verranno eliminati permanentemente.
-      Questa azione è irreversibile.
-    </>
-  ) : (
-    <>
-      Sei sicuro di voler eliminare l'intera conversazione con{" "}
-      <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
-      eliminati permanentemente. Questa azione è irreversibile.
-    </>
-  )}
-</AlertDialogDescription>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare questo messaggio? Questa azione è irreversibile.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="w-full sm:w-auto">Annulla</AlertDialogCancel>
@@ -534,12 +520,22 @@ export function ChatArea({
         <AlertDialogContent className="mx-4 max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>
-  {conversationType === "gruppo" ? "Elimina Gruppo" : "Elimina Conversazione"}
-</AlertDialogTitle>
+              {conversationType === "gruppo" ? "Elimina Gruppo" : "Elimina Conversazione"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare l'intera conversazione con{" "}
-              <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
-              eliminati permanentemente. Questa azione è irreversibile.
+              {conversationType === "gruppo" ? (
+                <>
+                  Sei sicuro di voler eliminare il gruppo <strong>{partnerName}</strong>?
+                  Tutti i messaggi e gli allegati verranno eliminati permanentemente.
+                  Questa azione è irreversibile.
+                </>
+              ) : (
+                <>
+                  Sei sicuro di voler eliminare l'intera conversazione con{" "}
+                  <strong>{partnerName}</strong>? Tutti i messaggi e gli allegati verranno
+                  eliminati permanentemente. Questa azione è irreversibile.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
