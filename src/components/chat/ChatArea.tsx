@@ -275,31 +275,39 @@ export function ChatArea({
           </span>
         </div>
 
-        <DropdownMenu>
+       <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="shrink-0">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end">
-            {conversationType === "gruppo" && canEditGroup && onEditGroup && (
-              <DropdownMenuItem onClick={onEditGroup}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Modifica gruppo
-              </DropdownMenuItem>
-            )}
+        <DropdownMenuContent align="end">
+  {conversationType === "gruppo" && canEditGroup && onEditGroup && (
+    <DropdownMenuItem
+      onSelect={(e) => {
+        e.preventDefault();
+        onEditGroup();
+      }}
+    >
+      <Pencil className="h-4 w-4 mr-2" />
+      Modifica gruppo
+    </DropdownMenuItem>
+  )}
 
-            {currentUserId === creatorId && (
-              <DropdownMenuItem
-                onClick={() => setDeleteChatDialogOpen(true)}
-                className="text-red-600"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Elimina conversazione
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
+  {currentUserId === creatorId && (
+    <DropdownMenuItem
+      onSelect={(e) => {
+        e.preventDefault();
+        setDeleteChatDialogOpen(true);
+      }}
+      className="text-red-600"
+    >
+      <Trash2 className="h-4 w-4 mr-2" />
+      Elimina conversazione
+    </DropdownMenuItem>
+  )}
+</DropdownMenuContent>
         </DropdownMenu>
       </div>
 
