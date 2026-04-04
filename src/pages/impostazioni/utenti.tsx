@@ -230,7 +230,7 @@ const response = await fetch("/api/auth/create-user", {
 
         toast({
           title: "✅ Utente creato con successo!",
-          description: `Email con le credenziali inviata a ${formData.email}`,
+         description: `Email di accesso inviata a ${formData.email}`,
           duration: 5000,
         });
 
