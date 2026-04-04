@@ -236,13 +236,14 @@ export default async function handler(
 
     // Invio email di primo accesso / impostazione password
 
-     const appBaseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "http://localhost:3000";
+    const appBaseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "http://localhost:3000";
 
-  const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
-    
+    const loginUrl = `${appBaseUrl.replace(/\/$/, "")}/login`;
+
+    const edgeBaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(
       ".supabase.co",
       ".supabase.co/functions/v1"
     );
