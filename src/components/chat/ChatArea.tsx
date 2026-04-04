@@ -275,40 +275,42 @@ export function ChatArea({
           </span>
         </div>
 
-       <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <MoreVertical className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
+      <DropdownMenu modal={false}>
+  <DropdownMenuTrigger asChild>
+    <Button variant="ghost" size="icon" className="shrink-0">
+      <MoreVertical className="h-5 w-5" />
+    </Button>
+  </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end">
-  {conversationType === "gruppo" && canEditGroup && onEditGroup && (
-    <DropdownMenuItem
-      onSelect={(e) => {
-        e.preventDefault();
-        onEditGroup();
-      }}
-    >
-      <Pencil className="h-4 w-4 mr-2" />
-      Modifica gruppo
-    </DropdownMenuItem>
-  )}
+  <DropdownMenuContent align="end">
+    {conversationType === "gruppo" && canEditGroup && onEditGroup && (
+      <DropdownMenuItem
+        onSelect={() => {
+          setTimeout(() => {
+            onEditGroup();
+          }, 0);
+        }}
+      >
+        <Pencil className="h-4 w-4 mr-2" />
+        Modifica gruppo
+      </DropdownMenuItem>
+    )}
 
-  {currentUserId === creatorId && (
-    <DropdownMenuItem
-      onSelect={(e) => {
-        e.preventDefault();
-        setDeleteChatDialogOpen(true);
-      }}
-      className="text-red-600"
-    >
-      <Trash2 className="h-4 w-4 mr-2" />
-      Elimina conversazione
-    </DropdownMenuItem>
-  )}
-</DropdownMenuContent>
-        </DropdownMenu>
+    {currentUserId === creatorId && (
+      <DropdownMenuItem
+        onSelect={() => {
+          setTimeout(() => {
+            setDeleteChatDialogOpen(true);
+          }, 0);
+        }}
+        className="text-red-600"
+      >
+        <Trash2 className="h-4 w-4 mr-2" />
+        {conversationType === "gruppo" ? "Elimina gruppo" : "Elimina conversazione"}
+      </DropdownMenuItem>
+    )}
+  </DropdownMenuContent>
+</DropdownMenu>
       </div>
 
       <div
