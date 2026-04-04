@@ -186,46 +186,49 @@ export default function GestioneUtentiPage() {
           return;
         }
 
-        const response = await fetch("/api/auth/create-user", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            nome: formData.nome,
-            cognome: formData.cognome,
-            tipo_utente: formData.tipo_utente,
-            ruolo_operatore_id: formData.ruolo_operatore_id || null,
-            attivo: formData.attivo,
-            settore: formData.settore || null,
-            responsabile: formData.responsabile,
-          }),
-        });
+// 🔐 recupero sessione per chiamata autenticata
+const {
+  data: { session },
+} = await supabase.auth.getSession();
 
-        const result = await response.json();
+// 🚀 uso la route che INVIA davvero l’email
+const response = await fetch("/api/auth/invite-user", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session?.access_token || ""}`,
+  },
+  body: JSON.stringify({
+    email: formData.email,
+    nome: formData.nome,
+    cognome: formData.cognome,
+  }),
+});
 
-        if (!response.ok) {
-          throw new Error(result.details || result.error || "Errore creazione utente");
-        }
+const result = await response.json();
 
-        await supabase
-          .from("tbutenti")
-          .update({
-            tipo_utente: formData.tipo_utente,
-            ruolo_operatore_id: formData.ruolo_operatore_id || null,
-            attivo: formData.attivo,
-            settore: formData.settore || null,
-            responsabile: formData.responsabile,
-            microsoft_connection_id: formData.microsoft_connection_id || null,
-          })
-          .eq("id", result.userId);
+if (!response.ok) {
+  throw new Error(result.details || result.error || "Errore invio invito utente");
+}
 
-        toast({
-          title: "✅ Utente creato con successo!",
-          description: `Email con le credenziali inviata a ${formData.email}`,
-          duration: 5000,
-        });
+// aggiorno dati aggiuntivi utente
+await supabase
+  .from("tbutenti")
+  .update({
+    tipo_utente: formData.tipo_utente,
+    ruolo_operatore_id: formData.ruolo_operatore_id || null,
+    attivo: formData.attivo,
+    settore: formData.settore || null,
+    responsabile: formData.responsabile,
+    microsoft_connection_id: formData.microsoft_connection_id || null,
+  })
+  .eq("email", formData.email);
+
+toast({
+  title: "✅ Utente creato con successo!",
+  description: `Email di invito inviata a ${formData.email}`,
+  duration: 5000,
+});
 
         setDialogOpen(false);
         resetForm();
