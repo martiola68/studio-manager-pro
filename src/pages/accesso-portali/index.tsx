@@ -21,11 +21,31 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, ExternalLink, Eye, EyeOff, Key } from "lucide-react";
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { revealProtectedValue, runProtectedSubmit } from "@/lib/security/masterPasswordActions";
+import { getStoredEncryptionKey, isEncryptionEnabled } from "@/services/encryptionService";
+import { isEncrypted } from "@/lib/encryption";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Key,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import { credenzialiAccessoService } from "@/services/credenzialiAccessoService";
 import type { Database } from "@/integrations/supabase/types";
 
 type CredenzialeAccesso = Database["public"]["Tables"]["tbcredenziali_accesso"]["Row"];
+
+function hasKey() {
+  return Boolean(getStoredEncryptionKey());
+}
 
 export default function AccessoPortaliPage() {
   const router = useRouter();
@@ -39,6 +59,8 @@ export default function AccessoPortaliPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
+  const [showPin, setShowPin] = useState<{ [key: string]: boolean }>({});
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
   const [formData, setFormData] = useState({
     portale: "",
@@ -49,6 +71,13 @@ export default function AccessoPortaliPage() {
     note: "",
   });
 
+  const masterPasswordGate = useMasterPasswordGate({
+    studioId: userId || "",
+    onUnlocked: async () => {
+      await fetchCredenziali();
+    },
+  });
+
   useEffect(() => {
     void checkAuth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,6 +85,7 @@ export default function AccessoPortaliPage() {
 
   useEffect(() => {
     if (userId) {
+      void refreshEncryptionEnabled();
       void fetchCredenziali();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,6 +95,21 @@ export default function AccessoPortaliPage() {
     filterCredenziali();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, credenziali]);
+
+  const refreshEncryptionEnabled = async () => {
+    try {
+      if (!userId) {
+        setEncryptionEnabled(false);
+        return;
+      }
+
+      const enabled = await isEncryptionEnabled(userId);
+      setEncryptionEnabled(Boolean(enabled));
+    } catch (e) {
+      console.error("Errore controllo cifratura:", e);
+      setEncryptionEnabled(false);
+    }
+  };
 
   const checkAuth = async () => {
     try {
@@ -167,19 +212,25 @@ export default function AccessoPortaliPage() {
     }
 
     try {
-      if (editingCredenziale) {
-        await credenzialiAccessoService.update(editingCredenziale.id, formData);
-        toast({ title: "Successo", description: "Credenziale aggiornata con successo" });
-      } else {
-        await credenzialiAccessoService.create({
-          ...formData,
-          created_by: userId,
-        });
-        toast({ title: "Successo", description: "Credenziale creata con successo" });
-      }
+      await runProtectedSubmit({
+        encryptionEnabled,
+        requireUnlock: masterPasswordGate.requireUnlock,
+        action: async () => {
+          if (editingCredenziale) {
+            await credenzialiAccessoService.update(editingCredenziale.id, formData);
+            toast({ title: "Successo", description: "Credenziale aggiornata con successo" });
+          } else {
+            await credenzialiAccessoService.create({
+              ...formData,
+              created_by: userId,
+            });
+            toast({ title: "Successo", description: "Credenziale creata con successo" });
+          }
 
-      handleCloseDialog();
-      void fetchCredenziali();
+          handleCloseDialog();
+          await fetchCredenziali();
+        },
+      });
     } catch (error) {
       console.error("Errore nel salvataggio:", error);
       toast({
@@ -225,8 +276,26 @@ export default function AccessoPortaliPage() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const toggleShowPassword = (id: string) => {
-    setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleShowPassword = (cred: CredenzialeAccesso) => {
+    revealProtectedValue({
+      value: cred.login_pw,
+      encryptionEnabled,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      onReveal: () => {
+        setShowPassword((prev) => ({ ...prev, [cred.id]: !prev[cred.id] }));
+      },
+    });
+  };
+
+  const toggleShowPin = (cred: CredenzialeAccesso) => {
+    revealProtectedValue({
+      value: cred.login_pin,
+      encryptionEnabled,
+      requireUnlock: masterPasswordGate.requireUnlock,
+      onReveal: () => {
+        setShowPin((prev) => ({ ...prev, [cred.id]: !prev[cred.id] }));
+      },
+    });
   };
 
   return (
@@ -239,10 +308,18 @@ export default function AccessoPortaliPage() {
           </h1>
           <p className="text-gray-500 mt-1">Gestione credenziali di accesso ai portali esterni</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nuova Credenziale
-        </Button>
+        <div className="flex items-center gap-2">
+          {encryptionEnabled && !hasKey() && (
+            <Button variant="outline" onClick={() => masterPasswordGate.setOpen(true)} className="gap-2">
+              <Unlock className="w-4 h-4" />
+              Sblocca
+            </Button>
+          )}
+          <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nuova Credenziale
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -324,14 +401,20 @@ export default function AccessoPortaliPage() {
                     {cred.login_pw ? (
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs">
-                          {showPassword[cred.id] ? cred.login_pw : "••••••••"}
+                          {encryptionEnabled && !hasKey() && isEncrypted(cred.login_pw)
+                            ? "🔒"
+                            : showPassword[cred.id]
+                              ? cred.login_pw
+                              : "••••••••"}
                         </span>
                         <button
-                          onClick={() => toggleShowPassword(cred.id)}
+                          onClick={() => toggleShowPassword(cred)}
                           className="text-gray-400 hover:text-gray-600"
                           type="button"
                         >
-                          {showPassword[cred.id] ? (
+                          {encryptionEnabled && !hasKey() && isEncrypted(cred.login_pw) ? (
+                            <Lock className="w-3 h-3" />
+                          ) : showPassword[cred.id] ? (
                             <EyeOff className="w-3 h-3" />
                           ) : (
                             <Eye className="w-3 h-3" />
@@ -343,7 +426,34 @@ export default function AccessoPortaliPage() {
                     )}
                   </TableCell>
 
-                  <TableCell className="text-sm font-mono text-xs">{cred.login_pin || "-"}</TableCell>
+                  <TableCell className="text-sm font-mono text-xs">
+                    {cred.login_pin ? (
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {encryptionEnabled && !hasKey() && isEncrypted(cred.login_pin)
+                            ? "🔒"
+                            : showPin[cred.id]
+                              ? cred.login_pin
+                              : "••••"}
+                        </span>
+                        <button
+                          onClick={() => toggleShowPin(cred)}
+                          className="text-gray-400 hover:text-gray-600"
+                          type="button"
+                        >
+                          {encryptionEnabled && !hasKey() && isEncrypted(cred.login_pin) ? (
+                            <Lock className="w-3 h-3" />
+                          ) : showPin[cred.id] ? (
+                            <EyeOff className="w-3 h-3" />
+                          ) : (
+                            <Eye className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
 
                   <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
                     {cred.note || "-"}
@@ -474,6 +584,15 @@ export default function AccessoPortaliPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MasterPasswordDialog
+        open={masterPasswordGate.open}
+        onOpenChange={masterPasswordGate.setOpen}
+        password={masterPasswordGate.password}
+        onPasswordChange={masterPasswordGate.setPassword}
+        onUnlock={masterPasswordGate.handleUnlock}
+        loading={masterPasswordGate.unlocking}
+      />
     </div>
   );
 }
