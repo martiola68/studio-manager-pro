@@ -285,7 +285,7 @@ export default function ModelloAV1Page() {
   const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-    const {
+   const {
     open: masterPasswordOpen,
     setOpen: setMasterPasswordOpen,
     password: masterPassword,
@@ -293,7 +293,6 @@ export default function ModelloAV1Page() {
     unlocking: masterPasswordLoading,
     requireUnlock,
     handleUnlock: handleMasterPasswordConfirm,
-    resetUnlockState,
   } = useMasterPasswordGate({
     studioId: formData.studio_id || "",
   });
@@ -1332,14 +1331,13 @@ const handleOpenFirmato = async () => {
           </div>
         </div>
       </div>
-       <MasterPasswordDialog
+      <MasterPasswordDialog
         open={masterPasswordOpen}
         onOpenChange={setMasterPasswordOpen}
         password={masterPassword}
         onPasswordChange={setMasterPassword}
-        onConfirm={handleMasterPasswordConfirm}
+        onUnlock={handleMasterPasswordConfirm}
         loading={masterPasswordLoading}
-        error={masterPasswordError}
       />
     </div>
   );
