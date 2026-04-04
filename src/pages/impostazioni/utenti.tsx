@@ -318,7 +318,7 @@ toast({
     try {
       setLoading(true);
 
-      const response = await fetch("/api/admin/delete-user", {
+       const response = await fetch("/api/admin/delete-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -328,11 +328,11 @@ toast({
         }),
       });
 
-      if (!response.ok) {
-        console.error("Errore eliminazione Auth");
-      }
+      const result = await response.json();
 
-      await utenteService.deleteUtente(utente.id);
+      if (!response.ok) {
+        throw new Error(result.details || result.error || "Errore eliminazione utente");
+      }
 
       toast({
         title: "✅ Utente eliminato",
@@ -340,6 +340,7 @@ toast({
       });
 
       await loadData();
+      
     } catch (error) {
       console.error("Errore eliminazione:", error);
       toast({
