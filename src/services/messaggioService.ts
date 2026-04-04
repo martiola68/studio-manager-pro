@@ -550,7 +550,7 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
     console.error("Errore eliminazione conversazione:", error);
     throw error;
   }
-}
+},
 
   subscribeToConversazione(conversazioneId: string, onNewMessage: (payload: any) => void) {
     return supabase
