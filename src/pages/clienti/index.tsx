@@ -640,54 +640,13 @@ const handleSave = async () => {
   const supabase = getSupabaseClient();
 
   try {
-    const newErrors: Record<string, boolean> = {};
-    const missingFields: string[] = [];
-
-    if (!formData.ragione_sociale) {
-      newErrors.ragione_sociale = true;
-      missingFields.push("Ragione Sociale");
-    }
-
-    if (!formData.utente_operatore_id) {
-      newErrors.utente_operatore_id = true;
-      missingFields.push("Utente Fiscale");
-    }
-
-    if (!formData.utente_professionista_id) {
-      newErrors.utente_professionista_id = true;
-      missingFields.push("Professionista Fiscale");
-    }
-
-    if (!formData.tipo_prestazione_id) {
-      newErrors.tipo_prestazione_id = true;
-      missingFields.push("Tipo Prestazione");
-    }
-
-    if (!formData.tipo_redditi) {
-      newErrors.tipo_redditi = true;
-      missingFields.push("Tipo Redditi");
-    }
-
-    if (missingFields.length > 0) {
-      setErrors(newErrors);
-
-      toast({
-        title: "Campi obbligatori mancanti",
-        description: missingFields.join(", "),
-        variant: "destructive",
-      });
-
-      return;
-    }
-
-    setErrors({});
-
     await runProtectedSubmit({
       encryptionEnabled,
       requireUnlock: masterPasswordGate.requireUnlock,
       action: async () => {
         const codiceFiscalePulito = String(formData.codice_fiscale || "").trim();
 
+        // 1) PRIMO CONTROLLO: duplicato per codice fiscale
         if (codiceFiscalePulito) {
           const { data: existingCliente, error: existingError } = await supabase
             .from("tbclienti")
@@ -709,6 +668,73 @@ const handleSave = async () => {
             return;
           }
         }
+
+        // 2) SOLO SE NON È DUPLICATO, CONTROLLI OBBLIGATORI
+        const newErrors: Record<string, boolean> = {};
+        const missingFields: string[] = [];
+
+        const hasFiscaleOrConsulenza =
+          !!formData.settore_fiscale || !!formData.settore_consulenza;
+
+        const hasLavoro = !!formData.settore_lavoro;
+
+        if (!formData.ragione_sociale.trim()) {
+          newErrors.ragione_sociale = true;
+          missingFields.push("Ragione Sociale");
+        }
+
+        if (!formData.settore_fiscale && !formData.settore_lavoro && !formData.settore_consulenza) {
+          newErrors.settori = true;
+          missingFields.push("Selezionare almeno un Settore");
+        }
+
+        if (hasFiscaleOrConsulenza) {
+          if (!formData.utente_operatore_id) {
+            newErrors.utente_operatore_id = true;
+            missingFields.push("Utente Fiscale");
+          }
+
+          if (!formData.utente_professionista_id) {
+            newErrors.utente_professionista_id = true;
+            missingFields.push("Professionista Fiscale");
+          }
+        }
+
+        if (hasLavoro) {
+          if (!formData.utente_payroll_id) {
+            newErrors.utente_payroll_id = true;
+            missingFields.push("Utente Payroll");
+          }
+
+          if (!formData.professionista_payroll_id) {
+            newErrors.professionista_payroll_id = true;
+            missingFields.push("Professionista Payroll");
+          }
+        }
+
+        if (!formData.tipo_prestazione_id) {
+          newErrors.tipo_prestazione_id = true;
+          missingFields.push("Tipo Prestazione");
+        }
+
+        if (!formData.tipo_redditi) {
+          newErrors.tipo_redditi = true;
+          missingFields.push("Tipo Redditi");
+        }
+
+        if (missingFields.length > 0) {
+          setErrors(newErrors);
+
+          toast({
+            title: "Campi obbligatori mancanti",
+            description: missingFields.join(", "),
+            variant: "destructive",
+          });
+
+          return;
+        }
+
+        setErrors({});
 
         const base: Partial<ClienteInsert> = {
           cod_cliente:
@@ -786,6 +812,7 @@ const handleSave = async () => {
         } else {
           const insertData: ClienteInsert = dataToSave as ClienteInsert;
           const { error } = await supabase.from("tbclienti").insert(insertData);
+
           if (error) throw error;
 
           toast({
@@ -813,6 +840,7 @@ const handleSave = async () => {
     });
   }
 };
+  
   const handleDelete = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo cliente?")) return;
     const supabase = getSupabaseClient();
