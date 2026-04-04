@@ -428,66 +428,129 @@ export const messaggioService = {
     }
   },
 
-  async eliminaConversazione(conversazioneId: string, userId: string) {
-    try {
-      // Verifica che l'utente sia il creatore della conversazione
-      const { data: conversazione, error: checkError } = await supabase
-        .from("tbconversazioni")
-        .select("creato_da, tipo")
-        .eq("id", conversazioneId)
-        .single();
+async eliminaConversazione(conversazioneId: string, userId: string) {
+  try {
+    const { data: conversazione, error: checkError } = await supabase
+      .from("tbconversazioni")
+      .select(`
+        id,
+        creato_da,
+        tipo,
+        partecipanti:tbconversazioni_utenti(utente_id)
+      `)
+      .eq("id", conversazioneId)
+      .single();
 
-      if (checkError) throw checkError;
+    if (checkError) throw checkError;
+    if (!conversazione) {
+      throw new Error("Conversazione non trovata");
+    }
 
-      if (conversazione.creato_da !== userId) {
-        throw new Error("Solo il creatore può eliminare questa conversazione");
-      }
+    const isPartecipante =
+      conversazione.partecipanti?.some((p: any) => p.utente_id === userId) || false;
 
-      // Elimina prima i partecipanti (foreign key constraint)
+    if (!isPartecipante) {
+      throw new Error("Non hai i permessi per eliminare questa conversazione");
+    }
+
+    // CHAT DIRETTA: ogni partecipante può eliminarla
+    if (conversazione.tipo === "diretta") {
       const { error: deleteParteciError } = await supabase
         .from("tbconversazioni_utenti")
         .delete()
-        .eq("conversazione_id", conversazioneId);
+        .eq("conversazione_id", conversazioneId)
+        .eq("utente_id", userId);
 
       if (deleteParteciError) throw deleteParteciError;
 
-      // Elimina gli allegati dei messaggi
-      const { data: messaggi } = await supabase
-        .from("tbmessaggi")
-        .select("id")
+      // Verifica se restano partecipanti
+      const { data: partecipantiResidui, error: partecipantiResiduiError } = await supabase
+        .from("tbconversazioni_utenti")
+        .select("utente_id")
         .eq("conversazione_id", conversazioneId);
 
-      if (messaggi && messaggi.length > 0) {
-        const messaggiIds = messaggi.map(m => m.id);
-        
-        await supabase
-          .from("tbmessaggi_allegati")
+      if (partecipantiResiduiError) throw partecipantiResiduiError;
+
+      // Se non resta nessuno, pulizia completa
+      if (!partecipantiResidui || partecipantiResidui.length === 0) {
+        const { data: messaggi } = await supabase
+          .from("tbmessaggi")
+          .select("id")
+          .eq("conversazione_id", conversazioneId);
+
+        if (messaggi && messaggi.length > 0) {
+          const messaggiIds = messaggi.map((m) => m.id);
+
+          await supabase
+            .from("tbmessaggi_allegati")
+            .delete()
+            .in("messaggio_id", messaggiIds);
+        }
+
+        const { error: deleteMessaggiError } = await supabase
+          .from("tbmessaggi")
           .delete()
-          .in("messaggio_id", messaggiIds);
+          .eq("conversazione_id", conversazioneId);
+
+        if (deleteMessaggiError) throw deleteMessaggiError;
+
+        const { error: deleteConvError } = await supabase
+          .from("tbconversazioni")
+          .delete()
+          .eq("id", conversazioneId);
+
+        if (deleteConvError) throw deleteConvError;
       }
 
-      // Elimina i messaggi
-      const { error: deleteMessaggiError } = await supabase
-        .from("tbmessaggi")
-        .delete()
-        .eq("conversazione_id", conversazioneId);
-
-      if (deleteMessaggiError) throw deleteMessaggiError;
-
-      // Elimina la conversazione
-      const { error: deleteConvError } = await supabase
-        .from("tbconversazioni")
-        .delete()
-        .eq("id", conversazioneId);
-
-      if (deleteConvError) throw deleteConvError;
-
       return true;
-    } catch (error) {
-      console.error("Errore eliminazione conversazione:", error);
-      throw error;
     }
-  },
+
+    // GRUPPO: per ora resta eliminabile solo dal creatore
+    if (conversazione.creato_da !== userId) {
+      throw new Error("Solo il creatore può eliminare questo gruppo");
+    }
+
+    const { error: deleteParteciError } = await supabase
+      .from("tbconversazioni_utenti")
+      .delete()
+      .eq("conversazione_id", conversazioneId);
+
+    if (deleteParteciError) throw deleteParteciError;
+
+    const { data: messaggi } = await supabase
+      .from("tbmessaggi")
+      .select("id")
+      .eq("conversazione_id", conversazioneId);
+
+    if (messaggi && messaggi.length > 0) {
+      const messaggiIds = messaggi.map((m) => m.id);
+
+      await supabase
+        .from("tbmessaggi_allegati")
+        .delete()
+        .in("messaggio_id", messaggiIds);
+    }
+
+    const { error: deleteMessaggiError } = await supabase
+      .from("tbmessaggi")
+      .delete()
+      .eq("conversazione_id", conversazioneId);
+
+    if (deleteMessaggiError) throw deleteMessaggiError;
+
+    const { error: deleteConvError } = await supabase
+      .from("tbconversazioni")
+      .delete()
+      .eq("id", conversazioneId);
+
+    if (deleteConvError) throw deleteConvError;
+
+    return true;
+  } catch (error) {
+    console.error("Errore eliminazione conversazione:", error);
+    throw error;
+  }
+}
 
   subscribeToConversazione(conversazioneId: string, onNewMessage: (payload: any) => void) {
     return supabase
