@@ -90,13 +90,13 @@ const masterPasswordGate = useMasterPasswordGate({
   }
 }, []);
 
-  useEffect(() => {
-  if (userId && studioId) {
+ useEffect(() => {
+  if (studioId) {
     void refreshEncryptionEnabled();
     void fetchCredenziali();
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [userId, studioId]);
+}, [studioId]);
 
   useEffect(() => {
     filterCredenziali();
