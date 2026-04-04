@@ -391,27 +391,39 @@ window.dispatchEvent(new Event("messaggi-updated"));
     }
   };
 
-  const openEditGroupDialog = () => {
-    if (!selectedConvId || !authUserId) return;
+const openEditGroupDialog = async () => {
+  if (!selectedConvId || !authUserId) return;
 
-    const conv = conversazioni.find((c) => c.id === selectedConvId);
-    if (!conv || conv.tipo !== "gruppo") return;
+  const conv = conversazioni.find((c) => c.id === selectedConvId);
+  if (!conv || conv.tipo !== "gruppo") return;
 
-    const participantIds =
-      conv.partecipanti
-        ?.map((p: any) => p.utente_id || p.tbutenti?.id)
-        .filter(Boolean) || [];
+  const { data, error } = await supabase
+    .from("tbconversazione_partecipanti")
+    .select("utente_id")
+    .eq("conversazione_id", conv.id);
 
-    setEditGroupId(conv.id);
-    setEditGroupTitle(conv.titolo || "");
-    setEditSelectedMembers(participantIds.filter((id: string) => id !== authUserId));
-    setIsEditGroupOpen(true);
-  };
+  if (error) {
+    console.error("Errore caricamento membri gruppo:", error);
+    toast({
+      variant: "destructive",
+      title: "Errore",
+      description: "Impossibile caricare i componenti del gruppo.",
+    });
+    return;
+  }
+
+  const participantIds = (data || []).map((p: any) => p.utente_id).filter(Boolean);
+
+  setEditGroupId(conv.id);
+  setEditGroupTitle(conv.titolo || "");
+  setEditSelectedMembers(participantIds.filter((id: string) => id !== authUserId));
+  setIsEditGroupOpen(true);
+};
 
   const saveGroupChanges = async () => {
     const trimmedTitle = editGroupTitle.trim();
 
-    if (!authUserId || !editGroupId || !trimmedTitle || editSelectedMembers.length < 2) {
+   if (!authUserId || !editGroupId || !trimmedTitle || editSelectedMembers.length < 1) {
       toast({
         variant: "destructive",
         title: "Errore",
@@ -772,7 +784,7 @@ window.dispatchEvent(new Event("messaggi-updated"));
             <DialogFooter>
               <Button
                 onClick={saveGroupChanges}
-                disabled={!editGroupTitle.trim() || editSelectedMembers.length < 2}
+               disabled={!editGroupTitle.trim() || editSelectedMembers.length < 1}
               >
                 Salva modifiche
               </Button>
