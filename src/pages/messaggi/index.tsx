@@ -85,6 +85,16 @@ useEffect(() => {
     });
   }
 
+  useEffect(() => {
+  if (!selectedConvId) {
+    setSelectedCreatorId(null);
+    return;
+  }
+
+  const conv = conversazioni.find((c) => c.id === selectedConvId);
+  setSelectedCreatorId(conv?.creato_da || null);
+}, [selectedConvId, conversazioni]);
+
   return () => {
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
@@ -127,10 +137,12 @@ useEffect(() => {
     }
   };
 
-  const loadConversazioni = async (userId: string) => {
-    const data = await messaggioService.getConversazioni(userId);
-    setConversazioni(data || []);
-  };
+ const loadConversazioni = async (userId: string) => {
+  const data = await messaggioService.getConversazioni(userId);
+  const convs = data || [];
+  setConversazioni(convs);
+  return convs;
+};
 
   const loadUtentiStudio = async (sId: string) => {
     try {
@@ -391,28 +403,16 @@ window.dispatchEvent(new Event("messaggi-updated"));
     }
   };
 
-const openEditGroupDialog = async () => {
+const openEditGroupDialog = () => {
   if (!selectedConvId || !authUserId) return;
 
   const conv = conversazioni.find((c) => c.id === selectedConvId);
   if (!conv || conv.tipo !== "gruppo") return;
 
-  const { data, error } = await supabase
-  .from("tbconversazione_partecipanti" as any)
-    .select("utente_id")
-    .eq("conversazione_id", conv.id);
-
-  if (error) {
-    console.error("Errore caricamento membri gruppo:", error);
-    toast({
-      variant: "destructive",
-      title: "Errore",
-      description: "Impossibile caricare i componenti del gruppo.",
-    });
-    return;
-  }
-
-  const participantIds = (data || []).map((p: any) => p.utente_id).filter(Boolean);
+  const participantIds =
+    conv.partecipanti
+      ?.map((p: any) => p.utente_id || p.tbutenti?.id || p.id)
+      .filter(Boolean) || [];
 
   setEditGroupId(conv.id);
   setEditGroupTitle(conv.titolo || "");
@@ -447,7 +447,11 @@ const openEditGroupDialog = async () => {
       setEditGroupTitle("");
       setEditSelectedMembers([]);
 
-      await loadConversazioni(authUserId);
+     const updatedConversazioni = await loadConversazioni(authUserId);
+const updatedConv = updatedConversazioni.find((c: any) => c.id === editGroupId);
+
+setSelectedConvId(editGroupId);
+setSelectedCreatorId(updatedConv?.creato_da || authUserId);
 
       toast({
         title: "✅ Gruppo aggiornato",
