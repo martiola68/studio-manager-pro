@@ -27,35 +27,51 @@ export default async function handler(
       return res.status(400).json({ error: "userId richiesto" });
     }
 
-    // 1. Elimina da Auth
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    // 🔍 1. Recupero user_id da DB
+    const { data: utente, error: fetchError } = await supabaseAdmin
+      .from("tbutenti")
+      .select("user_id")
+      .eq("id", userId)
+      .single();
 
-    if (authError) {
-      console.error("Errore eliminazione Auth:", authError);
+    if (fetchError) {
+      console.error("Errore fetch utente:", fetchError);
       return res.status(500).json({
-        error: "Errore eliminazione utente da Auth",
-        details: authError.message,
+        error: "Errore lettura utente",
+        details: fetchError.message,
       });
     }
 
-    // 2. Elimina anche da tbutenti
+    // 🔥 2. Elimina da Auth SOLO se esiste user_id
+    if (utente?.user_id) {
+      const { error: authError } =
+        await supabaseAdmin.auth.admin.deleteUser(utente.user_id);
+
+      if (authError) {
+        console.error("Errore eliminazione Auth:", authError);
+        // NON bloccare → continuiamo comunque
+      }
+    }
+
+    // 🗑️ 3. Elimina da tbutenti
     const { error: dbError } = await supabaseAdmin
       .from("tbutenti")
       .delete()
       .eq("id", userId);
 
     if (dbError) {
-      console.error("Errore eliminazione tbutenti:", dbError);
+      console.error("Errore eliminazione DB:", dbError);
       return res.status(500).json({
-        error: "Utente eliminato da Auth ma non da anagrafica",
+        error: "Errore eliminazione utente",
         details: dbError.message,
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Utente eliminato con successo",
+      message: "Utente eliminato completamente",
     });
+
   } catch (error: any) {
     console.error("Errore API delete-user:", error);
     return res.status(500).json({
