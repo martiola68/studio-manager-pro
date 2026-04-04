@@ -104,17 +104,16 @@ export function ChatSidebar({
     };
   };
 
-  const getGroupParticipantsLabel = (conv: ConversazioneConDettagli) => {
-    if (conv.tipo !== "gruppo") return "";
+ const getGroupParticipants = (conv: ConversazioneConDettagli) => {
+  if (conv.tipo !== "gruppo") return [];
 
-    const names =
-      conv.partecipanti
-        ?.filter((p) => p.tbutenti && p.tbutenti.email !== currentUserEmail)
-        .map((p) => `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`.trim())
-        .filter(Boolean) || [];
-
-    return names.join(", ");
-  };
+  return (
+    conv.partecipanti
+      ?.filter((p) => p.tbutenti && p.tbutenti.email !== currentUserEmail)
+      .map((p) => `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`.trim())
+      .filter(Boolean) || []
+  );
+};
 
   return (
     <div className={cn("flex flex-col h-full border-r bg-background", className)}>
@@ -146,7 +145,7 @@ export function ChatSidebar({
           ) : (
             filtered.map((conv) => {
               const displayInfo = getDisplayInfo(conv);
-              const groupParticipantsLabel = getGroupParticipantsLabel(conv);
+              const groupParticipants = getGroupParticipants(conv);
 
               return (
                 <button
@@ -167,7 +166,7 @@ export function ChatSidebar({
                     </AvatarFallback>
                   </Avatar>
 
-                <div className="flex-1 min-w-0">
+  <div className="flex-1 min-w-0">
   <div className="flex items-start justify-between mb-1 gap-2">
     <div className="flex items-start gap-1 flex-1 min-w-0">
       <span
@@ -201,29 +200,18 @@ export function ChatSidebar({
   </div>
 
   {conv.tipo === "gruppo" ? (
-    <p className="text-xs text-muted-foreground whitespace-normal break-words leading-snug block">
-      {groupParticipantsLabel || "Nessun partecipante"}
-    </p>
-  ) : (
-    <div className="flex items-center justify-between gap-2">
-      <p
-        className={cn(
-          "text-xs truncate flex-1 min-w-0",
-          (conv.non_letti || 0) > 0
-            ? "font-bold text-foreground"
-            : "text-muted-foreground"
-        )}
-      >
-        {conv.ultimo_messaggio?.testo || "Nessun messaggio"}
-      </p>
-
-      {(conv.non_letti || 0) > 0 && (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-          {conv.non_letti}
-        </span>
+    <div className="text-xs text-muted-foreground leading-snug">
+      {groupParticipants.length > 0 ? (
+        groupParticipants.map((name, index) => (
+          <div key={index} className="block">
+            {name}
+          </div>
+        ))
+      ) : (
+        <div>Nessun partecipante</div>
       )}
     </div>
-  )}
+  ) : null}
 
   {conv.tipo === "gruppo" && (conv.non_letti || 0) > 0 && (
     <div className="mt-2 flex justify-end">
