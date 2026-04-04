@@ -23,8 +23,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
-import { revealProtectedValue, runProtectedSubmit } from "@/lib/security/masterPasswordActions";
-import { getStoredEncryptionKey, isEncryptionEnabled } from "@/services/encryptionService";
+import {
+  revealProtectedValue,
+  runProtectedSubmit,
+} from "@/lib/security/masterPasswordActions";
+import {
+  getStoredEncryptionKey,
+  isEncryptionEnabled,
+} from "@/services/encryptionService";
 import { isEncrypted } from "@/lib/encryption";
 import {
   Plus,
@@ -41,7 +47,8 @@ import {
 import { credenzialiAccessoService } from "@/services/credenzialiAccessoService";
 import type { Database } from "@/integrations/supabase/types";
 
-type CredenzialeAccesso = Database["public"]["Tables"]["tbcredenziali_accesso"]["Row"];
+type CredenzialeAccesso =
+  Database["public"]["Tables"]["tbcredenziali_accesso"]["Row"];
 
 function hasKey() {
   return Boolean(getStoredEncryptionKey());
@@ -52,14 +59,19 @@ export default function AccessoPortaliPage() {
   const { toast } = useToast();
 
   const [credenziali, setCredenziali] = useState<CredenzialeAccesso[]>([]);
-  const [filteredCredenziali, setFilteredCredenziali] = useState<CredenzialeAccesso[]>([]);
+  const [filteredCredenziali, setFilteredCredenziali] = useState<
+    CredenzialeAccesso[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCredenziale, setEditingCredenziale] = useState<CredenzialeAccesso | null>(null);
+  const [editingCredenziale, setEditingCredenziale] =
+    useState<CredenzialeAccesso | null>(null);
   const [loading, setLoading] = useState(true);
   const [studioId, setStudioId] = useState<string>("");
-  
-  const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
+
+  const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>(
+    {}
+  );
   const [showPin, setShowPin] = useState<{ [key: string]: boolean }>({});
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
@@ -72,12 +84,12 @@ export default function AccessoPortaliPage() {
     note: "",
   });
 
-const masterPasswordGate = useMasterPasswordGate({
-  studioId,
-  onUnlocked: async () => {
-    await fetchCredenziali();
-  },
-});
+  const masterPasswordGate = useMasterPasswordGate({
+    studioId,
+    onUnlocked: async () => {
+      await fetchCredenziali();
+    },
+  });
 
   useEffect(() => {
     void checkAuth();
@@ -85,38 +97,38 @@ const masterPasswordGate = useMasterPasswordGate({
   }, []);
 
   useEffect(() => {
-  if (typeof window !== "undefined") {
-    setStudioId(localStorage.getItem("studio_id") || "");
-  }
-}, []);
+    if (typeof window !== "undefined") {
+      setStudioId(localStorage.getItem("studio_id") || "");
+    }
+  }, []);
 
- useEffect(() => {
-  if (studioId) {
-    void refreshEncryptionEnabled();
-    void fetchCredenziali();
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [studioId]);
+  useEffect(() => {
+    if (studioId) {
+      void refreshEncryptionEnabled();
+      void fetchCredenziali();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studioId]);
 
   useEffect(() => {
     filterCredenziali();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, credenziali]);
 
- const refreshEncryptionEnabled = async () => {
-  try {
-    if (!studioId) {
-      setEncryptionEnabled(false);
-      return;
-    }
+  const refreshEncryptionEnabled = async () => {
+    try {
+      if (!studioId) {
+        setEncryptionEnabled(false);
+        return;
+      }
 
-    const enabled = await isEncryptionEnabled(studioId);
-    setEncryptionEnabled(Boolean(enabled));
-  } catch (e) {
-    console.error("Errore controllo cifratura:", e);
-    setEncryptionEnabled(false);
-  }
-};
+      const enabled = await isEncryptionEnabled(studioId);
+      setEncryptionEnabled(Boolean(enabled));
+    } catch (e) {
+      console.error("Errore controllo cifratura:", e);
+      setEncryptionEnabled(false);
+    }
+  };
 
   const checkAuth = async () => {
     try {
@@ -129,8 +141,6 @@ const masterPasswordGate = useMasterPasswordGate({
         router.push("/login");
         return;
       }
-
-      setUserId(session.user.id);
     } catch (e) {
       router.push("/login");
     }
@@ -163,7 +173,8 @@ const masterPasswordGate = useMasterPasswordGate({
     const filtered = credenziali.filter(
       (cred) =>
         cred.portale.toLowerCase().includes(term) ||
-        (cred.indirizzo_url && cred.indirizzo_url.toLowerCase().includes(term)) ||
+        (cred.indirizzo_url &&
+          cred.indirizzo_url.toLowerCase().includes(term)) ||
         (cred.login_utente && cred.login_utente.toLowerCase().includes(term))
     );
 
@@ -224,14 +235,20 @@ const masterPasswordGate = useMasterPasswordGate({
         requireUnlock: masterPasswordGate.requireUnlock,
         action: async () => {
           if (editingCredenziale) {
-            await credenzialiAccessoService.update(editingCredenziale.id, formData);
-            toast({ title: "Successo", description: "Credenziale aggiornata con successo" });
-          } else {
-            await credenzialiAccessoService.create({
-              ...formData,
-              created_by: userId,
+            await credenzialiAccessoService.update(
+              editingCredenziale.id,
+              formData
+            );
+            toast({
+              title: "Successo",
+              description: "Credenziale aggiornata con successo",
             });
-            toast({ title: "Successo", description: "Credenziale creata con successo" });
+          } else {
+            await credenzialiAccessoService.create(formData);
+            toast({
+              title: "Successo",
+              description: "Credenziale creata con successo",
+            });
           }
 
           handleCloseDialog();
@@ -253,7 +270,10 @@ const masterPasswordGate = useMasterPasswordGate({
 
     try {
       await credenzialiAccessoService.delete(id);
-      toast({ title: "Successo", description: "Credenziale eliminata con successo" });
+      toast({
+        title: "Successo",
+        description: "Credenziale eliminata con successo",
+      });
       void fetchCredenziali();
     } catch (error) {
       console.error("Errore nell'eliminazione:", error);
@@ -313,11 +333,17 @@ const masterPasswordGate = useMasterPasswordGate({
             <Key className="w-8 h-8 text-blue-600" />
             Accesso Portali
           </h1>
-          <p className="text-gray-500 mt-1">Gestione credenziali di accesso ai portali esterni</p>
+          <p className="text-gray-500 mt-1">
+            Gestione credenziali di accesso ai portali esterni
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {encryptionEnabled && !hasKey() && (
-            <Button variant="outline" onClick={() => masterPasswordGate.setOpen(true)} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => masterPasswordGate.setOpen(true)}
+              className="gap-2"
+            >
               <Unlock className="w-4 h-4" />
               Sblocca
             </Button>
@@ -365,7 +391,9 @@ const masterPasswordGate = useMasterPasswordGate({
             ) : filteredCredenziali.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                  {searchTerm ? "Nessuna credenziale trovata" : "Nessuna credenziale inserita"}
+                  {searchTerm
+                    ? "Nessuna credenziale trovata"
+                    : "Nessuna credenziale inserita"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -393,7 +421,9 @@ const masterPasswordGate = useMasterPasswordGate({
                         className="text-blue-600 hover:underline flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {cred.indirizzo_url.replace(/^https?:\/\//, "").substring(0, 30)}
+                        {cred.indirizzo_url
+                          .replace(/^https?:\/\//, "")
+                          .substring(0, 30)}
                         {cred.indirizzo_url.length > 30 ? "..." : ""}
                         <ExternalLink className="w-3 h-3" />
                       </a>
@@ -402,7 +432,9 @@ const masterPasswordGate = useMasterPasswordGate({
                     )}
                   </TableCell>
 
-                  <TableCell className="text-sm">{cred.login_utente || "-"}</TableCell>
+                  <TableCell className="text-sm">
+                    {cred.login_utente || "-"}
+                  </TableCell>
 
                   <TableCell className="text-sm">
                     {cred.login_pw ? (
@@ -509,7 +541,9 @@ const masterPasswordGate = useMasterPasswordGate({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingCredenziale ? "Modifica Credenziale" : "Nuova Credenziale"}</DialogTitle>
+            <DialogTitle>
+              {editingCredenziale ? "Modifica Credenziale" : "Nuova Credenziale"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -518,7 +552,9 @@ const masterPasswordGate = useMasterPasswordGate({
               <Input
                 id="portale"
                 value={formData.portale}
-                onChange={(e) => setFormData({ ...formData, portale: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, portale: e.target.value })
+                }
                 placeholder="Es: Agenzia delle Entrate"
               />
             </div>
@@ -529,7 +565,9 @@ const masterPasswordGate = useMasterPasswordGate({
                 id="indirizzo_url"
                 type="url"
                 value={formData.indirizzo_url}
-                onChange={(e) => setFormData({ ...formData, indirizzo_url: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, indirizzo_url: e.target.value })
+                }
                 placeholder="https://..."
               />
             </div>
@@ -540,7 +578,9 @@ const masterPasswordGate = useMasterPasswordGate({
                 <Input
                   id="login_utente"
                   value={formData.login_utente}
-                  onChange={(e) => setFormData({ ...formData, login_utente: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, login_utente: e.target.value })
+                  }
                   placeholder="Username"
                   autoComplete="off"
                 />
@@ -552,7 +592,9 @@ const masterPasswordGate = useMasterPasswordGate({
                   id="login_pw"
                   type="password"
                   value={formData.login_pw}
-                  onChange={(e) => setFormData({ ...formData, login_pw: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, login_pw: e.target.value })
+                  }
                   placeholder="Password"
                   autoComplete="new-password"
                 />
@@ -564,7 +606,9 @@ const masterPasswordGate = useMasterPasswordGate({
               <Input
                 id="login_pin"
                 value={formData.login_pin}
-                onChange={(e) => setFormData({ ...formData, login_pin: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, login_pin: e.target.value })
+                }
                 placeholder="Es: 123456"
               />
             </div>
@@ -574,7 +618,9 @@ const masterPasswordGate = useMasterPasswordGate({
               <Textarea
                 id="note"
                 value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, note: e.target.value })
+                }
                 placeholder="Note aggiuntive..."
                 rows={3}
               />
