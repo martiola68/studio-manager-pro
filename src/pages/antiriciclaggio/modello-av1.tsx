@@ -7,6 +7,9 @@ import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+import MasterPasswordDialog from "@/components/master-password/MasterPasswordDialog";
+import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+
 const BUCKET_NAME = "allegati";
 
 type Cliente = {
@@ -281,6 +284,19 @@ export default function ModelloAV1Page() {
   const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+    const {
+    isOpen: masterPasswordOpen,
+    setIsOpen: setMasterPasswordOpen,
+    password: masterPassword,
+    setPassword: setMasterPassword,
+    error: masterPasswordError,
+    loading: masterPasswordLoading,
+    handleConfirm: handleMasterPasswordConfirm,
+    runProtectedSubmit,
+  } = useMasterPasswordGate({
+    studioId: formData.studio_id || "",
+  });
+
   const punteggioPrestazione = useMemo(
     () =>
       normalizeScore(
@@ -483,216 +499,226 @@ export default function ModelloAV1Page() {
   };
 
   const handleUploadFirmato = async (file: File) => {
-    try {
+    await runProtectedSubmit(async () => {
+      try {
+        if (!formData.studio_id) {
+          alert("Studio non disponibile.");
+          return;
+        }
+
+        setUploadingFirmato(true);
+        setError(null);
+
+        const supabase = getSupabaseClient() as any;
+        const safeName = file.name.replace(/\s+/g, "_");
+        const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
+
+        const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
+          upsert: true,
+        });
+
+        if (uploadError) {
+          throw new Error(uploadError.message || "Errore caricamento file firmato.");
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          allegato_av1_firmato: path,
+        }));
+      } catch (err: any) {
+        setError(err?.message || "Errore caricamento file firmato.");
+      } finally {
+        setUploadingFirmato(false);
+      }
+    });
+  };
+
+const handleOpenFirmato = async () => {
+    await runProtectedSubmit(async () => {
+      try {
+        if (!formData.allegato_av1_firmato) return;
+
+        const supabase = getSupabaseClient() as any;
+
+        const { data, error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .createSignedUrl(formData.allegato_av1_firmato, 60);
+
+        if (error) {
+          throw new Error(error.message || "Errore apertura file.");
+        }
+
+        if (!data?.signedUrl) {
+          throw new Error("URL firmato non disponibile.");
+        }
+
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      } catch (err: any) {
+        setError(err?.message || "Errore apertura file.");
+      }
+    });
+  };
+
+ const handleRemoveFirmato = async () => {
+    await runProtectedSubmit(async () => {
+      setFormData((prev) => ({
+        ...prev,
+        allegato_av1_firmato: "",
+      }));
+    });
+  };
+  
+ const handleRinnovoVerifica = async () => {
+    await runProtectedSubmit(async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
+      const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
+
+      setFormData((prev) => ({
+        ...prev,
+        DataVerifica: today,
+        ScadenzaVerifica: "",
+        AV1Conferma: false,
+        ...defaultSectionScores,
+      }));
+
+      if (!formData.id) return;
+
+      try {
+        setSaving(true);
+        setError(null);
+
+        const supabase = getSupabaseClient() as any;
+
+        const payload = {
+          DataVerifica: today,
+          ScadenzaVerifica: null,
+          AV1Conferma: false,
+          A1: 0,
+          A2: 0,
+          A3: 0,
+          A4: 0,
+          B1: 0,
+          B2: 0,
+          B3: 0,
+          B4: 0,
+          B5: 0,
+          B6: 0,
+          TotA: 0,
+          TotB: 0,
+          MediaPunteggio: 0,
+          LivelloRischio: "Non significativo",
+          RisInerentePonderato: rischioInerentePonderatoReset,
+          RisSpecificoPonderato: 0,
+          RischioEffettivo: rischioInerentePonderatoReset,
+          AdeguataVerifica: adeguataReset,
+        };
+
+        const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+
+        if (error) throw new Error(error.message);
+
+        alert("Rinnovo verifica eseguito correttamente.");
+      } catch (err: any) {
+        setError(err?.message || "Errore durante il rinnovo verifica.");
+      } finally {
+        setSaving(false);
+      }
+    });
+  };
+
+    const handleSave = async () => {
+    await runProtectedSubmit(async () => {
       if (!formData.studio_id) {
         alert("Studio non disponibile.");
         return;
       }
 
-      setUploadingFirmato(true);
-      setError(null);
-
-      const supabase = getSupabaseClient() as any;
-      const safeName = file.name.replace(/\s+/g, "_");
-      const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
-
-      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
-        upsert: true,
-      });
-
-      if (uploadError) {
-        throw new Error(uploadError.message || "Errore caricamento file firmato.");
+      if (!formData.cliente_id) {
+        alert("Seleziona un cliente.");
+        return;
       }
 
-      setFormData((prev) => ({
-        ...prev,
-        allegato_av1_firmato: path,
-      }));
-    } catch (err: any) {
-      setError(err?.message || "Errore caricamento file firmato.");
-    } finally {
-      setUploadingFirmato(false);
-    }
-  };
-
-  const handleOpenFirmato = async () => {
-    try {
-      if (!formData.allegato_av1_firmato) return;
-
-      const supabase = getSupabaseClient() as any;
-
-      const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(formData.allegato_av1_firmato, 60);
-
-      if (error) {
-        throw new Error(error.message || "Errore apertura file.");
+      if (!formData.Prestazione) {
+        alert("Seleziona una prestazione.");
+        return;
       }
 
-      if (!data?.signedUrl) {
-        throw new Error("URL firmato non disponibile.");
+      if (!formData.DataVerifica) {
+        alert("Inserisci la data verifica.");
+        return;
       }
 
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      setError(err?.message || "Errore apertura file.");
-    }
-  };
+      if (!formData.incaricato_adeguata_verifica_id) {
+        alert("Seleziona l'incaricato adeguata verifica.");
+        return;
+      }
 
-  const handleRemoveFirmato = () => {
-    setFormData((prev) => ({
-      ...prev,
-      allegato_av1_firmato: "",
-    }));
-  };
-
-  const handleRinnovoVerifica = async () => {
-    const today = new Date().toISOString().split("T")[0];
-    const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
-    const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
-
-    setFormData((prev) => ({
-      ...prev,
-      DataVerifica: today,
-      ScadenzaVerifica: "",
-      AV1Conferma: false,
-      ...defaultSectionScores,
-    }));
-
-    if (!formData.id) return;
-
-    try {
       setSaving(true);
       setError(null);
 
-      const supabase = getSupabaseClient() as any;
+      try {
+        const supabase = getSupabaseClient() as any;
 
-      const payload = {
-        DataVerifica: today,
-        ScadenzaVerifica: null,
-        AV1Conferma: false,
-        A1: 0,
-        A2: 0,
-        A3: 0,
-        A4: 0,
-        B1: 0,
-        B2: 0,
-        B3: 0,
-        B4: 0,
-        B5: 0,
-        B6: 0,
-        TotA: 0,
-        TotB: 0,
-        MediaPunteggio: 0,
-        LivelloRischio: "Non significativo",
-        RisInerentePonderato: rischioInerentePonderatoReset,
-        RisSpecificoPonderato: 0,
-        RischioEffettivo: rischioInerentePonderatoReset,
-        AdeguataVerifica: adeguataReset,
-      };
+        const payload = {
+          studio_id: formData.studio_id,
+          cliente_id: formData.cliente_id,
+          Prestazione: formData.Prestazione,
+          ValRischioIner: formData.ValRischioIner,
+          DataVerifica: formData.DataVerifica,
+          ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
+          allegato_av1_firmato: formData.allegato_av1_firmato || null,
+          incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
+          A1: normalizeScore(formData.A1),
+          A2: normalizeScore(formData.A2),
+          A3: normalizeScore(formData.A3),
+          A4: normalizeScore(formData.A4),
+          B1: normalizeScore(formData.B1),
+          B2: normalizeScore(formData.B2),
+          B3: normalizeScore(formData.B3),
+          B4: normalizeScore(formData.B4),
+          B5: normalizeScore(formData.B5),
+          B6: normalizeScore(formData.B6),
+          TotA,
+          TotB,
+          MediaPunteggio,
+          LivelloRischio,
+          RisInerentePonderato,
+          RisSpecificoPonderato,
+          RischioEffettivo,
+          AdeguataVerifica,
+          AV1Conferma: normalizeBoolean(formData.AV1Conferma),
+          AV4Generato: normalizeBoolean(formData.AV4Generato),
+        };
 
-      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+        let savedId = formData.id || "";
 
-      if (error) throw new Error(error.message);
-
-      alert("Rinnovo verifica eseguito correttamente.");
-    } catch (err: any) {
-      setError(err?.message || "Errore durante il rinnovo verifica.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formData.studio_id) {
-      alert("Studio non disponibile.");
-      return;
-    }
-
-    if (!formData.cliente_id) {
-      alert("Seleziona un cliente.");
-      return;
-    }
-
-    if (!formData.Prestazione) {
-      alert("Seleziona una prestazione.");
-      return;
-    }
-
-    if (!formData.DataVerifica) {
-      alert("Inserisci la data verifica.");
-      return;
-    }
-
-    if (!formData.incaricato_adeguata_verifica_id) {
-    alert("Seleziona l'incaricato adeguata verifica.");
-      return;
+        if (formData.id) {
+          const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+          if (error) throw new Error(error.message);
+        } else {
+          const { data, error } = await supabase.from("tbAV1").insert([payload]).select("id").single();
+          if (error) throw new Error(error.message);
+          savedId = String(data.id);
         }
 
-    setSaving(true);
-    setError(null);
+        setFormData((prev) => ({
+          ...prev,
+          id: savedId,
+          ScadenzaVerifica: ScadenzaVerificaCalcolata,
+        }));
 
-    try {
-      const supabase = getSupabaseClient() as any;
+        alert("Record AV1 salvato correttamente.");
 
-      const payload = {
-        studio_id: formData.studio_id,
-        cliente_id: formData.cliente_id,
-        Prestazione: formData.Prestazione,
-        ValRischioIner: formData.ValRischioIner,
-        DataVerifica: formData.DataVerifica,
-        ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
-        allegato_av1_firmato: formData.allegato_av1_firmato || null,
-        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
-        A1: normalizeScore(formData.A1),
-        A2: normalizeScore(formData.A2),
-        A3: normalizeScore(formData.A3),
-        A4: normalizeScore(formData.A4),
-        B1: normalizeScore(formData.B1),
-        B2: normalizeScore(formData.B2),
-        B3: normalizeScore(formData.B3),
-        B4: normalizeScore(formData.B4),
-        B5: normalizeScore(formData.B5),
-        B6: normalizeScore(formData.B6),
-        TotA,
-        TotB,
-        MediaPunteggio,
-        LivelloRischio,
-        RisInerentePonderato,
-        RisSpecificoPonderato,
-        RischioEffettivo,
-        AdeguataVerifica,
-        AV1Conferma: normalizeBoolean(formData.AV1Conferma),
-        AV4Generato: normalizeBoolean(formData.AV4Generato),
-      };
-
-      let savedId = formData.id || "";
-
-      if (formData.id) {
-        const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
-        if (error) throw new Error(error.message);
-      } else {
-        const { data, error } = await supabase.from("tbAV1").insert([payload]).select("id").single();
-        if (error) throw new Error(error.message);
-        savedId = String(data.id);
+        if (savedId) {
+          void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+        }
+      } catch (err: any) {
+        setError(err?.message || "Errore salvataggio AV1.");
+      } finally {
+        setSaving(false);
       }
-
-      setFormData((prev) => ({
-        ...prev,
-        id: savedId,
-        ScadenzaVerifica: ScadenzaVerificaCalcolata,
-      }));
-
-      alert("Record AV1 salvato correttamente.");
-
-      if (savedId) {
-        void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
-      }
-    } catch (err: any) {
-      setError(err?.message || "Errore salvataggio AV1.");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
@@ -1305,6 +1331,15 @@ export default function ModelloAV1Page() {
           </div>
         </div>
       </div>
+       <MasterPasswordDialog
+        open={masterPasswordOpen}
+        onOpenChange={setMasterPasswordOpen}
+        password={masterPassword}
+        onPasswordChange={setMasterPassword}
+        onConfirm={handleMasterPasswordConfirm}
+        loading={masterPasswordLoading}
+        error={masterPasswordError}
+      />
     </div>
   );
 }
