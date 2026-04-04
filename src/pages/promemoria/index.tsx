@@ -557,7 +557,8 @@ export default function PromemoriaPage() {
 
       if (!response.ok) {
         throw new Error(result.details || result.error || "Impossibile inviare la richiesta di confronto.");
-      }
+        }
+    };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
