@@ -85,17 +85,7 @@ useEffect(() => {
     });
   }
 
-  useEffect(() => {
-  if (!selectedConvId) {
-    setSelectedCreatorId(null);
-    return;
-  }
-
-  const conv = conversazioni.find((c) => c.id === selectedConvId);
-  setSelectedCreatorId(conv?.creato_da || null);
-}, [selectedConvId, conversazioni]);
-
-  return () => {
+ return () => {
     if (subscriptionRef.current) {
       supabase.removeChannel(subscriptionRef.current);
       subscriptionRef.current = null;
