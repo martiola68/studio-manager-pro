@@ -143,15 +143,7 @@ useEffect(() => {
     }
   };
 
-  const playIncomingSound = async () => {
-    try {
-      if (!audioRef.current) return;
-      audioRef.current.currentTime = 0;
-      await audioRef.current.play();
-    } catch (error) {
-      console.warn("Audio blocked:", error);
-    }
-  };
+const playIncomingSound = async () => {};
 
   const mergeMessagesAndNotify = (incoming: any[]) => {
     setMessaggi((prev) => {
@@ -160,9 +152,7 @@ useEffect(() => {
         (m) => !prevIds.has(m.id) && m.mittente_id !== authUserId
       );
 
-      if (newRemoteMessages.length > 0) {
-        playIncomingSound();
-      }
+    // suono disabilitato
 
       return incoming || [];
     });
@@ -235,15 +225,7 @@ setMessaggi((prev) => {
   return [...prev, newMessage as any];
 });
 
-if (
-  isNewMessage &&
-  payload.new.mittente_id !== currentUserId &&
-  audioRef.current &&
-  Date.now() > suppressSoundUntilRef.current
-) {
-  audioRef.current.currentTime = 0;
-  audioRef.current.play().catch(() => {});
-}
+// suono disabilitato
 
 window.dispatchEvent(new Event("messaggi-updated"));
       }
