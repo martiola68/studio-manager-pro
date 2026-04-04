@@ -7,8 +7,9 @@ import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import MasterPasswordDialog from "@/components/master-password/MasterPasswordDialog";
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
+import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+
 
 const BUCKET_NAME = "allegati";
 
