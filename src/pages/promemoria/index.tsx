@@ -78,9 +78,12 @@ export default function PromemoriaPage() {
   const [isAllegatiDialogOpen, setIsAllegatiDialogOpen] = useState(false);
   const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
   
-  const [selectedPromemoria, setSelectedPromemoria] = useState<Promemoria | null>(null);
+ const [selectedPromemoria, setSelectedPromemoria] = useState<Promemoria | null>(null);
   const [viewAllegatiPromemoria, setViewAllegatiPromemoria] = useState<Promemoria | null>(null);
   const [currentDocUrl, setCurrentDocUrl] = useState<string>("");
+
+  const [isConfrontoDialogOpen, setIsConfrontoDialogOpen] = useState(false);
+  const [motivazioneConfronto, setMotivazioneConfronto] = useState("");
   
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
@@ -519,17 +522,62 @@ export default function PromemoriaPage() {
     setIsEditDialogOpen(true);
   }, []);
 
+    const sendRichiestaConfrontoEmail = async (
+    promemoriaItem: Promemoria,
+    motivazione: string
+  ) => {
+    const creatore = utenti.find((u) => u.id === promemoriaItem.operatore_id);
+    const destinatario = utenti.find((u) => u.id === promemoriaItem.destinatario_id);
+
+    if (!creatore?.email) {
+      throw new Error("Email del creatore del promemoria non disponibile.");
+    }
+
+    const response = await fetch("/api/promemoria/richiesta-confronto-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: creatore.email,
+        creatoreNome: `${creatore.nome || ""} ${creatore.cognome || ""}`.trim(),
+        destinatarioNome: `${currentUser?.nome || ""} ${currentUser?.cognome || ""}`.trim(),
+        promemoriaTitolo: promemoriaItem.titolo || "",
+        promemoriaDescrizione: promemoriaItem.descrizione || "",
+        motivazione,
+        dataScadenza: promemoriaItem.data_scadenza || null,
+        destinatarioOriginale: destinatario
+          ? `${destinatario.nome || ""} ${destinatario.cognome || ""}`.trim()
+          : "",
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error || "Errore invio email richiesta confronto.");
+    }
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPromemoria) return;
 
+    const isRecipientOnly = !!(
+      currentUser &&
+      selectedPromemoria &&
+      currentUser.id === selectedPromemoria.destinatario_id &&
+      currentUser.id !== selectedPromemoria.operatore_id
+    );
+
+    if (isRecipientOnly && formData.working_progress === "Richiesta confronto") {
+      setMotivazioneConfronto("");
+      setIsConfrontoDialogOpen(true);
+      return;
+    }
+
     try {
       setLoading(true);
       setIsUploading(true);
-
-      const isRecipientOnly = !!(currentUser && selectedPromemoria && 
-        currentUser.id === selectedPromemoria.destinatario_id && 
-        currentUser.id !== selectedPromemoria.operatore_id);
 
       if (isRecipientOnly) {
         await promemoriaService.updatePromemoria(selectedPromemoria.id, {
@@ -544,7 +592,6 @@ export default function PromemoriaPage() {
           data_scadenza: format(formData.data_scadenza, "yyyy-MM-dd"),
           priorita: formData.priorita,
           working_progress: formData.working_progress,
-          // operatore_id rimosso perché non supportato da updatePromemoria
           destinatario_id: invioMultiplo ? null : (formData.destinatario_id || null),
           settore: formData.settore || undefined,
           tipo_promemoria_id: formData.tipo_promemoria_id || null
@@ -570,6 +617,50 @@ export default function PromemoriaPage() {
     } finally {
       setLoading(false);
       setIsUploading(false);
+    }
+  };
+
+   const handleConfermaRichiestaConfronto = async () => {
+    if (!selectedPromemoria) return;
+
+    if (!motivazioneConfronto.trim()) {
+      toast({
+        title: "Motivazione obbligatoria",
+        description: "Inserisci la motivazione della richiesta di confronto.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await promemoriaService.updatePromemoria(selectedPromemoria.id, {
+        working_progress: "Richiesta confronto"
+      });
+
+      await sendRichiestaConfrontoEmail(selectedPromemoria, motivazioneConfronto.trim());
+
+      toast({
+        title: "Successo",
+        description: "Richiesta confronto inviata correttamente."
+      });
+
+      setIsConfrontoDialogOpen(false);
+      setMotivazioneConfronto("");
+      setIsEditDialogOpen(false);
+      setSelectedPromemoria(null);
+      resetForm();
+      checkUserAndLoad();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inviare la richiesta di confronto.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1350,6 +1441,49 @@ export default function PromemoriaPage() {
             className="flex-1 w-full border-0 bg-gray-100"
             title="Document Viewer"
           />
+        </DialogContent>
+      </Dialog>
+
+         <Dialog open={isConfrontoDialogOpen} onOpenChange={setIsConfrontoDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Richiesta confronto</DialogTitle>
+            <DialogDescription>
+              Inserisci la motivazione da inviare automaticamente via email al creatore del promemoria.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2">
+            <div>
+              <Label>Motivazione *</Label>
+              <Textarea
+                value={motivazioneConfronto}
+                onChange={(e) => setMotivazioneConfronto(e.target.value)}
+                placeholder="Scrivi la motivazione della richiesta di confronto..."
+                rows={5}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsConfrontoDialogOpen(false);
+                setMotivazioneConfronto("");
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfermaRichiestaConfronto}
+              disabled={loading}
+            >
+              {loading ? "Invio..." : "Invia richiesta confronto"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
