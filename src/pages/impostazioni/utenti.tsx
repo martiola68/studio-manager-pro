@@ -192,10 +192,15 @@ const {
 } = await supabase.auth.getSession();
 
 // 🚀 uso la route che INVIA davvero l’email
-  const response = await fetch("/api/auth/create-user", {
+   const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const response = await fetch("/api/auth/create-user", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || ""}`,
           },
           body: JSON.stringify({
             email: formData.email,
@@ -206,6 +211,7 @@ const {
             attivo: formData.attivo,
             settore: formData.settore || null,
             responsabile: formData.responsabile,
+            microsoft_connection_id: formData.microsoft_connection_id || null,
           }),
         });
 
