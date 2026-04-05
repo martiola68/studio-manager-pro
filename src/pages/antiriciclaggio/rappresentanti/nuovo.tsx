@@ -711,11 +711,11 @@ export default function NuovoRappresentantePage() {
       Può caricare il nuovo documento tramite il seguente collegamento riservato:
     </p>
 
-    <p>
-      <a href="${url}" target="_blank" rel="noopener noreferrer">
-        ${url}
-      </a>
-    </p>
+ <p>
+  <a href="${url}" target="_blank" rel="noopener noreferrer">
+    Carica documento e verifica dati residenza
+  </a>
+</p>
 
     <p><strong>Documenti accettati:</strong></p>
 
