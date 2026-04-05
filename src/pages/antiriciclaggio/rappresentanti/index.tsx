@@ -423,17 +423,24 @@ export default function RappresentantiIndexPage() {
           });
 
           okCount++;
-        } catch (error: any) {
-          koCount++;
-          errori.push(`${r.nome_cognome || r.id}: ${error?.message || "Errore sconosciuto"}`);
-        }
+      } catch (error: any) {
+  koCount++;
+  const msg =
+    error?.message ||
+    error?.error ||
+    (typeof error === "string" ? error : JSON.stringify(error));
+  errori.push(`${r.nome_cognome || r.id}: ${msg}`);
+}
       }
 
       await loadRappresentanti();
 
-      if (koCount > 0) {
-        console.error("Errori invio massivo richieste documento:", errori);
-      }
+     if (koCount > 0) {
+  console.error("Errori invio massivo richieste documento:");
+  errori.forEach((err, index) => {
+    console.error(`${index + 1}. ${err}`);
+  });
+}
 
       alert(`Invio completato.\nEmail inviate: ${okCount}\nErrori: ${koCount}`);
     } catch (error: any) {
