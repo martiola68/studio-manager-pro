@@ -6,6 +6,8 @@ import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
 import { runProtectedSubmit } from "@/lib/security/masterPasswordActions";
 
+import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
+
 import {
   isValidCF,
   normalizeCF,
@@ -650,18 +652,18 @@ export default function NuovoRappresentantePage() {
 
       const nowIso = new Date().toISOString();
 
-      const { error: updateError } = await supabase
-        .from("rapp_legali")
-        .update({
-          public_doc_token: token,
-          public_doc_enabled: true,
-          public_doc_sent_at: nowIso,
-          public_doc_opened_at: null,
-          public_doc_submitted_at: null,
-          doc_richiesto_il: nowIso,
-          microsoft_connection_id: form.microsoft_connection_id,
-        })
-        .eq("id", recordId);
+     const { error: updateError } = await supabase
+  .from("rapp_legali")
+  .update({
+    public_doc_token: token,
+    public_doc_enabled: true,
+    public_doc_sent_at: nowIso,
+    public_doc_opened_at: null,
+    public_doc_submitted_at: null,
+    doc_richiesto_il: nowIso,
+    microsoft_connection_id: resolvedConnectionId,
+  })
+  .eq("id", recordId);
 
       if (updateError) {
         console.error("Errore aggiornamento link pubblico documento:", updateError);
