@@ -603,217 +603,68 @@ export default function NuovoRappresentantePage() {
   setErrMsg(null);
 }
 
-  async function handleInviaRichiestaDocumento() {
-    const supabase = getSupabaseClient() as any;
-    let token = "";
-    let userId: string | null = null;
-
-    try {
-      if (!recordId) {
-        alert("Salva prima il rappresentante.");
-        return;
-      }
-
-      if (!studioId) {
-        alert("studio_id non disponibile.");
-        return;
-      }
-
-      if (!form.email || !String(form.email).trim()) {
-        alert("Il rappresentante non ha un indirizzo email valorizzato.");
-        return;
-      }
-
-      if (!form.microsoft_connection_id || !String(form.microsoft_connection_id).trim()) {
-        alert("Seleziona una connessione Microsoft.");
-        return;
-      }
-
-      const resolvedConnectionId = resolveMicrosoftConnectionId(
-        microsoftConnections as any,
-        form.microsoft_connection_id
-      );
-
-      const connection = microsoftConnections.find(
-        (c) => c.id === resolvedConnectionId
-      );
-
-      if (!connection || !resolvedConnectionId) {
-        alert("La connessione Microsoft selezionata non è disponibile.");
-        return;
-      }
-
-      setSendingPublicDoc(true);
-
-      token =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      const nowIso = new Date().toISOString();
-
-     const { error: updateError } = await supabase
-  .from("rapp_legali")
-  .update({
-    public_doc_token: token,
-    public_doc_enabled: true,
-    public_doc_sent_at: nowIso,
-    public_doc_opened_at: null,
-    public_doc_submitted_at: null,
-    doc_richiesto_il: nowIso,
-    microsoft_connection_id: resolvedConnectionId,
-  })
-  .eq("id", recordId);
-
-      if (updateError) {
-        console.error("Errore aggiornamento link pubblico documento:", updateError);
-        alert("Errore durante la generazione del link pubblico.");
-        return;
-      }
-
-      const publicAppUrl =
-      process.env.NEXT_PUBLIC_PUBLIC_APP_URL || "https://studio-manager-public.vercel.app";
-
-      const url = `${publicAppUrl}/documento/${token}`;
-      setPublicDocUrl(url);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      userId = session?.user?.id ?? null;
-
-      if (!userId) {
-        alert(
-          `Link generato, ma non è stato possibile identificare l'utente mittente.\n${url}`
-        );
-        return;
-      }
-
-      const nomeDestinatario = form.nome_cognome || "Cliente";
-      const destinatario = String(form.email).trim();
-      const subject = "Richiesta aggiornamento documento di riconoscimento";
-      const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
-
-     const html = `
-  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-    <p>Gentile ${nomeDestinatario},</p>
-
-    <p>
-      La invitiamo ad allegare un documento di riconoscimento in corso di validità.
-    </p>
-
-    <p>
-      La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
-      (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
-      direttamente nella pagina di caricamento.
-    </p>
-
-    <p>
-      Può caricare il nuovo documento tramite il seguente collegamento riservato:
-    </p>
-
- <p>
-  <a href="${url}" target="_blank" rel="noopener noreferrer">
-    Carica documento e verifica dati residenza
-  </a>
-</p>
-
-    <p><strong>Documenti accettati:</strong></p>
-
-  <ul style="padding-left: 18px; margin: 8px 0;">
-  <li>Carta di identità</li>
-  <li>Passaporto</li>
-  <li>Patente</li>
-</ul>
-
-    <p>
-      Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
-      sfocature, riflessi o parti coperte.
-      </p>
-
-    <p>
-      Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
-      e allegare il documento aggiornato.
-    </p>
-
-    <p>
-      Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
-    </p>
-
-    <p>Cordiali saluti,<br />Studio Manager Pro</p>
-  </div>
-`;
-
-      await sendEmailViaMicrosoft(userId, {
-        microsoftConnectionId: form.microsoft_connection_id,
-        to: destinatario,
-        subject,
-        html,
-      });
-
-      const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
-        studio_id: studioId,
-        tipo_comunicazione: "richiesta_documento",
-        cliente_id: clienteIdFromQuery || null,
-        rapp_legale_id: recordId,
-        av4_id: av4IdFromQuery || null,
-        destinatario_email: destinatario,
-        oggetto: subject,
-        body_preview: bodyPreview,
-        stato_invio: "inviata",
-        data_invio: nowIso,
-        utente_id: userId,
-        public_token: token,
-        note: "Invio richiesta documento da anagrafica rappresentante",
-      });
-
-      if (logError) {
-        console.error("Errore salvataggio log tbAMLComunicazioni:", logError);
-        alert(
-          `Email inviata correttamente a ${destinatario}, ma il log AML non è stato salvato.`
-        );
-        return;
-      }
-
-      alert(`Email inviata correttamente a ${destinatario}.`);
-    } catch (error: any) {
-      console.error("Errore invio richiesta documento:", error);
-
-      try {
-        if (studioId && recordId && form.email?.trim()) {
-          await supabase.from("tbAMLComunicazioni").insert({
-            studio_id: studioId,
-            tipo_comunicazione: "richiesta_documento",
-            cliente_id: clienteIdFromQuery || null,
-            rapp_legale_id: recordId,
-            av4_id: av4IdFromQuery || null,
-            destinatario_email: String(form.email).trim(),
-            oggetto: "Richiesta aggiornamento documento di riconoscimento",
-            body_preview: `Errore invio richiesta documento a ${String(form.email).trim()}.`,
-            stato_invio: "errore",
-            data_invio: new Date().toISOString(),
-            utente_id: userId,
-            public_token: token || null,
-            note:
-              error?.message ||
-              "Errore durante l'invio della richiesta documento.",
-          });
-        }
-      } catch (logCatchError) {
-        console.error("Errore salvataggio log AML di errore:", logCatchError);
-      }
-
-      alert(
-        `Errore durante l'invio della richiesta documento: ${
-          error?.message || "errore sconosciuto"
-        }`
-      );
-    } finally {
-      setSendingPublicDoc(false);
+async function handleInviaRichiestaDocumento() {
+  try {
+    if (!recordId) {
+      alert("Salva prima il rappresentante.");
+      return;
     }
-  }
 
+    if (!studioId) {
+      alert("studio_id non disponibile.");
+      return;
+    }
+
+    if (!form.email || !String(form.email).trim()) {
+      alert("Il rappresentante non ha un indirizzo email valorizzato.");
+      return;
+    }
+
+    if (!form.microsoft_connection_id || !String(form.microsoft_connection_id).trim()) {
+      alert("Seleziona una connessione Microsoft.");
+      return;
+    }
+
+    const resolvedConnectionId = resolveMicrosoftConnectionId(
+      microsoftConnections as any,
+      form.microsoft_connection_id
+    );
+
+    const connection = microsoftConnections.find(
+      (c) => c.id === resolvedConnectionId
+    );
+
+    if (!connection || !resolvedConnectionId) {
+      alert("La connessione Microsoft selezionata non è disponibile.");
+      return;
+    }
+
+    setSendingPublicDoc(true);
+
+    const result = await sendRichiestaDocumentoRappresentante({
+      recordId,
+      studioId,
+      nomeDestinatario: form.nome_cognome || "Cliente",
+      email: String(form.email).trim(),
+      microsoftConnectionId: resolvedConnectionId,
+      clienteId: clienteIdFromQuery || null,
+      av4Id: av4IdFromQuery || null,
+      note: "Invio richiesta documento da anagrafica rappresentante",
+    });
+
+    setPublicDocUrl(result.url);
+    alert(`Email inviata correttamente a ${String(form.email).trim()}.`);
+  } catch (error: any) {
+    console.error("Errore invio richiesta documento:", error);
+    alert(
+      `Errore durante l'invio della richiesta documento: ${
+        error?.message || "errore sconosciuto"
+      }`
+    );
+  } finally {
+    setSendingPublicDoc(false);
+  }
+}
  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault();
 
