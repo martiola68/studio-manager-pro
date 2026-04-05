@@ -669,7 +669,10 @@ export default function NuovoRappresentantePage() {
         return;
       }
 
-      const url = `${window.location.origin}/documento/${token}`;
+      const publicAppUrl =
+      process.env.NEXT_PUBLIC_PUBLIC_APP_URL || "https://studio-manager-public.vercel.app";
+
+      const url = `${publicAppUrl}/documento/${token}`;
       setPublicDocUrl(url);
 
       const {
