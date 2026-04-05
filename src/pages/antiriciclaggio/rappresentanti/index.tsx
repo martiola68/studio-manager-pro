@@ -4,6 +4,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
 type Rapp = {
@@ -17,6 +18,7 @@ type Rapp = {
   allegato_doc: string | null;
   rappresentante_legale: boolean | null;
   doc_richiesto_il?: string | null;
+  microsoft_connection_id?: string | null;
   created_at?: string | null;
 };
 
@@ -55,9 +57,7 @@ function PresenzaBadge({
   return (
     <span
       className={`inline-flex min-w-[92px] items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${
-        present
-          ? "bg-green-100 text-green-800"
-          : "bg-red-100 text-red-800"
+        present ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
       }`}
     >
       {label || (present ? "Presente" : "Mancante")}
@@ -127,9 +127,7 @@ function getRowAmlState(r: Rapp): "neutral" | "green" | "yellow" | "red" {
     hasEmail && hasTipoDoc && hasAllegato && scadenzaStatus === "valid";
 
   if (isComplete) return "green";
-
   if (hasRichiesta) return "yellow";
-
   return "red";
 }
 
@@ -148,6 +146,34 @@ function getRowClassName(r: Rapp): string {
   }
 }
 
+function isOlderThan7Days(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return false;
+
+  const threshold = new Date();
+  threshold.setDate(threshold.getDate() - 7);
+  return d <= threshold;
+}
+
+function shouldSendDocumentRequest(r: Rapp): boolean {
+  if (r.rappresentante_legale !== true) return false;
+  if (!r.email?.trim()) return false;
+  if (!r.microsoft_connection_id?.trim()) return false;
+
+  const hasValidDoc =
+    !!r.allegato_doc?.trim() && getScadenzaStatus(r.scadenza_doc) === "valid";
+
+  if (hasValidDoc) return false;
+
+  const alreadyRequestedRecently =
+    !!r.doc_richiesto_il && !isOlderThan7Days(r.doc_richiesto_il);
+
+  if (alreadyRequestedRecently) return false;
+
+  return true;
+}
+
 export default function RappresentantiIndexPage() {
   const router = useRouter();
 
@@ -156,6 +182,7 @@ export default function RappresentantiIndexPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [importingVisura, setImportingVisura] = useState(false);
+  const [sendingMassivo, setSendingMassivo] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -212,7 +239,7 @@ export default function RappresentantiIndexPage() {
       const { data, error } = await supabase
         .from("rapp_legali")
         .select(
-          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, created_at"
+          "id, studio_id, nome_cognome, codice_fiscale, email, tipo_doc, scadenza_doc, allegato_doc, rappresentante_legale, doc_richiesto_il, microsoft_connection_id, created_at"
         )
         .eq("studio_id", studioId)
         .order("nome_cognome", { ascending: true });
@@ -354,6 +381,68 @@ export default function RappresentantiIndexPage() {
     }
   }
 
+  async function handleInvioMassivoRichiesteDocumento() {
+    if (!studioId) {
+      alert("studio_id non disponibile");
+      return;
+    }
+
+    const candidati = rows.filter(shouldSendDocumentRequest);
+
+    if (candidati.length === 0) {
+      alert("Nessun rappresentante da contattare.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Saranno inviate ${candidati.length} richieste documento ai rappresentanti legali con documento mancante/scaduto o con richiesta più vecchia di 7 giorni. Procedere?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setSendingMassivo(true);
+
+      let okCount = 0;
+      let koCount = 0;
+      const errori: string[] = [];
+
+      for (const r of candidati) {
+        try {
+          await sendRichiestaDocumentoRappresentante({
+            recordId: r.id,
+            studioId,
+            nomeDestinatario: r.nome_cognome || "Cliente",
+            email: String(r.email || "").trim(),
+            microsoftConnectionId: String(r.microsoft_connection_id || "").trim(),
+            clienteId: null,
+            av4Id: null,
+            note: "Invio massivo richiesta documento da elenco rappresentanti",
+          });
+
+          okCount++;
+        } catch (error: any) {
+          koCount++;
+          errori.push(`${r.nome_cognome || r.id}: ${error?.message || "Errore sconosciuto"}`);
+        }
+      }
+
+      await loadRappresentanti();
+
+      if (koCount > 0) {
+        console.error("Errori invio massivo richieste documento:", errori);
+      }
+
+      alert(`Invio completato.\nEmail inviate: ${okCount}\nErrori: ${koCount}`);
+    } catch (error: any) {
+      alert(error?.message || "Errore durante l'invio massivo delle richieste.");
+    } finally {
+      setSendingMassivo(false);
+    }
+  }
+
   return (
     <div className="p-3">
       <Card>
@@ -377,6 +466,18 @@ export default function RappresentantiIndexPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               {importingVisura ? "Importazione..." : "Importa visura"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendingMassivo || !studioId}
+              className="h-9 px-3 text-sm"
+              onClick={() => {
+                void handleInvioMassivoRichiesteDocumento();
+              }}
+            >
+              {sendingMassivo ? "Invio richieste..." : "Invia richieste documenti"}
             </Button>
 
             <Button
@@ -444,22 +545,15 @@ export default function RappresentantiIndexPage() {
                           )}
                         </div>
 
-                        <div className="truncate">
-                          {isLegale ? r.tipo_doc || "-" : "-"}
-                        </div>
+                        <div className="truncate">{isLegale ? r.tipo_doc || "-" : "-"}</div>
 
                         <div className="min-w-[120px]">
-                          <ScadenzaCell
-                            value={r.scadenza_doc}
-                            enabled={isLegale}
-                          />
+                          <ScadenzaCell value={r.scadenza_doc} enabled={isLegale} />
                         </div>
 
                         <div className="min-w-[120px]">
                           {isLegale ? (
-                            <span className="text-sm">
-                              {formatDateEU(r.doc_richiesto_il)}
-                            </span>
+                            <span className="text-sm">{formatDateEU(r.doc_richiesto_il)}</span>
                           ) : (
                             <span className="text-sm text-muted-foreground">-</span>
                           )}
