@@ -2047,81 +2047,81 @@ const handleSave = async () => {
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="utente_payroll_id">
-  Utente Payroll
-  {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
-</Label>
-            <Select
-  value={formData.utente_payroll_id || "none"}
-  onValueChange={(value) =>
-    setFormData({
-      ...formData,
-      utente_payroll_id: value === "none" ? "" : value,
-    })
-  }
->
-  <SelectTrigger className={errors.utente_payroll_id ? "border-red-500" : ""}>
-    <SelectValue placeholder="Seleziona utente payroll" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="none">Nessuno</SelectItem>
-    {utenti
-      .slice()
-      .sort((a, b) =>
-        `${safeString(a.cognome)} ${safeString(a.nome)}`
-          .toLowerCase()
-          .localeCompare(
-            `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-          )
-      )
-      .map((utente) => (
-        <SelectItem key={utente.id} value={utente.id}>
-          {safeString(utente.nome)} {safeString(utente.cognome)}
-        </SelectItem>
-      ))}
-  </SelectContent>
-</Select>
-          </div>
+         <div>
+  <Label htmlFor="utente_payroll_id">
+    Utente Payroll
+    {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
+  </Label>
 
-          <div>
-            <Label htmlFor="professionista_payroll_id">
-  Professionista Payroll
-  {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
-</Label>
-              Professionista Payroll
-            </Label>
-          <Select
-  value={formData.professionista_payroll_id || "none"}
-  onValueChange={(value) =>
-    setFormData({
-      ...formData,
-      professionista_payroll_id: value === "none" ? "" : value,
-    })
-  }
->
-  <SelectTrigger className={errors.professionista_payroll_id ? "border-red-500" : ""}>
-    <SelectValue placeholder="Seleziona professionista payroll" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="none">Nessuno</SelectItem>
-    {utenti
-      .slice()
-      .sort((a, b) =>
-        `${safeString(a.cognome)} ${safeString(a.nome)}`
-          .toLowerCase()
-          .localeCompare(
-            `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
-          )
-      )
-      .map((utente) => (
-        <SelectItem key={utente.id} value={utente.id}>
-          {safeString(utente.nome)} {safeString(utente.cognome)}
-        </SelectItem>
-      ))}
-  </SelectContent>
-</Select>
-          </div>
+  <Select
+    value={formData.utente_payroll_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        utente_payroll_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger className={errors.utente_payroll_id ? "border-red-500" : ""}>
+      <SelectValue placeholder="Seleziona utente payroll" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {utenti
+        .slice()
+        .sort((a, b) =>
+          `${safeString(a.cognome)} ${safeString(a.nome)}`
+            .toLowerCase()
+            .localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+            )
+        )
+        .map((utente) => (
+          <SelectItem key={utente.id} value={utente.id}>
+            {safeString(utente.nome)} {safeString(utente.cognome)}
+          </SelectItem>
+        ))}
+    </SelectContent>
+  </Select>
+</div>
+
+         <div>
+  <Label htmlFor="professionista_payroll_id">
+    Professionista Payroll
+    {formData.settore_lavoro ? <span className="text-red-500"> *</span> : null}
+  </Label>
+
+  <Select
+    value={formData.professionista_payroll_id || "none"}
+    onValueChange={(value) =>
+      setFormData({
+        ...formData,
+        professionista_payroll_id: value === "none" ? "" : value,
+      })
+    }
+  >
+    <SelectTrigger className={errors.professionista_payroll_id ? "border-red-500" : ""}>
+      <SelectValue placeholder="Seleziona professionista payroll" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Nessuno</SelectItem>
+      {utenti
+        .slice()
+        .sort((a, b) =>
+          `${safeString(a.cognome)} ${safeString(a.nome)}`
+            .toLowerCase()
+            .localeCompare(
+              `${safeString(b.cognome)} ${safeString(b.nome)}`.toLowerCase()
+            )
+        )
+        .map((utente) => (
+          <SelectItem key={utente.id} value={utente.id}>
+            {safeString(utente.nome)} {safeString(utente.cognome)}
+          </SelectItem>
+        ))}
+    </SelectContent>
+  </Select>
+</div>
 
           <div>
             <Label htmlFor="contatto1_id">Contatto 1</Label>
