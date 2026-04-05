@@ -834,7 +834,7 @@ export default function NuovoRappresentantePage() {
 
   try {
     await runProtectedSubmit({
-      encryptionEnabled: true,
+      encryptionEnabled,
       requireUnlock: masterPasswordGate.requireUnlock,
       action: async () => {
         const payload = {
