@@ -981,14 +981,6 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
         }
       />
       <span className="text-sm text-gray-800">{label}</span>
-    </label>
-  ))}
-</div>
-      </div>
-    </div>
-  );
-})}
-                                  <span className="text-sm text-gray-800">{label}</span>
                                 </label>
                               )
                             )}
