@@ -7,6 +7,11 @@ import { Input } from "@/components/ui/input";
 import { sendRichiestaDocumentoRappresentante } from "@/services/rappresentantiDocumentiService";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 
+import {
+  getMicrosoftConnectionsForUser,
+  resolveMicrosoftConnectionId,
+} from "@/services/microsoftConnectionsService";
+
 type Rapp = {
   id: string;
   studio_id: string;
@@ -184,6 +189,9 @@ export default function RappresentantiIndexPage() {
   const [importingVisura, setImportingVisura] = useState(false);
   const [sendingMassivo, setSendingMassivo] = useState(false);
 
+  const [microsoftConnections, setMicrosoftConnections] = useState<any[]>([]);
+const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -228,6 +236,44 @@ export default function RappresentantiIndexPage() {
 
     void run();
   }, []);
+
+  useEffect(() => {
+  if (!studioId) return;
+
+  let cancelled = false;
+
+  const loadMicrosoftConnections = async () => {
+    const supabase = getSupabaseClient() as any;
+    setLoadingMicrosoftConnections(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const userId = session?.user?.id || "";
+      if (!userId) return;
+
+      const rows = await getMicrosoftConnectionsForUser(studioId, userId);
+
+      if (!cancelled) {
+        setMicrosoftConnections(rows || []);
+      }
+    } catch (error) {
+      console.error("Errore caricamento connessioni Microsoft:", error);
+    } finally {
+      if (!cancelled) {
+        setLoadingMicrosoftConnections(false);
+      }
+    }
+  };
+
+  void loadMicrosoftConnections();
+
+  return () => {
+    cancelled = true;
+  };
+}, [studioId]);
 
   const loadRappresentanti = useCallback(async () => {
     if (!studioId) return;
@@ -408,6 +454,16 @@ export default function RappresentantiIndexPage() {
       let okCount = 0;
       let koCount = 0;
       const errori: string[] = [];
+
+      const resolvedMassivoConnectionId = resolveMicrosoftConnectionId(
+  microsoftConnections as any,
+  ""
+);
+
+if (!resolvedMassivoConnectionId) {
+  alert("Nessuna connessione Microsoft valida disponibile per l'invio massivo.");
+  return;
+}
 
       for (const r of candidati) {
         try {
