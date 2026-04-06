@@ -932,7 +932,7 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
 
           {isTB1 && (
             <p className="mt-2 text-sm font-medium text-red-700">
-              Sezione B non obbligatoria per prestazioni con Tipo TB = TB1.
+              Sezione B non obbligatoria per prestazioni con Tipo prestazione rientrante nella tabella 1
             </p>
           )}
         </div>
