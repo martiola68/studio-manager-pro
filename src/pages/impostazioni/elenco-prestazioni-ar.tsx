@@ -8,18 +8,21 @@ type PrestazioneAR = {
   TipoPrestazioneAR: string;
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
+  TipoTB?: string | null;
 };
 
 type FormDataType = {
   TipoPrestazioneAR: string;
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
+  TipoTB: string;
 };
 
 const initialFormData: FormDataType = {
   TipoPrestazioneAR: "",
   RischioTipoPrestAR: "Non significativo",
   PunteggioPrestAR: 1,
+  TipoTB: "",
 };
 
 export default function ElencoPrestazioniARPage() {
@@ -37,7 +40,7 @@ export default function ElencoPrestazioniARPage() {
 
     const { data, error } = await (supabase as any)
       .from("tbElencoPrestAR")
-      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
+      .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB")
       .order("TipoPrestazioneAR", { ascending: true });
 
     if (error) {
@@ -59,10 +62,7 @@ export default function ElencoPrestazioniARPage() {
     setEditingId(null);
   };
 
-  const handleChange = (
-    field: keyof FormDataType,
-    value: string | number
-  ) => {
+  const handleChange = (field: keyof FormDataType, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -75,6 +75,7 @@ export default function ElencoPrestazioniARPage() {
       TipoPrestazioneAR: row.TipoPrestazioneAR,
       RischioTipoPrestAR: row.RischioTipoPrestAR,
       PunteggioPrestAR: row.PunteggioPrestAR,
+      TipoTB: row.TipoTB || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -85,19 +86,23 @@ export default function ElencoPrestazioniARPage() {
       return;
     }
 
+    if (!formData.TipoTB) {
+      alert("Seleziona il tipo TB.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     if (editingId === null) {
-      const { error } = await (supabase as any)
-        .from("tbElencoPrestAR")
-        .insert([
-          {
-            TipoPrestazioneAR: formData.TipoPrestazioneAR.trim(),
-            RischioTipoPrestAR: formData.RischioTipoPrestAR,
-            PunteggioPrestAR: formData.PunteggioPrestAR,
-          },
-        ]);
+      const { error } = await (supabase as any).from("tbElencoPrestAR").insert([
+        {
+          TipoPrestazioneAR: formData.TipoPrestazioneAR.trim(),
+          RischioTipoPrestAR: formData.RischioTipoPrestAR,
+          PunteggioPrestAR: formData.PunteggioPrestAR,
+          TipoTB: formData.TipoTB,
+        },
+      ]);
 
       if (error) {
         setError(error.message);
@@ -111,6 +116,7 @@ export default function ElencoPrestazioniARPage() {
           TipoPrestazioneAR: formData.TipoPrestazioneAR.trim(),
           RischioTipoPrestAR: formData.RischioTipoPrestAR,
           PunteggioPrestAR: formData.PunteggioPrestAR,
+          TipoTB: formData.TipoTB,
         })
         .eq("id", editingId);
 
@@ -154,7 +160,7 @@ export default function ElencoPrestazioniARPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Elenco Prestazioni AR</h1>
         <p className="text-gray-500 mt-1">
-          Gestione prestazioni antiriciclaggio con rischio e punteggio
+          Gestione prestazioni antiriciclaggio con rischio, punteggio e tipo TB
         </p>
       </div>
 
@@ -167,35 +173,27 @@ export default function ElencoPrestazioniARPage() {
         <CardContent>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Tipo Prestazione AR
-              </label>
+              <label className="block text-sm font-medium mb-1">Tipo Prestazione AR</label>
               <input
                 type="text"
                 value={formData.TipoPrestazioneAR}
-                onChange={(e) =>
-                  handleChange("TipoPrestazioneAR", e.target.value)
-                }
+                onChange={(e) => handleChange("TipoPrestazioneAR", e.target.value)}
                 className="w-full border rounded-md px-3 py-2"
                 placeholder="Inserisci la prestazione"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Rischio</label>
                 <select
                   value={formData.RischioTipoPrestAR}
-                  onChange={(e) =>
-                    handleChange("RischioTipoPrestAR", e.target.value)
-                  }
+                  onChange={(e) => handleChange("RischioTipoPrestAR", e.target.value)}
                   className="w-full border rounded-md px-3 py-2"
                 >
                   <option value="Non significativo">Non significativo</option>
                   <option value="Poco significativo">Poco significativo</option>
-                  <option value="Abbastanza significativo">
-                    Abbastanza significativo
-                  </option>
+                  <option value="Abbastanza significativo">Abbastanza significativo</option>
                   <option value="Molto significativo">Molto significativo</option>
                 </select>
               </div>
@@ -204,9 +202,7 @@ export default function ElencoPrestazioniARPage() {
                 <label className="block text-sm font-medium mb-1">Punteggio</label>
                 <select
                   value={formData.PunteggioPrestAR}
-                  onChange={(e) =>
-                    handleChange("PunteggioPrestAR", Number(e.target.value))
-                  }
+                  onChange={(e) => handleChange("PunteggioPrestAR", Number(e.target.value))}
                   className="w-full border rounded-md px-3 py-2"
                 >
                   <option value={1}>1</option>
@@ -215,15 +211,24 @@ export default function ElencoPrestazioniARPage() {
                   <option value={4}>4</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Tipo TB</label>
+                <select
+                  value={formData.TipoTB}
+                  onChange={(e) => handleChange("TipoTB", e.target.value)}
+                  className="w-full border rounded-md px-3 py-2"
+                >
+                  <option value="">Seleziona</option>
+                  <option value="TB1">TB1</option>
+                  <option value="TB2">TB2</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex gap-3 pt-2">
               <Button onClick={handleSave} disabled={saving}>
-                {saving
-                  ? "Salvataggio..."
-                  : editingId === null
-                  ? "Salva"
-                  : "Aggiorna"}
+                {saving ? "Salvataggio..." : editingId === null ? "Salva" : "Aggiorna"}
               </Button>
 
               <Button type="button" variant="outline" onClick={resetForm}>
@@ -251,6 +256,7 @@ export default function ElencoPrestazioniARPage() {
                     <th className="border p-3 text-left">Tipo Prestazione AR</th>
                     <th className="border p-3 text-left">Rischio</th>
                     <th className="border p-3 text-left">Punteggio</th>
+                    <th className="border p-3 text-left">Tipo TB</th>
                     <th className="border p-3 text-left">Azioni</th>
                   </tr>
                 </thead>
@@ -260,6 +266,7 @@ export default function ElencoPrestazioniARPage() {
                       <td className="border p-3">{row.TipoPrestazioneAR}</td>
                       <td className="border p-3">{row.RischioTipoPrestAR}</td>
                       <td className="border p-3">{row.PunteggioPrestAR}</td>
+                      <td className="border p-3">{row.TipoTB || ""}</td>
                       <td className="border p-3">
                         <div className="flex gap-2">
                           <Button
@@ -284,7 +291,7 @@ export default function ElencoPrestazioniARPage() {
 
                   {rows.length === 0 && (
                     <tr>
-                      <td className="border p-3" colSpan={4}>
+                      <td className="border p-3" colSpan={5}>
                         Nessun dato presente
                       </td>
                     </tr>
