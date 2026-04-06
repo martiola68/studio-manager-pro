@@ -913,77 +913,85 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
 
               <CardContent>
                 <div className="space-y-6">
-                  {Object.entries(av1Labels).map(([sectionKey, fields]) => {
-                    const isBStart = sectionKey === "B1";
+                 {Object.entries(av1Labels).map(([sectionKey, fields]) => {
+  const isBStart = sectionKey === "B1";
+  const isBSection = sectionKey.startsWith("B");
+  const disableSection = isTB1 && isBSection;
 
-                    return (
-                      <div key={sectionKey}>
-                       {isBStart && (
-  <div
-    className={`mb-6 rounded-md border p-4 ${
-      isTB1
-        ? "border-red-500 bg-red-50"
-        : "border-transparent bg-transparent p-0"
-    }`}
-  >
-    <h3 className={`text-xl font-semibold ${isTB1 ? "text-red-700" : ""}`}>
-      B. Aspetti connessi all’operazione e/o prestazione professionale
-    </h3>
+  return (
+    <div key={sectionKey}>
+      {isBStart && (
+        <div
+          className={`mb-6 rounded-md border p-4 ${
+            isTB1
+              ? "border-red-500 bg-red-50"
+              : "border-transparent bg-transparent p-0"
+          }`}
+        >
+          <h3 className={`text-xl font-semibold ${isTB1 ? "text-red-700" : ""}`}>
+            B. Aspetti connessi all’operazione e/o prestazione professionale
+          </h3>
 
-    {isTB1 && (
-      <p className="mt-2 text-sm font-medium text-red-700">
-        Sezione B non obbligatoria per prestazioni con Tipo TB = TB1.
-      </p>
-    )}
-  </div>
-)}
+          {isTB1 && (
+            <p className="mt-2 text-sm font-medium text-red-700">
+              Sezione B non obbligatoria per prestazioni con Tipo TB = TB1.
+            </p>
+          )}
+        </div>
+      )}
 
-                       <div
-  className={`rounded-lg border p-4 ${
-    isTB1 && sectionKey.startsWith("B") ? "bg-red-50 opacity-70" : ""
-  }`}
->
-                          <div className="mb-3 flex items-center justify-between gap-4">
-                            <h3 className="text-lg font-semibold">{sectionTitles[sectionKey]}</h3>
+      <div
+        className={`rounded-lg border p-4 ${
+          disableSection ? "bg-red-50 opacity-70" : ""
+        }`}
+      >
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold">{sectionTitles[sectionKey]}</h3>
 
-                            <div className="flex items-center gap-2">
-                              <label className="whitespace-nowrap text-sm font-medium">
-                                Valore {sectionKey}
-                              </label>
-    <select
-  className="w-24 rounded-md border bg-sky-100 px-3 py-2"
-  value={normalizeScore(formData[sectionKey])}
-  onChange={(e) => handleScoreChange(sectionKey, e.target.value)}
-  disabled={isTB1 && sectionKey.startsWith("B")}
->
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                              </select>
-                            </div>
-                          </div>
+          <div className="flex items-center gap-2">
+            <label className="whitespace-nowrap text-sm font-medium">
+              Valore {sectionKey}
+            </label>
+            <select
+              className="w-24 rounded-md border bg-sky-100 px-3 py-2"
+              value={normalizeScore(formData[sectionKey])}
+              onChange={(e) => handleScoreChange(sectionKey, e.target.value)}
+              disabled={disableSection}
+            >
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+        </div>
 
-                        <div className="space-y-3">
-  {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => (
-    <label key={fieldKey} className="flex items-start gap-3">
-      <input
-        type="checkbox"
-        className="mt-1"
-        checked={Boolean(formData[fieldKey])}
-        disabled={isTB1 && sectionKey.startsWith("B")}
-        onChange={(e) =>
-          setFormData((prev) => ({
-            ...prev,
-            [fieldKey]: e.target.checked,
-          }))
-        }
-      />
-      <span className="text-sm text-gray-800">{label}</span>
-    </label>
-  ))}
-</div>
+        <div className="space-y-3">
+          {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => {
+            return (
+              <label key={fieldKey} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={Boolean(formData[fieldKey])}
+                  disabled={disableSection}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      [fieldKey]: e.target.checked,
+                    }))
+                  }
+                />
+                <span className="text-sm text-gray-800">{label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+})}
                                   <span className="text-sm text-gray-800">{label}</span>
                                 </label>
                               )
