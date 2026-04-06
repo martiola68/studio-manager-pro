@@ -91,14 +91,9 @@ const html = `
     </p>
 
     <p style="margin-top: 10px; margin-bottom: 18px;">
-      <a
-        href="${url}"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="display:inline-block; background:#111827; color:#ffffff !important; text-decoration:none; padding:10px 16px; border-radius:6px;"
-      >
-        Carica documento e verifica dati residenza
-      </a>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:8px; font-weight:600;">
+  Carica documento e verifica dati residenza
+</a>
     </p>
 
     <p><strong>Documenti accettati:</strong></p>
