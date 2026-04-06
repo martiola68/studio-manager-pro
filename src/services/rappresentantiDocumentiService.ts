@@ -47,23 +47,6 @@ export async function sendRichiestaDocumentoRappresentante(
 
   const nowIso = new Date().toISOString();
 
-  const { error: updateError } = await supabase
-    .from("rapp_legali")
-    .update({
-      public_doc_token: token,
-      public_doc_enabled: true,
-      public_doc_sent_at: nowIso,
-      public_doc_opened_at: null,
-      public_doc_submitted_at: null,
-      doc_richiesto_il: nowIso,
-      microsoft_connection_id: microsoftConnectionId,
-    })
-    .eq("id", recordId);
-
-  if (updateError) {
-    throw new Error("Errore durante la generazione del link pubblico.");
-  }
-
   const publicAppUrl =
     process.env.NEXT_PUBLIC_PUBLIC_APP_URL ||
     "https://studio-manager-public.vercel.app";
@@ -110,6 +93,11 @@ export async function sendRichiestaDocumentoRappresentante(
         </a>
       </p>
 
+      <p style="font-size: 12px; color: #6b7280; word-break: break-all;">
+        Se il pulsante non funziona, copi e incolli questo link nel browser:<br />
+        ${url}
+      </p>
+
       <p><strong>Documenti accettati:</strong></p>
 
       <ul style="padding-left: 18px; margin: 8px 0;">
@@ -144,6 +132,23 @@ export async function sendRichiestaDocumentoRappresentante(
       html,
     });
 
+    const { error: updateError } = await supabase
+      .from("rapp_legali")
+      .update({
+        public_doc_token: token,
+        public_doc_enabled: true,
+        public_doc_sent_at: nowIso,
+        public_doc_opened_at: null,
+        public_doc_submitted_at: null,
+        doc_richiesto_il: nowIso,
+        microsoft_connection_id: microsoftConnectionId,
+      })
+      .eq("id", recordId);
+
+    if (updateError) {
+      throw new Error("Email inviata ma errore aggiornamento stato richiesta documento.");
+    }
+
     const { error: logError } = await supabase.from("tbAMLComunicazioni").insert({
       studio_id: studioId,
       tipo_comunicazione: "richiesta_documento",
@@ -168,6 +173,22 @@ export async function sendRichiestaDocumentoRappresentante(
 
     return { ok: true, url, token };
   } catch (error: any) {
+    try {
+      await supabase
+        .from("rapp_legali")
+        .update({
+          public_doc_token: null,
+          public_doc_enabled: false,
+          public_doc_sent_at: null,
+          public_doc_opened_at: null,
+          public_doc_submitted_at: null,
+          doc_richiesto_il: null,
+        })
+        .eq("id", recordId);
+    } catch (rollbackError) {
+      console.error("Errore rollback richiesta documento:", rollbackError);
+    }
+
     try {
       await supabase.from("tbAMLComunicazioni").insert({
         studio_id: studioId,
