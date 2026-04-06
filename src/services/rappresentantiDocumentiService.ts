@@ -69,60 +69,61 @@ export async function sendRichiestaDocumentoRappresentante(
   const subject = "Richiesta aggiornamento documento di riconoscimento";
   const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Gentile ${nomeDestinatario || "Cliente"},</p>
+const html = `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+    <p>Gentile ${nomeDestinatario || "Cliente"},</p>
 
-      <p>
-        La invitiamo ad allegare un documento di riconoscimento in corso di validità.
-      </p>
+    <p>
+      La invitiamo ad allegare un documento di riconoscimento in corso di validità.
+    </p>
 
-      <p>
-        La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
-        (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
-        direttamente nella pagina di caricamento.
-      </p>
+    <p>
+      La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
+      (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
+      direttamente nella pagina di caricamento.
+    </p>
 
-      <p>
-        Può caricare il nuovo documento tramite il seguente collegamento riservato:
-      </p>
+    <p>
+      Può caricare il nuovo documento tramite il seguente collegamento riservato:
+    </p>
 
-      <p>
-        <a href="${url}" target="_blank" rel="noopener noreferrer">
-          Carica documento e verifica dati residenza
-        </a>
-      </p>
-
-      <p style="font-size: 12px; color: #6b7280; word-break: break-all;">
-        Se il pulsante non funziona, copi e incolli questo link nel browser:<br />
+    <p>
+      <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#7c3aed; text-decoration:underline; word-break:break-all;">
         ${url}
-      </p>
+      </a>
+    </p>
 
-      <p><strong>Documenti accettati:</strong></p>
+    <p style="margin-top: 10px;">
+      <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#111827; color:#ffffff; text-decoration:none; padding:10px 16px; border-radius:6px;">
+        Carica documento e verifica dati residenza
+      </a>
+    </p>
 
-      <ul style="padding-left: 18px; margin: 8px 0;">
-        <li>Carta di identità</li>
-        <li>Passaporto</li>
-        <li>Patente</li>
-      </ul>
+    <p><strong>Documenti accettati:</strong></p>
 
-      <p>
-        Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
-        sfocature, riflessi o parti coperte.
-      </p>
+    <ul style="padding-left: 18px; margin: 8px 0;">
+      <li>Carta di identità</li>
+      <li>Passaporto</li>
+      <li>Patente</li>
+    </ul>
 
-      <p>
-        Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
-        e allegare il documento aggiornato.
-      </p>
+    <p>
+      Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
+      sfocature, riflessi o parti coperte.
+    </p>
 
-      <p>
-        Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
-      </p>
+    <p>
+      Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
+      e allegare il documento aggiornato.
+    </p>
 
-      <p>Cordiali saluti,<br />Studio Manager Pro</p>
-    </div>
-  `;
+    <p>
+      Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
+    </p>
+
+    <p>Cordiali saluti,<br />Studio Manager Pro</p>
+  </div>
+`;
 
   try {
     await sendEmailViaMicrosoft(userId, {
