@@ -28,6 +28,7 @@ type PrestazioneAR = {
   TipoPrestazioneAR: string;
   RischioTipoPrestAR: string;
   PunteggioPrestAR: number;
+  TipoTB?: string | null;
 };
 
 type ResponsabileAV = {
@@ -298,6 +299,14 @@ export default function ModelloAV1Page() {
     studioId: formData.studio_id || "",
   });
 
+  const tipoTBPrestazione = useMemo(
+  () =>
+    prestazioni.find((p) => p.TipoPrestazioneAR === formData.Prestazione)?.TipoTB || "",
+  [prestazioni, formData.Prestazione]
+);
+
+const isTB1 = tipoTBPrestazione === "TB1";
+
   const punteggioPrestazione = useMemo(
     () =>
       normalizeScore(
@@ -312,15 +321,18 @@ export default function ModelloAV1Page() {
     normalizeScore(formData.A3) +
     normalizeScore(formData.A4);
 
-  const TotB =
-    normalizeScore(formData.B1) +
+const TotB = isTB1
+  ? 0
+  : normalizeScore(formData.B1) +
     normalizeScore(formData.B2) +
     normalizeScore(formData.B3) +
     normalizeScore(formData.B4) +
     normalizeScore(formData.B5) +
     normalizeScore(formData.B6);
 
-  const MediaPunteggio = Number(((TotA + TotB) / 10).toFixed(2));
+const divisoreMedia = isTB1 ? 4 : 10;
+const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
+  
   const LivelloRischio = calcolaLivelloRischio(MediaPunteggio);
   const RisInerentePonderato = Number((punteggioPrestazione * 0.3).toFixed(2));
   const RisSpecificoPonderato = Number((MediaPunteggio * 0.7).toFixed(2));
@@ -375,9 +387,9 @@ export default function ModelloAV1Page() {
       ] = await Promise.all([
         supabase.from("tbclienti").select("*"),
         supabase
-          .from("tbElencoPrestAR")
-          .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR")
-          .order("TipoPrestazioneAR", { ascending: true }),
+  .from("tbElencoPrestAR")
+  .select("id, TipoPrestazioneAR, RischioTipoPrestAR, PunteggioPrestAR, TipoTB")
+  .order("TipoPrestazioneAR", { ascending: true }),
         studioId
           ? supabase
               .from("tbRespAV")
@@ -458,19 +470,53 @@ export default function ModelloAV1Page() {
     void loadRecordById(id);
   }, [router.isReady, id]);
 
-  const handlePrestazioneChange = (prestazioneValue: string) => {
-    const prestazioneSelezionata = prestazioni.find(
-      (p) => p.TipoPrestazioneAR === prestazioneValue
-    );
+const handlePrestazioneChange = (prestazioneValue: string) => {
+  const prestazioneSelezionata = prestazioni.find(
+    (p) => p.TipoPrestazioneAR === prestazioneValue
+  );
 
-    const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
+  const livello = prestazioneSelezionata?.RischioTipoPrestAR || "";
+  const tipoTB = prestazioneSelezionata?.TipoTB || "";
 
-    setFormData((prev) => ({
-      ...prev,
-      Prestazione: prestazioneValue,
-      ValRischioIner: livello,
-    }));
-  };
+  setFormData((prev) => ({
+    ...prev,
+    Prestazione: prestazioneValue,
+    ValRischioIner: livello,
+    ...(tipoTB === "TB1"
+      ? {
+          B1: 0,
+          B2: 0,
+          B3: 0,
+          B4: 0,
+          B5: 0,
+          B6: 0,
+          b1a: false,
+          b1b: false,
+          b1c: false,
+          b1d: false,
+          b2a: false,
+          b2b: false,
+          b2c: false,
+          b2d: false,
+          b2e: false,
+          b3a: false,
+          b3b: false,
+          b3c: false,
+          b4a: false,
+          b4b: false,
+          b4c: false,
+          b5a: false,
+          b5b: false,
+          b5c: false,
+          b5d: false,
+          b6a: false,
+          b6b: false,
+          b6c: false,
+          b6d: false,
+        }
+      : {}),
+  }));
+};
 
   const handleDataVerificaChange = (dataVerifica: string) => {
     setFormData((prev) => ({
@@ -739,16 +785,18 @@ export default function ModelloAV1Page() {
         beforeSaveSlot={
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-              <input
-                type="checkbox"
-                checked={Boolean(formData.AV1Conferma)}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    AV1Conferma: e.target.checked,
-                  }))
-                }
-              />
+             <input
+  type="checkbox"
+  className="mt-1"
+  checked={Boolean(formData[fieldKey])}
+  disabled={isTB1 && sectionKey.startsWith("B")}
+  onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      [fieldKey]: e.target.checked,
+    }))
+  }
+/>
               <span>Conferma AV1</span>
             </label>
 
@@ -870,15 +918,31 @@ export default function ModelloAV1Page() {
 
                     return (
                       <div key={sectionKey}>
-                        {isBStart && (
-                          <div className="mb-6">
-                            <h3 className="text-xl font-semibold">
-                              B. Aspetti connessi all’operazione e/o prestazione professionale
-                            </h3>
-                          </div>
-                        )}
+                       {isBStart && (
+  <div
+    className={`mb-6 rounded-md border p-4 ${
+      isTB1
+        ? "border-red-500 bg-red-50"
+        : "border-transparent bg-transparent p-0"
+    }`}
+  >
+    <h3 className={`text-xl font-semibold ${isTB1 ? "text-red-700" : ""}`}>
+      B. Aspetti connessi all’operazione e/o prestazione professionale
+    </h3>
 
-                        <div className="rounded-lg border p-4">
+    {isTB1 && (
+      <p className="mt-2 text-sm font-medium text-red-700">
+        Sezione B non obbligatoria per prestazioni con Tipo TB = TB1.
+      </p>
+    )}
+  </div>
+)}
+
+                       <div
+  className={`rounded-lg border p-4 ${
+    isTB1 && sectionKey.startsWith("B") ? "bg-red-50 opacity-70" : ""
+  }`}
+>
                           <div className="mb-3 flex items-center justify-between gap-4">
                             <h3 className="text-lg font-semibold">{sectionTitles[sectionKey]}</h3>
 
@@ -886,11 +950,12 @@ export default function ModelloAV1Page() {
                               <label className="whitespace-nowrap text-sm font-medium">
                                 Valore {sectionKey}
                               </label>
-                              <select
-                                className="w-24 rounded-md border bg-sky-100 px-3 py-2"
-                                value={normalizeScore(formData[sectionKey])}
-                                onChange={(e) => handleScoreChange(sectionKey, e.target.value)}
-                              >
+                             <select
+  className="w-24 rounded-md border bg-sky-100 px-3 py-2"
+  value={normalizeScore(formData[sectionKey])}
+  onChange={(e) => handleScoreChange(sectionKey, e.target.value)}
+  disabled={isTB1 && sectionKey.startsWith("B")}
+>
                                 <option value="0">0</option>
                                 <option value="1">1</option>
                                 <option value="2">2</option>
@@ -982,7 +1047,9 @@ export default function ModelloAV1Page() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">TotB</label>
+                  <label className="mb-1 block text-sm font-medium">
+  TotB {isTB1 ? "(non obbligatorio per TB1)" : ""}
+</label>
                     <input
                       type="text"
                       className="w-full rounded-md border bg-gray-100 px-3 py-2"
