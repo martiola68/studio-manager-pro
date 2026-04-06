@@ -1179,10 +1179,7 @@ const handleOpenFirmato = async () => {
   Molto significativo
   <div className="text-sm font-normal">3,6 - 4</div>
 </div>
-                     <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-  Molto significativo
-  <div className="text-sm font-normal">3,6 - 4</div>
-</div>
+
                       </div>
                       <div
                         className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
