@@ -121,7 +121,7 @@ const html = `
       Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
     </p>
 
-    <p>Cordiali saluti,<br />Studio Manager Pro</p>
+    <p>Cordiali saluti,<br/>${nomeOperatore}</p>
   </div>
 `;
 
