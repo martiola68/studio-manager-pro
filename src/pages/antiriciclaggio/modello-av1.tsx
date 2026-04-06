@@ -950,7 +950,7 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
                               <label className="whitespace-nowrap text-sm font-medium">
                                 Valore {sectionKey}
                               </label>
-                             <select
+    <select
   className="w-24 rounded-md border bg-sky-100 px-3 py-2"
   value={normalizeScore(formData[sectionKey])}
   onChange={(e) => handleScoreChange(sectionKey, e.target.value)}
@@ -965,21 +965,25 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            {Object.entries(fields as Record<string, string>).map(
-                              ([fieldKey, label]) => (
-                                <label key={fieldKey} className="flex items-start gap-3">
-                                  <input
-                                    type="checkbox"
-                                    className="mt-1"
-                                    checked={Boolean(formData[fieldKey])}
-                                    onChange={(e) =>
-                                      setFormData((prev) => ({
-                                        ...prev,
-                                        [fieldKey]: e.target.checked,
-                                      }))
-                                    }
-                                  />
+                        <div className="space-y-3">
+  {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => (
+    <label key={fieldKey} className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        className="mt-1"
+        checked={Boolean(formData[fieldKey])}
+        disabled={isTB1 && sectionKey.startsWith("B")}
+        onChange={(e) =>
+          setFormData((prev) => ({
+            ...prev,
+            [fieldKey]: e.target.checked,
+          }))
+        }
+      />
+      <span className="text-sm text-gray-800">{label}</span>
+    </label>
+  ))}
+</div>
                                   <span className="text-sm text-gray-800">{label}</span>
                                 </label>
                               )
