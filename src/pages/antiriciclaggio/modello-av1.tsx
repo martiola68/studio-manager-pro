@@ -616,13 +616,6 @@ const handleUploadFirmato = async (file: File) => {
   await run();
 };
 
-  if (encryptionEnabled && isEncryptionLocked()) {
-    requireUnlock(run);
-    return;
-  }
-
-  await run();
-};
 const handleOpenFirmato = async () => {
   const run = async () => {
     try {
