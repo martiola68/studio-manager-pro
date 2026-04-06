@@ -11,6 +11,7 @@ import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
+import { isEncryptionEnabled, isEncryptionLocked } from "@/services/encryptionService";
 
 const BUCKET_NAME = "allegati";
 
@@ -286,6 +287,7 @@ export default function ModelloAV1Page() {
   const [saving, setSaving] = useState(false);
   const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
 
   const {
     open: masterPasswordOpen,
@@ -372,6 +374,23 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
     return nome || responsabile.id;
   };
 
+const refreshEncryptionEnabled = async (studioIdValue?: string) => {
+  try {
+    const sid = studioIdValue || formData.studio_id || "";
+
+    if (!sid) {
+      setEncryptionEnabled(false);
+      return;
+    }
+
+    const enabled = await isEncryptionEnabled(sid);
+    setEncryptionEnabled(Boolean(enabled));
+  } catch (e) {
+    console.error("Error checking encryption enabled:", e);
+    setEncryptionEnabled(false);
+  }
+};
+  
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -411,6 +430,9 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
         ...prev,
         studio_id: prev.studio_id || studioId || "",
       }));
+
+      await refreshEncryptionEnabled(studioId || "");
+      
     } catch (err: any) {
       setError(err?.message || "Errore caricamento dati.");
     } finally {
@@ -454,6 +476,9 @@ const MediaPunteggio = Number(((TotA + TotB) / divisoreMedia).toFixed(2));
         B5: normalizeScore(data.B5),
         B6: normalizeScore(data.B6),
       }));
+
+      await refreshEncryptionEnabled(data.studio_id ?? "");
+      
     } catch (err: any) {
       setError(err?.message || "Errore caricamento record.");
     }
@@ -545,228 +570,262 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
     void router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
   };
 
-  const handleUploadFirmato = (file: File) => {
-    requireUnlock(async () => {
-      try {
-        if (!formData.studio_id) {
-          alert("Studio non disponibile.");
-          return;
-        }
-
-        setUploadingFirmato(true);
-        setError(null);
-
-        const supabase = getSupabaseClient() as any;
-        const safeName = file.name.replace(/\s+/g, "_");
-        const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
-
-        const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
-          upsert: true,
-        });
-
-        if (uploadError) {
-          throw new Error(uploadError.message || "Errore caricamento file firmato.");
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          allegato_av1_firmato: path,
-        }));
-      } catch (err: any) {
-        setError(err?.message || "Errore caricamento file firmato.");
-      } finally {
-        setUploadingFirmato(false);
-      }
-    });
-  };
-
-  const handleOpenFirmato = () => {
-    requireUnlock(async () => {
-      try {
-        if (!formData.allegato_av1_firmato) return;
-
-        const supabase = getSupabaseClient() as any;
-
-        const { data, error } = await supabase.storage
-          .from(BUCKET_NAME)
-          .createSignedUrl(formData.allegato_av1_firmato, 60);
-
-        if (error) {
-          throw new Error(error.message || "Errore apertura file.");
-        }
-
-        if (!data?.signedUrl) {
-          throw new Error("URL firmato non disponibile.");
-        }
-
-        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-      } catch (err: any) {
-        setError(err?.message || "Errore apertura file.");
-      }
-    });
-  };
-
-  const handleRemoveFirmato = () => {
-    requireUnlock(async () => {
-      setFormData((prev) => ({
-        ...prev,
-        allegato_av1_firmato: "",
-      }));
-    });
-  };
-
-  const handleRinnovoVerifica = () => {
-    requireUnlock(async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
-      const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
-
-      setFormData((prev) => ({
-        ...prev,
-        DataVerifica: today,
-        ScadenzaVerifica: "",
-        AV1Conferma: false,
-        ...defaultSectionScores,
-      }));
-
-      if (!formData.id) return;
-
-      try {
-        setSaving(true);
-        setError(null);
-
-        const supabase = getSupabaseClient() as any;
-
-        const payload = {
-          DataVerifica: today,
-          ScadenzaVerifica: null,
-          AV1Conferma: false,
-          A1: 0,
-          A2: 0,
-          A3: 0,
-          A4: 0,
-          B1: 0,
-          B2: 0,
-          B3: 0,
-          B4: 0,
-          B5: 0,
-          B6: 0,
-          TotA: 0,
-          TotB: 0,
-          MediaPunteggio: 0,
-          LivelloRischio: "Non significativo",
-          RisInerentePonderato: rischioInerentePonderatoReset,
-          RisSpecificoPonderato: 0,
-          RischioEffettivo: rischioInerentePonderatoReset,
-          AdeguataVerifica: adeguataReset,
-        };
-
-        const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
-
-        if (error) throw new Error(error.message);
-
-        alert("Rinnovo verifica eseguito correttamente.");
-      } catch (err: any) {
-        setError(err?.message || "Errore durante il rinnovo verifica.");
-      } finally {
-        setSaving(false);
-      }
-    });
-  };
-
-  const handleSave = () => {
-    requireUnlock(async () => {
+const handleUploadFirmato = async (file: File) => {
+  const run = async () => {
+    try {
       if (!formData.studio_id) {
         alert("Studio non disponibile.");
         return;
       }
 
-      if (!formData.cliente_id) {
-        alert("Seleziona un cliente.");
-        return;
+      setUploadingFirmato(true);
+      setError(null);
+
+      const supabase = getSupabaseClient() as any;
+      const safeName = file.name.replace(/\s+/g, "_");
+      const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
+        upsert: true,
+      });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Errore caricamento file firmato.");
       }
 
-      if (!formData.Prestazione) {
-        alert("Seleziona una prestazione.");
-        return;
+      setFormData((prev) => ({
+        ...prev,
+        allegato_av1_firmato: path,
+      }));
+    } catch (err: any) {
+      setError(err?.message || "Errore caricamento file firmato.");
+    } finally {
+      setUploadingFirmato(false);
+    }
+  };
+
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
+const handleOpenFirmato = async () => {
+  const run = async () => {
+    try {
+      if (!formData.allegato_av1_firmato) return;
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(formData.allegato_av1_firmato, 60);
+
+      if (error) {
+        throw new Error(error.message || "Errore apertura file.");
       }
 
-      if (!formData.DataVerifica) {
-        alert("Inserisci la data verifica.");
-        return;
+      if (!data?.signedUrl) {
+        throw new Error("URL firmato non disponibile.");
       }
 
-      if (!formData.incaricato_adeguata_verifica_id) {
-        alert("Seleziona l'incaricato adeguata verifica.");
-        return;
-      }
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      setError(err?.message || "Errore apertura file.");
+    }
+  };
 
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
+
+const handleRemoveFirmato = async () => {
+  const run = async () => {
+    setFormData((prev) => ({
+      ...prev,
+      allegato_av1_firmato: "",
+    }));
+  };
+
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
+
+const handleRinnovoVerifica = async () => {
+  const run = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
+    const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
+
+    setFormData((prev) => ({
+      ...prev,
+      DataVerifica: today,
+      ScadenzaVerifica: "",
+      AV1Conferma: false,
+      ...defaultSectionScores,
+    }));
+
+    if (!formData.id) return;
+
+    try {
       setSaving(true);
       setError(null);
 
-      try {
-        const supabase = getSupabaseClient() as any;
+      const supabase = getSupabaseClient() as any;
 
-        const payload = {
-          studio_id: formData.studio_id,
-          cliente_id: formData.cliente_id,
-          Prestazione: formData.Prestazione,
-          ValRischioIner: formData.ValRischioIner,
-          DataVerifica: formData.DataVerifica,
-          ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
-          allegato_av1_firmato: formData.allegato_av1_firmato || null,
-          incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
-          A1: normalizeScore(formData.A1),
-          A2: normalizeScore(formData.A2),
-          A3: normalizeScore(formData.A3),
-          A4: normalizeScore(formData.A4),
-          B1: normalizeScore(formData.B1),
-          B2: normalizeScore(formData.B2),
-          B3: normalizeScore(formData.B3),
-          B4: normalizeScore(formData.B4),
-          B5: normalizeScore(formData.B5),
-          B6: normalizeScore(formData.B6),
-          TotA,
-          TotB,
-          MediaPunteggio,
-          LivelloRischio,
-          RisInerentePonderato,
-          RisSpecificoPonderato,
-          RischioEffettivo,
-          AdeguataVerifica,
-          AV1Conferma: normalizeBoolean(formData.AV1Conferma),
-          AV4Generato: normalizeBoolean(formData.AV4Generato),
-        };
+      const payload = {
+        DataVerifica: today,
+        ScadenzaVerifica: null,
+        AV1Conferma: false,
+        A1: 0,
+        A2: 0,
+        A3: 0,
+        A4: 0,
+        B1: 0,
+        B2: 0,
+        B3: 0,
+        B4: 0,
+        B5: 0,
+        B6: 0,
+        TotA: 0,
+        TotB: 0,
+        MediaPunteggio: 0,
+        LivelloRischio: "Non significativo",
+        RisInerentePonderato: rischioInerentePonderatoReset,
+        RisSpecificoPonderato: 0,
+        RischioEffettivo: rischioInerentePonderatoReset,
+        AdeguataVerifica: adeguataReset,
+      };
 
-        let savedId = formData.id || "";
+      const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
 
-        if (formData.id) {
-          const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
-          if (error) throw new Error(error.message);
-        } else {
-          const { data, error } = await supabase.from("tbAV1").insert([payload]).select("id").single();
-          if (error) throw new Error(error.message);
-          savedId = String(data.id);
-        }
+      if (error) throw new Error(error.message);
 
-        setFormData((prev) => ({
-          ...prev,
-          id: savedId,
-          ScadenzaVerifica: ScadenzaVerificaCalcolata,
-        }));
-
-        alert("Record AV1 salvato correttamente.");
-
-        if (savedId) {
-          void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
-        }
-      } catch (err: any) {
-        setError(err?.message || "Errore salvataggio AV1.");
-      } finally {
-        setSaving(false);
-      }
-    });
+      alert("Rinnovo verifica eseguito correttamente.");
+    } catch (err: any) {
+      setError(err?.message || "Errore durante il rinnovo verifica.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
+
+ const handleSave = async () => {
+  const run = async () => {
+    if (!formData.studio_id) {
+      alert("Studio non disponibile.");
+      return;
+    }
+
+    if (!formData.cliente_id) {
+      alert("Seleziona un cliente.");
+      return;
+    }
+
+    if (!formData.Prestazione) {
+      alert("Seleziona una prestazione.");
+      return;
+    }
+
+    if (!formData.DataVerifica) {
+      alert("Inserisci la data verifica.");
+      return;
+    }
+
+    if (!formData.incaricato_adeguata_verifica_id) {
+      alert("Seleziona l'incaricato adeguata verifica.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const supabase = getSupabaseClient() as any;
+
+      const payload = {
+        studio_id: formData.studio_id,
+        cliente_id: formData.cliente_id,
+        Prestazione: formData.Prestazione,
+        ValRischioIner: formData.ValRischioIner,
+        DataVerifica: formData.DataVerifica,
+        ScadenzaVerifica: ScadenzaVerificaCalcolata || null,
+        allegato_av1_firmato: formData.allegato_av1_firmato || null,
+        incaricato_adeguata_verifica_id: formData.incaricato_adeguata_verifica_id || null,
+        A1: normalizeScore(formData.A1),
+        A2: normalizeScore(formData.A2),
+        A3: normalizeScore(formData.A3),
+        A4: normalizeScore(formData.A4),
+        B1: normalizeScore(formData.B1),
+        B2: normalizeScore(formData.B2),
+        B3: normalizeScore(formData.B3),
+        B4: normalizeScore(formData.B4),
+        B5: normalizeScore(formData.B5),
+        B6: normalizeScore(formData.B6),
+        TotA,
+        TotB,
+        MediaPunteggio,
+        LivelloRischio,
+        RisInerentePonderato,
+        RisSpecificoPonderato,
+        RischioEffettivo,
+        AdeguataVerifica,
+        AV1Conferma: normalizeBoolean(formData.AV1Conferma),
+        AV4Generato: normalizeBoolean(formData.AV4Generato),
+      };
+
+      let savedId = formData.id || "";
+
+      if (formData.id) {
+        const { error } = await supabase.from("tbAV1").update(payload).eq("id", formData.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { data, error } = await supabase.from("tbAV1").insert([payload]).select("id").single();
+        if (error) throw new Error(error.message);
+        savedId = String(data.id);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        id: savedId,
+        ScadenzaVerifica: ScadenzaVerificaCalcolata,
+      }));
+
+      alert("Record AV1 salvato correttamente.");
+
+      if (savedId) {
+        void router.replace(`/antiriciclaggio/modello-av1?id=${savedId}`);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Errore salvataggio AV1.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
 
   return (
     <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-background">
