@@ -222,9 +222,9 @@ function calcolaScadenzaFinale(dataVerifica: string, adeguataVerifica: string) {
 }
 
 function calcolaLivelloRischio(mediaPunteggio: number) {
-  if (mediaPunteggio <= 1.5) return "Non significativo";
-  if (mediaPunteggio >= 1.6 && mediaPunteggio <= 2.5) return "Poco significativo";
-  if (mediaPunteggio >= 2.6 && mediaPunteggio <= 3.5) return "Abbastanza significativo";
+  if (mediaPunteggio < 1.6) return "Non significativo";
+  if (mediaPunteggio < 2.6) return "Poco significativo";
+  if (mediaPunteggio < 3.6) return "Abbastanza significativo";
   if (mediaPunteggio >= 3.6) return "Molto significativo";
   return "";
 }
@@ -265,9 +265,9 @@ function getAdeguataVerificaBgClass(value: string) {
 }
 
 function getCategoriaRischio(value: number) {
-  if (value <= 1.5) return "non";
-  if (value <= 2.5) return "poco";
-  if (value <= 3.5) return "abbastanza";
+  if (value < 1.6) return "non";
+  if (value < 2.6) return "poco";
+  if (value < 3.6) return "abbastanza";
   return "molto";
 }
 
@@ -1163,26 +1163,26 @@ const handleOpenFirmato = async () => {
                         RISCHIO INERENTE 30%
                       </div>
 
-                      <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
-                        Non significativo
-                        <div className="text-sm font-normal">1 - 1,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-                        Poco significativo
-                        <div className="text-sm font-normal">1,6 - 2,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-                        Abbastanza significativo
-                        <div className="text-sm font-normal">2,6 - 3,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-                        Molto significativo
-                        <div className="text-sm font-normal">3,6 - 4</div>
-                      </div>
-
-                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-                        Molto significativo
-                        <div className="text-sm font-normal">3,6 - 4</div>
+                    <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+  Non significativo
+  <div className="text-sm font-normal">1 - 1,59</div>
+</div>
+<div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+  Poco significativo
+  <div className="text-sm font-normal">1,6 - 2,59</div>
+</div>
+<div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+  Abbastanza significativo
+  <div className="text-sm font-normal">2,6 - 3,59</div>
+</div>
+<div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+  Molto significativo
+  <div className="text-sm font-normal">3,6 - 4</div>
+</div>
+                     <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+  Molto significativo
+  <div className="text-sm font-normal">3,6 - 4</div>
+</div>
                       </div>
                       <div
                         className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
@@ -1209,10 +1209,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-                        Abbastanza significativo
-                        <div className="text-sm font-normal">2,6 - 3,5</div>
-                      </div>
+                    <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+  Abbastanza significativo
+  <div className="text-sm font-normal">2,6 - 3,59</div>
+</div>
                       <div
                         className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
                           "abbastanza",
@@ -1238,10 +1238,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-                        Poco significativo
-                        <div className="text-sm font-normal">1,6 - 2,5</div>
-                      </div>
+                    <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+  Poco significativo
+  <div className="text-sm font-normal">1,6 - 2,59</div>
+</div>
                       <div
                         className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell(
                           "poco",
@@ -1267,10 +1267,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                      <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
-                        Non significativo
-                        <div className="text-sm font-normal">1 - 1,5</div>
-                      </div>
+                   <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
+  Non significativo
+  <div className="text-sm font-normal">1 - 1,59</div>
+</div>
                       <div
                         className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell(
                           "non",
@@ -1299,22 +1299,23 @@ const handleOpenFirmato = async () => {
 
                     <div className="grid grid-cols-5 gap-0 border-b border-l border-r border-gray-400">
                       <div className="border border-gray-400 bg-white p-4" />
-                      <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
-                        Non significativa
-                        <div className="text-sm font-normal">1 - 1,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-                        Poco significativa
-                        <div className="text-sm font-normal">1,6 - 2,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-                        Abbastanza significativa
-                        <div className="text-sm font-normal">2,6 - 3,5</div>
-                      </div>
-                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-                        Molto significativa
-                        <div className="text-sm font-normal">3,6 - 4</div>
-                      </div>
+                      
+                     <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+  Non significativa
+  <div className="text-sm font-normal">1 - 1,59</div>
+</div>
+<div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+  Poco significativa
+  <div className="text-sm font-normal">1,6 - 2,59</div>
+</div>
+<div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+  Abbastanza significativa
+  <div className="text-sm font-normal">2,6 - 3,59</div>
+</div>
+<div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+  Molto significativa
+  <div className="text-sm font-normal">3,6 - 4</div>
+</div>
 
                       <div className="col-span-5 border border-gray-400 bg-white p-4 text-center text-xl font-bold">
                         VULNERABILITÀ 70%
