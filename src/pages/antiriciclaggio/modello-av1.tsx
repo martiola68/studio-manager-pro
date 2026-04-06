@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getSupabaseClient } from "@/lib/supabaseClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getStudioId } from "@/services/getStudioId";
 import { useRouter } from "next/router";
-import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
+
+import { getSupabaseClient } from "@/lib/supabaseClient";
+import { getStudioId } from "@/services/getStudioId";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import FormStickyHeader from "@/components/antiriciclaggio/FormStickyHeader";
 
 import { useMasterPasswordGate } from "@/hooks/useMasterPasswordGate";
 import { MasterPasswordDialog } from "@/components/security/MasterPasswordDialog";
-
 
 const BUCKET_NAME = "allegati";
 
@@ -285,7 +286,7 @@ export default function ModelloAV1Page() {
   const [uploadingFirmato, setUploadingFirmato] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-   const {
+  const {
     open: masterPasswordOpen,
     setOpen: setMasterPasswordOpen,
     password: masterPassword,
@@ -296,7 +297,7 @@ export default function ModelloAV1Page() {
   } = useMasterPasswordGate({
     studioId: formData.studio_id || "",
   });
-  
+
   const punteggioPrestazione = useMemo(
     () =>
       normalizeScore(
@@ -498,8 +499,8 @@ export default function ModelloAV1Page() {
     void router.push(`/antiriciclaggio/stampa-av1?id=${av1Id}`);
   };
 
-  const handleUploadFirmato = async (file: File) => {
-   requireUnlock(async () => {
+  const handleUploadFirmato = (file: File) => {
+    requireUnlock(async () => {
       try {
         if (!formData.studio_id) {
           alert("Studio non disponibile.");
@@ -533,7 +534,7 @@ export default function ModelloAV1Page() {
     });
   };
 
-const handleOpenFirmato = async () => {
+  const handleOpenFirmato = () => {
     requireUnlock(async () => {
       try {
         if (!formData.allegato_av1_firmato) return;
@@ -559,7 +560,7 @@ const handleOpenFirmato = async () => {
     });
   };
 
- const handleRemoveFirmato = async () => {
+  const handleRemoveFirmato = () => {
     requireUnlock(async () => {
       setFormData((prev) => ({
         ...prev,
@@ -567,9 +568,9 @@ const handleOpenFirmato = async () => {
       }));
     });
   };
-  
- const handleRinnovoVerifica = async () => {
-   requireUnlock(async () => {
+
+  const handleRinnovoVerifica = () => {
+    requireUnlock(async () => {
       const today = new Date().toISOString().split("T")[0];
       const rischioInerentePonderatoReset = Number((punteggioPrestazione * 0.3).toFixed(2));
       const adeguataReset = calcolaAdeguataVerifica(rischioInerentePonderatoReset);
@@ -627,7 +628,7 @@ const handleOpenFirmato = async () => {
     });
   };
 
-    const handleSave = async () => {
+  const handleSave = () => {
     requireUnlock(async () => {
       if (!formData.studio_id) {
         alert("Studio non disponibile.");
@@ -779,7 +780,7 @@ const handleOpenFirmato = async () => {
                     <div className="md:col-span-2">
                       <label className="mb-1 block text-sm font-medium">Cliente</label>
                       <select
-                         className="w-full rounded-md border px-3 py-2"
+                        className="w-full rounded-md border px-3 py-2"
                         value={formData.cliente_id}
                         onChange={(e) =>
                           setFormData((prev) => ({
@@ -1100,7 +1101,7 @@ const handleOpenFirmato = async () => {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        void handleUploadFirmato(file);
+                        handleUploadFirmato(file);
                       }
                       e.currentTarget.value = "";
                     }}
@@ -1158,28 +1159,30 @@ const handleOpenFirmato = async () => {
               <CardContent>
                 <div className="overflow-x-auto">
                   <div className="min-w-[760px]">
-                    <div className="grid grid-cols-5 gap-0 border border-gray-400">
+                    <div className="grid grid-cols-5 border border-gray-400">
                       <div className="flex items-center justify-center border border-gray-400 bg-white p-4 text-center font-bold">
                         RISCHIO INERENTE 30%
                       </div>
+                      <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+                        Non significativo
+                        <div className="text-sm font-normal">1 - 1,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                        Poco significativo
+                        <div className="text-sm font-normal">1,6 - 2,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                        Abbastanza significativo
+                        <div className="text-sm font-normal">2,6 - 3,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                        Molto significativo
+                        <div className="text-sm font-normal">3,6 - 4</div>
+                      </div>
 
-                    <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
-  Non significativo
-  <div className="text-sm font-normal">1 - 1,59</div>
-</div>
-<div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-  Poco significativo
-  <div className="text-sm font-normal">1,6 - 2,59</div>
-</div>
-<div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-  Abbastanza significativo
-  <div className="text-sm font-normal">2,6 - 3,59</div>
-</div>
-<div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-  Molto significativo
-  <div className="text-sm font-normal">3,6 - 4</div>
-</div>
-
+                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                        Molto significativo
+                        <div className="text-sm font-normal">3,6 - 4</div>
                       </div>
                       <div
                         className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
@@ -1206,10 +1209,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                    <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-  Abbastanza significativo
-  <div className="text-sm font-normal">2,6 - 3,59</div>
-</div>
+                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                        Abbastanza significativo
+                        <div className="text-sm font-normal">2,6 - 3,59</div>
+                      </div>
                       <div
                         className={`h-24 border border-gray-400 bg-yellow-200 ${isActiveCell(
                           "abbastanza",
@@ -1235,10 +1238,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                    <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-  Poco significativo
-  <div className="text-sm font-normal">1,6 - 2,59</div>
-</div>
+                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                        Poco significativo
+                        <div className="text-sm font-normal">1,6 - 2,59</div>
+                      </div>
                       <div
                         className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell(
                           "poco",
@@ -1264,10 +1267,10 @@ const handleOpenFirmato = async () => {
                         )}`}
                       />
 
-                   <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
-  Non significativo
-  <div className="text-sm font-normal">1 - 1,59</div>
-</div>
+                      <div className="border border-gray-400 bg-green-300 p-3 text-center font-semibold">
+                        Non significativo
+                        <div className="text-sm font-normal">1 - 1,59</div>
+                      </div>
                       <div
                         className={`h-24 border border-gray-400 bg-green-300 ${isActiveCell(
                           "non",
@@ -1294,25 +1297,24 @@ const handleOpenFirmato = async () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-5 gap-0 border-b border-l border-r border-gray-400">
+                    <div className="grid grid-cols-5 border-b border-l border-r border-gray-400">
                       <div className="border border-gray-400 bg-white p-4" />
-                      
-                     <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
-  Non significativa
-  <div className="text-sm font-normal">1 - 1,59</div>
-</div>
-<div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
-  Poco significativa
-  <div className="text-sm font-normal">1,6 - 2,59</div>
-</div>
-<div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
-  Abbastanza significativa
-  <div className="text-sm font-normal">2,6 - 3,59</div>
-</div>
-<div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
-  Molto significativa
-  <div className="text-sm font-normal">3,6 - 4</div>
-</div>
+                      <div className="border border-gray-400 bg-green-200 p-3 text-center font-semibold">
+                        Non significativa
+                        <div className="text-sm font-normal">1 - 1,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-yellow-200 p-3 text-center font-semibold">
+                        Poco significativa
+                        <div className="text-sm font-normal">1,6 - 2,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-orange-300 p-3 text-center font-semibold">
+                        Abbastanza significativa
+                        <div className="text-sm font-normal">2,6 - 3,59</div>
+                      </div>
+                      <div className="border border-gray-400 bg-red-400 p-3 text-center font-semibold text-white">
+                        Molto significativa
+                        <div className="text-sm font-normal">3,6 - 4</div>
+                      </div>
 
                       <div className="col-span-5 border border-gray-400 bg-white p-4 text-center text-xl font-bold">
                         VULNERABILITÀ 70%
@@ -1329,6 +1331,7 @@ const handleOpenFirmato = async () => {
           </div>
         </div>
       </div>
+
       <MasterPasswordDialog
         open={masterPasswordOpen}
         onOpenChange={setMasterPasswordOpen}
