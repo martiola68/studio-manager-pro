@@ -785,15 +785,13 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
         beforeSaveSlot={
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-             <input
+            <input
   type="checkbox"
-  className="mt-1"
-  checked={Boolean(formData[fieldKey])}
-  disabled={isTB1 && sectionKey.startsWith("B")}
+  checked={Boolean(formData.AV1Conferma)}
   onChange={(e) =>
     setFormData((prev) => ({
       ...prev,
-      [fieldKey]: e.target.checked,
+      AV1Conferma: e.target.checked,
     }))
   }
 />
@@ -967,27 +965,25 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
           </div>
         </div>
 
-        <div className="space-y-3">
-          {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => {
-            return (
-              <label key={fieldKey} className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  className="mt-1"
-                  checked={Boolean(formData[fieldKey])}
-                  disabled={disableSection}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      [fieldKey]: e.target.checked,
-                    }))
-                  }
-                />
-                <span className="text-sm text-gray-800">{label}</span>
-              </label>
-            );
-          })}
-        </div>
+     <div className="space-y-3">
+  {Object.entries(fields as Record<string, string>).map(([fieldKey, label]) => (
+    <label key={fieldKey} className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        className="mt-1"
+        checked={Boolean(formData[fieldKey])}
+        disabled={isTB1 && sectionKey.startsWith("B")}
+        onChange={(e) =>
+          setFormData((prev) => ({
+            ...prev,
+            [fieldKey]: e.target.checked,
+          }))
+        }
+      />
+      <span className="text-sm text-gray-800">{label}</span>
+    </label>
+  ))}
+</div>
       </div>
     </div>
   );
