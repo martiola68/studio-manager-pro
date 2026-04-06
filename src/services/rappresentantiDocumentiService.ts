@@ -22,6 +22,7 @@ export async function sendRichiestaDocumentoRappresentante(
     studioId,
     nomeDestinatario,
     email,
+    nomeOperatore,
     microsoftConnectionId,
     clienteId = null,
     av4Id = null,
