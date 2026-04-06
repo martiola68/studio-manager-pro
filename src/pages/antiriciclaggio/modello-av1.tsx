@@ -574,48 +574,39 @@ const handlePrestazioneChange = (prestazioneValue: string) => {
   };
 
 const handleUploadFirmato = async (file: File) => {
-  const run = async () => {
-    try {
-      if (!formData.studio_id) {
-        alert("Studio non disponibile.");
-        return;
-      }
-
-      setUploadingFirmato(true);
-      setError(null);
-
-      const supabase = getSupabaseClient() as any;
-      const safeName = file.name.replace(/\s+/g, "_");
-      const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
-
-     const { data: uploadData, error: uploadError } = await supabase.storage
-  .from(BUCKET_NAME)
-  .upload(path, file, { upsert: true });
-
-console.log("UPLOAD AV1", { path, uploadData, uploadError });
-
-if (uploadError) {
-  throw new Error(uploadError.message || "Errore caricamento file firmato.");
-}
-
-      setFormData((prev) => ({
-        ...prev,
-        allegato_av1_firmato: path,
-      }));
-    } catch (err: any) {
-      setError(err?.message || "Errore caricamento file firmato.");
-    } finally {
-      setUploadingFirmato(false);
+  try {
+    if (!formData.studio_id) {
+      alert("Studio non disponibile.");
+      return;
     }
-  };
 
-  // 👇 QUESTA È LA PARTE IMPORTANTE
-  if (encryptionEnabled && isEncryptionLocked()) {
-    requireUnlock(run);
-    return;
+    setUploadingFirmato(true);
+    setError(null);
+
+    const supabase = getSupabaseClient() as any;
+    const safeName = file.name.replace(/\s+/g, "_");
+    const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
+
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, file, { upsert: true });
+
+    if (error) {
+      alert(error.message || "Errore caricamento file firmato.");
+      throw error;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      allegato_av1_firmato: path,
+    }));
+
+    alert("File caricato correttamente. Ora premi Salva AV1.");
+  } catch (err: any) {
+    setError(err?.message || "Errore caricamento file firmato.");
+  } finally {
+    setUploadingFirmato(false);
   }
-
-  await run();
 };
 
 const handleOpenFirmato = async () => {
@@ -1240,14 +1231,13 @@ const handleRinnovoVerifica = async () => {
                     }}
                   />
 
-                 <Input
+<Input
   type="text"
   readOnly
   value={formData.allegato_av1_firmato || ""}
   placeholder="Nessun file allegato"
   className="cursor-default"
 />
-
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
