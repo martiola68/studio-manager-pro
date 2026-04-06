@@ -73,61 +73,66 @@ export async function sendRichiestaDocumentoRappresentante(
   const firmaOperatore =
     String(nomeOperatore || "").trim() || "Operatore";
 
-  const html = `
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
-      <p>Gentile ${nomeDestinatario || "Cliente"},</p>
+ const firmaOperatore = String(nomeOperatore || "").trim();
 
-      <p>
-        La invitiamo ad allegare un documento di riconoscimento in corso di validità.
-      </p>
+const html = `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
+    <p>Gentile ${nomeDestinatario || "Cliente"},</p>
 
-      <p>
-        La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
-        (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
-        direttamente nella pagina di caricamento.
-      </p>
+    <p>
+      La invitiamo ad allegare un documento di riconoscimento in corso di validità.
+    </p>
 
-      <p>
-        Può caricare il nuovo documento tramite il seguente collegamento riservato:
-      </p>
+    <p>
+      La invitiamo inoltre a verificare la correttezza dei dati relativi alla residenza
+      (città, indirizzo e CAP) e, qualora mancanti o non aggiornati, a completarli
+      direttamente nella pagina di caricamento.
+    </p>
 
-      <p>
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#7c3aed; text-decoration:underline; word-break:break-all;">
-          ${url}
-        </a>
-      </p>
+    <p>
+      Può caricare il nuovo documento tramite il pulsante seguente:
+    </p>
 
-      <p style="margin-top: 10px;">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#111827; color:#ffffff; text-decoration:none; padding:10px 16px; border-radius:6px;">
-          Carica documento e verifica dati residenza
-        </a>
-      </p>
+    <p style="margin-top: 10px; margin-bottom: 18px;">
+      <a
+        href="${url}"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="display:inline-block; background:#111827; color:#ffffff !important; text-decoration:none; padding:10px 16px; border-radius:6px;"
+      >
+        Carica documento e verifica dati residenza
+      </a>
+    </p>
 
-      <p><strong>Documenti accettati:</strong></p>
+    <p><strong>Documenti accettati:</strong></p>
 
-      <ul style="padding-left: 18px; margin: 8px 0;">
-        <li>Carta di identità</li>
-        <li>Passaporto</li>
-        <li>Patente</li>
-      </ul>
+    <ul style="padding-left: 18px; margin: 8px 0;">
+      <li>Carta di identità</li>
+      <li>Passaporto</li>
+      <li>Patente</li>
+    </ul>
 
-      <p>
-        Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
-        sfocature, riflessi o parti coperte.
-      </p>
+    <p>
+      Il documento allegato dovrà essere completo e chiaramente leggibile, senza tagli,
+      sfocature, riflessi o parti coperte.
+    </p>
 
-      <p>
-        Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
-        e allegare il documento aggiornato.
-      </p>
+    <p>
+      Le chiediamo di compilare i campi richiesti, verificare i dati di residenza
+      e allegare il documento aggiornato.
+    </p>
 
-      <p>
-        Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
-      </p>
+    <p>
+      Una volta completata la procedura, il collegamento non sarà più riutilizzabile.
+    </p>
 
-      <p>Cordiali saluti,<br/>${firmaOperatore}</p>
-    </div>
-  `;
+    ${
+      firmaOperatore
+        ? `<p>Cordiali saluti,<br/>${firmaOperatore}</p>`
+        : ""
+    }
+  </div>
+`;
 
   try {
     await sendEmailViaMicrosoft(userId, {
