@@ -191,6 +191,7 @@ export default function RappresentantiIndexPage() {
 
   const [microsoftConnections, setMicrosoftConnections] = useState<any[]>([]);
 const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(false);
+  const [nomeOperatore, setNomeOperatore] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -216,26 +217,26 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
       const email = auth?.user?.email;
       if (!email) return;
 
-      const { data, error } = await supabase
-        .from("tbutenti")
-        .select("studio_id")
-        .eq("email", email)
-        .single();
+   const { data, error } = await supabase
+      .from("tbutenti")
+      .select("studio_id")
+      .eq("email", email)
+      .single();
 
-      if (!error) {
-        const sid = data?.studio_id ? String((data as any).studio_id) : "";
-        if (sid) {
-          setStudioId(sid);
+    if (!error) {
+      const sid = data?.studio_id ? String((data as any).studio_id) : "";
+      if (sid) {
+        setStudioId(sid);
 
-          if (typeof window !== "undefined") {
-            localStorage.setItem("studio_id", sid);
-          }
+        if (typeof window !== "undefined") {
+          localStorage.setItem("studio_id", sid);
         }
       }
-    };
+    }
+  };
 
-    void run();
-  }, []);
+  void run();
+}, []);
 
   useEffect(() => {
   if (!studioId) return;
@@ -455,7 +456,7 @@ const [loadingMicrosoftConnections, setLoadingMicrosoftConnections] = useState(f
       let koCount = 0;
       const errori: string[] = [];
 
-      const resolvedMassivoConnectionId = resolveMicrosoftConnectionId(
+    const resolvedMassivoConnectionId = resolveMicrosoftConnectionId(
   microsoftConnections as any,
   ""
 );
@@ -465,29 +466,30 @@ if (!resolvedMassivoConnectionId) {
   return;
 }
 
-      for (const r of candidati) {
-        try {
-          await sendRichiestaDocumentoRappresentante({
-            recordId: r.id,
-            studioId,
-            nomeDestinatario: r.nome_cognome || "Cliente",
-            email: String(r.email || "").trim(),
-            microsoftConnectionId: String(r.microsoft_connection_id || "").trim(),
-            clienteId: null,
-            av4Id: null,
-            note: "Invio massivo richiesta documento da elenco rappresentanti",
-          });
+for (const r of candidati) {
+  try {
+    await sendRichiestaDocumentoRappresentante({
+      recordId: r.id,
+      studioId,
+      nomeDestinatario: r.nome_cognome || "Cliente",
+      email: String(r.email || "").trim(),
+      nomeOperatore,
+      microsoftConnectionId: resolvedMassivoConnectionId,
+      clienteId: null,
+      av4Id: null,
+      note: "Invio massivo richiesta documento da elenco rappresentanti",
+    });
 
-          okCount++;
-      } catch (error: any) {
-  koCount++;
-  const msg =
-    error?.message ||
-    error?.error ||
-    (typeof error === "string" ? error : JSON.stringify(error));
-  errori.push(`${r.nome_cognome || r.id}: ${msg}`);
+    okCount++;
+  } catch (error: any) {
+    koCount++;
+    const msg =
+      error?.message ||
+      error?.error ||
+      (typeof error === "string" ? error : JSON.stringify(error));
+    errori.push(`${r.nome_cognome || r.id}: ${msg}`);
+  }
 }
-      }
 
       await loadRappresentanti();
 
