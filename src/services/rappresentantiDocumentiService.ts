@@ -68,12 +68,9 @@ export async function sendRichiestaDocumentoRappresentante(
   }
 
   const destinatario = String(email).trim();
-  const subject = "Richiesta aggiornamento documento di riconoscimento";
-  const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
-  const firmaOperatore =
-    String(nomeOperatore || "").trim() || "Operatore";
-
- const firmaOperatore = String(nomeOperatore || "").trim();
+ const subject = "Richiesta aggiornamento documento di riconoscimento";
+const bodyPreview = `Richiesta aggiornamento documento inviata a ${destinatario}. Link pubblico: ${url}`;
+const firmaOperatore = String(nomeOperatore || "").trim();
 
 const html = `
   <div style="font-family: Arial, sans-serif; font-size: 14px; color: #1f2937; line-height: 1.6;">
