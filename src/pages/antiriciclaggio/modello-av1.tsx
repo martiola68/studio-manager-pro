@@ -588,13 +588,15 @@ const handleUploadFirmato = async (file: File) => {
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, { upsert: true });
+     const { data: uploadData, error: uploadError } = await supabase.storage
+  .from(BUCKET_NAME)
+  .upload(path, file, { upsert: true });
 
-      if (uploadError) {
-        throw new Error(uploadError.message || "Errore caricamento file firmato.");
-      }
+console.log("UPLOAD AV1", { path, uploadData, uploadError });
+
+if (uploadError) {
+  throw new Error(uploadError.message || "Errore caricamento file firmato.");
+}
 
       setFormData((prev) => ({
         ...prev,
@@ -1238,13 +1240,13 @@ const handleRinnovoVerifica = async () => {
                     }}
                   />
 
-                  <Input
-                    type="text"
-                    readOnly
-                    value={formData.allegato_av1_firmato ? "File allegato" : ""}
-                    placeholder="Nessun file allegato"
-                    className="cursor-default"
-                  />
+                 <Input
+  type="text"
+  readOnly
+  value={formData.allegato_av1_firmato || ""}
+  placeholder="Nessun file allegato"
+  className="cursor-default"
+/>
 
                   <div className="flex flex-wrap gap-2">
                     <Button
