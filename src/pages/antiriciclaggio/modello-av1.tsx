@@ -399,6 +399,9 @@ const refreshEncryptionEnabled = async (studioIdValue?: string) => {
       const supabase = getSupabaseClient() as any;
       const studioId = await getStudioId();
 
+      const enabled = await isEncryptionEnabled(studioId);
+      setEncryptionEnabled(enabled);
+
       const [
         { data: clientiData, error: clientiError },
         { data: prestazioniData, error: prestazioniError },
@@ -585,9 +588,9 @@ const handleUploadFirmato = async (file: File) => {
       const safeName = file.name.replace(/\s+/g, "_");
       const path = `av1_firmati/${formData.studio_id}/${Date.now()}_${safeName}`;
 
-      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(path, file, {
-        upsert: true,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(path, file, { upsert: true });
 
       if (uploadError) {
         throw new Error(uploadError.message || "Errore caricamento file firmato.");
@@ -603,6 +606,15 @@ const handleUploadFirmato = async (file: File) => {
       setUploadingFirmato(false);
     }
   };
+
+  // 👇 QUESTA È LA PARTE IMPORTANTE
+  if (encryptionEnabled && isEncryptionLocked()) {
+    requireUnlock(run);
+    return;
+  }
+
+  await run();
+};
 
   if (encryptionEnabled && isEncryptionLocked()) {
     requireUnlock(run);
