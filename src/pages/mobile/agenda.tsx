@@ -1591,36 +1591,41 @@ export default function MobileAgendaPage() {
                 const today = isSameDay(day, new Date());
 
                 return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate(day);
-                      setView("day");
-                    }}
-                    className={`min-w-[76px] rounded-[22px] border px-3 py-3 text-center shadow-sm ${
-                      active
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-slate-200 bg-white text-slate-800"
-                    }`}
-                  >
-                    <div className="text-[11px] uppercase">{day.toLocaleDateString("it-IT", { weekday: "short" })}</div>
-                    <div className="mt-1 text-lg font-bold">
-                      {day.toLocaleDateString("it-IT", { day: "2-digit" })}
-                    </div>
-                    
-                <div className="mt-1 text-[10px] font-medium">
-  {(() => {
-    const count = mobileEvents.filter((evento) =>
-      isSameDay(safeParseISO(evento.data_inizio), day)
-    ).length;
+                 <button
+  key={day.toISOString()}
+  type="button"
+  onClick={() => {
+    setSelectedDate(day);
+    setView("day");
+  }}
+  className={`min-w-[76px] rounded-[22px] border px-3 py-3 text-center shadow-sm ${
+    active
+      ? "border-blue-600 bg-blue-600 text-white"
+      : "border-slate-200 bg-white text-slate-800"
+  }`}
+>
+  <div className="text-[11px] uppercase">
+    {day.toLocaleDateString("it-IT", { weekday: "short" })}
+  </div>
 
-    if (count > 0) return `${count} app.`;
-    return today ? "Oggi" : "\u00A0";
-  })()}
-</div>
-                   
-                  </button>
+  <div className="mt-1 text-lg font-bold">
+    {day.toLocaleDateString("it-IT", { day: "2-digit" })}
+  </div>
+
+  <div className="mt-1 text-[10px] font-medium">
+    {(() => {
+      const count = mobileEvents.filter((evento) =>
+        isSameDay(safeParseISO(evento.data_inizio), day)
+      ).length;
+
+      if (count > 0) {
+        return count === 1 ? "1 app." : `${count} app.`;
+      }
+
+      return today ? "Oggi" : "\u00A0";
+    })()}
+  </div>
+</button>
                 );
               })}
             </div>
