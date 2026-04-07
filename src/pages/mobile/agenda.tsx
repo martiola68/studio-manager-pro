@@ -1642,9 +1642,6 @@ export default function MobileAgendaPage() {
       return today ? "Oggi" : "\u00A0";
     })()}
   </div>
-</button>
-                  </button>
-                );
               })}
             </div>
           </div>
