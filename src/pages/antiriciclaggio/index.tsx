@@ -823,13 +823,14 @@ if (typeof window !== "undefined") {
     }
   };
 
-  const handleApriDocumenti = (row: AV1Row) => {
+ const handleApriDocumenti = (row: AV1Row) => {
   if (!canAccessAntiriciclaggio) return;
 
-  // TODO: collegare pagina/document manager del fascicolo
-  alert(`Apri fascicolo documenti per AV1 ID: ${row.id}`);
+  router.push(
+    `/antiriciclaggio/fascicolo-documenti?av1_id=${row.id}&cliente_id=${row.cliente_id || ""}`
+  );
 };
-
+  
   const handleEliminaCompleto = async (av1Id: string) => {
     if (!canAccessAntiriciclaggio) return;
 
