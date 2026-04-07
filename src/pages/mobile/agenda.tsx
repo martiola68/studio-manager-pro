@@ -1608,7 +1608,7 @@ export default function MobileAgendaPage() {
                     <div className="mt-1 text-lg font-bold">
                       {day.toLocaleDateString("it-IT", { day: "2-digit" })}
                     </div>
-                   <button
+<button
   key={day.toISOString()}
   type="button"
   onClick={() => {
@@ -1642,7 +1642,9 @@ export default function MobileAgendaPage() {
       return today ? "Oggi" : "\u00A0";
     })()}
   </div>
-              })}
+</button>
+             );
+})}
             </div>
           </div>
         </div>
