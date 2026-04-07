@@ -175,6 +175,32 @@ export default function FascicoloDocumentiPage() {
       return;
     }
 
+const { data: av1DocumentoData, error: av1DocumentoError } = await supabase
+  .from("tbAV1")
+  .select("id, allegato_av1_firmato")
+  .eq("studio_id", studioId)
+  .eq("id", av1IdNum)
+  .maybeSingle();
+
+if (av1DocumentoError) {
+  throw av1DocumentoError;
+}
+
+if (av1DocumentoData?.allegato_av1_firmato) {
+  await ensureDocumentoInFascicolo({
+    supabase,
+    studioId,
+    av1Id: av1IdNum,
+    clienteId: effectiveClienteId,
+    tipoDocumento: "Modulo firmato",
+    storagePath: av1DocumentoData.allegato_av1_firmato,
+    bucketName: "allegati",
+    mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
+    origine: "av1_firmato",
+    note: "Importato da AV1 firmato",
+  });
+}
+    
     const { data: clienteData, error: clienteError } = await supabase
       .from("tbclienti")
       .select("id, ragione_sociale, cod_cliente, rapp_legale_id")
