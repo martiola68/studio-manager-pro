@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
-import { Trash2, X } from "lucide-react";
+import { FolderOpen, Trash2, X } from "lucide-react";
 
 type Cliente = {
   id: string;
@@ -246,12 +246,12 @@ const getAV4IconBorderClass = (row: AV1Row) => {
   }
 
   if (av4Info?.Av4InviatoCL || av4Info?.public_sent_at) {
-    return "border-2 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.85)]";
+    return "border-2 border-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.9)]";
   }
 
   return "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
 };
-
+  
   const loadSocietaOptions = async () => {
     try {
       const studioId = await getStudioId();
@@ -823,6 +823,13 @@ if (typeof window !== "undefined") {
     }
   };
 
+  const handleApriDocumenti = (row: AV1Row) => {
+  if (!canAccessAntiriciclaggio) return;
+
+  // TODO: collegare pagina/document manager del fascicolo
+  alert(`Apri fascicolo documenti per AV1 ID: ${row.id}`);
+};
+
   const handleEliminaCompleto = async (av1Id: string) => {
     if (!canAccessAntiriciclaggio) return;
 
@@ -1156,7 +1163,7 @@ if (typeof window !== "undefined") {
                             </span>
                           </button>
 
-                        <button
+ <button
   type="button"
   onClick={() => handleApriAV4(row)}
   disabled={workingId === row.id}
@@ -1170,17 +1177,30 @@ if (typeof window !== "undefined") {
   </span>
 </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleEliminaCompleto(row.id)}
-                            className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
-                            title="Elimina record completo"
-                          >
-                            <Trash2
-                              className="h-4 w-4 text-red-500"
-                              strokeWidth={2.2}
-                            />
-                          </button>
+<button
+  type="button"
+  onClick={() => handleApriDocumenti(row)}
+  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-blue-500 bg-white shadow-[0_0_8px_rgba(59,130,246,0.35)] transition hover:scale-105"
+  title="Apri fascicolo documenti"
+>
+  <FolderOpen
+    className="h-4 w-4 text-blue-600"
+    strokeWidth={2.2}
+  />
+</button>
+
+<button
+  type="button"
+  onClick={() => handleEliminaCompleto(row.id)}
+  className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white transition hover:scale-105"
+  title="Elimina record completo"
+>
+  <Trash2
+    className="h-4 w-4 text-red-500"
+    strokeWidth={2.2}
+  />
+</button>
+                          
                         </div>
                       </td>
                     </tr>
