@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
+import { useRef } from "react";
 
 type ClienteRow = {
   id: string;
@@ -31,6 +32,9 @@ export default function FascicoloDocumentiPage() {
   const [clienteNome, setClienteNome] = useState("Cliente");
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
 
+  const [uploading, setUploading] = useState(false);
+const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const formatDateTime = (value?: string | null) => {
     if (!value) return "-";
 
@@ -54,6 +58,65 @@ export default function FascicoloDocumentiPage() {
         if (!router.isReady || !av1_id) return;
 
         setLoading(true);
+
+        const handleUploadFile = async (file: File) => {
+  try {
+    if (!file || !av1_id) return;
+
+    setUploading(true);
+
+    const studioId = await getStudioId();
+    if (!studioId) {
+      alert("Studio non trovato");
+      return;
+    }
+
+    const supabase = getSupabaseClient() as any;
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+
+    const filePath = `antiriciclaggio/fascicoli/${studioId}/${av1_id}/${fileName}`;
+
+    // upload su storage
+    const { error: uploadError } = await supabase.storage
+      .from("allegati")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // salvataggio DB
+    const { error: insertError } = await supabase
+      .from("tbAVFascicoliDocumenti")
+      .insert({
+        studio_id: studioId,
+        av1_id: Number(av1_id),
+        cliente_id: cliente_id || null,
+        nome_file: file.name,
+        storage_path: filePath,
+        mime_type: file.type,
+        dimensione: file.size,
+        origine: "manuale",
+        tipo_documento: "Documento generico",
+      });
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    alert("Documento caricato con successo");
+
+    // ricarica lista
+    window.location.reload();
+  } catch (err: any) {
+    console.error("Errore upload:", err);
+    alert(err?.message || "Errore upload documento");
+  } finally {
+    setUploading(false);
+  }
+};
 
         const studioId = await getStudioId();
         if (!studioId) {
@@ -144,13 +207,18 @@ export default function FascicoloDocumentiPage() {
           Qui poi inseriremo upload, apertura ed eliminazione documenti.
         </div>
 
-        <button
-          type="button"
-          disabled
-          className="cursor-not-allowed rounded bg-gray-400 px-4 py-2 text-white"
-        >
-          Carica documento
-        </button>
+       <button
+  type="button"
+  onClick={() => fileInputRef.current?.click()}
+  disabled={uploading}
+  className={`rounded px-4 py-2 text-white ${
+    uploading
+      ? "cursor-not-allowed bg-gray-400"
+      : "bg-blue-600 hover:bg-blue-700"
+  }`}
+>
+  {uploading ? "Caricamento..." : "Carica documento"}
+</button>
       </div>
 
       <div className="overflow-x-auto rounded-lg border bg-white">
