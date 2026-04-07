@@ -134,7 +134,6 @@ export default function FascicoloDocumentiPage() {
         studio_id: studioId,
         av1_id: av1Id,
         cliente_id: clienteId,
-        av4_id: av4Id,
         tipo_documento: tipoDocumento,
         nome_file: getFileNameFromPath(storagePath),
         storage_path: storagePath,
