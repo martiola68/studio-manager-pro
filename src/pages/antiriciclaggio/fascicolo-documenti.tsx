@@ -194,7 +194,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
     clienteId: effectiveClienteId,
     tipoDocumento: "Modulo firmato",
     storagePath: av1DocumentoData.allegato_av1_firmato,
-    bucketName: "messaggi-allegati",
+    bucketName: "allegati",
     mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
     origine: "av1_firmato",
     note: "Importato da AV1 firmato",
