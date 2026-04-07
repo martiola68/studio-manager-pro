@@ -185,9 +185,13 @@ const fileInputRef = useRef<HTMLInputElement | null>(null);
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Fascicolo documenti</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Cliente: <span className="font-semibold">{clienteNome}</span>
-          </p>
+         <p className="mt-1 text-gray-700">
+  Cliente:
+</p>
+
+<p className="text-lg font-bold text-gray-900">
+  {clienteNome}
+</p>
           <p className="mt-1 text-sm text-gray-600">
             AV1 ID: <span className="font-semibold">{String(av1_id || "-")}</span>
           </p>
