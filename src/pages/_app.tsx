@@ -12,13 +12,15 @@ import { useRouter } from "next/router";
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
-  // Pagine pubbliche: niente layout
-const isPublicPage =
-  router.pathname === "/login" ||
-  router.pathname === "/auth/callback" ||
-  router.pathname === "/404" ||
-  router.asPath.startsWith("/documento/") ||
-  router.asPath.startsWith("/compilazione-av4/");
+  // Pagine pubbliche / standalone: niente layout
+  const isPublicPage =
+    router.pathname === "/login" ||
+    router.pathname === "/auth/callback" ||
+    router.pathname === "/404" ||
+    router.pathname === "/mobile/agenda" ||
+    router.asPath.startsWith("/documento/") ||
+    router.asPath.startsWith("/compilazione-av4/");
+
   return (
     <ThemeProvider>
       <StudioProvider>
