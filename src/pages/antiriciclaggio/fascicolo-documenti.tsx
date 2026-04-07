@@ -23,6 +23,17 @@ type DocumentoRow = {
   created_at?: string | null;
 };
 
+const TIPO_DOCUMENTO_OPTIONS = [
+  "Documento generico",
+  "Documento identità",
+  "Codice fiscale",
+  "Visura camerale",
+  "Contratto",
+  "Delega",
+  "Modulo firmato",
+  "Altro",
+];
+
 export default function FascicoloDocumentiPage() {
   const router = useRouter();
   const { av1_id, cliente_id } = router.query;
@@ -31,6 +42,8 @@ export default function FascicoloDocumentiPage() {
   const [clienteNome, setClienteNome] = useState("Cliente");
   const [documenti, setDocumenti] = useState<DocumentoRow[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [workingDocumentId, setWorkingDocumentId] = useState<string | null>(null);
+  const [tipoDocumento, setTipoDocumento] = useState("Documento generico");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -130,8 +143,9 @@ export default function FascicoloDocumentiPage() {
 
       const supabase = getSupabaseClient() as any;
 
-      const fileExt = file.name.split(".").pop() || "file";
-      const fileName = `${Date.now()}.${fileExt}`;
+      const originalName = file.name || "file";
+      const safeOriginalName = originalName.replace(/\s+/g, "_");
+      const fileName = `${Date.now()}_${safeOriginalName}`;
       const filePath = `antiriciclaggio/fascicoli/${studioId}/${av1_id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -154,12 +168,10 @@ export default function FascicoloDocumentiPage() {
           mime_type: file.type || null,
           dimensione: file.size,
           origine: "manuale",
-          tipo_documento: "Documento generico",
+          tipo_documento: tipoDocumento || "Documento generico",
         });
 
       if (insertError) throw insertError;
-
-      alert("Documento caricato con successo");
 
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -171,6 +183,72 @@ export default function FascicoloDocumentiPage() {
       alert(err?.message || "Errore upload documento");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleApriDocumento = async (doc: DocumentoRow) => {
+    try {
+      if (!doc.storage_path) {
+        alert("Percorso file non disponibile");
+        return;
+      }
+
+      setWorkingDocumentId(doc.id);
+
+      const supabase = getSupabaseClient() as any;
+
+      const { data, error } = await supabase.storage
+        .from("allegati")
+        .createSignedUrl(doc.storage_path, 60);
+
+      if (error) throw error;
+
+      if (!data?.signedUrl) {
+        alert("Impossibile aprire il documento");
+        return;
+      }
+
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch (err: any) {
+      console.error("Errore apertura documento:", err);
+      alert(err?.message || "Errore apertura documento");
+    } finally {
+      setWorkingDocumentId(null);
+    }
+  };
+
+  const handleEliminaDocumento = async (doc: DocumentoRow) => {
+    try {
+      const conferma = window.confirm(
+        `Vuoi eliminare il documento "${doc.nome_file || "senza nome"}"?`
+      );
+      if (!conferma) return;
+
+      setWorkingDocumentId(doc.id);
+
+      const supabase = getSupabaseClient() as any;
+
+      if (doc.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from("allegati")
+          .remove([doc.storage_path]);
+
+        if (storageError) throw storageError;
+      }
+
+      const { error: deleteError } = await supabase
+        .from("tbAVFascicoliDocumenti")
+        .delete()
+        .eq("id", doc.id);
+
+      if (deleteError) throw deleteError;
+
+      await loadData();
+    } catch (err: any) {
+      console.error("Errore eliminazione documento:", err);
+      alert(err?.message || "Errore eliminazione documento");
+    } finally {
+      setWorkingDocumentId(null);
     }
   };
 
@@ -202,36 +280,56 @@ export default function FascicoloDocumentiPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-end justify-between gap-4">
         <div className="text-sm text-gray-600">
-          Qui poi inseriremo upload, apertura ed eliminazione documenti.
+          Gestione upload, apertura ed eliminazione documenti del fascicolo.
         </div>
 
-        <div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className={`rounded px-4 py-2 text-white ${
-              uploading
-                ? "cursor-not-allowed bg-gray-400"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {uploading ? "Caricamento..." : "Carica documento"}
-          </button>
+        <div className="flex items-end gap-3">
+          <div className="min-w-[220px]">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              Tipo documento
+            </label>
+            <select
+              value={tipoDocumento}
+              onChange={(e) => setTipoDocumento(e.target.value)}
+              disabled={uploading}
+              className="w-full rounded border px-3 py-2 text-sm"
+            >
+              {TIPO_DOCUMENTO_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                void handleUploadFile(file);
-              }
-            }}
-          />
+          <div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className={`rounded px-4 py-2 text-white ${
+                uploading
+                  ? "cursor-not-allowed bg-gray-400"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {uploading ? "Caricamento..." : "Carica documento"}
+            </button>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  void handleUploadFile(file);
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -263,17 +361,41 @@ export default function FascicoloDocumentiPage() {
                 </td>
               </tr>
             ) : (
-              documenti.map((doc) => (
-                <tr key={doc.id} className="border-t">
-                  <td className="p-3">{doc.tipo_documento || "-"}</td>
-                  <td className="p-3">{doc.nome_file || "-"}</td>
-                  <td className="p-3">{doc.origine || "-"}</td>
-                  <td className="p-3">{doc.mime_type || "-"}</td>
-                  <td className="p-3">{formatSize(doc.dimensione)}</td>
-                  <td className="p-3">{formatDateTime(doc.created_at)}</td>
-                  <td className="p-3 text-center">-</td>
-                </tr>
-              ))
+              documenti.map((doc) => {
+                const isWorking = workingDocumentId === doc.id;
+
+                return (
+                  <tr key={doc.id} className="border-t">
+                    <td className="p-3">{doc.tipo_documento || "-"}</td>
+                    <td className="p-3">{doc.nome_file || "-"}</td>
+                    <td className="p-3">{doc.origine || "-"}</td>
+                    <td className="p-3">{doc.mime_type || "-"}</td>
+                    <td className="p-3">{formatSize(doc.dimensione)}</td>
+                    <td className="p-3">{formatDateTime(doc.created_at)}</td>
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleApriDocumento(doc)}
+                          disabled={isWorking}
+                          className="rounded border border-blue-300 px-3 py-1 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                        >
+                          Apri
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleEliminaDocumento(doc)}
+                          disabled={isWorking}
+                          className="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          Elimina
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
