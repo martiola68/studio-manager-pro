@@ -233,10 +233,24 @@ if (status === "warning") return "font-semibold text-yellow-600";
   };
 
   const getIconBorderClass = (enabled: boolean) => {
-    return enabled
-      ? "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]"
-      : "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
-  };
+  return enabled
+    ? "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]"
+    : "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
+};
+
+const getAV4IconBorderClass = (row: AV1Row) => {
+  const av4Info = getAV4Info(row);
+
+  if (av4Info?.compilato_da_cliente) {
+    return "border-2 border-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.9)]";
+  }
+
+  if (av4Info?.Av4InviatoCL || av4Info?.public_sent_at) {
+    return "border-2 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.85)]";
+  }
+
+  return "border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]";
+};
 
   const loadSocietaOptions = async () => {
     try {
@@ -1142,19 +1156,19 @@ if (typeof window !== "undefined") {
                             </span>
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleApriAV4(row)}
-                            disabled={workingId === row.id}
-                            className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getIconBorderClass(
-                              !!row.AV4Generato
-                            )}`}
-                            title="Apri AV4"
-                          >
-                            <span className="text-xs font-semibold text-blue-600">
-                              AV4
-                            </span>
-                          </button>
+                        <button
+  type="button"
+  onClick={() => handleApriAV4(row)}
+  disabled={workingId === row.id}
+  className={`rounded-[28px] bg-white p-1 transition hover:scale-105 disabled:opacity-60 ${getAV4IconBorderClass(
+    row
+  )}`}
+  title="Apri AV4"
+>
+  <span className="text-xs font-semibold text-blue-600">
+    AV4
+  </span>
+</button>
 
                           <button
                             type="button"
