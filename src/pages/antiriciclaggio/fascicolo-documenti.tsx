@@ -13,9 +13,11 @@ type DocumentoRow = {
   id: string;
   av1_id?: string | number | null;
   cliente_id?: string | null;
+  av4_id?: string | number | null;
   tipo_documento?: string | null;
   nome_file?: string | null;
   storage_path?: string | null;
+  bucket_name?: string | null;
   mime_type?: string | null;
   dimensione?: number | null;
   origine?: string | null;
@@ -95,19 +97,21 @@ export default function FascicoloDocumentiPage() {
 
       const { data, error } = await supabase
         .from("tbAVFascicoliDocumenti")
-        .select(`
-          id,
-          av1_id,
-          cliente_id,
-          tipo_documento,
-          nome_file,
-          storage_path,
-          mime_type,
-          dimensione,
-          origine,
-          note,
-          created_at
-        `)
+      .select(`
+  id,
+  av1_id,
+  cliente_id,
+  av4_id,
+  tipo_documento,
+  nome_file,
+  storage_path,
+  bucket_name,
+  mime_type,
+  dimensione,
+  origine,
+  note,
+  created_at
+`)
         .eq("studio_id", studioId)
         .eq("av1_id", Number(av1_id))
         .order("created_at", { ascending: false });
@@ -154,22 +158,23 @@ export default function FascicoloDocumentiPage() {
 
       if (uploadError) throw uploadError;
 
-      const { error: insertError } = await supabase
-        .from("tbAVFascicoliDocumenti")
-        .insert({
-          studio_id: studioId,
-          av1_id: Number(av1_id),
-          cliente_id:
-            typeof cliente_id === "string" && cliente_id.trim() !== ""
-              ? cliente_id
-              : null,
-          nome_file: file.name,
-          storage_path: filePath,
-          mime_type: file.type || null,
-          dimensione: file.size,
-          origine: "manuale",
-          tipo_documento: tipoDocumento || "Documento generico",
-        });
+const { error: insertError } = await supabase
+  .from("tbAVFascicoliDocumenti")
+  .insert({
+    studio_id: studioId,
+    av1_id: Number(av1_id),
+    cliente_id:
+      typeof cliente_id === "string" && cliente_id.trim() !== ""
+        ? cliente_id
+        : null,
+    nome_file: file.name,
+    storage_path: filePath,
+    bucket_name: "allegati",
+    mime_type: file.type || null,
+    dimensione: file.size,
+    origine: "manuale",
+    tipo_documento: tipoDocumento || "Documento generico",
+  });
 
       if (insertError) throw insertError;
 
@@ -186,36 +191,37 @@ export default function FascicoloDocumentiPage() {
     }
   };
 
-  const handleApriDocumento = async (doc: DocumentoRow) => {
-    try {
-      if (!doc.storage_path) {
-        alert("Percorso file non disponibile");
-        return;
-      }
-
-      setWorkingDocumentId(doc.id);
-
-      const supabase = getSupabaseClient() as any;
-
-      const { data, error } = await supabase.storage
-        .from("allegati")
-        .createSignedUrl(doc.storage_path, 60);
-
-      if (error) throw error;
-
-      if (!data?.signedUrl) {
-        alert("Impossibile aprire il documento");
-        return;
-      }
-
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      console.error("Errore apertura documento:", err);
-      alert(err?.message || "Errore apertura documento");
-    } finally {
-      setWorkingDocumentId(null);
+const handleApriDocumento = async (doc: DocumentoRow) => {
+  try {
+    if (!doc.storage_path) {
+      alert("Percorso file non disponibile");
+      return;
     }
-  };
+
+    setWorkingDocumentId(doc.id);
+
+    const supabase = getSupabaseClient() as any;
+    const bucketName = doc.bucket_name || "allegati";
+
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(doc.storage_path, 60);
+
+    if (error) throw error;
+
+    if (!data?.signedUrl) {
+      alert("Impossibile aprire il documento");
+      return;
+    }
+
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  } catch (err: any) {
+    console.error("Errore apertura documento:", err);
+    alert(err?.message || "Errore apertura documento");
+  } finally {
+    setWorkingDocumentId(null);
+  }
+};
 
   const handleEliminaDocumento = async (doc: DocumentoRow) => {
     try {
@@ -228,13 +234,15 @@ export default function FascicoloDocumentiPage() {
 
       const supabase = getSupabaseClient() as any;
 
-      if (doc.storage_path) {
-        const { error: storageError } = await supabase.storage
-          .from("allegati")
-          .remove([doc.storage_path]);
+    if (doc.storage_path) {
+  const bucketName = doc.bucket_name || "allegati";
 
-        if (storageError) throw storageError;
-      }
+  const { error: storageError } = await supabase.storage
+    .from(bucketName)
+    .remove([doc.storage_path]);
+
+  if (storageError) throw storageError;
+}
 
       const { error: deleteError } = await supabase
         .from("tbAVFascicoliDocumenti")
