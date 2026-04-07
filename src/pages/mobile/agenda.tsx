@@ -1608,7 +1608,18 @@ export default function MobileAgendaPage() {
                     <div className="mt-1 text-lg font-bold">
                       {day.toLocaleDateString("it-IT", { day: "2-digit" })}
                     </div>
-                    <div className="mt-1 text-[10px]">{today ? "Oggi" : "\u00A0"}</div>
+                    
+                <div className="mt-1 text-[10px] font-medium">
+  {(() => {
+    const count = mobileEvents.filter((evento) =>
+      isSameDay(safeParseISO(evento.data_inizio), day)
+    ).length;
+
+    if (count > 0) return `${count} app.`;
+    return today ? "Oggi" : "\u00A0";
+  })()}
+</div>
+                   
                   </button>
                 );
               })}
