@@ -224,34 +224,34 @@ export default function FascicoloDocumentiPage() {
       }
     }
 
-    const { data: av4Data, error: av4Error } = await supabase
-      .from("tbAV4")
-      .select("id, pdf_firmato_cliente")
-      .eq("studio_id", studioId)
-      .eq("av1_id", av1IdNum)
-      .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  const { data: av4Data, error: av4Error } = await supabase
+  .from("tbAV4")
+  .select("id, allegato_pdf_cliente")
+  .eq("studio_id", studioId)
+  .eq("av1_id", av1IdNum)
+  .order("id", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
-    if (av4Error && av4Error.code !== "PGRST116") {
-      throw av4Error;
-    }
+if (av4Error && av4Error.code !== "PGRST116") {
+  throw av4Error;
+}
 
-    if (av4Data?.pdf_firmato_cliente) {
-      await ensureDocumentoInFascicolo({
-        supabase,
-        studioId,
-        av1Id: av1IdNum,
-        clienteId: effectiveClienteId,
-        av4Id: av4Data.id || null,
-        tipoDocumento: "Modulo firmato",
-        storagePath: av4Data.pdf_firmato_cliente,
-        bucketName: "allegati",
-        mimeType: getMimeTypeFromPath(av4Data.pdf_firmato_cliente),
-        origine: "av4_firmato",
-        note: "Importato da AV4 firmato cliente",
-      });
-    }
+if (av4Data?.allegato_pdf_cliente) {
+  await ensureDocumentoInFascicolo({
+    supabase,
+    studioId,
+    av1Id: av1IdNum,
+    clienteId: effectiveClienteId,
+    av4Id: av4Data.id || null,
+    tipoDocumento: "Modulo firmato",
+    storagePath: av4Data.allegato_pdf_cliente,
+    bucketName: "allegati",
+    mimeType: getMimeTypeFromPath(av4Data.allegato_pdf_cliente),
+    origine: "av4_firmato",
+    note: "Importato da AV4 firmato cliente",
+  });
+}
   };
 
   const loadData = async () => {
