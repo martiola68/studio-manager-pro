@@ -1609,8 +1609,7 @@ export default function MobileAgendaPage() {
                       {day.toLocaleDateString("it-IT", { day: "2-digit" })}
                     </div>
 <div className="mt-1 text-[10px]">{today ? "Oggi" : "\u00A0"}</div>
-             );
-})}
+        
             </div>
           </div>
         </div>
