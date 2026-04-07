@@ -249,35 +249,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
       }
     }
 
-  const { data: av4Data, error: av4Error } = await supabase
-  .from("tbAV4")
-  .select("id, allegato_pdf_cliente")
-  .eq("studio_id", studioId)
-  .eq("av1_id", av1IdNum)
-  .order("id", { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-if (av4Error && av4Error.code !== "PGRST116") {
-  throw av4Error;
-}
-
-if (av4Data?.allegato_pdf_cliente) {
-  await ensureDocumentoInFascicolo({
-    supabase,
-    studioId,
-    av1Id: av1IdNum,
-    clienteId: effectiveClienteId,
-    av4Id: av4Data.id || null,
-    tipoDocumento: "Modulo firmato",
-    storagePath: av4Data.allegato_pdf_cliente,
-    bucketName: "messaggi-allegati",
-    mimeType: getMimeTypeFromPath(av4Data.allegato_pdf_cliente),
-    origine: "av4_firmato",
-    note: "Importato da AV4 firmato cliente",
-  });
-}
-  };
+   };
 
   const loadData = async () => {
     try {
