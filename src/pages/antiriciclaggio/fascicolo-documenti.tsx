@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+  import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { getStudioId } from "@/services/getStudioId";
@@ -56,6 +56,50 @@ function getMimeTypeFromPath(path?: string | null) {
   return null;
 }
 
+function getDisplayFileName(name?: string | null) {
+  if (!name) return "-";
+  return name.replace(/^\d+_/, "");
+}
+
+function getOrigineLabel(orig?: string | null) {
+  switch (orig) {
+    case "av1_firmato":
+      return "AV1 firmato";
+    case "av4_pdf":
+      return "AV4 firmato";
+    case "documento_rappresentante":
+      return "Documento rappresentante";
+    case "manuale":
+      return "Caricato manualmente";
+    default:
+      return orig || "-";
+  }
+}
+
+function getOrigineBadgeClass(orig?: string | null) {
+  switch (orig) {
+    case "av1_firmato":
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    case "av4_pdf":
+      return "bg-violet-50 text-violet-700 border-violet-200";
+    case "documento_rappresentante":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "manuale":
+      return "bg-gray-50 text-gray-700 border-gray-200";
+    default:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+  }
+}
+
+function getFormatoLabel(mime?: string | null) {
+  if (!mime) return "";
+  if (mime === "application/pdf") return "PDF";
+  if (mime === "image/jpeg") return "JPG";
+  if (mime === "image/png") return "PNG";
+  if (mime === "image/webp") return "WEBP";
+  return mime;
+}
+
 export default function FascicoloDocumentiPage() {
   const router = useRouter();
   const { av1_id, cliente_id } = router.query;
@@ -79,7 +123,7 @@ export default function FascicoloDocumentiPage() {
   };
 
   const formatSize = (value?: number | null) => {
-    if (!value || value <= 0) return "-";
+    if (!value || value <= 0) return "";
 
     if (value < 1024) return `${value} B`;
     if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
@@ -166,41 +210,38 @@ export default function FascicoloDocumentiPage() {
       throw av1Error;
     }
 
-    const effectiveClienteId =
-      clienteIdFromQuery ||
-      av1Data?.cliente_id ||
-      null;
+    const effectiveClienteId = clienteIdFromQuery || av1Data?.cliente_id || null;
 
     if (!effectiveClienteId) {
       return;
     }
 
-const { data: av1DocumentoData, error: av1DocumentoError } = await supabase
-  .from("tbAV1")
-  .select("id, allegato_av1_firmato")
-  .eq("studio_id", studioId)
-  .eq("id", av1IdNum)
-  .maybeSingle();
+    const { data: av1DocumentoData, error: av1DocumentoError } = await supabase
+      .from("tbAV1")
+      .select("id, allegato_av1_firmato")
+      .eq("studio_id", studioId)
+      .eq("id", av1IdNum)
+      .maybeSingle();
 
-if (av1DocumentoError) {
-  throw av1DocumentoError;
-}
+    if (av1DocumentoError) {
+      throw av1DocumentoError;
+    }
 
-if (av1DocumentoData?.allegato_av1_firmato) {
-  await ensureDocumentoInFascicolo({
-    supabase,
-    studioId,
-    av1Id: av1IdNum,
-    clienteId: effectiveClienteId,
-    tipoDocumento: "Modulo firmato",
-    storagePath: av1DocumentoData.allegato_av1_firmato,
-    bucketName: "allegati",
-    mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
-    origine: "av1_firmato",
-    note: "Importato da AV1 firmato",
-  });
-}
-    
+    if (av1DocumentoData?.allegato_av1_firmato) {
+      await ensureDocumentoInFascicolo({
+        supabase,
+        studioId,
+        av1Id: av1IdNum,
+        clienteId: effectiveClienteId,
+        tipoDocumento: "Modulo firmato",
+        storagePath: av1DocumentoData.allegato_av1_firmato,
+        bucketName: "allegati",
+        mimeType: getMimeTypeFromPath(av1DocumentoData.allegato_av1_firmato),
+        origine: "av1_firmato",
+        note: "Importato da AV1 firmato",
+      });
+    }
+
     const { data: clienteData, error: clienteError } = await supabase
       .from("tbclienti")
       .select("id, ragione_sociale, cod_cliente, rapp_legale_id")
@@ -213,9 +254,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
 
     if (clienteData) {
       const cliente = clienteData as ClienteRow;
-      setClienteNome(
-        cliente.ragione_sociale || cliente.cod_cliente || "Cliente"
-      );
+      setClienteNome(cliente.ragione_sociale || cliente.cod_cliente || "Cliente");
     }
 
     const rappLegaleId = clienteData?.rapp_legale_id || null;
@@ -248,8 +287,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
         });
       }
     }
-
-   };
+  };
 
   const loadData = async () => {
     try {
@@ -270,12 +308,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
           ? cliente_id
           : null;
 
-      await syncDocumentiCollegati(
-        supabase,
-        studioId,
-        av1IdNum,
-        clienteIdValue
-      );
+      await syncDocumentiCollegati(supabase, studioId, av1IdNum, clienteIdValue);
 
       const { data, error } = await supabase
         .from("tbAVFascicoliDocumenti")
@@ -453,7 +486,6 @@ if (av1DocumentoData?.allegato_av1_firmato) {
           <h1 className="text-2xl font-bold">Fascicolo documenti</h1>
 
           <p className="mt-1 text-gray-700">Cliente:</p>
-
           <p className="text-lg font-bold text-gray-900">{clienteNome}</p>
 
           <p className="mt-1 text-sm text-gray-600">
@@ -464,7 +496,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
         <button
           type="button"
           onClick={() => router.push("/antiriciclaggio")}
-          className="rounded border px-4 py-2 text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Torna all'elenco
         </button>
@@ -484,7 +516,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
               value={tipoDocumento}
               onChange={(e) => setTipoDocumento(e.target.value)}
               disabled={uploading}
-              className="w-full rounded border px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
               {TIPO_DOCUMENTO_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -499,7 +531,7 @@ if (av1DocumentoData?.allegato_av1_firmato) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className={`rounded px-4 py-2 text-white ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
                 uploading
                   ? "cursor-not-allowed bg-gray-400"
                   : "bg-blue-600 hover:bg-blue-700"
@@ -523,64 +555,105 @@ if (av1DocumentoData?.allegato_av1_firmato) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="p-3 text-left">Tipo documento</th>
-              <th className="p-3 text-left">Nome file</th>
-              <th className="p-3 text-left">Origine</th>
-              <th className="p-3 text-left">Formato</th>
-              <th className="p-3 text-left">Dimensione</th>
-              <th className="p-3 text-left">Data caricamento</th>
-              <th className="p-3 text-center">Azioni</th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Tipo documento
+              </th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Nome file
+              </th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Origine
+              </th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Formato
+              </th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Dimensione
+              </th>
+              <th className="p-3 text-left font-semibold text-gray-700">
+                Data caricamento
+              </th>
+              <th className="p-3 text-center font-semibold text-gray-700">
+                Azioni
+              </th>
             </tr>
           </thead>
 
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center">
+                <td colSpan={7} className="p-6 text-center text-gray-500">
                   Caricamento...
                 </td>
               </tr>
             ) : documenti.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-4 text-center">
+                <td colSpan={7} className="p-6 text-center text-gray-500">
                   Nessun documento presente nel fascicolo
                 </td>
               </tr>
             ) : (
               documenti.map((doc) => {
                 const isWorking = workingDocumentId === doc.id;
+                const canDelete = doc.origine === "manuale";
 
                 return (
-                  <tr key={doc.id} className="border-t">
-                    <td className="p-3">{doc.tipo_documento || "-"}</td>
-                    <td className="p-3">{doc.nome_file || "-"}</td>
-                    <td className="p-3">{doc.origine || "-"}</td>
-                    <td className="p-3">{doc.mime_type || "-"}</td>
-                    <td className="p-3">{formatSize(doc.dimensione)}</td>
-                    <td className="p-3">{formatDateTime(doc.created_at)}</td>
+                  <tr key={doc.id} className="border-t border-gray-100">
+                    <td className="p-3 text-gray-900">
+                      {doc.tipo_documento || "-"}
+                    </td>
+
+                    <td className="p-3 text-gray-800">
+                      {getDisplayFileName(doc.nome_file)}
+                    </td>
+
+                    <td className="p-3">
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${getOrigineBadgeClass(
+                          doc.origine
+                        )}`}
+                      >
+                        {getOrigineLabel(doc.origine)}
+                      </span>
+                    </td>
+
+                    <td className="p-3 text-gray-700">
+                      {getFormatoLabel(doc.mime_type)}
+                    </td>
+
+                    <td className="p-3 text-gray-700">
+                      {formatSize(doc.dimensione)}
+                    </td>
+
+                    <td className="p-3 text-gray-700">
+                      {formatDateTime(doc.created_at)}
+                    </td>
+
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           type="button"
                           onClick={() => void handleApriDocumento(doc)}
                           disabled={isWorking}
-                          className="rounded border border-blue-300 px-3 py-1 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                          className="rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-60"
                         >
                           Apri
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => void handleEliminaDocumento(doc)}
-                          disabled={isWorking}
-                          className="rounded border border-red-300 px-3 py-1 text-sm text-red-700 hover:bg-red-50 disabled:opacity-60"
-                        >
-                          Elimina
-                        </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => void handleEliminaDocumento(doc)}
+                            disabled={isWorking}
+                            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                          >
+                            Elimina
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
