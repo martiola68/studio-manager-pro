@@ -217,7 +217,7 @@ if (status === "warning") return "font-semibold text-yellow-600";
       };
     }
 
-    if (!getAV4Info(row)?.Av4InviatoCL) {
+     if (!(getAV4Info(row)?.Av4InviatoCL || getAV4Info(row)?.public_sent_at)) {
       return {
         dotClass: "bg-red-500",
         text: "AV4 da generare",
@@ -1113,12 +1113,14 @@ if (typeof window !== "undefined") {
                         {row.AV2Generato ? "Sì" : "No"}
                       </td>
 
-                      <td
+                         <td
                         className={`p-3 text-center font-semibold ${
-                          av4Info?.Av4InviatoCL ? "text-green-600" : "text-red-600"
+                          av4Info?.Av4InviatoCL || av4Info?.public_sent_at
+                            ? "text-green-600"
+                            : "text-red-600"
                         }`}
                       >
-                        {av4Info?.Av4InviatoCL ? "Sì" : "No"}
+                        {av4Info?.Av4InviatoCL || av4Info?.public_sent_at ? "Sì" : "No"}
                       </td>
 
                       <td className="p-3 text-center">
