@@ -643,14 +643,22 @@ const copyToClipboard = (text: string | null | undefined, label: string) => {
                           </div>
                         </TableCell>
 
-                      <TableCell
-  className={cassetto.pw_attiva1 ? "!bg-red-100 border border-red-300" : ""}
+ <TableCell
+  className={
+    cassetto.pw_attiva1
+      ? "!bg-green-100 border border-green-300"
+      : "!bg-gray-100 border border-gray-300"
+  }
 >
   {renderSensitiveCell(cassetto, "pw1")}
 </TableCell>
 
 <TableCell
-  className={cassetto.pw_attiva2 ? "!bg-red-100 border border-red-300" : ""}
+  className={
+    cassetto.pw_attiva2
+      ? "!bg-green-100 border border-green-300"
+      : "!bg-gray-100 border border-gray-300"
+  }
 >
   {renderSensitiveCell(cassetto, "pw2")}
 </TableCell>
