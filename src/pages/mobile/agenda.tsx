@@ -665,14 +665,18 @@ export default function MobileAgendaPage() {
       } else {
         setContactOptions([]);
       }
-    } catch (error) {
+   } catch (error) {
       console.error("Errore caricamento agenda mobile:", error);
       toast({
         title: "Errore",
         description: "Impossibile caricare i dati agenda",
         variant: "destructive",
       });
-
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // ----------------------------------------------------
   // MEMO
   // ----------------------------------------------------
@@ -1550,7 +1554,7 @@ export default function MobileAgendaPage() {
     );
   }
 
-        const selectedAgendaUser = utenti.find(
+   const selectedAgendaUser = utenti.find(
     (u) => String(u.id) === String(selectedAgendaUserId || currentUserId || "")
   );
 
