@@ -300,42 +300,6 @@ const getProviderBadgeClass = (provider?: string | null, isTeams?: boolean) => {
 };
 
 const getSettoreEventColor = (settore?: string | null, isTeams?: boolean) => {
-  const normalized = normalizeSettore(settore);
-
-  const base =
-    normalized === "Fiscale"
-      ? {
-  left: "border-l-emerald-500",
-  dot: "bg-emerald-500",
-},
-      : normalized === "Lavoro"
-      ? {
-          left: "border-l-red-500",
-          chip: "bg-red-50 text-red-800 border-red-200",
-          soft: "bg-red-500",
-        }
-      : normalized === "Consulenza"
-      ? {
-          left: "border-l-blue-500",
-          chip: "bg-blue-50 text-blue-800 border-blue-200",
-          soft: "bg-blue-500",
-        }
-      : {
-          left: "border-l-slate-400",
-          chip: "bg-slate-50 text-slate-800 border-slate-200",
-          soft: "bg-slate-400",
-        };
-
-  if (isTeams) {
-    return {
-      left: "border-l-violet-500",
-      chip: "bg-violet-50 text-violet-800 border-violet-200",
-      soft: "bg-violet-500",
-    };
-  }
-
-  return base;
-};
 
 const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
   const grouped = new Map<string, EventoWithRelations[]>();
@@ -483,45 +447,36 @@ const USER_EVENT_COLORS = [
   {
     left: "border-l-emerald-500",
     dot: "bg-emerald-500",
-    badge: "border-emerald-300 bg-emerald-50 text-emerald-800",
   },
   {
     left: "border-l-blue-500",
     dot: "bg-blue-500",
-    badge: "border-blue-300 bg-blue-50 text-blue-800",
   },
   {
     left: "border-l-violet-500",
     dot: "bg-violet-500",
-    badge: "border-violet-300 bg-violet-50 text-violet-800",
   },
   {
     left: "border-l-amber-500",
     dot: "bg-amber-500",
-    badge: "border-amber-300 bg-amber-50 text-amber-800",
   },
   {
     left: "border-l-rose-500",
     dot: "bg-rose-500",
-    badge: "border-rose-300 bg-rose-50 text-rose-800",
   },
   {
     left: "border-l-cyan-500",
     dot: "bg-cyan-500",
-    badge: "border-cyan-300 bg-cyan-50 text-cyan-800",
   },
   {
     left: "border-l-fuchsia-500",
     dot: "bg-fuchsia-500",
-    badge: "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-800",
   },
   {
     left: "border-l-lime-500",
     dot: "bg-lime-500",
-    badge: "border-lime-300 bg-lime-50 text-lime-800",
   },
 ];
-
 const getUserEventColor = (userId?: string | null) => {
   if (!userId) {
    return {
