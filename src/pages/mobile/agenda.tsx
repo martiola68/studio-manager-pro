@@ -1447,6 +1447,15 @@ export default function MobileAgendaPage() {
   // UI
   // ----------------------------------------------------
 
+const toggleAgendaUser = (userId: string, checked: boolean) => {
+  setSelectedAgendaUserIds((prev) => {
+    if (checked) {
+      return [...new Set([...prev, userId])];
+    }
+    return prev.filter((id) => id !== userId);
+  });
+};
+  
   const handlePrev = () => {
     if (view === "day") {
       setSelectedDate((prev) => addDays(prev, -1));
@@ -1593,14 +1602,6 @@ export default function MobileAgendaPage() {
                 </div>
               </div>
 
-            const toggleAgendaUser = (userId: string, checked: boolean) => {
-  setSelectedAgendaUserIds((prev) => {
-    if (checked) {
-      return [...new Set([...prev, userId])];
-    }
-    return prev.filter((id) => id !== userId);
-  });
-};
             </div>
 
             <div className="mt-4 flex items-center gap-2">
