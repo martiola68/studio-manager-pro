@@ -501,8 +501,10 @@ export default function MobileAgendaPage() {
   const [clienti, setClienti] = useState<ClienteAgenda[]>([]);
   const [utenti, setUtenti] = useState<UtenteAgenda[]>([]);
   const [contactOptions, setContactOptions] = useState<ContactEmailOption[]>([]);
+  
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentStudioId, setCurrentStudioId] = useState<string | null>(null);
+  const [selectedAgendaUserId, setSelectedAgendaUserId] = useState<string | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -547,11 +549,14 @@ export default function MobileAgendaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadData = async () => {
+ const loadData = async () => {
     const supabase = getSupabaseClient() as any;
 
     try {
       setLoading(true);
+
+      let resolvedUserId: string | null = null;
+      let resolvedStudioId: string | null = null;
 
       const {
         data: { session },
@@ -565,12 +570,16 @@ export default function MobileAgendaPage() {
           .single();
 
         if (!userErr && userData?.id) {
-          setCurrentUserId(String(userData.id));
-          setCurrentStudioId(userData?.studio_id ? String(userData.studio_id) : null);
+          resolvedUserId = String(userData.id);
+          resolvedStudioId = userData?.studio_id ? String(userData.studio_id) : null;
+
+          setCurrentUserId(resolvedUserId);
+          setCurrentStudioId(resolvedStudioId);
+          setSelectedAgendaUserId((prev) => prev ?? resolvedUserId);
         }
       }
 
-      const { data: eventiData, error: eventiError } = await supabase
+      let eventiQuery = supabase
         .from("tbagenda")
         .select(`
           *,
@@ -579,19 +588,31 @@ export default function MobileAgendaPage() {
         `)
         .order("data_inizio", { ascending: true });
 
+      if (resolvedStudioId) {
+        eventiQuery = eventiQuery.eq("studio_id", resolvedStudioId);
+      }
+
+      const { data: eventiData, error: eventiError } = await eventiQuery;
+
       if (eventiError) throw eventiError;
       setEventiRows(((eventiData ?? []) as unknown) as EventoWithRelations[]);
 
-      const { data: clientiData, error: clientiError } = await supabase
+      let clientiQuery = supabase
         .from("tbclienti")
         .select("id, ragione_sociale, attivo")
         .eq("attivo", true)
         .order("ragione_sociale");
 
+      if (resolvedStudioId) {
+        clientiQuery = clientiQuery.eq("studio_id", resolvedStudioId);
+      }
+
+      const { data: clientiData, error: clientiError } = await clientiQuery;
+
       if (clientiError) throw clientiError;
       setClienti(((clientiData ?? []) as unknown) as ClienteAgenda[]);
 
-      const { data: utentiData, error: utentiError } = await supabase
+      let utentiQuery = supabase
         .from("tbutenti")
         .select(`
           id,
@@ -609,13 +630,25 @@ export default function MobileAgendaPage() {
         .eq("attivo", true)
         .order("cognome", { ascending: true });
 
+      if (resolvedStudioId) {
+        utentiQuery = utentiQuery.eq("studio_id", resolvedStudioId);
+      }
+
+      const { data: utentiData, error: utentiError } = await utentiQuery;
+
       if (utentiError) throw utentiError;
       setUtenti(((utentiData ?? []) as unknown) as UtenteAgenda[]);
 
-      const { data: contattiData, error: contattiError } = await (supabase as any)
+      let contattiQuery = (supabase as any)
         .from("tbcontatti")
         .select("*")
         .order("cognome", { ascending: true });
+
+      if (resolvedStudioId) {
+        contattiQuery = contattiQuery.eq("studio_id", resolvedStudioId);
+      }
+
+      const { data: contattiData, error: contattiError } = await contattiQuery;
 
       if (!contattiError) {
         const mapped: ContactEmailOption[] = (contattiData ?? [])
@@ -639,10 +672,6 @@ export default function MobileAgendaPage() {
         description: "Impossibile caricare i dati agenda",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ----------------------------------------------------
   // MEMO
@@ -656,15 +685,17 @@ export default function MobileAgendaPage() {
 
   const groupedEvents = useMemo(() => aggregateEventGroups(eventiRows), [eventiRows]);
 
-  const mobileEvents = useMemo(() => {
-    if (!currentUserId) return groupedEvents;
+   const mobileEvents = useMemo(() => {
+    const effectiveUserId = selectedAgendaUserId || currentUserId;
+
+    if (!effectiveUserId) return groupedEvents;
 
     return groupedEvents.filter(
       (evento) =>
-        String(evento.utente_id || "") === String(currentUserId) ||
-        evento.partecipanti.some((id) => String(id) === String(currentUserId))
+        String(evento.utente_id || "") === String(effectiveUserId) ||
+        evento.partecipanti.some((id) => String(id) === String(effectiveUserId))
     );
-  }, [groupedEvents, currentUserId]);
+  }, [groupedEvents, currentUserId, selectedAgendaUserId]);
 
   const eventiGiorno = useMemo(() => {
     return mobileEvents.filter((evento) =>
@@ -1519,6 +1550,10 @@ export default function MobileAgendaPage() {
     );
   }
 
+        const selectedAgendaUser = utenti.find(
+    (u) => String(u.id) === String(selectedAgendaUserId || currentUserId || "")
+  );
+
   return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       <div className="mx-auto max-w-md pb-28">
@@ -1528,10 +1563,29 @@ export default function MobileAgendaPage() {
               <div>
                 <div className="text-[26px] font-bold tracking-tight">Agenda</div>
                 <div className="mt-1 text-sm text-slate-500 capitalize">{headerTitle}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {selectedAgendaUser
+                    ? `Agenda di ${selectedAgendaUser.cognome} ${selectedAgendaUser.nome}`
+                    : "Agenda"}
+                </div>
               </div>
 
-              <div className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
-                {currentUserId ? "Personale" : "Calendario"}
+             <div className="min-w-[180px] max-w-[220px]">
+                <Select
+                  value={selectedAgendaUserId || currentUserId || ""}
+                  onValueChange={(value) => setSelectedAgendaUserId(value)}
+                >
+                  <SelectTrigger className="rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-sm">
+                    <SelectValue placeholder="Seleziona utente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {utenti.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.cognome} {u.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
