@@ -408,33 +408,34 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     }
   };
 
-  const handleCloseAccess = () => {
+ const handleCloseAccess = () => {
     clearAmlTimers();
-closeTimeoutModal();
-clearAccessState();
+    closeTimeoutModal();
+    clearAccessState();
 
-// 🔥 AGGIUNGI QUESTO
-setSocietaFilter("");
-setSelectedSocieta(null);
+    setSocietaFilter("");
+    setSelectedSocieta(null);
+    setRows([]);
+    setWorkingId(null);
 
-setRows([]);
-setWorkingId(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(AML_SESSION_KEY);
+      sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
+    }
 
-if (typeof window !== "undefined") {
-  sessionStorage.removeItem(AML_SESSION_KEY);
-  sessionStorage.removeItem(AML_SELECTED_SOCIETA_KEY);
-}
+    router.replace(router.asPath);
   };
 
   const startWarningPhase = () => {
     closeTimeoutModal();
 
+    const warningStartedAt = Date.now();
     setShowTimeoutModal(true);
-    setTimeoutCountdown(Math.floor(AML_WARNING_MS / 1000));
+    setTimeoutCountdown(Math.ceil(AML_WARNING_MS / 1000));
 
     warningIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - lastActivityRef.current;
-      const remainingMs = Math.max(0, AML_TIMEOUT_MS - elapsed);
+      const elapsedMs = Date.now() - warningStartedAt;
+      const remainingMs = Math.max(0, AML_WARNING_MS - elapsedMs);
       const remainingSec = Math.ceil(remainingMs / 1000);
 
       setTimeoutCountdown(remainingSec);
@@ -470,7 +471,7 @@ if (typeof window !== "undefined") {
     closeTimeoutModal();
     resetInactivityTimer();
   };
-
+  
   const unlockSocietaDirectly = async (societa: SocietaOption) => {
     setUnlockedSocietaId(societa.id);
 
@@ -541,6 +542,7 @@ if (typeof window !== "undefined") {
     unlockedSocietaId === societaFilter;
 
   useEffect(() => {
+ useEffect(() => {
     if (typeof window === "undefined" || !canAccessAntiriciclaggio) {
       clearAmlTimers();
       closeTimeoutModal();
@@ -565,15 +567,20 @@ if (typeof window !== "undefined") {
       window.addEventListener(eventName, onActivity);
     });
 
-    resetInactivityTimer();
+    if (!showTimeoutModal) {
+      resetInactivityTimer();
+    }
 
     return () => {
       events.forEach((eventName) => {
         window.removeEventListener(eventName, onActivity);
       });
-      clearAmlTimers();
+
+      if (!showTimeoutModal) {
+        clearAmlTimers();
+      }
     };
-  }, [canAccessAntiriciclaggio, showTimeoutModal]);
+  }, [canAccessAntiriciclaggio]);
 
    useEffect(() => {
     if (typeof window === "undefined") return;
