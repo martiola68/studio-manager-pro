@@ -852,6 +852,7 @@ async function handleInvioPubblico() {
         public_token: token,
         public_enabled: true,
         public_sent_at: new Date().toISOString(),
+        Av4InviatoCL: true,
         compilato_da_cliente: false,
       };
 
