@@ -305,10 +305,9 @@ const getSettoreEventColor = (settore?: string | null, isTeams?: boolean) => {
   const base =
     normalized === "Fiscale"
       ? {
-          left: "border-l-emerald-500",
-          chip: "bg-emerald-50 text-emerald-800 border-emerald-200",
-          soft: "bg-emerald-500",
-        }
+  left: "border-l-emerald-500",
+  dot: "bg-emerald-500",
+},
       : normalized === "Lavoro"
       ? {
           left: "border-l-red-500",
@@ -525,11 +524,10 @@ const USER_EVENT_COLORS = [
 
 const getUserEventColor = (userId?: string | null) => {
   if (!userId) {
-    return {
-      left: "border-l-slate-400",
-      dot: "bg-slate-400",
-      badge: "border-slate-200 bg-slate-50 text-slate-700",
-    };
+   return {
+  left: "border-l-slate-400",
+  dot: "bg-slate-400",
+};
   }
 
   const chars = String(userId).split("");
@@ -1560,46 +1558,38 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
 
   const agendaFilterLabel = getSelectedAgendaUsersLabel(selectedAgendaUsers);
 
- const renderAgendaCard = (evento: EventoGroup, compact = false) => {
+const renderAgendaCard = (evento: EventoGroup, compact = false) => {
     const userColor = getUserEventColor(evento.utente_id);
     const ownerName = evento.utente
       ? `${evento.utente.cognome} ${evento.utente.nome}`
       : "Nominativo non disponibile";
 
-    const badgeLabel = `${ownerName} - ${evento.titolo || "(senza titolo)"}`;
+    const mainTitle = `${evento.titolo || "(senza titolo)"} - ${ownerName}`;
 
     return (
       <button
         key={evento.gruppo_evento}
         type="button"
         onClick={() => handleOpenDetail(evento)}
-        className={`w-full text-left rounded-[18px] border border-slate-200 bg-white p-2.5 shadow-sm transition active:scale-[0.99] border-l-4 ${userColor.left}`}
+        className={`w-full text-left rounded-[16px] border border-slate-200 bg-white p-2 shadow-sm transition active:scale-[0.99] border-l-4 ${userColor.left}`}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${userColor.dot}`} />
               <p className="text-[15px] font-semibold text-slate-900 truncate">
-                {evento.titolo || "(senza titolo)"}
+                {mainTitle}
               </p>
             </div>
 
-            <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-600">
+            <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
               <Clock className="h-4 w-4 shrink-0" />
               <span>{formatTimeRange(evento)}</span>
-            </div>
-
-            <div className="mt-1.5">
-              <span
-                className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${userColor.badge}`}
-              >
-                <span className="truncate">{badgeLabel}</span>
-              </span>
             </div>
           </div>
         </div>
 
-        <div className="mt-2 space-y-1">
+        <div className="mt-1.5 space-y-1">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Building2 className="h-4 w-4 shrink-0" />
             <span className="truncate">
