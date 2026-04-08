@@ -541,7 +541,6 @@ const getAV4IconBorderClass = (row: AV1Row) => {
     !!isProtectedSocieta &&
     unlockedSocietaId === societaFilter;
 
-  useEffect(() => {
  useEffect(() => {
     if (typeof window === "undefined" || !canAccessAntiriciclaggio) {
       clearAmlTimers();
