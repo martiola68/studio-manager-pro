@@ -1590,14 +1590,7 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
   selectedAgendaUserIds.includes(String(u.id))
 );
 
-  const agendaFilterLabel =
-  selectedAgendaUserIds.length === 0
-    ? "Tutti"
-    : selectedAgendaUserIds.length === 1
-    ? "1 selezionato"
-    : `${selectedAgendaUserIds.length} selezionati`;
-
-  return (
+   return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       <div className="mx-auto max-w-md pb-28">
         <div className="sticky top-0 z-20 border-b border-slate-200 bg-[#f3f6fb]/95 backdrop-blur">
