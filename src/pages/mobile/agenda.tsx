@@ -300,6 +300,41 @@ const getProviderBadgeClass = (provider?: string | null, isTeams?: boolean) => {
 };
 
 const getSettoreEventColor = (settore?: string | null, isTeams?: boolean) => {
+  if (isTeams) {
+    return {
+      left: "border-l-violet-500",
+      dot: "bg-violet-500",
+    };
+  }
+
+  const normalized = normalizeSettore(settore);
+
+  if (normalized === "Fiscale") {
+    return {
+      left: "border-l-emerald-500",
+      dot: "bg-emerald-500",
+    };
+  }
+
+  if (normalized === "Lavoro") {
+    return {
+      left: "border-l-red-500",
+      dot: "bg-red-500",
+    };
+  }
+
+  if (normalized === "Consulenza") {
+    return {
+      left: "border-l-blue-500",
+      dot: "bg-blue-500",
+    };
+  }
+
+  return {
+    left: "border-l-slate-400",
+    dot: "bg-slate-400",
+  };
+};
 
 const aggregateEventGroups = (rows: EventoWithRelations[]): EventoGroup[] => {
   const grouped = new Map<string, EventoWithRelations[]>();
