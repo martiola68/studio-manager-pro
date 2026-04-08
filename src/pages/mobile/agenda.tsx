@@ -504,7 +504,7 @@ export default function MobileAgendaPage() {
   
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentStudioId, setCurrentStudioId] = useState<string | null>(null);
-  const [selectedAgendaUserId, setSelectedAgendaUserId] = useState<string | null>(null);
+  const [selectedAgendaUserIds, setSelectedAgendaUserIds] = useState<string[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -575,7 +575,9 @@ export default function MobileAgendaPage() {
 
           setCurrentUserId(resolvedUserId);
           setCurrentStudioId(resolvedStudioId);
-          setSelectedAgendaUserId((prev) => prev ?? resolvedUserId);
+          setSelectedAgendaUserIds((prev) =>
+  prev.length > 0 ? prev : resolvedUserId ? [resolvedUserId] : []
+);
         }
       }
 
@@ -689,18 +691,26 @@ export default function MobileAgendaPage() {
 
   const groupedEvents = useMemo(() => aggregateEventGroups(eventiRows), [eventiRows]);
 
-   const mobileEvents = useMemo(() => {
-    const effectiveUserId = selectedAgendaUserId || currentUserId;
+ const mobileEvents = useMemo(() => {
+  const effectiveUserIds =
+    selectedAgendaUserIds.length > 0
+      ? selectedAgendaUserIds
+      : currentUserId
+      ? [currentUserId]
+      : [];
 
-    if (!effectiveUserId) return groupedEvents;
+  if (effectiveUserIds.length === 0) return groupedEvents;
 
-    return groupedEvents.filter(
-      (evento) =>
-        String(evento.utente_id || "") === String(effectiveUserId) ||
-        evento.partecipanti.some((id) => String(id) === String(effectiveUserId))
+  return groupedEvents.filter((evento) => {
+    const ownerId = String(evento.utente_id || "");
+    const participantIds = evento.partecipanti.map((id) => String(id));
+
+    return effectiveUserIds.some(
+      (userId) =>
+        ownerId === String(userId) || participantIds.includes(String(userId))
     );
-  }, [groupedEvents, currentUserId, selectedAgendaUserId]);
-
+  });
+}, [groupedEvents, currentUserId, selectedAgendaUserIds]);
   const eventiGiorno = useMemo(() => {
     return mobileEvents.filter((evento) =>
       isSameDay(safeParseISO(evento.data_inizio), selectedDate)
@@ -1467,6 +1477,13 @@ export default function MobileAgendaPage() {
           year: "numeric",
         })}`;
 
+   const agendaFilterLabel =
+    selectedAgendaUserIds.length === 0
+      ? "Tutti"
+      : selectedAgendaUserIds.length === 1
+      ? "1 selezionato"
+      : `${selectedAgendaUserIds.length} selezionati`;
+
   const renderAgendaCard = (evento: EventoGroup, compact = false) => {
     const style = getSettoreEventColor(evento.utente?.settore, Boolean(evento.riunione_teams));
 
@@ -1554,9 +1571,9 @@ export default function MobileAgendaPage() {
     );
   }
 
-   const selectedAgendaUser = utenti.find(
-    (u) => String(u.id) === String(selectedAgendaUserId || currentUserId || "")
-  );
+  const selectedAgendaUsers = utenti.filter((u) =>
+  selectedAgendaUserIds.includes(String(u.id))
+);
 
   return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
@@ -1568,29 +1585,22 @@ export default function MobileAgendaPage() {
                 <div className="text-[26px] font-bold tracking-tight">Agenda</div>
                 <div className="mt-1 text-sm text-slate-500 capitalize">{headerTitle}</div>
                 <div className="mt-1 text-xs text-slate-500">
-                  {selectedAgendaUser
-                    ? `Agenda di ${selectedAgendaUser.cognome} ${selectedAgendaUser.nome}`
-                    : "Agenda"}
+                 {selectedAgendaUsers.length === 0
+  ? "Agenda"
+  : selectedAgendaUsers.length === 1
+  ? `Agenda di ${selectedAgendaUsers[0].cognome} ${selectedAgendaUsers[0].nome}`
+  : `${selectedAgendaUsers.length} nominativi selezionati`}
                 </div>
               </div>
 
-             <div className="min-w-[180px] max-w-[220px]">
-                <Select
-                  value={selectedAgendaUserId || currentUserId || ""}
-                  onValueChange={(value) => setSelectedAgendaUserId(value)}
-                >
-                  <SelectTrigger className="rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 shadow-sm">
-                    <SelectValue placeholder="Seleziona utente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {utenti.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.cognome} {u.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            const toggleAgendaUser = (userId: string, checked: boolean) => {
+  setSelectedAgendaUserIds((prev) => {
+    if (checked) {
+      return [...new Set([...prev, userId])];
+    }
+    return prev.filter((id) => id !== userId);
+  });
+};
             </div>
 
             <div className="mt-4 flex items-center gap-2">
