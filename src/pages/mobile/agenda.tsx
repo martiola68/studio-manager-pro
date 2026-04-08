@@ -484,32 +484,42 @@ const USER_EVENT_COLORS = [
   {
     left: "border-l-emerald-500",
     dot: "bg-emerald-500",
-    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    badge: "border-emerald-300 bg-emerald-50 text-emerald-800",
   },
   {
     left: "border-l-blue-500",
     dot: "bg-blue-500",
-    badge: "border-blue-200 bg-blue-50 text-blue-700",
+    badge: "border-blue-300 bg-blue-50 text-blue-800",
   },
   {
     left: "border-l-violet-500",
     dot: "bg-violet-500",
-    badge: "border-violet-200 bg-violet-50 text-violet-700",
+    badge: "border-violet-300 bg-violet-50 text-violet-800",
   },
   {
     left: "border-l-amber-500",
     dot: "bg-amber-500",
-    badge: "border-amber-200 bg-amber-50 text-amber-700",
+    badge: "border-amber-300 bg-amber-50 text-amber-800",
   },
   {
     left: "border-l-rose-500",
     dot: "bg-rose-500",
-    badge: "border-rose-200 bg-rose-50 text-rose-700",
+    badge: "border-rose-300 bg-rose-50 text-rose-800",
   },
   {
     left: "border-l-cyan-500",
     dot: "bg-cyan-500",
-    badge: "border-cyan-200 bg-cyan-50 text-cyan-700",
+    badge: "border-cyan-300 bg-cyan-50 text-cyan-800",
+  },
+  {
+    left: "border-l-fuchsia-500",
+    dot: "bg-fuchsia-500",
+    badge: "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-800",
+  },
+  {
+    left: "border-l-lime-500",
+    dot: "bg-lime-500",
+    badge: "border-lime-300 bg-lime-50 text-lime-800",
   },
 ];
 
@@ -528,13 +538,8 @@ const getUserEventColor = (userId?: string | null) => {
 };
 
 const getSelectedAgendaUsersLabel = (users: UtenteAgenda[]) => {
-  if (users.length === 0) return "Tutti";
-
-  const labels = users.map((u) => `${u.cognome} ${u.nome}`);
-
-  if (labels.length <= 2) return labels.join(" • ");
-
-  return `${labels[0]} • ${labels[1]} • +${labels.length - 2}`;
+  if (users.length === 0) return "Tutti i nominativi";
+  return users.map((u) => `${u.cognome} ${u.nome}`).join(", ");
 };
 
 const toNotificationPayload = (e: Record<string, unknown>) => ({
@@ -1555,23 +1560,25 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
 
   const agendaFilterLabel = getSelectedAgendaUsersLabel(selectedAgendaUsers);
 
-const renderAgendaCard = (evento: EventoGroup, compact = false) => {
+ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
     const userColor = getUserEventColor(evento.utente_id);
     const ownerName = evento.utente
       ? `${evento.utente.cognome} ${evento.utente.nome}`
       : "Nominativo non disponibile";
+
+    const badgeLabel = `${ownerName} - ${evento.titolo || "(senza titolo)"}`;
 
     return (
       <button
         key={evento.gruppo_evento}
         type="button"
         onClick={() => handleOpenDetail(evento)}
-        className={`w-full text-left rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm transition active:scale-[0.99] border-l-4 ${userColor.left}`}
+        className={`w-full text-left rounded-[18px] border border-slate-200 bg-white p-2.5 shadow-sm transition active:scale-[0.99] border-l-4 ${userColor.left}`}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${userColor.dot}`} />
+              <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${userColor.dot}`} />
               <p className="text-[15px] font-semibold text-slate-900 truncate">
                 {evento.titolo || "(senza titolo)"}
               </p>
@@ -1584,15 +1591,15 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
 
             <div className="mt-1.5">
               <span
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${userColor.badge}`}
+                className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${userColor.badge}`}
               >
-                {ownerName}
+                <span className="truncate">{badgeLabel}</span>
               </span>
             </div>
           </div>
         </div>
 
-        <div className="mt-2.5 space-y-1.5">
+        <div className="mt-2 space-y-1">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Building2 className="h-4 w-4 shrink-0" />
             <span className="truncate">
@@ -1619,7 +1626,7 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
       </button>
     );
   };
-
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f3f6fb] px-4 py-10">
@@ -1648,9 +1655,9 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
                   <Button
                     type="button"
                     variant="outline"
-                    className="flex-1 justify-between rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm overflow-hidden"
+                    className="min-w-0 flex-1 justify-between rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm"
                   >
-                    <span className="truncate">{agendaFilterLabel}</span>
+                    <span className="truncate">Seleziona nominativi</span>
                     <Users className="h-4 w-4 ml-2 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1706,26 +1713,8 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
 
               <button
                 type="button"
-                onClick={() => setSelectedDate(startOfDay(new Date()))}
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold shadow-sm"
-              >
-                Oggi
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
                 onClick={() => setView(view === "day" ? "week" : "day")}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm"
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm"
               >
                 {view === "day" ? (
                   <>
@@ -1739,6 +1728,19 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
                   </>
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={handleNext}
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            <div className="mt-2 text-xs leading-5 text-slate-500">
+              <span className="font-medium text-slate-600">Filtrati:</span>{" "}
+              <span>{agendaFilterLabel}</span>
             </div>
 
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1808,7 +1810,7 @@ const renderAgendaCard = (evento: EventoGroup, compact = false) => {
               {eventiSettimana.map(({ day, eventi }) => (
                  <div
                   key={day.toISOString()}
-                  className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm"
+                  className="rounded-[20px] border border-slate-200 bg-white p-2.5 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <div>
