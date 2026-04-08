@@ -1660,6 +1660,8 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
           </div>
         ))}
       </div>
+        </DropdownMenuContent>
+  </DropdownMenu>
             
             <div className="mt-4 flex items-center gap-2">
               <button
