@@ -480,6 +480,63 @@ const getParticipantLabel = (evento: EventoGroup) => {
   return `${evento.participantUsers.length} partecipanti`;
 };
 
+const USER_EVENT_COLORS = [
+  {
+    left: "border-l-emerald-500",
+    dot: "bg-emerald-500",
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  {
+    left: "border-l-blue-500",
+    dot: "bg-blue-500",
+    badge: "border-blue-200 bg-blue-50 text-blue-700",
+  },
+  {
+    left: "border-l-violet-500",
+    dot: "bg-violet-500",
+    badge: "border-violet-200 bg-violet-50 text-violet-700",
+  },
+  {
+    left: "border-l-amber-500",
+    dot: "bg-amber-500",
+    badge: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  {
+    left: "border-l-rose-500",
+    dot: "bg-rose-500",
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
+  },
+  {
+    left: "border-l-cyan-500",
+    dot: "bg-cyan-500",
+    badge: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  },
+];
+
+const getUserEventColor = (userId?: string | null) => {
+  if (!userId) {
+    return {
+      left: "border-l-slate-400",
+      dot: "bg-slate-400",
+      badge: "border-slate-200 bg-slate-50 text-slate-700",
+    };
+  }
+
+  const chars = String(userId).split("");
+  const hash = chars.reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return USER_EVENT_COLORS[hash % USER_EVENT_COLORS.length];
+};
+
+const getSelectedAgendaUsersLabel = (users: UtenteAgenda[]) => {
+  if (users.length === 0) return "Tutti";
+
+  const labels = users.map((u) => `${u.cognome} ${u.nome}`);
+
+  if (labels.length <= 2) return labels.join(" • ");
+
+  return `${labels[0]} • ${labels[1]} • +${labels.length - 2}`;
+};
+
 const toNotificationPayload = (e: Record<string, unknown>) => ({
   ...e,
   eventoInSede: Boolean((e as any)?.in_sede),
@@ -1492,70 +1549,59 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
           year: "numeric",
         })}`;
 
-   const agendaFilterLabel =
-    selectedAgendaUserIds.length === 0
-      ? "Tutti"
-      : selectedAgendaUserIds.length === 1
-      ? "1 selezionato"
-      : `${selectedAgendaUserIds.length} selezionati`;
+   const selectedAgendaUsers = utenti.filter((u) =>
+    selectedAgendaUserIds.includes(String(u.id))
+  );
 
-  const renderAgendaCard = (evento: EventoGroup, compact = false) => {
-    const style = getSettoreEventColor(evento.utente?.settore, Boolean(evento.riunione_teams));
+  const agendaFilterLabel = getSelectedAgendaUsersLabel(selectedAgendaUsers);
+
+const renderAgendaCard = (evento: EventoGroup, compact = false) => {
+    const userColor = getUserEventColor(evento.utente_id);
+    const ownerName = evento.utente
+      ? `${evento.utente.cognome} ${evento.utente.nome}`
+      : "Nominativo non disponibile";
 
     return (
       <button
         key={evento.gruppo_evento}
         type="button"
         onClick={() => handleOpenDetail(evento)}
-        className={`w-full text-left rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm transition active:scale-[0.99] border-l-4 ${style.left}`}
+        className={`w-full text-left rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm transition active:scale-[0.99] border-l-4 ${userColor.left}`}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${style.soft}`} />
-              <p className="text-base font-semibold text-slate-900 truncate">
+              <span className={`h-2.5 w-2.5 rounded-full ${userColor.dot}`} />
+              <p className="text-[15px] font-semibold text-slate-900 truncate">
                 {evento.titolo || "(senza titolo)"}
               </p>
             </div>
 
-            <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-              <Clock className="h-4 w-4" />
+            <div className="mt-1.5 flex items-center gap-2 text-sm text-slate-600">
+              <Clock className="h-4 w-4 shrink-0" />
               <span>{formatTimeRange(evento)}</span>
             </div>
-          </div>
 
-          <div className="flex flex-col items-end gap-1.5">
-            {evento.utente?.settore && (
+            <div className="mt-1.5">
               <span
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getSettoreBadgeClass(
-                  evento.utente.settore
-                )}`}
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${userColor.badge}`}
               >
-                {normalizeSettore(evento.utente.settore) || evento.utente.settore}
+                {ownerName}
               </span>
-            )}
-
-            {(evento.provider || evento.riunione_teams) && (
-              <span
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getProviderBadgeClass(
-                  evento.provider,
-                  evento.riunione_teams
-                )}`}
-              >
-                {evento.riunione_teams ? "Teams" : evento.provider}
-              </span>
-            )}
+            </div>
           </div>
         </div>
 
-        <div className="mt-3 space-y-2">
+        <div className="mt-2.5 space-y-1.5">
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <Building2 className="h-4 w-4" />
-            <span className="truncate">{evento.cliente?.ragione_sociale || "Evento senza cliente"}</span>
+            <Building2 className="h-4 w-4 shrink-0" />
+            <span className="truncate">
+              {evento.cliente?.ragione_sociale || "Evento senza cliente"}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-slate-600">
-            <MapPin className="h-4 w-4" />
+            <MapPin className="h-4 w-4 shrink-0" />
             <span className="truncate">
               {evento.in_sede
                 ? `In sede${evento.sala ? ` • ${evento.sala}` : ""}`
@@ -1565,7 +1611,7 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
 
           {!compact && (
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Users className="h-4 w-4" />
+              <Users className="h-4 w-4 shrink-0" />
               <span className="truncate">{getParticipantLabel(evento)}</span>
             </div>
           )}
@@ -1585,87 +1631,75 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
       </div>
     );
   }
-  const selectedAgendaUsers = utenti.filter((u) =>
-  selectedAgendaUserIds.includes(String(u.id))
-);
+
    return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       <div className="mx-auto max-w-md pb-28">
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-[#f3f6fb]/95 backdrop-blur">
-          <div className="px-4 pt-5 pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[26px] font-bold tracking-tight">Agenda</div>
-                <div className="mt-1 text-sm text-slate-500 capitalize">{headerTitle}</div>
-                <div className="mt-1 text-xs text-slate-500">
-                 {selectedAgendaUsers.length === 0
-  ? "Agenda"
-  : selectedAgendaUsers.length === 1
-  ? `Agenda di ${selectedAgendaUsers[0].cognome} ${selectedAgendaUsers[0].nome}`
-  : `${selectedAgendaUsers.length} nominativi selezionati`}
-                </div>
-              </div>
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-[#f3f6fb]/95 backdrop-blur">
+          <div className="px-4 pt-4 pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[26px] font-bold tracking-tight">Agenda</div>
+              <div className="text-sm text-slate-500 capitalize text-right">{headerTitle}</div>
             </div>
 
-            <div className="mt-3">
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full justify-between rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm"
-      >
-        <span>{agendaFilterLabel}</span>
-        <Users className="h-4 w-4 ml-2" />
-      </Button>
-    </DropdownMenuTrigger>
+            <div className="mt-3 flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 justify-between rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm overflow-hidden"
+                  >
+                    <span className="truncate">{agendaFilterLabel}</span>
+                    <Users className="h-4 w-4 ml-2 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
 
-    <DropdownMenuContent align="start" className="w-[280px] rounded-2xl p-2">
-      <div className="max-h-[320px] overflow-y-auto">
-        <div className="flex items-center gap-3 rounded-xl px-3 py-2">
-          <Checkbox
-            checked={selectedAgendaUserIds.length === 0}
-            onCheckedChange={(checked: CheckedState) => {
-              if (checked === true) {
-                setSelectedAgendaUserIds([]);
-              }
-            }}
-          />
-          <span className="text-sm font-medium">Tutti i nominativi</span>
-        </div>
+                <DropdownMenuContent align="start" className="w-[280px] rounded-2xl p-2">
+                  <div className="max-h-[320px] overflow-y-auto">
+                    <div className="flex items-center gap-3 rounded-xl px-3 py-2">
+                      <Checkbox
+                        checked={selectedAgendaUserIds.length === 0}
+                        onCheckedChange={(checked: CheckedState) => {
+                          if (checked === true) {
+                            setSelectedAgendaUserIds([]);
+                          }
+                        }}
+                      />
+                      <span className="text-sm font-medium">Tutti i nominativi</span>
+                    </div>
 
-        {utenti.map((u) => (
-          <div
-            key={u.id}
-            className="flex items-center gap-3 rounded-xl px-3 py-2"
-          >
-            <Checkbox
-              checked={selectedAgendaUserIds.includes(u.id)}
-              onCheckedChange={(checked: CheckedState) =>
-                toggleAgendaUser(u.id, checked === true)
-              }
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-slate-800">
-                {u.cognome} {u.nome}
-              </div>
-              {u.settore && (
-                <div className="mt-1 text-[11px] text-slate-500">
-                  {normalizeSettore(u.settore) || u.settore}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-        </DropdownMenuContent>
-  </DropdownMenu>
-            
-            <div className="mt-4 flex items-center gap-2">
+                    {utenti.map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2"
+                      >
+                        <Checkbox
+                          checked={selectedAgendaUserIds.includes(u.id)}
+                          onCheckedChange={(checked: CheckedState) =>
+                            toggleAgendaUser(u.id, checked === true)
+                          }
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-800">
+                            {u.cognome} {u.nome}
+                          </div>
+                          {u.settore && (
+                            <div className="mt-1 text-[11px] text-slate-500">
+                              {normalizeSettore(u.settore) || u.settore}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <button
                 type="button"
                 onClick={handlePrev}
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
               >
                 <ChevronLeft size={18} />
               </button>
@@ -1673,7 +1707,7 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
               <button
                 type="button"
                 onClick={() => setSelectedDate(startOfDay(new Date()))}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold shadow-sm"
               >
                 Oggi
               </button>
@@ -1681,85 +1715,80 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
               <button
                 type="button"
                 onClick={handleNext}
-                className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
               >
                 <ChevronRight size={18} />
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 rounded-[22px] bg-slate-200/70 p-1">
+            <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                onClick={() => setView("day")}
-                className={`flex items-center justify-center gap-2 rounded-[18px] px-3 py-2.5 text-sm font-semibold ${
-                  view === "day" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
-                }`}
+                onClick={() => setView(view === "day" ? "week" : "day")}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm"
               >
-                <Clock className="h-4 w-4" />
-                Giorno
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setView("week")}
-                className={`flex items-center justify-center gap-2 rounded-[18px] px-3 py-2.5 text-sm font-semibold ${
-                  view === "week" ? "bg-white shadow-sm text-slate-900" : "text-slate-600"
-                }`}
-              >
-                <CalendarDays className="h-4 w-4" />
-                Settimana
+                {view === "day" ? (
+                  <>
+                    <CalendarDays className="h-4 w-4" />
+                    Settimana
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-4 w-4" />
+                    Giorno
+                  </>
+                )}
               </button>
             </div>
-                </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {weekDays.map((day) => {
                 const active = isSameDay(day, selectedDate);
                 const today = isSameDay(day, new Date());
 
                 return (
-                 <button
-  key={day.toISOString()}
-  type="button"
-  onClick={() => {
-    setSelectedDate(day);
-    setView("day");
-  }}
-  className={`min-w-[76px] rounded-[22px] border px-3 py-3 text-center shadow-sm ${
-    active
-      ? "border-blue-600 bg-blue-600 text-white"
-      : "border-slate-200 bg-white text-slate-800"
-  }`}
->
-  <div className="text-[11px] uppercase">
-    {day.toLocaleDateString("it-IT", { weekday: "short" })}
-  </div>
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate(day);
+                      setView("day");
+                    }}
+                    className={`min-w-[70px] rounded-[18px] border px-2.5 py-2.5 text-center shadow-sm ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-slate-200 bg-white text-slate-800"
+                    }`}
+                  >
+                    <div className="text-[10px] uppercase">
+                      {day.toLocaleDateString("it-IT", { weekday: "short" })}
+                    </div>
 
-  <div className="mt-1 text-lg font-bold">
-    {day.toLocaleDateString("it-IT", { day: "2-digit" })}
-  </div>
+                    <div className="mt-1 text-lg font-bold">
+                      {day.toLocaleDateString("it-IT", { day: "2-digit" })}
+                    </div>
 
-  <div className="mt-1 text-[10px] font-medium">
-    {(() => {
-      const count = mobileEvents.filter((evento) =>
-        isSameDay(safeParseISO(evento.data_inizio), day)
-      ).length;
+                    <div className="mt-1 text-[10px] font-medium">
+                      {(() => {
+                        const count = mobileEvents.filter((evento) =>
+                          isSameDay(safeParseISO(evento.data_inizio), day)
+                        ).length;
 
-      if (count > 0) {
-        return count === 1 ? "1 app." : `${count} app.`;
-      }
+                        if (count > 0) {
+                          return count === 1 ? "1 app." : `${count} app.`;
+                        }
 
-      return today ? "Oggi" : "\u00A0";
-    })()}
-  </div>
-</button>
+                        return today ? "Oggi" : "\u00A0";
+                      })()}
+                    </div>
+                  </button>
                 );
               })}
             </div>
           </div>
         </div>
-
-        <div className="px-4 pt-4">
+        
+               <div className="px-4 pt-3">
           {view === "day" ? (
             <div className="space-y-3">
               <div className="px-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -1777,9 +1806,9 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
           ) : (
             <div className="space-y-4">
               {eventiSettimana.map(({ day, eventi }) => (
-                <div
+                 <div
                   key={day.toISOString()}
-                  className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm"
                 >
                   <div className="mb-3 flex items-center justify-between">
                     <div>
@@ -1811,7 +1840,7 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
                       Nessun evento
                     </div>
                   ) : (
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       {eventi.map((evento) => renderAgendaCard(evento, true))}
                     </div>
                   )}
@@ -1868,29 +1897,8 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
 
               <div className="space-y-4 px-5 py-4">
                 <div className="flex flex-wrap gap-2">
-                  {selectedEvento.utente?.settore && (
-                    <span
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getSettoreBadgeClass(
-                        selectedEvento.utente.settore
-                      )}`}
-                    >
-                      {normalizeSettore(selectedEvento.utente.settore) || selectedEvento.utente.settore}
-                    </span>
-                  )}
-
-                  {(selectedEvento.provider || selectedEvento.riunione_teams) && (
-                    <span
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getProviderBadgeClass(
-                        selectedEvento.provider,
-                        selectedEvento.riunione_teams
-                      )}`}
-                    >
-                      {selectedEvento.riunione_teams ? "Teams" : selectedEvento.provider}
-                    </span>
-                  )}
-
                   {selectedEvento.in_sede && (
-                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                       In sede
                     </span>
                   )}
