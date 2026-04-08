@@ -55,6 +55,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { calendarSyncService } from "@/services/calendarSyncService";
 
 // ----------------------------------------------------
@@ -1584,6 +1590,13 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
   selectedAgendaUserIds.includes(String(u.id))
 );
 
+  const agendaFilterLabel =
+  selectedAgendaUserIds.length === 0
+    ? "Tutti"
+    : selectedAgendaUserIds.length === 1
+    ? "1 selezionato"
+    : `${selectedAgendaUserIds.length} selezionati`;
+
   return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       <div className="mx-auto max-w-md pb-28">
@@ -1601,9 +1614,60 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
   : `${selectedAgendaUsers.length} nominativi selezionati`}
                 </div>
               </div>
-
             </div>
 
+            <div className="mt-3">
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-between rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm"
+      >
+        <span>{agendaFilterLabel}</span>
+        <Users className="h-4 w-4 ml-2" />
+      </Button>
+    </DropdownMenuTrigger>
+
+    <DropdownMenuContent align="start" className="w-[280px] rounded-2xl p-2">
+      <div className="max-h-[320px] overflow-y-auto">
+        <div className="flex items-center gap-3 rounded-xl px-3 py-2">
+          <Checkbox
+            checked={selectedAgendaUserIds.length === 0}
+            onCheckedChange={(checked: CheckedState) => {
+              if (checked === true) {
+                setSelectedAgendaUserIds([]);
+              }
+            }}
+          />
+          <span className="text-sm font-medium">Tutti i nominativi</span>
+        </div>
+
+        {utenti.map((u) => (
+          <div
+            key={u.id}
+            className="flex items-center gap-3 rounded-xl px-3 py-2"
+          >
+            <Checkbox
+              checked={selectedAgendaUserIds.includes(u.id)}
+              onCheckedChange={(checked: CheckedState) =>
+                toggleAgendaUser(u.id, checked === true)
+              }
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-slate-800">
+                {u.cognome} {u.nome}
+              </div>
+              {u.settore && (
+                <div className="mt-1 text-[11px] text-slate-500">
+                  {normalizeSettore(u.settore) || u.settore}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+            
             <div className="mt-4 flex items-center gap-2">
               <button
                 type="button"
