@@ -1585,11 +1585,9 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
       </div>
     );
   }
-
   const selectedAgendaUsers = utenti.filter((u) =>
   selectedAgendaUserIds.includes(String(u.id))
 );
-
    return (
     <div className="min-h-screen bg-[#f3f6fb] text-slate-900">
       <div className="mx-auto max-w-md pb-28">
@@ -1712,6 +1710,7 @@ const toggleAgendaUser = (userId: string, checked: boolean) => {
                 Settimana
               </button>
             </div>
+                </div>
 
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
               {weekDays.map((day) => {
