@@ -578,7 +578,7 @@ export default function MessaggiPage() {
           )}
         >
           <ChatSidebar
-            conversazioni={conversazioni}
+            conversazioni={conversazioni as any}
             selectedId={selectedConvId}
             onSelect={handleSelectConversation}
             currentUserEmail={user?.email}
