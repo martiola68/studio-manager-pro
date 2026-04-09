@@ -345,10 +345,12 @@ export function ChatArea({
                     )}
 
                     <div
-                      className={cn(
-                        "max-w-[85%] md:max-w-[70%] rounded-lg p-2.5 md:p-3 relative group break-words",
-                        isMe ? "bg-primary text-primary-foreground" : "bg-muted"
-                      )}
+className={cn(
+  "max-w-[85%] md:max-w-[70%] rounded-lg p-2.5 md:p-3 relative group break-words shadow-sm",
+  isMe
+    ? "bg-green-100 text-gray-900 border border-green-200"
+    : "bg-gray-100 text-gray-900 border border-gray-200"
+)}
                       onMouseEnter={() => setHoveredMessageId(msg.id)}
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
