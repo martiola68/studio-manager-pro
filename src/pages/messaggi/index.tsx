@@ -30,6 +30,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/types";
 import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,13 +42,12 @@ type UserProfile = {
   tipo_utente?: string;
 };
 
-type Conversazione = {
-  id: string;
-  tipo: "diretta" | "gruppo";
-  titolo?: string | null;
-  creato_da?: string | null;
-  studio_id?: string | null;
+type ConversazioneBase = Database["public"]["Tables"]["tbconversazioni"]["Row"];
+
+type Conversazione = ConversazioneBase & {
   partecipanti?: any[];
+  ultimo_messaggio?: any;
+  non_letti?: number;
 };
 
 export default function MessaggiPage() {
@@ -58,7 +58,6 @@ export default function MessaggiPage() {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [studioId, setStudioId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
-
   const [conversazioni, setConversazioni] = useState<Conversazione[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [selectedCreatorId, setSelectedCreatorId] = useState<string | null>(null);
@@ -110,7 +109,6 @@ export default function MessaggiPage() {
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
-
       if (!authUser) {
         router.push("/login");
         return;
@@ -119,7 +117,6 @@ export default function MessaggiPage() {
       setAuthUserId(authUser.id);
 
       const profile = await authService.getUserProfile(authUser.id);
-
       if (!profile) {
         router.push("/login");
         return;
@@ -134,17 +131,18 @@ export default function MessaggiPage() {
       if (studio?.id) {
         setStudioId(studio.id);
         await loadUtentiStudio(studio.id);
+        await loadConversazioni(authUser.id, studio.id);
+      } else {
+        await loadConversazioni(authUser.id, null);
       }
-
-      await loadConversazioni(authUser.id);
     } catch (error) {
       console.error("Auth error:", error);
       router.push("/login");
     }
   };
 
-  const loadConversazioni = async (userId: string) => {
-    const data = await messaggioService.getConversazioni(userId);
+  const loadConversazioni = async (userId: string, currentStudioId?: string | null) => {
+    const data = await messaggioService.getConversazioni(userId, currentStudioId || studioId);
     const convs = (data || []) as Conversazione[];
     setConversazioni(convs);
     return convs;
@@ -168,9 +166,7 @@ export default function MessaggiPage() {
         (m) => !prevIds.has(m.id) && m.mittente_id !== authUserId
       );
 
-      // suono disabilitato
       void newRemoteMessages;
-
       return incoming || [];
     });
   };
@@ -178,24 +174,24 @@ export default function MessaggiPage() {
   const loadMessaggi = async (convId: string) => {
     if (!authUserId) return;
 
-    const data = await messaggioService.getMessaggi(convId);
+    const data = await messaggioService.getMessaggi(convId, authUserId);
     mergeMessagesAndNotify(data || []);
 
     await messaggioService.segnaComeLetto(convId, authUserId);
-    await loadConversazioni(authUserId);
+    await loadConversazioni(authUserId, studioId);
   };
 
   const loadMessaggiSilent = async (convId: string) => {
     if (!authUserId) return;
 
-    const data = await messaggioService.getMessaggi(convId);
+    const data = await messaggioService.getMessaggi(convId, authUserId);
     mergeMessagesAndNotify(data || []);
 
     if (document.visibilityState === "visible") {
       await messaggioService.segnaComeLetto(convId, authUserId);
     }
 
-    await loadConversazioni(authUserId);
+    await loadConversazioni(authUserId, studioId);
   };
 
   const subscribeToChat = (convId: string) => {
@@ -209,11 +205,6 @@ export default function MessaggiPage() {
     const selectedConversation = conversazioni.find((c) => c.id === convId);
     const currentStudioId = selectedConversation?.studio_id || studioId || null;
 
-    let filter = `conversazione_id=eq.${convId}`;
-    if (currentStudioId) {
-      filter = `conversazione_id=eq.${convId},studio_id=eq.${currentStudioId}`;
-    }
-
     subscriptionRef.current = supabase
       .channel(`chat:${convId}:${currentStudioId || "no-studio"}`)
       .on(
@@ -222,9 +213,13 @@ export default function MessaggiPage() {
           event: "INSERT",
           schema: "public",
           table: "tbmessaggi",
-          filter,
+          filter: `conversazione_id=eq.${convId}`,
         },
         async (payload) => {
+          if (currentStudioId && payload?.new?.studio_id && payload.new.studio_id !== currentStudioId) {
+            return;
+          }
+
           const { data: sender } = await supabase
             .from("tbutenti")
             .select("id, nome, cognome, email")
@@ -244,8 +239,12 @@ export default function MessaggiPage() {
             return [...prev, newMessage as any];
           });
 
-          // suono disabilitato
           window.dispatchEvent(new Event("messaggi-updated"));
+
+          if (document.visibilityState === "visible" && selectedConvId === convId) {
+            await messaggioService.segnaComeLetto(convId, authUserId);
+            await loadMessaggiSilent(convId);
+          }
         }
       )
       .subscribe();
@@ -257,6 +256,11 @@ export default function MessaggiPage() {
     const testoFinale = (testo || "").trim() || " ";
 
     try {
+      await supabase
+        .from("tbconversazioni")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", selectedConvId);
+
       const { data: sentMsg, error } = await supabase
         .from("tbmessaggi")
         .insert({
@@ -284,6 +288,7 @@ export default function MessaggiPage() {
         const optimisticMsg = {
           ...sentMsg,
           studio_id: studioId,
+          letto_da_altri: false,
           mittente: {
             id: authUserId,
             nome: user.nome,
@@ -299,7 +304,7 @@ export default function MessaggiPage() {
           return [...prev, optimisticMsg];
         });
 
-        await loadConversazioni(authUserId);
+        await loadConversazioni(authUserId, studioId);
 
         if (files && files.length > 0) {
           setTimeout(() => {
@@ -340,7 +345,7 @@ export default function MessaggiPage() {
         throw new Error("Impossibile creare la conversazione");
       }
 
-      await loadConversazioni(authUserId);
+      await loadConversazioni(authUserId, studioId);
       handleSelectConversation(conv.id);
 
       toast({
@@ -385,7 +390,7 @@ export default function MessaggiPage() {
         setIsNewChatOpen(false);
         setGroupTitle("");
         setSelectedMembers([]);
-        await loadConversazioni(authUserId);
+        await loadConversazioni(authUserId, studioId);
         handleSelectConversation(conv.id);
 
         toast({
@@ -447,7 +452,7 @@ export default function MessaggiPage() {
       setEditGroupTitle("");
       setEditSelectedMembers([]);
 
-      const updatedConversazioni = await loadConversazioni(authUserId);
+      const updatedConversazioni = await loadConversazioni(authUserId, studioId);
       const updatedConv = updatedConversazioni.find((c: any) => c.id === editGroupId);
 
       setSelectedConvId(editGroupId);
@@ -497,8 +502,8 @@ export default function MessaggiPage() {
     const nomeConv =
       conv?.tipo === "gruppo"
         ? conv.titolo
-        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)?.tbutenti
-            ?.nome || "questa conversazione";
+        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)
+            ?.tbutenti?.nome || "questa conversazione";
 
     if (
       !confirm(
@@ -516,7 +521,7 @@ export default function MessaggiPage() {
         setSelectedCreatorId(null);
       }
 
-      await loadConversazioni(authUserId);
+      await loadConversazioni(authUserId, studioId);
 
       toast({
         title: "✅ Conversazione eliminata",
