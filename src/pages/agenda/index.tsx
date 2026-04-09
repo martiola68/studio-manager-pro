@@ -2438,9 +2438,7 @@ const handleDeleteEvento = async () => {
   };
 
   const renderTeamsView = () => {
-    const loggedUserLabel = loggedUser
-      ? `${loggedUser.cognome} ${loggedUser.nome}`
-      : "utente loggato";
+  const loggedUserLabel = loggedUser
 
     if (teamsEvents.length === 0) {
       return (
