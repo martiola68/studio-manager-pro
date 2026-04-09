@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Plus, Users } from "lucide-react";
+import { Search, Plus, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -49,32 +49,35 @@ export function ChatSidebar({
   className,
 }: ChatSidebarProps) {
   const [search, setSearch] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-  const filtered = conversazioni.filter((c) => {
-    if (c.tipo === "gruppo") {
-      const titoloMatch = c.titolo?.toLowerCase().includes(search.toLowerCase());
+  const filtered = useMemo(() => {
+    return conversazioni.filter((c) => {
+      if (c.tipo === "gruppo") {
+        const titoloMatch = c.titolo?.toLowerCase().includes(search.toLowerCase());
 
-      const partecipantiMatch =
-        c.partecipanti?.some((p) => {
-          const nomeCompleto = `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`
-            .trim()
-            .toLowerCase();
-          return nomeCompleto.includes(search.toLowerCase());
-        }) || false;
+        const partecipantiMatch =
+          c.partecipanti?.some((p) => {
+            const nomeCompleto = `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`
+              .trim()
+              .toLowerCase();
+            return nomeCompleto.includes(search.toLowerCase());
+          }) || false;
 
-      return !!titoloMatch || partecipantiMatch;
-    }
+        return !!titoloMatch || partecipantiMatch;
+      }
 
-    const altroUtente = c.partecipanti?.find(
-      (p) => p.tbutenti?.email !== currentUserEmail
-    )?.tbutenti;
+      const altroUtente = c.partecipanti?.find(
+        (p) => p.tbutenti?.email !== currentUserEmail
+      )?.tbutenti;
 
-    const nome = altroUtente
-      ? `${altroUtente.nome} ${altroUtente.cognome}`
-      : "Chat";
+      const nome = altroUtente
+        ? `${altroUtente.nome} ${altroUtente.cognome}`
+        : "Chat";
 
-    return nome.toLowerCase().includes(search.toLowerCase());
-  });
+      return nome.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [conversazioni, search, currentUserEmail]);
 
   const getDisplayInfo = (conv: ConversazioneConDettagli) => {
     if (conv.tipo === "gruppo") {
@@ -104,16 +107,23 @@ export function ChatSidebar({
     };
   };
 
- const getGroupParticipants = (conv: ConversazioneConDettagli) => {
-  if (conv.tipo !== "gruppo") return [];
+  const getGroupParticipants = (conv: ConversazioneConDettagli) => {
+    if (conv.tipo !== "gruppo") return [];
 
-  return (
-    conv.partecipanti
-      ?.filter((p) => p.tbutenti && p.tbutenti.email !== currentUserEmail)
-      .map((p) => `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`.trim())
-      .filter(Boolean) || []
-  );
-};
+    return (
+      conv.partecipanti
+        ?.filter((p) => p.tbutenti && p.tbutenti.email !== currentUserEmail)
+        .map((p) => `${p.tbutenti?.nome || ""} ${p.tbutenti?.cognome || ""}`.trim())
+        .filter(Boolean) || []
+    );
+  };
+
+  const toggleGroupExpanded = (convId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [convId]: !prev[convId],
+    }));
+  };
 
   return (
     <div className={cn("flex flex-col h-full border-r bg-background", className)}>
@@ -146,13 +156,14 @@ export function ChatSidebar({
             filtered.map((conv) => {
               const displayInfo = getDisplayInfo(conv);
               const groupParticipants = getGroupParticipants(conv);
+              const isExpanded = !!expandedGroups[conv.id];
 
               return (
-                <button
+                <div
                   key={conv.id}
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg text-left transition-colors hover:bg-accent active:bg-accent/80 touch-manipulation",
+                    "flex items-start gap-3 p-3 rounded-lg text-left transition-colors hover:bg-accent active:bg-accent/80 touch-manipulation cursor-pointer",
                     selectedId === conv.id && "bg-accent"
                   )}
                 >
@@ -166,62 +177,87 @@ export function ChatSidebar({
                     </AvatarFallback>
                   </Avatar>
 
-  <div className="flex-1 min-w-0">
-  <div className="flex items-start justify-between mb-1 gap-2">
-    <div className="flex items-start gap-1 flex-1 min-w-0">
-      <span
-        className={cn(
-          conv.tipo === "gruppo"
-            ? "font-semibold text-sm leading-snug whitespace-normal break-words block"
-            : "font-semibold text-sm truncate",
-          currentUserId && currentUserId !== conv.creato_da
-            ? "text-red-600"
-            : "text-black dark:text-white"
-        )}
-      >
-        {displayInfo.nome}
-      </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-1 gap-2">
+                      <div className="flex items-start gap-1 flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            conv.tipo === "gruppo"
+                              ? "font-semibold text-sm leading-snug whitespace-normal break-words block"
+                              : "font-semibold text-sm truncate",
+                            currentUserId && currentUserId !== conv.creato_da
+                              ? "text-red-600"
+                              : "text-black dark:text-white"
+                          )}
+                        >
+                          {displayInfo.nome}
+                        </span>
 
-      {displayInfo.isGroup && (
-        <span className="text-xs text-muted-foreground shrink-0 mt-[2px]">
-          ({conv.partecipanti?.length || 0})
-        </span>
-      )}
-    </div>
+                        {displayInfo.isGroup && (
+                          <span className="text-xs text-muted-foreground shrink-0 mt-[2px]">
+                            ({conv.partecipanti?.length || 0})
+                          </span>
+                        )}
+                      </div>
 
-    {conv.ultimo_messaggio && (
-      <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-        {formatDistanceToNow(new Date(conv.ultimo_messaggio.created_at!), {
-          addSuffix: false,
-          locale: it,
-        })}
-      </span>
-    )}
-  </div>
+                      {conv.ultimo_messaggio && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                          {formatDistanceToNow(new Date(conv.ultimo_messaggio.created_at!), {
+                            addSuffix: false,
+                            locale: it,
+                          })}
+                        </span>
+                      )}
+                    </div>
 
-  {conv.tipo === "gruppo" ? (
-    <div className="text-xs text-muted-foreground leading-snug">
-      {groupParticipants.length > 0 ? (
-        groupParticipants.map((name, index) => (
-          <div key={index} className="block">
-            {name}
-          </div>
-        ))
-      ) : (
-        <div>Nessun partecipante</div>
-      )}
-    </div>
-  ) : null}
+                    {conv.tipo === "gruppo" && (
+                      <div className="mt-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleGroupExpanded(conv.id);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronUp className="h-3.5 w-3.5" />
+                              Nascondi partecipanti
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3.5 w-3.5" />
+                              Mostra partecipanti
+                            </>
+                          )}
+                        </button>
 
-  {conv.tipo === "gruppo" && (conv.non_letti || 0) > 0 && (
-    <div className="mt-2 flex justify-end">
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-        {conv.non_letti}
-      </span>
-    </div>
-  )}
-</div>
-                </button>
+                        {isExpanded && (
+                          <div className="mt-2 text-xs text-muted-foreground leading-snug space-y-1">
+                            {groupParticipants.length > 0 ? (
+                              groupParticipants.map((name, index) => (
+                                <div key={`${conv.id}-participant-${index}`} className="block">
+                                  {name}
+                                </div>
+                              ))
+                            ) : (
+                              <div>Nessun partecipante</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {(conv.non_letti || 0) > 0 && (
+                      <div className="mt-2 flex justify-end">
+                        <span className="flex h-5 min-w-5 px-1 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                          {conv.non_letti}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })
           )}
