@@ -83,6 +83,39 @@ export default function MessaggiPage() {
   }, []);
 
   useEffect(() => {
+  if (!authUserId) return;
+
+  let interval: NodeJS.Timeout;
+
+  const updatePresence = async () => {
+    await supabase
+      .from("tbutenti")
+      .update({ last_seen: new Date().toISOString() })
+      .eq("id", authUserId);
+  };
+
+  // aggiorna subito
+  updatePresence();
+
+  // aggiorna ogni 30 secondi
+  interval = setInterval(updatePresence, 30000);
+
+  // quando torni sulla pagina → aggiorna subito
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      updatePresence();
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return () => {
+    clearInterval(interval);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+  };
+}, [authUserId]);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       audioRef.current = new Audio("/sounds/message.mp3");
       audioRef.current.preload = "auto";
