@@ -748,18 +748,30 @@ const filteredEvents = useMemo(() => {
   setUserFilterInitialized(true);
 }, [currentUserId, userFilterInitialized]);
 
-  const teamsEvents = useMemo(() => {
-    return groupedEvents
-      .filter(
-        (e) =>
-          Boolean(e.riunione_teams) &&
-          Boolean(String(e.link_teams || "").trim()) &&
-          Boolean(currentUserId) &&
-          (String(e.utente_id || "") === String(currentUserId) ||
-            e.partecipanti.some((id) => String(id) === String(currentUserId)))
-      )
-      .sort((a, b) => safeParseISO(a.data_inizio).getTime() - safeParseISO(b.data_inizio).getTime());
-  }, [groupedEvents, currentUserId]);
+ const teamsEvents = useMemo(() => {
+  return groupedEvents
+    .filter((e) => {
+      const isTeams =
+        Boolean(e.riunione_teams) &&
+        Boolean(String(e.link_teams || "").trim());
+
+      if (!isTeams) return false;
+
+      if (filtroUtenti.length === 0) return true;
+
+      const ownerMatch = filtroUtenti.includes(String(e.utente_id || ""));
+      const participantMatch = e.partecipanti.some((id) =>
+        filtroUtenti.includes(String(id))
+      );
+
+      return ownerMatch || participantMatch;
+    })
+    .sort(
+      (a, b) =>
+        safeParseISO(a.data_inizio).getTime() -
+        safeParseISO(b.data_inizio).getTime()
+    );
+}, [groupedEvents, filtroUtenti]);
 
   const filteredContactOptions = useMemo(() => {
     const search = searchContatti.trim().toLowerCase();
