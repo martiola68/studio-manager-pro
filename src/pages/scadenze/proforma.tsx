@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Trash2 } from "lucide-react";
 
 type ScadenzaProformaRow = {
   id: string;
@@ -143,6 +143,30 @@ export default function ScadenzarioProforma() {
         variant: "destructive",
       });
       // ricarico per riallineare
+      await loadData();
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const deleteRow = async (id: string) => {
+    try {
+      setSaving(id);
+
+      const { error } = await (supabase as any)
+        .from("tbscadproforma")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setScadenze((prev) => prev.filter((s) => s.id !== id));
+    } catch (error: any) {
+      toast({
+        title: "Errore eliminazione",
+        description: error.message,
+        variant: "destructive",
+      });
       await loadData();
     } finally {
       setSaving(null);
@@ -313,40 +337,43 @@ export default function ScadenzarioProforma() {
                   </th>
 
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Gennaio
+                    Gen
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Febbraio
+                    Feb
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Marzo
+                    Mar
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Aprile
+                    Apr
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Maggio
+                    Mag
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Giugno
+                    Giu
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Luglio
+                    Lug
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Agosto
+                    Ago
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Settembre
+                    Set
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Ottobre
+                    Ott
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Novembre
+                    Nov
                   </th>
                   <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[110px]">
-                    Dicembre
+                    Dic
+                  </th>
+                  <th className="h-10 px-2 text-center align-middle font-medium text-muted-foreground min-w-[90px]">
+                    Azioni
                   </th>
                 </tr>
               </thead>
@@ -354,7 +381,7 @@ export default function ScadenzarioProforma() {
               <tbody className="[&_tr:last-child]:border-0">
                 {filteredScadenze.length === 0 ? (
                   <tr className="border-b transition-colors hover:bg-muted/50">
-                    <td colSpan={15} className="p-2 align-middle text-center py-8 text-gray-500">
+                    <td colSpan={16} className="p-2 align-middle text-center py-8 text-gray-500">
                       Nessuna scadenza trovata
                     </td>
                   </tr>
@@ -480,6 +507,17 @@ export default function ScadenzarioProforma() {
                           }
                           disabled={saving === scadenza.id}
                         />
+                      </td>
+                      <td className="p-2 align-middle text-center min-w-[90px]">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteRow(scadenza.id)}
+                          disabled={saving === scadenza.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))
