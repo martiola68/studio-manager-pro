@@ -6,64 +6,64 @@ type Messaggio = Database["public"]["Tables"]["tbmessaggi"]["Row"];
 type Allegato = Database["public"]["Tables"]["tbmessaggi_allegati"]["Row"];
 
 export const messaggioService = {
+  async getConversazioni(userId: string, studioId?: string | null) {
+    let query = supabase
+      .from("tbconversazioni")
+      .select(`
+        *,
+        partecipanti:tbconversazioni_utenti(
+          utente_id,
+          ultimo_letto_at,
+          tbutenti(id, nome, cognome, email)
+        )
+      `)
+      .order("updated_at", { ascending: false });
 
- async getConversazioni(userId: string, studioId?: string | null) {
-  let query = supabase
-    .from("tbconversazioni")
-    .select(`
-      *,
-      partecipanti:tbconversazioni_utenti(
-        utente_id,
-        ultimo_letto_at,
-        tbutenti(id, nome, cognome, email)
-      )
-    `)
-    .order("updated_at", { ascending: false });
+    if (studioId) {
+      query = query.eq("studio_id", studioId);
+    }
 
-  if (studioId) {
-    query = query.eq("studio_id", studioId);
-  }
+    const { data, error } = await query;
 
-  const { data, error } = await query;
+    if (error) throw error;
 
-  if (error) throw error;
+    const conversazioniUtente = (data || []).filter((conv: any) => {
+      const isPartecipante = conv.partecipanti?.some((p: any) => p.utente_id === userId);
+      return isPartecipante;
+    });
 
-  const conversazioniUtente = (data || []).filter((conv: any) => {
-    const isPartecipante = conv.partecipanti?.some((p: any) => p.utente_id === userId);
-    return isPartecipante;
-  });
+    const conversazioniConDettagli = await Promise.all(
+      conversazioniUtente.map(async (conv: any) => {
+        const { data: ultimoMessaggio } = await supabase
+          .from("tbmessaggi")
+          .select("*")
+          .eq("conversazione_id", conv.id)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-  const conversazioniConDettagli = await Promise.all(
-    conversazioniUtente.map(async (conv: any) => {
-      const { data: ultimoMessaggio } = await supabase
-        .from("tbmessaggi")
-        .select("*")
-        .eq("conversazione_id", conv.id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
+        const ultimoLetto = partecipante?.ultimo_letto_at;
 
-      const partecipante = conv.partecipanti?.find((p: any) => p.utente_id === userId);
-      const ultimoLetto = partecipante?.ultimo_letto_at;
+        const { count } = await supabase
+          .from("tbmessaggi")
+          .select("*", { count: "exact", head: true })
+          .eq("conversazione_id", conv.id)
+          .neq("mittente_id", userId)
+          .is("deleted_at", null)
+          .gt("created_at", ultimoLetto || "1970-01-01");
 
-      const { count } = await supabase
-        .from("tbmessaggi")
-        .select("*", { count: "exact", head: true })
-        .eq("conversazione_id", conv.id)
-        .neq("mittente_id", userId)
-        .gt("created_at", ultimoLetto || "1970-01-01");
+        return {
+          ...conv,
+          ultimo_messaggio: ultimoMessaggio || null,
+          non_letti: count || 0,
+        };
+      })
+    );
 
-      return {
-        ...conv,
-        ultimo_messaggio: ultimoMessaggio || null,
-        non_letti: count || 0,
-      };
-    })
-  );
-
-  return conversazioniConDettagli;
-},
+    return conversazioniConDettagli;
+  },
 
   async aggiornaConversazioneGruppo(
     conversazioneId: string,
@@ -103,7 +103,7 @@ export const messaggioService = {
     return true;
   },
 
-   async getMessaggi(conversazioneId: string) {
+  async getMessaggi(conversazioneId: string, currentUserId?: string) {
     const { data, error } = await supabase
       .from("tbmessaggi")
       .select(`
@@ -116,24 +116,70 @@ export const messaggioService = {
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return data || [];
+
+    const messaggi = data || [];
+
+    if (!currentUserId || messaggi.length === 0) {
+      return messaggi;
+    }
+
+    const { data: partecipanti, error: partecipantiError } = await supabase
+      .from("tbconversazioni_utenti")
+      .select("utente_id, ultimo_letto_at")
+      .eq("conversazione_id", conversazioneId);
+
+    if (partecipantiError) throw partecipantiError;
+
+    const altriPartecipanti = (partecipanti || []).filter(
+      (p: any) => p.utente_id !== currentUserId
+    );
+
+    return messaggi.map((msg: any) => {
+      if (msg.mittente_id !== currentUserId) {
+        return {
+          ...msg,
+          letto_da_altri: false,
+        };
+      }
+
+      const lettoDaTutti =
+        altriPartecipanti.length > 0 &&
+        altriPartecipanti.every((p: any) => {
+          if (!p.ultimo_letto_at || !msg.created_at) return false;
+          return new Date(p.ultimo_letto_at).getTime() >= new Date(msg.created_at).getTime();
+        });
+
+      return {
+        ...msg,
+        letto_da_altri: lettoDaTutti,
+      };
+    });
   },
 
-  async inviaMessaggio(conversazioneId: string, mittenteId: string, testo: string) {
-    // Prima aggiorna il timestamp della conversazione
+  async inviaMessaggio(
+    conversazioneId: string,
+    mittenteId: string,
+    testo: string,
+    studioId?: string | null
+  ) {
     await supabase
       .from("tbconversazioni")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", conversazioneId);
 
-    // Poi inserisci il messaggio
+    const payload: any = {
+      conversazione_id: conversazioneId,
+      mittente_id: mittenteId,
+      testo,
+    };
+
+    if (studioId) {
+      payload.studio_id = studioId;
+    }
+
     const { data, error } = await supabase
       .from("tbmessaggi")
-      .insert({
-        conversazione_id: conversazioneId,
-        mittente_id: mittenteId,
-        testo,
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -141,7 +187,7 @@ export const messaggioService = {
     return data;
   },
 
- async segnaComeLetto(conversazioneId: string, utenteId: string) {
+  async segnaComeLetto(conversazioneId: string, utenteId: string) {
     const { error } = await supabase
       .from("tbconversazioni_utenti")
       .update({ ultimo_letto_at: new Date().toISOString() })
@@ -158,14 +204,12 @@ export const messaggioService = {
     }
   },
 
-
   async getOrCreateConversazioneDiretta(
     userId1: string,
     userId2: string,
     studioId: string
   ): Promise<Conversazione | null> {
     try {
-      // VALIDAZIONE INPUT
       if (!userId1 || !userId2 || !studioId) {
         const error = `Parametri mancanti: userId1=${userId1}, userId2=${userId2}, studioId=${studioId}`;
         console.error(error);
@@ -174,7 +218,6 @@ export const messaggioService = {
 
       console.log("🔍 Ricerca conversazione esistente tra:", { userId1, userId2, studioId });
 
-      // Cerca conversazione esistente tra questi due utenti
       const { data: esistenti, error: searchError } = await supabase
         .from("tbconversazioni")
         .select(`
@@ -191,7 +234,6 @@ export const messaggioService = {
 
       console.log(`📋 Trovate ${esistenti?.length || 0} conversazioni dirette nello studio`);
 
-      // Trova conversazione con esattamente questi 2 utenti
       const conversazioneEsistente = esistenti?.find((conv: any) => {
         const utentiIds = conv.partecipanti?.map((p: any) => p.utente_id) || [];
         return (
@@ -208,9 +250,11 @@ export const messaggioService = {
 
       console.log("🆕 Creazione nuova conversazione...");
 
-      // Verifica che userId1 sia l'auth.uid() corrente
-      const { data: { user: currentAuthUser }, error: authError } = await supabase.auth.getUser();
-      
+      const {
+        data: { user: currentAuthUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
       if (authError) {
         console.error("❌ Errore verifica auth:", authError);
         throw new Error(`Errore autenticazione: ${authError.message}`);
@@ -226,17 +270,16 @@ export const messaggioService = {
         tipo: "diretta",
         creato_da: userId1,
         auth_uid: currentAuthUser.id,
-        match: userId1 === currentAuthUser.id ? "✅ MATCH" : "❌ MISMATCH"
+        match: userId1 === currentAuthUser.id ? "✅ MATCH" : "❌ MISMATCH",
       });
 
       if (userId1 !== currentAuthUser.id) {
         throw new Error(
           `ERRORE CRITICO: userId1 (${userId1}) non corrisponde a auth.uid() (${currentAuthUser.id}). ` +
-          `La policy RLS richiede che creato_da = auth.uid()`
+            `La policy RLS richiede che creato_da = auth.uid()`
         );
       }
 
-      // Crea nuova conversazione
       const { data: nuovaConv, error: createError } = await supabase
         .from("tbconversazioni")
         .insert({
@@ -252,11 +295,11 @@ export const messaggioService = {
           code: createError.code,
           message: createError.message,
           details: createError.details,
-          hint: createError.hint
+          hint: createError.hint,
         });
         throw new Error(
           `Errore RLS creazione conversazione (${createError.code}): ${createError.message}. ` +
-          `Verifica che l'utente ${userId1} sia autenticato e corrisponda a auth.uid()`
+            `Verifica che l'utente ${userId1} sia autenticato e corrisponda a auth.uid()`
         );
       }
 
@@ -265,10 +308,8 @@ export const messaggioService = {
       }
 
       console.log("✅ Conversazione creata:", nuovaConv.id);
-
-      // Aggiungi i 2 partecipanti
       console.log("👥 Aggiunta partecipanti:", [userId1, userId2]);
-      
+
       const { error: parteciError } = await supabase
         .from("tbconversazioni_utenti")
         .insert([
@@ -280,16 +321,12 @@ export const messaggioService = {
         console.error("❌ ERRORE AGGIUNTA PARTECIPANTI:", {
           code: parteciError.code,
           message: parteciError.message,
-          details: parteciError.details
+          details: parteciError.details,
         });
-        
-        // Rollback: elimina la conversazione creata
+
         console.log("🔄 Rollback conversazione...");
-        await supabase
-          .from("tbconversazioni")
-          .delete()
-          .eq("id", nuovaConv.id);
-        
+        await supabase.from("tbconversazioni").delete().eq("id", nuovaConv.id);
+
         throw new Error(`Errore aggiunta partecipanti: ${parteciError.message}`);
       }
 
@@ -299,7 +336,6 @@ export const messaggioService = {
       return nuovaConv;
     } catch (error: any) {
       console.error("💥 ERRORE FATALE getOrCreateConversazioneDiretta:", error);
-      // NON ritornare null - lancia l'errore così il chiamante lo vede
       throw error;
     }
   },
@@ -311,7 +347,6 @@ export const messaggioService = {
     membriIds: string[]
   ): Promise<Conversazione | null> {
     try {
-      // Crea conversazione gruppo
       const { data: nuovaConv, error: createError } = await supabase
         .from("tbconversazioni")
         .insert({
@@ -325,7 +360,6 @@ export const messaggioService = {
 
       if (createError) throw createError;
 
-      // Aggiungi tutti i membri (incluso il creatore)
       const partecipanti = membriIds.map((uid) => ({
         conversazione_id: nuovaConv.id,
         utente_id: uid,
@@ -347,22 +381,20 @@ export const messaggioService = {
   async uploadAllegato(file: File, messaggioId: string, userId: string) {
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `messaggi-allegati/${fileName}`;
+      const fileName = `${userId}/${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(7)}.${fileExt}`;
 
-      // Upload file su Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("messaggi-allegati")
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
-      // Ottieni URL pubblico (firmato per 1 anno)
       const { data: urlData } = await supabase.storage
         .from("messaggi-allegati")
-        .createSignedUrl(fileName, 31536000); // 1 anno in secondi
+        .createSignedUrl(fileName, 31536000);
 
-      // Salva metadata nel database
       const { data, error } = await supabase
         .from("tbmessaggi_allegati")
         .insert({
@@ -400,7 +432,6 @@ export const messaggioService = {
 
   async eliminaMessaggio(messaggioId: string, utenteId: string) {
     try {
-      // Verifica che l'utente sia il mittente del messaggio
       const { data: messaggio, error: checkError } = await supabase
         .from("tbmessaggi")
         .select("mittente_id")
@@ -413,7 +444,6 @@ export const messaggioService = {
         throw new Error("Non hai i permessi per eliminare questo messaggio");
       }
 
-      // Soft delete: imposta deleted_at
       const { error: deleteError } = await supabase
         .from("tbmessaggi")
         .update({ deleted_at: new Date().toISOString() })
@@ -428,129 +458,125 @@ export const messaggioService = {
     }
   },
 
-async eliminaConversazione(conversazioneId: string, userId: string) {
-  try {
-    const { data: conversazione, error: checkError } = await supabase
-      .from("tbconversazioni")
-      .select(`
-        id,
-        creato_da,
-        tipo,
-        partecipanti:tbconversazioni_utenti(utente_id)
-      `)
-      .eq("id", conversazioneId)
-      .single();
+  async eliminaConversazione(conversazioneId: string, userId: string) {
+    try {
+      const { data: conversazione, error: checkError } = await supabase
+        .from("tbconversazioni")
+        .select(`
+          id,
+          creato_da,
+          tipo,
+          partecipanti:tbconversazioni_utenti(utente_id)
+        `)
+        .eq("id", conversazioneId)
+        .single();
 
-    if (checkError) throw checkError;
-    if (!conversazione) {
-      throw new Error("Conversazione non trovata");
-    }
+      if (checkError) throw checkError;
+      if (!conversazione) {
+        throw new Error("Conversazione non trovata");
+      }
 
-    const isPartecipante =
-      conversazione.partecipanti?.some((p: any) => p.utente_id === userId) || false;
+      const isPartecipante =
+        conversazione.partecipanti?.some((p: any) => p.utente_id === userId) || false;
 
-    if (!isPartecipante) {
-      throw new Error("Non hai i permessi per eliminare questa conversazione");
-    }
+      if (!isPartecipante) {
+        throw new Error("Non hai i permessi per eliminare questa conversazione");
+      }
 
-    // CHAT DIRETTA: ogni partecipante può eliminarla
-    if (conversazione.tipo === "diretta") {
+      if (conversazione.tipo === "diretta") {
+        const { error: deleteParteciError } = await supabase
+          .from("tbconversazioni_utenti")
+          .delete()
+          .eq("conversazione_id", conversazioneId)
+          .eq("utente_id", userId);
+
+        if (deleteParteciError) throw deleteParteciError;
+
+        const { data: partecipantiResidui, error: partecipantiResiduiError } = await supabase
+          .from("tbconversazioni_utenti")
+          .select("utente_id")
+          .eq("conversazione_id", conversazioneId);
+
+        if (partecipantiResiduiError) throw partecipantiResiduiError;
+
+        if (!partecipantiResidui || partecipantiResidui.length === 0) {
+          const { data: messaggi } = await supabase
+            .from("tbmessaggi")
+            .select("id")
+            .eq("conversazione_id", conversazioneId);
+
+          if (messaggi && messaggi.length > 0) {
+            const messaggiIds = messaggi.map((m) => m.id);
+
+            await supabase
+              .from("tbmessaggi_allegati")
+              .delete()
+              .in("messaggio_id", messaggiIds);
+          }
+
+          const { error: deleteMessaggiError } = await supabase
+            .from("tbmessaggi")
+            .delete()
+            .eq("conversazione_id", conversazioneId);
+
+          if (deleteMessaggiError) throw deleteMessaggiError;
+
+          const { error: deleteConvError } = await supabase
+            .from("tbconversazioni")
+            .delete()
+            .eq("id", conversazioneId);
+
+          if (deleteConvError) throw deleteConvError;
+        }
+
+        return true;
+      }
+
+      if (conversazione.creato_da !== userId) {
+        throw new Error("Solo il creatore può eliminare questo gruppo");
+      }
+
       const { error: deleteParteciError } = await supabase
         .from("tbconversazioni_utenti")
         .delete()
-        .eq("conversazione_id", conversazioneId)
-        .eq("utente_id", userId);
+        .eq("conversazione_id", conversazioneId);
 
       if (deleteParteciError) throw deleteParteciError;
 
-      // Verifica se restano partecipanti
-      const { data: partecipantiResidui, error: partecipantiResiduiError } = await supabase
-        .from("tbconversazioni_utenti")
-        .select("utente_id")
+      const { data: messaggi } = await supabase
+        .from("tbmessaggi")
+        .select("id")
         .eq("conversazione_id", conversazioneId);
 
-      if (partecipantiResiduiError) throw partecipantiResiduiError;
+      if (messaggi && messaggi.length > 0) {
+        const messaggiIds = messaggi.map((m) => m.id);
 
-      // Se non resta nessuno, pulizia completa
-      if (!partecipantiResidui || partecipantiResidui.length === 0) {
-        const { data: messaggi } = await supabase
-          .from("tbmessaggi")
-          .select("id")
-          .eq("conversazione_id", conversazioneId);
-
-        if (messaggi && messaggi.length > 0) {
-          const messaggiIds = messaggi.map((m) => m.id);
-
-          await supabase
-            .from("tbmessaggi_allegati")
-            .delete()
-            .in("messaggio_id", messaggiIds);
-        }
-
-        const { error: deleteMessaggiError } = await supabase
-          .from("tbmessaggi")
+        await supabase
+          .from("tbmessaggi_allegati")
           .delete()
-          .eq("conversazione_id", conversazioneId);
-
-        if (deleteMessaggiError) throw deleteMessaggiError;
-
-        const { error: deleteConvError } = await supabase
-          .from("tbconversazioni")
-          .delete()
-          .eq("id", conversazioneId);
-
-        if (deleteConvError) throw deleteConvError;
+          .in("messaggio_id", messaggiIds);
       }
 
-      return true;
-    }
-
-    // GRUPPO: per ora resta eliminabile solo dal creatore
-    if (conversazione.creato_da !== userId) {
-      throw new Error("Solo il creatore può eliminare questo gruppo");
-    }
-
-    const { error: deleteParteciError } = await supabase
-      .from("tbconversazioni_utenti")
-      .delete()
-      .eq("conversazione_id", conversazioneId);
-
-    if (deleteParteciError) throw deleteParteciError;
-
-    const { data: messaggi } = await supabase
-      .from("tbmessaggi")
-      .select("id")
-      .eq("conversazione_id", conversazioneId);
-
-    if (messaggi && messaggi.length > 0) {
-      const messaggiIds = messaggi.map((m) => m.id);
-
-      await supabase
-        .from("tbmessaggi_allegati")
+      const { error: deleteMessaggiError } = await supabase
+        .from("tbmessaggi")
         .delete()
-        .in("messaggio_id", messaggiIds);
+        .eq("conversazione_id", conversazioneId);
+
+      if (deleteMessaggiError) throw deleteMessaggiError;
+
+      const { error: deleteConvError } = await supabase
+        .from("tbconversazioni")
+        .delete()
+        .eq("id", conversazioneId);
+
+      if (deleteConvError) throw deleteConvError;
+
+      return true;
+    } catch (error) {
+      console.error("Errore eliminazione conversazione:", error);
+      throw error;
     }
-
-    const { error: deleteMessaggiError } = await supabase
-      .from("tbmessaggi")
-      .delete()
-      .eq("conversazione_id", conversazioneId);
-
-    if (deleteMessaggiError) throw deleteMessaggiError;
-
-    const { error: deleteConvError } = await supabase
-      .from("tbconversazioni")
-      .delete()
-      .eq("id", conversazioneId);
-
-    if (deleteConvError) throw deleteConvError;
-
-    return true;
-  } catch (error) {
-    console.error("Errore eliminazione conversazione:", error);
-    throw error;
-  }
-},
+  },
 
   subscribeToConversazione(conversazioneId: string, onNewMessage: (payload: any) => void) {
     return supabase
@@ -576,20 +602,21 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
     try {
       console.log("📊 Caricamento messaggi non letti per userId:", userId);
 
-      // Verifica che userId sia valido
       if (!userId || typeof userId !== "string") {
         console.warn("⚠️ userId non valido:", userId);
         return 0;
       }
 
-      // Verifica sessione attiva
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError || !session) {
         console.warn("⚠️ Sessione non valida o scaduta, skip conteggio messaggi");
         return 0;
       }
 
-      // Ottieni tutte le conversazioni dell'utente con timeout e retry
       const convQuery = supabase
         .from("tbconversazioni_utenti")
         .select(`
@@ -602,7 +629,6 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
       const { data: conversazioni, error: convError } = await convQuery;
 
       if (convError) {
-        // Log dell'errore ma non bloccare l'applicazione
         console.warn("⚠️ Errore caricamento conversazioni (gestito):", convError.message);
         return 0;
       }
@@ -612,12 +638,10 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
         return 0;
       }
 
-      // Filtra lato client se necessario per studioId, anche se RLS dovrebbe averlo già fatto
-      const conversazioniFiltrate = studioId 
+      const conversazioniFiltrate = studioId
         ? conversazioni.filter((c: any) => c.conversazione?.studio_id === studioId)
         : conversazioni;
 
-      // Per ogni conversazione, conta i messaggi non letti
       let totalNonLetti = 0;
 
       for (const conv of conversazioniFiltrate) {
@@ -625,7 +649,8 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
           .from("tbmessaggi")
           .select("id", { count: "exact", head: true })
           .eq("conversazione_id", conv.conversazione_id)
-          .neq("mittente_id", userId);
+          .neq("mittente_id", userId)
+          .is("deleted_at", null);
 
         if (conv.ultimo_letto_at) {
           query.gt("created_at", conv.ultimo_letto_at);
@@ -650,9 +675,13 @@ async eliminaConversazione(conversazioneId: string, userId: string) {
 
   playNotificationSound() {
     try {
-      const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZijkIG2m98OObUhALTKXh8LdfGwU7k9n1z3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXz");
+      const audio = new Audio(
+        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZijkIG2m98OObUhALTKXh8LdfGwU7k9n1z3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXzz3goBS2C0fPejjoIG2m98OWdUhAKSKPe8b1pIAU2jdXz"
+      );
       audio.volume = 0.3;
-      audio.play().catch(err => console.log("Impossibile riprodurre suono notifica:", err));
+      audio.play().catch((err) =>
+        console.log("Impossibile riprodurre suono notifica:", err)
+      );
     } catch (error) {
       console.error("Errore riproduzione suono:", error);
     }
