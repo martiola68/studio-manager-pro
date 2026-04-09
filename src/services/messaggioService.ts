@@ -14,7 +14,7 @@ export const messaggioService = {
         partecipanti:tbconversazioni_utenti(
           utente_id,
           ultimo_letto_at,
-          tbutenti(id, nome, cognome, email)
+          tbutenti(id, nome, cognome, email, last_seen)
         )
       `)
       .order("updated_at", { ascending: false });
