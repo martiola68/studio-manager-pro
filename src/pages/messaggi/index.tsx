@@ -576,21 +576,18 @@ export default function MessaggiPage() {
     return conversazioni.find((c) => c.id === selectedConvId) || null;
   };
 
-  const getPartnerName = () => {
-    if (!selectedConvId || !user) return "";
-    const conv = conversazioni.find((c) => c.id === selectedConvId);
-    if (!conv) return "";
+ const getPartnerLastSeen = () => {
+  if (!selectedConvId || !user) return null;
 
-    if (conv.tipo === "gruppo") {
-      return conv.titolo || "Gruppo";
-    }
+  const conv = conversazioni.find((c) => c.id === selectedConvId);
+  if (!conv || conv.tipo === "gruppo") return null;
 
-    const partner = conv.partecipanti?.find(
-      (p: any) => p.tbutenti?.email !== user.email
-    )?.tbutenti;
+  const partner = conv.partecipanti?.find(
+    (p: any) => p.tbutenti?.email !== user.email
+  )?.tbutenti;
 
-    return partner ? `${partner.nome} ${partner.cognome}` : "Chat";
-  };
+  return partner?.last_seen || null;
+};
 
   const selectedConversation = getSelectedConversation();
   const canEditGroup =
@@ -633,6 +630,7 @@ export default function MessaggiPage() {
               messaggi={messaggi}
               currentUserId={authUserId!}
               partnerName={getPartnerName()}
+              partnerLastSeen={getPartnerLastSeen()}
               creatorId={selectedCreatorId || ""}
               conversationType={
   selectedConversation?.tipo === "gruppo" ? "gruppo" : "diretta"
