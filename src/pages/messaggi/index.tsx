@@ -33,15 +33,33 @@ import { supabase } from "@/lib/supabase/client";
 import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type UserProfile = {
+  id: string;
+  nome?: string;
+  cognome?: string;
+  email?: string;
+  tipo_utente?: string;
+};
+
+type Conversazione = {
+  id: string;
+  tipo: "diretta" | "gruppo";
+  titolo?: string | null;
+  creato_da?: string | null;
+  studio_id?: string | null;
+  partecipanti?: any[];
+};
+
 export default function MessaggiPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [studioId, setStudioId] = useState<string | null>(null);
   const [isPartner, setIsPartner] = useState(false);
-  const [conversazioni, setConversazioni] = useState<any[]>([]);
+
+  const [conversazioni, setConversazioni] = useState<Conversazione[]>([]);
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [selectedCreatorId, setSelectedCreatorId] = useState<string | null>(null);
   const [messaggi, setMessaggi] = useState<any[]>([]);
@@ -58,11 +76,7 @@ export default function MessaggiPage() {
   const [editSelectedMembers, setEditSelectedMembers] = useState<string[]>([]);
 
   const subscriptionRef = useRef<any>(null);
-  
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const isChatReadyRef = useRef(false);
-
   const suppressSoundUntilRef = useRef(0);
 
   useEffect(() => {
@@ -76,26 +90,27 @@ export default function MessaggiPage() {
     }
   }, []);
 
-useEffect(() => {
-  suppressSoundUntilRef.current = Date.now() + 1500;
+  useEffect(() => {
+    suppressSoundUntilRef.current = Date.now() + 1500;
 
-  if (selectedConvId && authUserId) {
-    loadMessaggi(selectedConvId).then(() => {
-      subscribeToChat(selectedConvId);
-    });
-  }
-
- return () => {
-    if (subscriptionRef.current) {
-      supabase.removeChannel(subscriptionRef.current);
-      subscriptionRef.current = null;
+    if (selectedConvId && authUserId) {
+      loadMessaggi(selectedConvId).then(() => {
+        subscribeToChat(selectedConvId);
+      });
     }
-  };
-}, [selectedConvId, authUserId]);
-  
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [selectedConvId, authUserId, studioId]);
+
   const checkAuth = async () => {
     try {
       const authUser = await authService.getCurrentUser();
+
       if (!authUser) {
         router.push("/login");
         return;
@@ -104,6 +119,7 @@ useEffect(() => {
       setAuthUserId(authUser.id);
 
       const profile = await authService.getUserProfile(authUser.id);
+
       if (!profile) {
         router.push("/login");
         return;
@@ -115,7 +131,7 @@ useEffect(() => {
       setIsPartner(isPartnerUser);
 
       const studio = await studioService.getStudio();
-      if (studio) {
+      if (studio?.id) {
         setStudioId(studio.id);
         await loadUtentiStudio(studio.id);
       }
@@ -127,12 +143,12 @@ useEffect(() => {
     }
   };
 
- const loadConversazioni = async (userId: string) => {
-  const data = await messaggioService.getConversazioni(userId);
-  const convs = data || [];
-  setConversazioni(convs);
-  return convs;
-};
+  const loadConversazioni = async (userId: string) => {
+    const data = await messaggioService.getConversazioni(userId);
+    const convs = (data || []) as Conversazione[];
+    setConversazioni(convs);
+    return convs;
+  };
 
   const loadUtentiStudio = async (sId: string) => {
     try {
@@ -143,7 +159,7 @@ useEffect(() => {
     }
   };
 
-const playIncomingSound = async () => {};
+  const playIncomingSound = async () => {};
 
   const mergeMessagesAndNotify = (incoming: any[]) => {
     setMessaggi((prev) => {
@@ -152,7 +168,8 @@ const playIncomingSound = async () => {};
         (m) => !prevIds.has(m.id) && m.mittente_id !== authUserId
       );
 
-    // suono disabilitato
+      // suono disabilitato
+      void newRemoteMessages;
 
       return incoming || [];
     });
@@ -181,69 +198,79 @@ const playIncomingSound = async () => {};
     await loadConversazioni(authUserId);
   };
 
- const subscribeToChat = (convId: string) => {
-  if (!authUserId) return;
+  const subscribeToChat = (convId: string) => {
+    if (!authUserId) return;
 
-  const currentUserId = authUserId;
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
 
-  if (subscriptionRef.current) {
-    supabase.removeChannel(subscriptionRef.current);
-    subscriptionRef.current = null;
-  }
+    const selectedConversation = conversazioni.find((c) => c.id === convId);
+    const currentStudioId = selectedConversation?.studio_id || studioId || null;
 
-  subscriptionRef.current = supabase
-    .channel(`chat:${convId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "tbmessaggi",
-        filter: `conversazione_id=eq.${convId}`,
-      },
-      async (payload) => {
-        const { data: sender } = await supabase
-          .from("tbutenti")
-          .select("id, nome, cognome, email")
-          .eq("id", payload.new.mittente_id)
-          .single();
+    let filter = `conversazione_id=eq.${convId}`;
+    if (currentStudioId) {
+      filter = `conversazione_id=eq.${convId},studio_id=eq.${currentStudioId}`;
+    }
 
-const incomingMessageId = payload.new.id;
+    subscriptionRef.current = supabase
+      .channel(`chat:${convId}:${currentStudioId || "no-studio"}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tbmessaggi",
+          filter,
+        },
+        async (payload) => {
+          const { data: sender } = await supabase
+            .from("tbutenti")
+            .select("id, nome, cognome, email")
+            .eq("id", payload.new.mittente_id)
+            .single();
 
-const newMessage = {
-  ...payload.new,
-  mittente: sender,
-};
+          const incomingMessageId = payload.new.id;
 
-let isNewMessage = false;
+          const newMessage = {
+            ...payload.new,
+            mittente: sender,
+          };
 
-setMessaggi((prev) => {
-  const exists = prev.some((msg) => msg.id === incomingMessageId);
-  if (exists) return prev;
+          setMessaggi((prev) => {
+            const exists = prev.some((msg) => msg.id === incomingMessageId);
+            if (exists) return prev;
+            return [...prev, newMessage as any];
+          });
 
-  isNewMessage = true;
-  return [...prev, newMessage as any];
-});
-
-// suono disabilitato
-
-window.dispatchEvent(new Event("messaggi-updated"));
-      }
-    )
-    .subscribe();
-};
+          // suono disabilitato
+          window.dispatchEvent(new Event("messaggi-updated"));
+        }
+      )
+      .subscribe();
+  };
 
   const handleSendMessage = async (testo: string, files?: File[]) => {
-    if (!authUserId || !selectedConvId) return;
+    if (!authUserId || !selectedConvId || !studioId) return;
 
     const testoFinale = (testo || "").trim() || " ";
 
     try {
-      const sentMsg = await messaggioService.inviaMessaggio(
-        selectedConvId,
-        authUserId,
-        testoFinale
-      );
+      const { data: sentMsg, error } = await supabase
+        .from("tbmessaggi")
+        .insert({
+          conversazione_id: selectedConvId,
+          mittente_id: authUserId,
+          testo: testoFinale,
+          studio_id: studioId,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        throw error;
+      }
 
       if (sentMsg && files && files.length > 0) {
         await Promise.all(
@@ -256,6 +283,7 @@ window.dispatchEvent(new Event("messaggi-updated"));
       if (sentMsg && user) {
         const optimisticMsg = {
           ...sentMsg,
+          studio_id: studioId,
           mittente: {
             id: authUserId,
             nome: user.nome,
@@ -375,27 +403,27 @@ window.dispatchEvent(new Event("messaggi-updated"));
     }
   };
 
-const openEditGroupDialog = () => {
-  if (!selectedConvId || !authUserId) return;
+  const openEditGroupDialog = () => {
+    if (!selectedConvId || !authUserId) return;
 
-  const conv = conversazioni.find((c) => c.id === selectedConvId);
-  if (!conv || conv.tipo !== "gruppo") return;
+    const conv = conversazioni.find((c) => c.id === selectedConvId);
+    if (!conv || conv.tipo !== "gruppo") return;
 
-  const participantIds =
-    conv.partecipanti
-      ?.map((p: any) => p.utente_id || p.tbutenti?.id || p.id)
-      .filter(Boolean) || [];
+    const participantIds =
+      conv.partecipanti
+        ?.map((p: any) => p.utente_id || p.tbutenti?.id || p.id)
+        .filter(Boolean) || [];
 
-  setEditGroupId(conv.id);
-  setEditGroupTitle(conv.titolo || "");
-  setEditSelectedMembers(participantIds.filter((id: string) => id !== authUserId));
-  setIsEditGroupOpen(true);
-};
+    setEditGroupId(conv.id);
+    setEditGroupTitle(conv.titolo || "");
+    setEditSelectedMembers(participantIds.filter((id: string) => id !== authUserId));
+    setIsEditGroupOpen(true);
+  };
 
   const saveGroupChanges = async () => {
     const trimmedTitle = editGroupTitle.trim();
 
-   if (!authUserId || !editGroupId || !trimmedTitle || editSelectedMembers.length < 1) {
+    if (!authUserId || !editGroupId || !trimmedTitle || editSelectedMembers.length < 1) {
       toast({
         variant: "destructive",
         title: "Errore",
@@ -419,11 +447,11 @@ const openEditGroupDialog = () => {
       setEditGroupTitle("");
       setEditSelectedMembers([]);
 
-     const updatedConversazioni = await loadConversazioni(authUserId);
-const updatedConv = updatedConversazioni.find((c: any) => c.id === editGroupId);
+      const updatedConversazioni = await loadConversazioni(authUserId);
+      const updatedConv = updatedConversazioni.find((c: any) => c.id === editGroupId);
 
-setSelectedConvId(editGroupId);
-setSelectedCreatorId(updatedConv?.creato_da || authUserId);
+      setSelectedConvId(editGroupId);
+      setSelectedCreatorId(updatedConv?.creato_da || authUserId);
 
       toast({
         title: "✅ Gruppo aggiornato",
@@ -469,8 +497,8 @@ setSelectedCreatorId(updatedConv?.creato_da || authUserId);
     const nomeConv =
       conv?.tipo === "gruppo"
         ? conv.titolo
-        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)
-            ?.tbutenti?.nome || "questa conversazione";
+        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)?.tbutenti
+            ?.nome || "questa conversazione";
 
     if (
       !confirm(
@@ -760,7 +788,7 @@ setSelectedCreatorId(updatedConv?.creato_da || authUserId);
             <DialogFooter>
               <Button
                 onClick={saveGroupChanges}
-               disabled={!editGroupTitle.trim() || editSelectedMembers.length < 1}
+                disabled={!editGroupTitle.trim() || editSelectedMembers.length < 1}
               >
                 Salva modifiche
               </Button>
