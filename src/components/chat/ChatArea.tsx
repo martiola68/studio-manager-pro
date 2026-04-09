@@ -39,6 +39,7 @@ interface ChatAreaProps {
   messaggi: any[];
   currentUserId: string;
   partnerName: string;
+  partnerLastSeen?: string | null;
   creatorId: string;
   conversationType?: "diretta" | "gruppo";
   canEditGroup?: boolean;
@@ -54,6 +55,7 @@ export function ChatArea({
   messaggi,
   currentUserId,
   partnerName,
+  partnerLastSeen,
   creatorId,
   conversationType,
   canEditGroup,
@@ -79,6 +81,10 @@ export function ChatArea({
 
   const canDeleteConversation =
     conversationType === "gruppo" ? currentUserId === creatorId : true;
+
+const isOnline =
+  !!partnerLastSeen &&
+  new Date(partnerLastSeen).getTime() > Date.now() - 60000;
 
   useEffect(() => {
     setLocalMessages(messaggi);
@@ -255,10 +261,15 @@ export function ChatArea({
           >
             {partnerName}
           </h2>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-            Online
-          </span>
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
+  <span
+    className={cn(
+      "w-2 h-2 rounded-full inline-block",
+      isOnline ? "bg-green-500" : "bg-red-500"
+    )}
+  />
+  {isOnline ? "Online" : "Offline"}
+</span>
         </div>
 
         <DropdownMenu modal={false}>
