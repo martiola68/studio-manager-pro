@@ -2438,7 +2438,13 @@ const handleDeleteEvento = async () => {
   };
 
   const renderTeamsView = () => {
-  const loggedUserLabel = loggedUser
+ const selectedUsersLabel =
+  filtroUtenti.length === 0
+    ? "tutti gli utenti"
+    : utenti
+        .filter((u) => filtroUtenti.includes(String(u.id)))
+        .map((u) => `${u.cognome} ${u.nome}`)
+        .join(", ");
 
     if (teamsEvents.length === 0) {
       return (
