@@ -601,7 +601,9 @@ export default function MessaggiPage() {
               currentUserId={authUserId!}
               partnerName={getPartnerName()}
               creatorId={selectedCreatorId || ""}
-              conversationType={selectedConversation?.tipo || "diretta"}
+              conversationType={
+  selectedConversation?.tipo === "gruppo" ? "gruppo" : "diretta"
+}
               canEditGroup={canEditGroup}
               onEditGroup={openEditGroupDialog}
               onSendMessage={handleSendMessage}
