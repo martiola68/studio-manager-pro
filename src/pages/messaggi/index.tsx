@@ -90,7 +90,7 @@ export default function MessaggiPage() {
   const updatePresence = async () => {
     await supabase
       .from("tbutenti")
-      .update({ last_seen: new Date().toISOString() })
+     .update({ last_seen: new Date().toISOString() } as any)
       .eq("id", authUserId);
   };
 
