@@ -83,37 +83,33 @@ export default function MessaggiPage() {
   }, []);
 
   useEffect(() => {
-  if (!authUserId) return;
+    if (!authUserId) return;
 
-  let interval: NodeJS.Timeout;
+    let interval: NodeJS.Timeout;
 
-  const updatePresence = async () => {
-    await supabase
-      .from("tbutenti")
-     .update({ last_seen: new Date().toISOString() } as any)
-      .eq("id", authUserId);
-  };
+    const updatePresence = async () => {
+      await supabase
+        .from("tbutenti")
+        .update({ last_seen: new Date().toISOString() } as any)
+        .eq("id", authUserId);
+    };
 
-  // aggiorna subito
-  updatePresence();
+    updatePresence();
+    interval = setInterval(updatePresence, 30000);
 
-  // aggiorna ogni 30 secondi
-  interval = setInterval(updatePresence, 30000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updatePresence();
+      }
+    };
 
-  // quando torni sulla pagina → aggiorna subito
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === "visible") {
-      updatePresence();
-    }
-  };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-  document.addEventListener("visibilitychange", handleVisibilityChange);
-
-  return () => {
-    clearInterval(interval);
-    document.removeEventListener("visibilitychange", handleVisibilityChange);
-  };
-}, [authUserId]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [authUserId]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -190,8 +186,6 @@ export default function MessaggiPage() {
     }
   };
 
-  const playIncomingSound = async () => {};
-
   const mergeMessagesAndNotify = (incoming: any[]) => {
     setMessaggi((prev) => {
       const prevIds = new Set(prev.map((m) => m.id));
@@ -249,7 +243,11 @@ export default function MessaggiPage() {
           filter: `conversazione_id=eq.${convId}`,
         },
         async (payload) => {
-          if (currentStudioId && payload?.new?.studio_id && payload.new.studio_id !== currentStudioId) {
+          if (
+            currentStudioId &&
+            payload?.new?.studio_id &&
+            payload.new.studio_id !== currentStudioId
+          ) {
             return;
           }
 
@@ -311,9 +309,7 @@ export default function MessaggiPage() {
 
       if (sentMsg && files && files.length > 0) {
         await Promise.all(
-          files.map((file) =>
-            messaggioService.uploadAllegato(file, sentMsg.id, authUserId)
-          )
+          files.map((file) => messaggioService.uploadAllegato(file, sentMsg.id, authUserId))
         );
       }
 
@@ -535,8 +531,8 @@ export default function MessaggiPage() {
     const nomeConv =
       conv?.tipo === "gruppo"
         ? conv.titolo
-        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)
-            ?.tbutenti?.nome || "questa conversazione";
+        : conv?.partecipanti?.find((p: any) => p.tbutenti?.email !== user?.email)?.tbutenti
+            ?.nome || "questa conversazione";
 
     if (
       !confirm(
@@ -577,46 +573,33 @@ export default function MessaggiPage() {
   };
 
   const getPartnerName = () => {
-  if (!selectedConvId || !user) return "";
-  const conv = conversazioni.find((c) => c.id === selectedConvId);
-  if (!conv) return "";
+    if (!selectedConvId || !user) return "";
+    const conv = conversazioni.find((c) => c.id === selectedConvId);
+    if (!conv) return "";
 
-  if (conv.tipo === "gruppo") {
-    return conv.titolo || "Gruppo";
-  }
+    if (conv.tipo === "gruppo") {
+      return conv.titolo || "Gruppo";
+    }
 
-  const partner = conv.partecipanti?.find(
-    (p: any) => p.tbutenti?.email !== user.email
-  )?.tbutenti;
+    const partner = conv.partecipanti?.find(
+      (p: any) => p.tbutenti?.email !== user.email
+    )?.tbutenti;
 
-  return partner ? `${partner.nome} ${partner.cognome}` : "Chat";
-};
+    return partner ? `${partner.nome} ${partner.cognome}` : "Chat";
+  };
 
-const getPartnerLastSeen = () => {
-  if (!selectedConvId || !user) return null;
+  const getPartnerLastSeen = () => {
+    if (!selectedConvId || !user) return null;
 
-  const conv = conversazioni.find((c) => c.id === selectedConvId);
-  if (!conv || conv.tipo === "gruppo") return null;
+    const conv = conversazioni.find((c) => c.id === selectedConvId);
+    if (!conv || conv.tipo === "gruppo") return null;
 
-  const partner = conv.partecipanti?.find(
-    (p: any) => p.tbutenti?.email !== user.email
-  )?.tbutenti;
+    const partner = conv.partecipanti?.find(
+      (p: any) => p.tbutenti?.email !== user.email
+    )?.tbutenti;
 
-  return partner?.last_seen || null;
-};
-
- const getPartnerLastSeen = () => {
-  if (!selectedConvId || !user) return null;
-
-  const conv = conversazioni.find((c) => c.id === selectedConvId);
-  if (!conv || conv.tipo === "gruppo") return null;
-
-  const partner = conv.partecipanti?.find(
-    (p: any) => p.tbutenti?.email !== user.email
-  )?.tbutenti;
-
-  return partner?.last_seen || null;
-};
+    return partner?.last_seen || null;
+  };
 
   const selectedConversation = getSelectedConversation();
   const canEditGroup =
@@ -662,8 +645,8 @@ const getPartnerLastSeen = () => {
               partnerLastSeen={getPartnerLastSeen()}
               creatorId={selectedCreatorId || ""}
               conversationType={
-  selectedConversation?.tipo === "gruppo" ? "gruppo" : "diretta"
-}
+                selectedConversation?.tipo === "gruppo" ? "gruppo" : "diretta"
+              }
               canEditGroup={canEditGroup}
               onEditGroup={openEditGroupDialog}
               onSendMessage={handleSendMessage}
