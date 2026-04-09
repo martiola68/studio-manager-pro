@@ -2450,7 +2450,7 @@ const handleDeleteEvento = async () => {
       return (
         <div className="text-center py-12">
           <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-gray-500">Nessuna riunione Teams trovata per {loggedUserLabel}</p>
+          <p className="text-gray-500">Nessuna riunione Teams trovata per {selectedUsersLabel}</p>
         </div>
       );
     }
@@ -2459,11 +2459,11 @@ const handleDeleteEvento = async () => {
       <div className="max-h-[600px] overflow-y-auto p-4 space-y-4">
         <div className="rounded-lg border bg-violet-50/40 px-4 py-3">
           <div className="text-sm font-semibold text-violet-900">
-            Riunioni Teams di {loggedUserLabel}
-          </div>
+  Riunioni Teams di {selectedUsersLabel}
+</div>
           <div className="text-xs text-violet-700 mt-1">
-            Elenco riunioni filtrato automaticamente sull'utente loggato
-          </div>
+  Elenco riunioni filtrato sugli utenti selezionati
+</div>
         </div>
 
         <div className="overflow-x-auto">
