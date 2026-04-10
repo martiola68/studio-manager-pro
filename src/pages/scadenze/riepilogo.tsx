@@ -109,20 +109,22 @@ export default function ScadenzarioRiepilogo() {
     }
   }
 
-  const operatori = useMemo<UtenteOption[]>(() => {
-    const ids = [
-      ...new Set(
-        rows
-          .map((r) => r.utente_operatore_id)
-          .filter((v): v is string => !!v)
-      ),
-    ];
+ const operatori = useMemo<UtenteOption[]>(() => {
+  const ids = [
+    ...new Set(
+      rows
+        .map((r) => r.utente_operatore_id)
+        .filter((v): v is string => !!v)
+    ),
+  ];
 
-    return ids.map((id) => ({
+  return ids
+    .map((id) => ({
       id,
       nome: utentiMap[id] || id,
-    }));
-  }, [rows, utentiMap]);
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }));
+}, [rows, utentiMap]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
