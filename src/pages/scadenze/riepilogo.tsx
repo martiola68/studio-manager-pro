@@ -35,12 +35,18 @@ type RigaRiepilogo = {
   stato_imu?: string | null;
 };
 
+type UtenteOption = {
+  id: string;
+  nome: string;
+};
+
 export default function ScadenzarioRiepilogo() {
   const [rows, setRows] = useState<RigaRiepilogo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statoFilter, setStatoFilter] = useState("TUTTI");
   const [operatore, setOperatore] = useState("TUTTI");
+  const [utentiMap, setUtentiMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -64,18 +70,59 @@ export default function ScadenzarioRiepilogo() {
         return;
       }
 
-      setRows(data || []);
+      const loadedRows: RigaRiepilogo[] = data || [];
+      setRows(loadedRows);
+
+      const operatoreIds = [
+        ...new Set(
+          loadedRows
+            .map((r) => r.utente_operatore_id)
+            .filter((v): v is string => !!v)
+        ),
+      ];
+
+      if (operatoreIds.length > 0) {
+        const { data: utentiData, error: utentiError } = await (supabase as any)
+          .from("tbutenti")
+          .select("id, nome, cognome")
+          .in("id", operatoreIds);
+
+        if (utentiError) {
+          console.error("Errore caricamento utenti:", utentiError);
+        } else {
+          const map: Record<string, string> = {};
+          (utentiData || []).forEach((u: any) => {
+            const fullName = [u.cognome, u.nome].filter(Boolean).join(" ").trim();
+            map[u.id] = fullName || u.nome || u.cognome || u.id;
+          });
+          setUtentiMap(map);
+        }
+      } else {
+        setUtentiMap({});
+      }
     } catch (err) {
       console.error("Errore caricamento riepilogo:", err);
       setRows([]);
+      setUtentiMap({});
     } finally {
       setLoading(false);
     }
   }
 
-  const operatori = useMemo(() => {
-    return [...new Set(rows.map((r) => r.utente_operatore_id).filter(Boolean))];
-  }, [rows]);
+  const operatori = useMemo<UtenteOption[]>(() => {
+    const ids = [
+      ...new Set(
+        rows
+          .map((r) => r.utente_operatore_id)
+          .filter((v): v is string => !!v)
+      ),
+    ];
+
+    return ids.map((id) => ({
+      id,
+      nome: utentiMap[id] || id,
+    }));
+  }, [rows, utentiMap]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
@@ -138,9 +185,9 @@ export default function ScadenzarioRiepilogo() {
               className="border rounded px-3 py-2 text-sm min-w-[220px]"
             >
               <option value="TUTTI">Tutti</option>
-              {operatori.map((id) => (
-                <option key={id} value={id as string}>
-                  {id}
+              {operatori.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.nome}
                 </option>
               ))}
             </select>
@@ -160,6 +207,7 @@ export default function ScadenzarioRiepilogo() {
             <thead>
               <tr className="bg-gray-100">
                 <th className="p-2 text-left">Nominativo</th>
+                <th className="p-2 text-left">Operatore</th>
                 <th className="p-2">Stato</th>
                 <th className="p-2">IVA</th>
                 <th className="p-2">Fiscali</th>
@@ -176,6 +224,12 @@ export default function ScadenzarioRiepilogo() {
                 <tr key={r.cliente_id} className="border-t">
                   <td className="p-2">{r.nominativo}</td>
 
+                  <td className="p-2">
+                    {r.utente_operatore_id
+                      ? utentiMap[r.utente_operatore_id] || r.utente_operatore_id
+                      : ""}
+                  </td>
+
                   <td
                     className={`p-2 text-center ${getColor(
                       r.stato_generale || ""
@@ -184,9 +238,7 @@ export default function ScadenzarioRiepilogo() {
                     {r.stato_generale || ""}
                   </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(r.stato_iva || "")}`}
-                  >
+                  <td className={`p-2 text-center ${getColor(r.stato_iva || "")}`}>
                     {r.stato_iva || ""}
                   </td>
 
@@ -206,11 +258,7 @@ export default function ScadenzarioRiepilogo() {
                     {r.stato_bilanci || ""}
                   </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_770 || ""
-                    )}`}
-                  >
+                  <td className={`p-2 text-center ${getColor(r.stato_770 || "")}`}>
                     {r.stato_770 || ""}
                   </td>
 
@@ -222,17 +270,11 @@ export default function ScadenzarioRiepilogo() {
                     {r.stato_ccgg || ""}
                   </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(r.stato_cu || "")}`}
-                  >
+                  <td className={`p-2 text-center ${getColor(r.stato_cu || "")}`}>
                     {r.stato_cu || ""}
                   </td>
 
-                  <td
-                    className={`p-2 text-center ${getColor(
-                      r.stato_imu || ""
-                    )}`}
-                  >
+                  <td className={`p-2 text-center ${getColor(r.stato_imu || "")}`}>
                     {r.stato_imu || ""}
                   </td>
                 </tr>
