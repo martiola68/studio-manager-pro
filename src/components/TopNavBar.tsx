@@ -255,7 +255,7 @@ export function TopNavBar() {
       children: [
         { label: "Elenco Generale", href: "/scadenze/elenco-generale", icon: null },
         { label: "Calendario", href: "/scadenze/calendario", icon: null },
-        { label: "Riepilogo", href: "/scadenze/riepilogo" },
+        { label: "Riepilogo", href: "/scadenze/riepilogo", icon: null },
         { label: "IVA", href: "/scadenze/iva", icon: null },
         { label: "CCGG", href: "/scadenze/ccgg", icon: null },
         { label: "CU", href: "/scadenze/cu", icon: null },
