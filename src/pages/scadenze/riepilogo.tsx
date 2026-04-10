@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
-const supabase = getSupabaseClient();
-
 const studioId = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
 
 const getColor = (stato: string) => {
@@ -21,90 +19,117 @@ const getColor = (stato: string) => {
   return "bg-yellow-100 text-yellow-700";
 };
 
+type RigaRiepilogo = {
+  cliente_id: string;
+  nominativo: string;
+  stato_generale?: string | null;
+  stato_iva?: string | null;
+  stato_fiscali?: string | null;
+  stato_bilanci?: string | null;
+  stato_770?: string | null;
+  stato_ccgg?: string | null;
+  stato_cu?: string | null;
+  stato_imu?: string | null;
+};
+
 export default function ScadenzarioRiepilogo() {
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<RigaRiepilogo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
- async function loadData() {
-  const { data, error } = await (supabase as any)
-    .from("vw_scadenzario_dashboard_societa")
-    .select("*")
-    .eq("studio_id", studioId)
-    .order("nominativo", { ascending: true });
+  async function loadData() {
+    try {
+      setLoading(true);
 
-  if (error) {
-    console.error("Errore caricamento riepilogo:", error);
-    setRows([]);
-    return;
+      const supabase = getSupabaseClient();
+
+      const { data, error } = await (supabase as any)
+        .from("vw_scadenzario_dashboard_societa")
+        .select("*")
+        .eq("studio_id", studioId)
+        .order("nominativo", { ascending: true });
+
+      if (error) {
+        console.error("Errore caricamento riepilogo:", error);
+        setRows([]);
+        return;
+      }
+
+      setRows(data || []);
+    } catch (err) {
+      console.error("Errore caricamento riepilogo:", err);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
   }
-
-  setRows(data || []);
-}
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">
-        Scadenzario Riepilogativo
-      </h1>
+      <h1 className="text-xl font-bold mb-4">Scadenzario Riepilogativo</h1>
 
-      <table className="w-full border text-sm">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-2 text-left">Nominativo</th>
-            <th className="p-2">Stato</th>
-            <th className="p-2">IVA</th>
-            <th className="p-2">Fiscali</th>
-            <th className="p-2">Bilanci</th>
-            <th className="p-2">770</th>
-            <th className="p-2">CCGG</th>
-            <th className="p-2">CU</th>
-            <th className="p-2">IMU</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.cliente_id} className="border-t">
-              <td className="p-2">{r.nominativo}</td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_generale)}`}>
-                {r.stato_generale}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_iva)}`}>
-                {r.stato_iva}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_fiscali)}`}>
-                {r.stato_fiscali}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_bilanci)}`}>
-                {r.stato_bilanci}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_770)}`}>
-                {r.stato_770}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_ccgg)}`}>
-                {r.stato_ccgg}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_cu)}`}>
-                {r.stato_cu}
-              </td>
-
-              <td className={`p-2 text-center ${getColor(r.stato_imu)}`}>
-                {r.stato_imu}
-              </td>
+      {loading ? (
+        <div>Caricamento...</div>
+      ) : (
+        <table className="w-full border text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 text-left">Nominativo</th>
+              <th className="p-2">Stato</th>
+              <th className="p-2">IVA</th>
+              <th className="p-2">Fiscali</th>
+              <th className="p-2">Bilanci</th>
+              <th className="p-2">770</th>
+              <th className="p-2">CCGG</th>
+              <th className="p-2">CU</th>
+              <th className="p-2">IMU</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.cliente_id} className="border-t">
+                <td className="p-2">{r.nominativo}</td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_generale || "")}`}>
+                  {r.stato_generale || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_iva || "")}`}>
+                  {r.stato_iva || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_fiscali || "")}`}>
+                  {r.stato_fiscali || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_bilanci || "")}`}>
+                  {r.stato_bilanci || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_770 || "")}`}>
+                  {r.stato_770 || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_ccgg || "")}`}>
+                  {r.stato_ccgg || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_cu || "")}`}>
+                  {r.stato_cu || ""}
+                </td>
+
+                <td className={`p-2 text-center ${getColor(r.stato_imu || "")}`}>
+                  {r.stato_imu || ""}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
