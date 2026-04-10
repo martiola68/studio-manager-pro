@@ -24,6 +24,7 @@ const getColor = (stato: string) => {
 type RigaRiepilogo = {
   cliente_id: string;
   nominativo: string;
+  utente_operatore_id?: string | null;
   stato_generale?: string | null;
   stato_iva?: string | null;
   stato_fiscali?: string | null;
@@ -39,6 +40,7 @@ export default function ScadenzarioRiepilogo() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statoFilter, setStatoFilter] = useState("TUTTI");
+  const [operatore, setOperatore] = useState("TUTTI");
 
   useEffect(() => {
     loadData();
@@ -71,6 +73,10 @@ export default function ScadenzarioRiepilogo() {
     }
   }
 
+  const operatori = useMemo(() => {
+    return [...new Set(rows.map((r) => r.utente_operatore_id).filter(Boolean))];
+  }, [rows]);
+
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       const matchesSearch = (r.nominativo || "")
@@ -81,9 +87,12 @@ export default function ScadenzarioRiepilogo() {
         statoFilter === "TUTTI" ||
         (r.stato_generale || "").toUpperCase() === statoFilter;
 
-      return matchesSearch && matchesStato;
+      const matchesOperatore =
+        operatore === "TUTTI" || r.utente_operatore_id === operatore;
+
+      return matchesSearch && matchesStato && matchesOperatore;
     });
-  }, [rows, search, statoFilter]);
+  }, [rows, search, statoFilter, operatore]);
 
   return (
     <div className="p-4">
@@ -118,6 +127,22 @@ export default function ScadenzarioRiepilogo() {
               <option value="COMPLETO">Completo</option>
               <option value="IN CORSO">In corso</option>
               <option value="DA FARE">Da fare</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Filtra Operatore</label>
+            <select
+              value={operatore}
+              onChange={(e) => setOperatore(e.target.value)}
+              className="border rounded px-3 py-2 text-sm min-w-[220px]"
+            >
+              <option value="TUTTI">Tutti</option>
+              {operatori.map((id) => (
+                <option key={id} value={id as string}>
+                  {id}
+                </option>
+              ))}
             </select>
           </div>
         </div>
