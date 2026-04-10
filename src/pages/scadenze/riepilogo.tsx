@@ -21,27 +21,33 @@ const getColor = (stato: string) => {
   return "bg-yellow-100 text-yellow-700";
 };
 
-export default function ScadenzeRiepilogo() {
+export default function ScadenzarioRiepilogo() {
   const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  async function loadData() {
-    const { data } = await supabase
-      .from("vw_scadenze_dashboard_societa")
-      .select("*")
-      .eq("studio_id", studioId)
-      .order("nominativo");
+ async function loadData() {
+  const { data, error } = await (supabase as any)
+    .from("vw_scadenzario_dashboard_societa")
+    .select("*")
+    .eq("studio_id", studioId)
+    .order("nominativo", { ascending: true });
 
-    setRows(data || []);
+  if (error) {
+    console.error("Errore caricamento riepilogo:", error);
+    setRows([]);
+    return;
   }
+
+  setRows(data || []);
+}
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">
-        Scadenze Riepilogativo
+        Scadenzario Riepilogativo
       </h1>
 
       <table className="w-full border text-sm">
