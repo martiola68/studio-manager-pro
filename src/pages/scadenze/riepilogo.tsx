@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 
 const studioId = "f9d3ca10-6134-4061-a2b4-0be74e8c7654";
@@ -7,7 +7,9 @@ const getColor = (stato: string) => {
   if (!stato) return "bg-gray-100 text-gray-600";
 
   if (
-    ["INVIATO", "COMUNICATO", "DICHIARAZIONE PRESENTATA"].includes(stato)
+    ["INVIATO", "COMUNICATO", "DICHIARAZIONE PRESENTATA", "COMPLETO"].includes(
+      stato
+    )
   ) {
     return "bg-green-100 text-green-700";
   }
@@ -35,6 +37,8 @@ type RigaRiepilogo = {
 export default function ScadenzarioRiepilogo() {
   const [rows, setRows] = useState<RigaRiepilogo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statoFilter, setStatoFilter] = useState("TUTTI");
 
   useEffect(() => {
     loadData();
@@ -67,68 +71,150 @@ export default function ScadenzarioRiepilogo() {
     }
   }
 
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      const matchesSearch = (r.nominativo || "")
+        .toLowerCase()
+        .includes(search.trim().toLowerCase());
+
+      const matchesStato =
+        statoFilter === "TUTTI" ||
+        (r.stato_generale || "").toUpperCase() === statoFilter;
+
+      return matchesSearch && matchesStato;
+    });
+  }, [rows, search, statoFilter]);
+
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Scadenzario Riepilogativo</h1>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Scadenzario Riepilogativo</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Totale risultati: {filteredRows.length}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Cerca nominativo</label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Scrivi il nominativo..."
+              className="border rounded px-3 py-2 text-sm min-w-[240px]"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Stato generale</label>
+            <select
+              value={statoFilter}
+              onChange={(e) => setStatoFilter(e.target.value)}
+              className="border rounded px-3 py-2 text-sm min-w-[180px]"
+            >
+              <option value="TUTTI">Tutti</option>
+              <option value="COMPLETO">Completo</option>
+              <option value="IN CORSO">In corso</option>
+              <option value="DA FARE">Da fare</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
       {loading ? (
         <div>Caricamento...</div>
+      ) : filteredRows.length === 0 ? (
+        <div className="border rounded p-4 bg-white text-sm text-gray-600">
+          Nessun risultato trovato.
+        </div>
       ) : (
-        <table className="w-full border text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-left">Nominativo</th>
-              <th className="p-2">Stato</th>
-              <th className="p-2">IVA</th>
-              <th className="p-2">Fiscali</th>
-              <th className="p-2">Bilanci</th>
-              <th className="p-2">770</th>
-              <th className="p-2">CCGG</th>
-              <th className="p-2">CU</th>
-              <th className="p-2">IMU</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.cliente_id} className="border-t">
-                <td className="p-2">{r.nominativo}</td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_generale || "")}`}>
-                  {r.stato_generale || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_iva || "")}`}>
-                  {r.stato_iva || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_fiscali || "")}`}>
-                  {r.stato_fiscali || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_bilanci || "")}`}>
-                  {r.stato_bilanci || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_770 || "")}`}>
-                  {r.stato_770 || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_ccgg || "")}`}>
-                  {r.stato_ccgg || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_cu || "")}`}>
-                  {r.stato_cu || ""}
-                </td>
-
-                <td className={`p-2 text-center ${getColor(r.stato_imu || "")}`}>
-                  {r.stato_imu || ""}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm bg-white">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="p-2 text-left">Nominativo</th>
+                <th className="p-2">Stato</th>
+                <th className="p-2">IVA</th>
+                <th className="p-2">Fiscali</th>
+                <th className="p-2">Bilanci</th>
+                <th className="p-2">770</th>
+                <th className="p-2">CCGG</th>
+                <th className="p-2">CU</th>
+                <th className="p-2">IMU</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {filteredRows.map((r) => (
+                <tr key={r.cliente_id} className="border-t">
+                  <td className="p-2">{r.nominativo}</td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_generale || ""
+                    )}`}
+                  >
+                    {r.stato_generale || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(r.stato_iva || "")}`}
+                  >
+                    {r.stato_iva || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_fiscali || ""
+                    )}`}
+                  >
+                    {r.stato_fiscali || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_bilanci || ""
+                    )}`}
+                  >
+                    {r.stato_bilanci || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_770 || ""
+                    )}`}
+                  >
+                    {r.stato_770 || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_ccgg || ""
+                    )}`}
+                  >
+                    {r.stato_ccgg || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(r.stato_cu || "")}`}
+                  >
+                    {r.stato_cu || ""}
+                  </td>
+
+                  <td
+                    className={`p-2 text-center ${getColor(
+                      r.stato_imu || ""
+                    )}`}
+                  >
+                    {r.stato_imu || ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
