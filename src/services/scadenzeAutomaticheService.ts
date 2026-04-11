@@ -314,49 +314,33 @@ function buildMessaggioScadenza(
 ): { oggetto: string; messaggio: string } {
   const titoloAlert =
     tipoAlert === "preavviso_1" || tipoAlert === "preavviso_2"
-      ? `Promemoria scadenza a ${giorniMancanti} giorn${
-          giorniMancanti === 1 ? "o" : "i"
-        }`
+      ? `Promemoria scadenza a ${giorniMancanti} giorn${giorniMancanti === 1 ? "o" : "i"}`
       : "Rinnovo automatico scadenza";
 
-const elencoNominativi =
-  nominativi.length > 0
-    ? nominativi.map((n, index) => `${index + 1}. ${n}`).join("\n")
-    : "Nessun nominativo collegato trovato";
+  const elencoNominativi =
+    nominativi.length > 0
+      ? nominativi.map((n, index) => `${index + 1}. ${n}`).join("\n")
+      : "Nessun nominativo collegato trovato";
 
   const oggetto =
     tipoAlert === "rinnovo_auto"
       ? `Rinnovo automatico scadenza: ${tipo.nome}`
       : `${titoloAlert} — ${tipo.nome}`;
 
- const messaggio =
-  tipoAlert === "rinnovo_auto"
-    ? [
-        `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
-        "",
-        `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
-        `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
-        tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
-        "",
-        "Clienti / nominativi collegati alla scadenza:",
-        elencoNominativi,
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : [
-        `Ti segnalo che una scadenza richiede attenzione.`,
-        "",
-        `Scadenza: ${tipo.nome}`,
-        `Data scadenza: ${formatDateIT(tipo.data_scadenza)}`,
-        `Giorni mancanti: ${giorniMancanti}`,
-        tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
-        "",
-        "Clienti / nominativi collegati alla scadenza:",
-        elencoNominativi,
-      ]
-        .filter(Boolean)
-        .join("\n");
-  
+  const messaggio =
+    tipoAlert === "rinnovo_auto"
+      ? [
+          `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
+          "",
+          `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
+          `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
+          tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
+          "",
+          "Clienti / nominativi collegati alla scadenza:",
+          elencoNominativi,
+        ]
+          .filter(Boolean)
+          .join("\n")
       : [
           `Ti segnalo che una scadenza richiede attenzione.`,
           "",
@@ -365,7 +349,7 @@ const elencoNominativi =
           `Giorni mancanti: ${giorniMancanti}`,
           tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
           "",
-          "Nominativi collegati:",
+          "Clienti / nominativi collegati alla scadenza:",
           elencoNominativi,
         ]
           .filter(Boolean)
