@@ -448,6 +448,14 @@ if (!targetPresente) {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
+        if (tipo.id === targetId) {
+  const alreadySent1 = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
+
+  result.errors.push(
+    `[DEBUG] target trovato: id=${tipo.id} nome=${tipo.nome} data_scadenza=${tipo.data_scadenza} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} attivo=${tipo.attivo} alreadySent1=${alreadySent1}`
+  );
+}
+
      const isScadenzaTarget = tipo.id === "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435";
 
 if (isScadenzaTarget || giorniMancanti === preavviso1) {
