@@ -439,30 +439,34 @@ const tipi = await loadTipiScadenzeAttive();
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
- if (tipo.nome === "IVA") {
-  const alreadySentDebug = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
-
-  result.errors.push(
-    `[DEBUG IVA] id=${tipo.id} nome=${tipo.nome} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} alreadySent=${alreadySentDebug}`
-  );
-}
-
 if (giorniMancanti === preavviso1) {
-  const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
+  const { data: alertEsistente, error: alertError } = await supabase
+    .from("tbtipi_scadenze_alert")
+    .select("id, email_inviata")
+    .eq("tipo_scadenza_id", tipo.id)
+    .eq("anno_invio", annoInvio)
+    .eq("tipo_alert", "preavviso_1")
+    .maybeSingle();
 
-  if (!alreadySent) {
-    await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
-    result.alertsCreated += 1;
+  if (alertError) throw alertError;
 
-    const emailSent = await inviaEmailScadenza(
+  const emailGiaInviata = alertEsistente?.email_inviata === true;
+
+  if (!emailGiaInviata) {
+    if (!alertEsistente) {
+      await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
+      result.alertsCreated += 1;
+    }
+
+    const sentCount = await inviaEmailScadenza(
       tipo,
       "preavviso_1",
       giorniMancanti
     );
 
-    if (emailSent) {
+    if (sentCount > 0) {
       await markAlertEmailSent(tipo.id, annoInvio, "preavviso_1");
-      result.emailsSent += 1;
+      result.emailsSent += sentCount;
     }
   }
 }
