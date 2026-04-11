@@ -36,6 +36,11 @@ type DestinatarioEmail = {
   nome: string;
 };
 
+type AlertRecord = {
+  id: string;
+  email_inviata: boolean | null;
+};
+
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -45,7 +50,9 @@ function startOfDay(date: Date): Date {
 function diffDaysFromToday(targetDate: string): number {
   const today = startOfDay(new Date());
   const target = startOfDay(new Date(targetDate));
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil(
+    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
 }
 
 function addOneYear(dateString: string): string {
@@ -120,21 +127,21 @@ async function loadTipiScadenzeAttive(): Promise<TipoScadenza[]> {
   return (data || []) as TipoScadenza[];
 }
 
-async function alertAlreadySent(
+async function getAlertRecord(
   tipoScadenzaId: string,
   annoInvio: number,
   tipoAlert: AlertType
-): Promise<boolean> {
+): Promise<AlertRecord | null> {
   const { data, error } = await supabase
     .from("tbtipi_scadenze_alert")
-    .select("id")
+    .select("id, email_inviata")
     .eq("tipo_scadenza_id", tipoScadenzaId)
     .eq("anno_invio", annoInvio)
     .eq("tipo_alert", tipoAlert)
     .maybeSingle();
 
   if (error) throw error;
-  return !!data;
+  return (data as AlertRecord | null) ?? null;
 }
 
 async function createAlertRecord(
@@ -142,16 +149,14 @@ async function createAlertRecord(
   annoInvio: number,
   tipoAlert: AlertType
 ): Promise<void> {
-  const { error } = await supabase
-    .from("tbtipi_scadenze_alert")
-    .insert({
-      tipo_scadenza_id: tipoScadenzaId,
-      anno_invio: annoInvio,
-      data_invio: new Date().toISOString(),
-      email_inviata: false,
-      promemoria_inviato: false,
-      tipo_alert: tipoAlert,
-    });
+  const { error } = await supabase.from("tbtipi_scadenze_alert").insert({
+    tipo_scadenza_id: tipoScadenzaId,
+    anno_invio: annoInvio,
+    data_invio: new Date().toISOString(),
+    email_inviata: false,
+    promemoria_inviato: false,
+    tipo_alert: tipoAlert,
+  });
 
   if (error) throw error;
 }
@@ -281,7 +286,9 @@ function buildMessaggioScadenza(
 ): { oggetto: string; messaggio: string } {
   const titoloAlert =
     tipoAlert === "preavviso_1" || tipoAlert === "preavviso_2"
-      ? `Promemoria scadenza a ${giorniMancanti} giorn${giorniMancanti === 1 ? "o" : "i"}`
+      ? `Promemoria scadenza a ${giorniMancanti} giorn${
+          giorniMancanti === 1 ? "o" : "i"
+        }`
       : "Rinnovo automatico scadenza";
 
   const elencoNominativi =
@@ -300,7 +307,9 @@ function buildMessaggioScadenza(
           `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
           "",
           `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
-          `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
+          `Nuova data: ${
+            nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"
+          }`,
           tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
           "",
           "Nominativi collegati:",
@@ -417,6 +426,39 @@ async function inviaEmailScadenza(
   return await sendScadenzaEmails(recipients, oggetto, messaggio);
 }
 
+async function processAlertInvio(
+  tipo: TipoScadenza,
+  annoInvio: number,
+  tipoAlert: AlertType,
+  giorniMancanti: number,
+  result: ProcessResult,
+  nuovaData?: string
+): Promise<void> {
+  const alertEsistente = await getAlertRecord(tipo.id, annoInvio, tipoAlert);
+  const emailGiaInviata = alertEsistente?.email_inviata === true;
+
+  if (emailGiaInviata) {
+    return;
+  }
+
+  if (!alertEsistente) {
+    await createAlertRecord(tipo.id, annoInvio, tipoAlert);
+    result.alertsCreated += 1;
+  }
+
+  const sentCount = await inviaEmailScadenza(
+    tipo,
+    tipoAlert,
+    giorniMancanti,
+    nuovaData
+  );
+
+  if (sentCount > 0) {
+    await markAlertEmailSent(tipo.id, annoInvio, tipoAlert);
+    result.emailsSent += sentCount;
+  }
+}
+
 export const scadenzeAutomaticheService = {
   async processaTipiScadenzeAutomatiche(): Promise<ProcessResult> {
     const result: ProcessResult = {
@@ -427,7 +469,7 @@ export const scadenzeAutomaticheService = {
       errors: [],
     };
 
-const tipi = await loadTipiScadenzeAttive();
+    const tipi = await loadTipiScadenzeAttive();
 
     for (const tipo of tipi) {
       try {
@@ -439,75 +481,42 @@ const tipi = await loadTipiScadenzeAttive();
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-if (giorniMancanti === preavviso1) {
-  const { data: alertEsistente, error: alertError } = await supabase
-    .from("tbtipi_scadenze_alert")
-    .select("id, email_inviata")
-    .eq("tipo_scadenza_id", tipo.id)
-    .eq("anno_invio", annoInvio)
-    .eq("tipo_alert", "preavviso_1")
-    .maybeSingle();
-
-  if (alertError) throw alertError;
-
-  const emailGiaInviata = alertEsistente?.email_inviata === true;
-
-  if (!emailGiaInviata) {
-    if (!alertEsistente) {
-      await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
-      result.alertsCreated += 1;
-    }
-
-    const sentCount = await inviaEmailScadenza(
-      tipo,
-      "preavviso_1",
-      giorniMancanti
-    );
-
-    if (sentCount > 0) {
-      await markAlertEmailSent(tipo.id, annoInvio, "preavviso_1");
-      result.emailsSent += sentCount;
-    }
-  }
-}
-        if (giorniMancanti === preavviso2) {
-          const alreadySent = await alertAlreadySent(
-            tipo.id,
+        if (giorniMancanti === preavviso1) {
+          await processAlertInvio(
+            tipo,
             annoInvio,
-            "preavviso_2"
+            "preavviso_1",
+            giorniMancanti,
+            result
           );
+        }
 
-          if (!alreadySent) {
-            await createAlertRecord(tipo.id, annoInvio, "preavviso_2");
-            result.alertsCreated += 1;
-
-            const sentCount = await inviaEmailScadenza(
-              tipo,
-              "preavviso_2",
-              giorniMancanti
-            );
-
-            if (sentCount > 0) {
-              await markAlertEmailSent(tipo.id, annoInvio, "preavviso_2");
-              result.emailsSent += sentCount;
-            }
-          }
+        if (giorniMancanti === preavviso2) {
+          await processAlertInvio(
+            tipo,
+            annoInvio,
+            "preavviso_2",
+            giorniMancanti,
+            result
+          );
         }
 
         if (giorniMancanti < 0 && tipo.ricorrente) {
-          const alreadyRenewed = await alertAlreadySent(
+          const alertRinnovo = await getAlertRecord(
             tipo.id,
             annoInvio,
             "rinnovo_auto"
           );
+          const rinnovoGiaGestito = !!alertRinnovo;
 
-          if (!alreadyRenewed) {
+          if (!rinnovoGiaGestito) {
             const nuovaData = await rinnovaScadenzaAutomatica(tipo);
             await createAlertRecord(tipo.id, annoInvio, "rinnovo_auto");
+            result.alertsCreated += 1;
             result.renewals += 1;
 
             const sentCount = await inviaEmailScadenza(
-              { ...tipo, data_scadenza: tipo.data_scadenza },
+              tipo,
               "rinnovo_auto",
               giorniMancanti,
               nuovaData
@@ -521,7 +530,9 @@ if (giorniMancanti === preavviso1) {
         }
       } catch (error: any) {
         result.errors.push(
-          `Errore su scadenza ${tipo.nome} (${tipo.id}): ${error?.message || "errore sconosciuto"}`
+          `Errore su scadenza ${tipo.nome} (${tipo.id}): ${
+            error?.message || "errore sconosciuto"
+          }`
         );
       }
     }
