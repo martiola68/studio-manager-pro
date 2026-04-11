@@ -193,7 +193,7 @@ async function markAlertEmailSent(
   if (error) throw error;
 }
 
-async function rinnovaScadenzaAutomatica(tipo: TipoScadenza): Promise<void> {
+async function rinnovaScadenzaAutomatica(tipo: TipoScadenza): Promise<string> {
   const nuovaData = addOneYear(tipo.data_scadenza);
 
   const { error } = await supabase
@@ -205,6 +205,7 @@ async function rinnovaScadenzaAutomatica(tipo: TipoScadenza): Promise<void> {
     .eq("id", tipo.id);
 
   if (error) throw error;
+  return nuovaData;
 }
 
 async function loadDestinatariInterniEmailPerScadenza(
@@ -294,7 +295,8 @@ function buildMessaggioScadenza(
   tipo: TipoScadenza,
   tipoAlert: AlertType,
   nominativi: string[],
-  giorniMancanti: number
+  giorniMancanti: number,
+  nuovaData?: string
 ): { oggetto: string; messaggio: string } {
   const titoloAlert =
     tipoAlert === "preavviso_1"
@@ -319,7 +321,7 @@ function buildMessaggioScadenza(
           `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
           "",
           `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
-          `Nuova data annuale aggiornata automaticamente.`,
+          `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
           "",
           "Nominativi collegati:",
           elencoNominativi,
@@ -410,24 +412,26 @@ async function sendScadenzaEmails(
 
   return sent;
 }
+
 async function inviaEmailScadenza(
   tipo: TipoScadenza,
   tipoAlert: AlertType,
-  giorniMancanti: number
-): Promise<boolean> {
+  giorniMancanti: number,
+  nuovaData?: string
+): Promise<number> {
   const recipients = await loadDestinatariInterniEmailPerScadenza(tipo);
-  if (recipients.length === 0) return false;
+  if (recipients.length === 0) return 0;
 
   const nominativi = await loadNominativiPerTipoScadenza(tipo.id);
   const { oggetto, messaggio } = buildMessaggioScadenza(
     tipo,
     tipoAlert,
     nominativi,
-    giorniMancanti
+    giorniMancanti,
+    nuovaData
   );
 
-  const sentCount = await sendScadenzaEmails(recipients, oggetto, messaggio);
-  return sentCount > 0;
+  return await sendScadenzaEmails(recipients, oggetto, messaggio);
 }
 
 export const scadenzeAutomaticheService = {
@@ -453,52 +457,76 @@ export const scadenzeAutomaticheService = {
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
         if (giorniMancanti === preavviso1) {
-          const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
+          const alreadySent = await alertAlreadySent(
+            tipo.id,
+            annoInvio,
+            "preavviso_1"
+          );
 
           if (!alreadySent) {
             await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
             result.alertsCreated += 1;
 
-            const emailSent = await inviaEmailScadenza(
+            const sentCount = await inviaEmailScadenza(
               tipo,
               "preavviso_1",
               giorniMancanti
             );
 
-            if (emailSent) {
+            if (sentCount > 0) {
               await markAlertEmailSent(tipo.id, annoInvio, "preavviso_1");
-              result.emailsSent += 1;
+              result.emailsSent += sentCount;
             }
           }
         }
 
         if (giorniMancanti === preavviso2) {
-          const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_2");
+          const alreadySent = await alertAlreadySent(
+            tipo.id,
+            annoInvio,
+            "preavviso_2"
+          );
 
           if (!alreadySent) {
             await createAlertRecord(tipo.id, annoInvio, "preavviso_2");
             result.alertsCreated += 1;
 
-            const emailSent = await inviaEmailScadenza(
+            const sentCount = await inviaEmailScadenza(
               tipo,
               "preavviso_2",
               giorniMancanti
             );
 
-            if (emailSent) {
+            if (sentCount > 0) {
               await markAlertEmailSent(tipo.id, annoInvio, "preavviso_2");
-              result.emailsSent += 1;
+              result.emailsSent += sentCount;
             }
           }
         }
 
         if (giorniMancanti < 0 && tipo.ricorrente) {
-          const alreadyRenewed = await alertAlreadySent(tipo.id, annoInvio, "rinnovo_auto");
+          const alreadyRenewed = await alertAlreadySent(
+            tipo.id,
+            annoInvio,
+            "rinnovo_auto"
+          );
 
           if (!alreadyRenewed) {
-            await rinnovaScadenzaAutomatica(tipo);
+            const nuovaData = await rinnovaScadenzaAutomatica(tipo);
             await createAlertRecord(tipo.id, annoInvio, "rinnovo_auto");
             result.renewals += 1;
+
+            const sentCount = await inviaEmailScadenza(
+              { ...tipo, data_scadenza: tipo.data_scadenza },
+              "rinnovo_auto",
+              giorniMancanti,
+              nuovaData
+            );
+
+            if (sentCount > 0) {
+              await markAlertEmailSent(tipo.id, annoInvio, "rinnovo_auto");
+              result.emailsSent += sentCount;
+            }
           }
         }
       } catch (error: any) {
