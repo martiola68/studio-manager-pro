@@ -427,7 +427,16 @@ export const scadenzeAutomaticheService = {
       errors: [],
     };
 
-    const tipi = await loadTipiScadenzeAttive();
+   const tipi = await loadTipiScadenzeAttive();
+
+const targetId = "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435";
+const targetPresente = tipi.some((t) => t.id === targetId);
+
+if (!targetPresente) {
+  result.errors.push(
+    `[DEBUG] targetId ${targetId} NON presente tra le scadenze attive caricate`
+  );
+}
 
     for (const tipo of tipi) {
       try {
