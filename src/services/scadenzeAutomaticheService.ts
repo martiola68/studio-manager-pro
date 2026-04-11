@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/services/emailService";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -350,21 +349,25 @@ async function sendScadenzaEmails(
   const html = buildHtmlScadenzaEmail(oggetto, messaggio);
 
   for (const recipient of recipients) {
-    const result = await sendEmail({
-      to: recipient.email,
-      subject: oggetto,
+    const result = await sendEmailDirectServerSide(
+      recipient.email,
+      oggetto,
       html,
-      text: messaggio,
-    });
+      messaggio
+    );
 
     if (result.success) {
       sent += 1;
+    } else {
+      console.error(
+        `❌ Invio email fallito per ${recipient.email}:`,
+        result.error
+      );
     }
   }
 
   return sent;
 }
-
 async function inviaEmailScadenza(
   tipo: TipoScadenza,
   tipoAlert: AlertType,
