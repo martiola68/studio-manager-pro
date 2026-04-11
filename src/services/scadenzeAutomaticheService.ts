@@ -32,6 +32,7 @@ type ProcessResult = {
 };
 
 type DestinatarioEmail = {
+  id: string;
   email: string;
   nome: string;
 };
@@ -235,46 +236,54 @@ async function loadDestinatariInterniEmailPerScadenza(
   if (error) throw error;
 
   return (data || [])
-    .filter((u: any) => !!u.email)
+    .filter((u: any) => !!u.email && !!u.id)
     .map((u: any) => ({
+      id: u.id as string,
       email: u.email as string,
       nome: [u.cognome, u.nome].filter(Boolean).join(" ").trim(),
     }));
 }
 
 async function loadNominativiPerTipoScadenza(
-  tipoScadenzaId: string
+  tipoScadenzaId: string,
+  utenteOperatoreId: string
 ): Promise<string[]> {
   const queries = await Promise.all([
     supabase
       .from("tbscadiva")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
 
     supabase
       .from("tbscadfiscali")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
 
     supabase
       .from("tbscadbilanci")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
 
     supabase
       .from("tbscad770")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
 
     supabase
       .from("tbscadccgg")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
 
     supabase
       .from("tbscadcu")
       .select("nominativo")
-      .eq("tipo_scadenza_id", tipoScadenzaId),
+      .eq("tipo_scadenza_id", tipoScadenzaId)
+      .eq("utente_operatore_id", utenteOperatoreId),
   ]);
 
   const errors = queries
@@ -445,16 +454,33 @@ async function inviaEmailScadenza(
   const recipients = await loadDestinatariInterniEmailPerScadenza(tipo);
   if (recipients.length === 0) return 0;
 
-  const nominativi = await loadNominativiPerTipoScadenza(tipo.id);
-  const { oggetto, messaggio } = buildMessaggioScadenza(
-    tipo,
-    tipoAlert,
-    nominativi,
-    giorniMancanti,
-    nuovaData
-  );
+  let sentTotale = 0;
 
-  return await sendScadenzaEmails(recipients, oggetto, messaggio);
+  for (const recipient of recipients) {
+    const nominativi = await loadNominativiPerTipoScadenza(tipo.id, recipient.id);
+
+    if (nominativi.length === 0) {
+      continue;
+    }
+
+    const { oggetto, messaggio } = buildMessaggioScadenza(
+      tipo,
+      tipoAlert,
+      nominativi,
+      giorniMancanti,
+      nuovaData
+    );
+
+    const sentCount = await sendScadenzaEmails(
+      [{ id: recipient.id, email: recipient.email, nome: recipient.nome }],
+      oggetto,
+      messaggio
+    );
+
+    sentTotale += sentCount;
+  }
+
+  return sentTotale;
 }
 
 async function processAlertInvio(
