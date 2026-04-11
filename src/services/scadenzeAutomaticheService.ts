@@ -427,14 +427,23 @@ export const scadenzeAutomaticheService = {
       errors: [],
     };
 
-   const tipi = await loadTipiScadenzeAttive();
+  const tipi = await loadTipiScadenzeAttive();
 
 const targetNome = "presentazione dichiarazione annuale Iva (E' UNA PROVA DI ALERT AUTOMATICO)";
+
+const tipiIva = tipi
+  .filter((t) => (t.nome || "").toLowerCase().includes("iva"))
+  .map((t) => `${t.id} | ${t.nome} | attivo=${t.attivo} | data=${t.data_scadenza} | p1=${t.giorni_preavviso_1}`);
+
+result.errors.push(
+  `[DEBUG IVA ATTIVE] ${tipiIva.length > 0 ? tipiIva.join(" || ") : "nessuna scadenza IVA attiva caricata"}`
+);
+
 const targetPresente = tipi.some((t) => t.nome === targetNome);
 
 if (!targetPresente) {
   result.errors.push(
-    `[DEBUG] targetNome ${targetNome} NON presente tra le scadenze attive caricate`
+    `[DEBUG TARGET NON TROVATO] ${targetNome}`
   );
 }
 
