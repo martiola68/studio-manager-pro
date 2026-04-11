@@ -439,11 +439,11 @@ const tipi = await loadTipiScadenzeAttive();
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-     if (tipo.id === "d47567fe-5faf-4c80-b1c6-d48dc1d26902") {
+ if (tipo.nome === "IVA") {
   const alreadySentDebug = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
 
   result.errors.push(
-    `[DEBUG TARGET] id=${tipo.id} nome=${tipo.nome} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} alreadySent=${alreadySentDebug}`
+    `[DEBUG IVA] id=${tipo.id} nome=${tipo.nome} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} alreadySent=${alreadySentDebug}`
   );
 }
 
