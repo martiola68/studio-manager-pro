@@ -432,12 +432,13 @@ async function processAlertInvio(
   tipoAlert: AlertType,
   giorniMancanti: number,
   result: ProcessResult,
-  nuovaData?: string
+  nuovaData?: string,
+  forceSend: boolean = false
 ): Promise<void> {
   const alertEsistente = await getAlertRecord(tipo.id, annoInvio, tipoAlert);
   const emailGiaInviata = alertEsistente?.email_inviata === true;
 
-  if (emailGiaInviata) {
+  if (emailGiaInviata && !forceSend) {
     return;
   }
 
@@ -460,7 +461,10 @@ async function processAlertInvio(
 }
 
 export const scadenzeAutomaticheService = {
-  async processaTipiScadenzeAutomatiche(): Promise<ProcessResult> {
+  async processaTipiScadenzeAutomatiche(options?: {
+    forceTipoScadenzaId?: string;
+    ignoreAlreadySent?: boolean;
+  }): Promise<ProcessResult> {
     const result: ProcessResult = {
       processed: 0,
       alertsCreated: 0,
@@ -481,25 +485,33 @@ export const scadenzeAutomaticheService = {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-        if (giorniMancanti === preavviso1) {
-          await processAlertInvio(
-            tipo,
-            annoInvio,
-            "preavviso_1",
-            giorniMancanti,
-            result
-          );
-        }
+      const forceThisTipo =
+  options?.ignoreAlreadySent === true &&
+  options?.forceTipoScadenzaId === tipo.id;
 
-        if (giorniMancanti === preavviso2) {
-          await processAlertInvio(
-            tipo,
-            annoInvio,
-            "preavviso_2",
-            giorniMancanti,
-            result
-          );
-        }
+if (giorniMancanti === preavviso1) {
+  await processAlertInvio(
+    tipo,
+    annoInvio,
+    "preavviso_1",
+    giorniMancanti,
+    result,
+    undefined,
+    forceThisTipo
+  );
+}
+
+if (giorniMancanti === preavviso2) {
+  await processAlertInvio(
+    tipo,
+    annoInvio,
+    "preavviso_2",
+    giorniMancanti,
+    result,
+    undefined,
+    forceThisTipo
+  );
+}
 
         if (giorniMancanti < 0 && tipo.ricorrente) {
           const alertRinnovo = await getAlertRecord(
