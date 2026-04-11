@@ -217,68 +217,26 @@ async function rinnovaScadenzaAutomatica(tipo: TipoScadenza): Promise<string> {
 async function loadDestinatariInterniEmailPerScadenza(
   tipo: TipoScadenza
 ): Promise<DestinatarioEmail[]> {
-  const queries = await Promise.all([
-    supabase
-      .from("tbscadiva")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
+  if (!tipo.studio_id) return [];
 
-    supabase
-      .from("tbscadfiscali")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
+  const settori: string[] = [];
+  if (tipo.settore_fiscale) settori.push("Fiscale");
+  if (tipo.settore_lavoro) settori.push("Lavoro");
+  if (tipo.settore_consulenza) settori.push("Consulenza");
 
-    supabase
-      .from("tbscadbilanci")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
-
-    supabase
-      .from("tbscad770")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
-
-    supabase
-      .from("tbscadccgg")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
-
-    supabase
-      .from("tbscadcu")
-      .select("utente_operatore_id")
-      .eq("tipo_scadenza_id", tipo.id),
-  ]);
-
-  const errors = queries
-    .map((q) => q.error)
-    .filter(Boolean)
-    .map((e) => (e as any).message);
-
-  if (errors.length > 0) {
-    throw new Error(errors.join(" | "));
-  }
-
-  const utenteIds = [
-    ...new Set(
-      queries
-        .flatMap((q) => q.data || [])
-        .map((r: any) => r.utente_operatore_id)
-        .filter(Boolean)
-    ),
-  ];
-
-  if (utenteIds.length === 0) return [];
+  if (settori.length === 0) return [];
 
   const { data, error } = await supabase
     .from("tbutenti")
     .select("id, nome, cognome, email")
     .eq("attivo", true)
-    .in("id", utenteIds);
+    .eq("studio_id", tipo.studio_id)
+    .in("settore", settori);
 
   if (error) throw error;
 
   return (data || [])
-    .filter((u: any) => !!u.id && !!u.email)
+    .filter((u: any) => !!u.email && !!u.id)
     .map((u: any) => ({
       id: u.id as string,
       email: u.email as string,
