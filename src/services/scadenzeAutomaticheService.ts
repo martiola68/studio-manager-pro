@@ -267,25 +267,6 @@ async function loadNominativiPerTipoScadenza(
     .map((r: any) => (r.nominativo || "").trim())
     .filter(Boolean);
 
-  // 🔥 AGGIUNTA: fallback automatico
-  if (nominativi.length === 0) {
-    const { data, error } = await supabase
-      .from("tbtipi_scadenze")
-      .select("nome")
-      .eq("id", tipoScadenzaId)
-      .maybeSingle();
-
-    if (error) {
-      throw error;
-    }
-
-    if (data?.nome) {
-      return [data.nome];
-    }
-
-    return [];
-  }
-
   return [...new Set(nominativi)].sort((a, b) =>
     a.localeCompare(b, "it", { sensitivity: "base" })
   );
@@ -457,15 +438,6 @@ export const scadenzeAutomaticheService = {
 
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
-
-        if (tipo.id === "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435") {
-  const alreadySent1 = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
-  const alreadySent2 = await alertAlreadySent(tipo.id, annoInvio, "preavviso_2");
-
-  result.errors.push(
-    `[DEBUG] id=${tipo.id} nome=${tipo.nome} data_scadenza=${tipo.data_scadenza} giorniMancanti=${giorniMancanti} preavviso1=${preavviso1} preavviso2=${preavviso2} attivo=${tipo.attivo} alreadySent1=${alreadySent1} alreadySent2=${alreadySent2}`
-  );
-}
 
         if (giorniMancanti === preavviso1) {
           const alreadySent = await alertAlreadySent(
