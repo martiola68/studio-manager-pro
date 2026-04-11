@@ -62,68 +62,49 @@ function formatDateIT(dateString: string): string {
 function buildHtmlScadenzaEmail(oggetto: string, messaggio: string): string {
   return `
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
-    }
-    .container {
-      max-width: 700px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .header {
-      background: #111827;
-      color: white;
-      padding: 20px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    .content {
-      padding: 24px;
-    }
-    .message {
-      background: #f9fafb;
-      border-left: 4px solid #2563eb;
-      padding: 16px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-    }
-    .footer {
-      background: #f3f4f6;
-      padding: 16px;
-      text-align: center;
-      font-size: 12px;
-      color: #666;
-      border-top: 1px solid #e5e7eb;
-    }
-    .footer p {
-      margin: 5px 0;
-    }
-  </style>
+  <title>${oggetto}</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">${oggetto}</div>
-    <div class="content">
-      <div class="message">${messaggio.replace(/\n/g, "<br>")}</div>
-    </div>
-    <div class="footer">
-      <p><strong>Studio Manager Pro</strong></p>
-      <p>Questa è una email automatica, non rispondere a questo messaggio</p>
-    </div>
-  </div>
+<body style="margin:0;padding:0;background-color:#eef4fb;font-family:Arial,sans-serif;color:#1f2937;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef4fb;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbe7f3;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#2563eb,#0ea5e9);padding:24px 28px;color:#ffffff;">
+              <div style="font-size:13px;opacity:0.95;margin-bottom:8px;">Studio Manager Pro</div>
+              <div style="font-size:24px;font-weight:700;line-height:1.3;">${oggetto}</div>
+              <div style="font-size:13px;opacity:0.92;margin-top:8px;">Notifica automatica del sistema scadenze</div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:28px;">
+              <div style="display:inline-block;padding:7px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;margin-bottom:18px;">
+                Promemoria automatico
+              </div>
+
+              <div style="background:#f8fbff;border:1px solid #dbeafe;border-left:5px solid #3b82f6;border-radius:10px;padding:18px 20px;font-size:15px;line-height:1.7;color:#1f2937;">
+                ${messaggio.replace(/\n/g, "<br>")}
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:18px 24px;text-align:center;">
+              <div style="font-size:13px;font-weight:700;color:#0f172a;">Studio Manager Pro</div>
+              <div style="font-size:12px;color:#64748b;margin-top:4px;">
+                Messaggio generato automaticamente dal sistema. Non rispondere a questa email.
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
@@ -299,21 +280,19 @@ function buildMessaggioScadenza(
   nuovaData?: string
 ): { oggetto: string; messaggio: string } {
   const titoloAlert =
-    tipoAlert === "preavviso_1"
-      ? `Promemoria scadenza a ${giorniMancanti} giorni`
-      : tipoAlert === "preavviso_2"
-      ? `Promemoria scadenza a ${giorniMancanti} giorni`
+    tipoAlert === "preavviso_1" || tipoAlert === "preavviso_2"
+      ? `Promemoria scadenza a ${giorniMancanti} giorn${giorniMancanti === 1 ? "o" : "i"}`
       : "Rinnovo automatico scadenza";
 
   const elencoNominativi =
     nominativi.length > 0
-      ? nominativi.map((n) => `- ${n}`).join("\n")
-      : "- Nessun nominativo collegato trovato";
+      ? nominativi.map((n) => `• ${n}`).join("\n")
+      : "• Nessun nominativo collegato trovato";
 
   const oggetto =
     tipoAlert === "rinnovo_auto"
       ? `Rinnovo automatico scadenza: ${tipo.nome}`
-      : `${titoloAlert}: ${tipo.nome} del ${formatDateIT(tipo.data_scadenza)}`;
+      : `${titoloAlert} — ${tipo.nome}`;
 
   const messaggio =
     tipoAlert === "rinnovo_auto"
@@ -322,15 +301,19 @@ function buildMessaggioScadenza(
           "",
           `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
           `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
+          tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
           "",
           "Nominativi collegati:",
           elencoNominativi,
-        ].join("\n")
+        ]
+          .filter(Boolean)
+          .join("\n")
       : [
-          `${titoloAlert}.`,
+          `Ti segnalo che una scadenza richiede attenzione.`,
           "",
           `Scadenza: ${tipo.nome}`,
           `Data scadenza: ${formatDateIT(tipo.data_scadenza)}`,
+          `Giorni mancanti: ${giorniMancanti}`,
           tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
           "",
           "Nominativi collegati:",
