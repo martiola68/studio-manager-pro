@@ -434,7 +434,7 @@ const targetPresente = tipi.some((t) => t.nome === targetNome);
 
 if (!targetPresente) {
   result.errors.push(
-    `[DEBUG] targetId ${targetId} NON presente tra le scadenze attive caricate`
+    `[DEBUG] targetNome ${targetNome} NON presente tra le scadenze attive caricate`
   );
 }
 
