@@ -439,30 +439,27 @@ export const scadenzeAutomaticheService = {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-        if (giorniMancanti === preavviso1) {
-          const alreadySent = await alertAlreadySent(
-            tipo.id,
-            annoInvio,
-            "preavviso_1"
-          );
+     const isScadenzaTarget = tipo.id === "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435";
 
-          if (!alreadySent) {
-            await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
-            result.alertsCreated += 1;
+if (isScadenzaTarget || giorniMancanti === preavviso1) {
+  const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
 
-            const sentCount = await inviaEmailScadenza(
-              tipo,
-              "preavviso_1",
-              giorniMancanti
-            );
+  if (!alreadySent) {
+    await createAlertRecord(tipo.id, annoInvio, "preavviso_1");
+    result.alertsCreated += 1;
 
-            if (sentCount > 0) {
-              await markAlertEmailSent(tipo.id, annoInvio, "preavviso_1");
-              result.emailsSent += sentCount;
-            }
-          }
-        }
+    const emailSent = await inviaEmailScadenza(
+      tipo,
+      "preavviso_1",
+      giorniMancanti
+    );
 
+    if (emailSent) {
+      await markAlertEmailSent(tipo.id, annoInvio, "preavviso_1");
+      result.emailsSent += 1;
+    }
+  }
+}
         if (giorniMancanti === preavviso2) {
           const alreadySent = await alertAlreadySent(
             tipo.id,
