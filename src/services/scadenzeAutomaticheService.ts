@@ -67,6 +67,12 @@ function formatDateIT(dateString: string): string {
 }
 
 function buildHtmlScadenzaEmail(oggetto: string, messaggio: string): string {
+  const messaggioHtml = messaggio
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>");
+
   return `
 <!DOCTYPE html>
 <html lang="it">
@@ -76,34 +82,47 @@ function buildHtmlScadenzaEmail(oggetto: string, messaggio: string): string {
   <title>${oggetto}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#eef4fb;font-family:Arial,sans-serif;color:#1f2937;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef4fb;padding:24px 0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#eef4fb;margin:0;padding:24px 0;">
     <tr>
-      <td align="center">
-        <table role="presentation" width="680" cellpadding="0" cellspacing="0" style="max-width:680px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbe7f3;">
+      <td align="center" valign="top" style="padding:0 12px;">
+        <table role="presentation" width="720" cellpadding="0" cellspacing="0" border="0" style="width:720px;max-width:720px;background:#ffffff;border:1px solid #dbe7f3;">
           <tr>
-            <td style="background:linear-gradient(135deg,#2563eb,#0ea5e9);padding:24px 28px;color:#ffffff;">
-              <div style="font-size:13px;opacity:0.95;margin-bottom:8px;">Studio Manager Pro</div>
-              <div style="font-size:24px;font-weight:700;line-height:1.3;">${oggetto}</div>
-              <div style="font-size:13px;opacity:0.92;margin-top:8px;">Notifica automatica del sistema scadenze</div>
+            <td valign="top" style="background:#1d4ed8;padding:24px 28px;color:#ffffff;">
+              <div style="font-size:13px;line-height:18px;font-weight:bold;opacity:0.95;">Studio Manager Pro</div>
+              <div style="font-size:26px;line-height:34px;font-weight:bold;padding-top:8px;">${oggetto}</div>
+              <div style="font-size:13px;line-height:18px;padding-top:8px;opacity:0.95;">Notifica automatica del sistema scadenze</div>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:28px;">
-              <div style="display:inline-block;padding:7px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;margin-bottom:18px;">
-                Promemoria automatico
-              </div>
-
-              <div style="background:#f8fbff;border:1px solid #dbeafe;border-left:5px solid #3b82f6;border-radius:10px;padding:18px 20px;font-size:15px;line-height:1.7;color:#1f2937;">
-                ${messaggio.replace(/\n/g, "<br>")}
-              </div>
+            <td valign="top" style="padding:24px 28px 12px 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#e0f2fe;color:#0369a1;font-size:12px;line-height:16px;font-weight:bold;padding:8px 12px;">
+                    Promemoria automatico
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <tr>
-            <td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:18px 24px;text-align:center;">
-              <div style="font-size:13px;font-weight:700;color:#0f172a;">Studio Manager Pro</div>
-              <div style="font-size:12px;color:#64748b;margin-top:4px;">
+            <td valign="top" style="padding:0 28px 28px 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background:#f8fbff;border:1px solid #dbeafe;">
+                <tr>
+                  <td width="6" style="width:6px;background:#3b82f6;font-size:0;line-height:0;">&nbsp;</td>
+                  <td valign="top" style="padding:18px 20px;font-size:16px;line-height:26px;color:#1f2937;">
+                    ${messaggioHtml}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td valign="top" style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:18px 24px;text-align:center;">
+              <div style="font-size:14px;line-height:20px;font-weight:bold;color:#0f172a;">Studio Manager Pro</div>
+              <div style="font-size:12px;line-height:18px;color:#64748b;padding-top:4px;">
                 Messaggio generato automaticamente dal sistema. Non rispondere a questa email.
               </div>
             </td>
@@ -291,32 +310,44 @@ function buildMessaggioScadenza(
         }`
       : "Rinnovo automatico scadenza";
 
-  const elencoNominativi =
-    nominativi.length > 0
-      ? nominativi.map((n) => `• ${n}`).join("\n")
-      : "• Nessun nominativo collegato trovato";
+const elencoNominativi =
+  nominativi.length > 0
+    ? nominativi.map((n, index) => `${index + 1}. ${n}`).join("\n")
+    : "Nessun nominativo collegato trovato";
 
   const oggetto =
     tipoAlert === "rinnovo_auto"
       ? `Rinnovo automatico scadenza: ${tipo.nome}`
       : `${titoloAlert} — ${tipo.nome}`;
 
-  const messaggio =
-    tipoAlert === "rinnovo_auto"
-      ? [
-          `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
-          "",
-          `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
-          `Nuova data: ${
-            nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"
-          }`,
-          tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
-          "",
-          "Nominativi collegati:",
-          elencoNominativi,
-        ]
-          .filter(Boolean)
-          .join("\n")
+ const messaggio =
+  tipoAlert === "rinnovo_auto"
+    ? [
+        `È stato eseguito il rinnovo automatico della scadenza "${tipo.nome}".`,
+        "",
+        `Data precedente: ${formatDateIT(tipo.data_scadenza)}`,
+        `Nuova data: ${nuovaData ? formatDateIT(nuovaData) : "aggiornata automaticamente"}`,
+        tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
+        "",
+        "Clienti / nominativi collegati alla scadenza:",
+        elencoNominativi,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : [
+        `Ti segnalo che una scadenza richiede attenzione.`,
+        "",
+        `Scadenza: ${tipo.nome}`,
+        `Data scadenza: ${formatDateIT(tipo.data_scadenza)}`,
+        `Giorni mancanti: ${giorniMancanti}`,
+        tipo.descrizione ? `Descrizione: ${tipo.descrizione}` : "",
+        "",
+        "Clienti / nominativi collegati alla scadenza:",
+        elencoNominativi,
+      ]
+        .filter(Boolean)
+        .join("\n");
+  
       : [
           `Ti segnalo che una scadenza richiede attenzione.`,
           "",
