@@ -10,11 +10,23 @@ export default async function handler(
   }
 
   try {
+    const forceTipoScadenzaId =
+      typeof req.query.forceTipoScadenzaId === "string"
+        ? req.query.forceTipoScadenzaId
+        : undefined;
+
+    const ignoreAlreadySent = req.query.ignoreAlreadySent === "1";
+
     const result =
-      await scadenzeAutomaticheService.processaTipiScadenzeAutomatiche();
+      await scadenzeAutomaticheService.processaTipiScadenzeAutomatiche({
+        forceTipoScadenzaId,
+        ignoreAlreadySent,
+      });
 
     return res.status(200).json({
       ok: true,
+      forceTipoScadenzaId,
+      ignoreAlreadySent,
       result,
     });
   } catch (error: any) {
