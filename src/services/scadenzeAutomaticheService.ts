@@ -429,8 +429,8 @@ export const scadenzeAutomaticheService = {
 
    const tipi = await loadTipiScadenzeAttive();
 
-const targetId = "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435";
-const targetPresente = tipi.some((t) => t.id === targetId);
+const targetNome = "presentazione dichiarazione annuale Iva (E' UNA PROVA DI ALERT AUTOMATICO)";
+const targetPresente = tipi.some((t) => t.nome === targetNome);
 
 if (!targetPresente) {
   result.errors.push(
@@ -448,7 +448,7 @@ if (!targetPresente) {
         const preavviso1 = Number(tipo.giorni_preavviso_1 ?? 15);
         const preavviso2 = Number(tipo.giorni_preavviso_2 ?? 7);
 
-        if (tipo.id === targetId) {
+       if (tipo.nome === targetNome) {
   const alreadySent1 = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
 
   result.errors.push(
@@ -456,7 +456,7 @@ if (!targetPresente) {
   );
 }
 
-     const isScadenzaTarget = tipo.id === "a96e6e9a-a2d6-4505-b4b7-e36ac28d7435";
+const isScadenzaTarget = tipo.nome === "presentazione dichiarazione annuale Iva (E' UNA PROVA DI ALERT AUTOMATICO)";
 
 if (isScadenzaTarget || giorniMancanti === preavviso1) {
   const alreadySent = await alertAlreadySent(tipo.id, annoInvio, "preavviso_1");
