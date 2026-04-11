@@ -267,6 +267,25 @@ async function loadNominativiPerTipoScadenza(
     .map((r: any) => (r.nominativo || "").trim())
     .filter(Boolean);
 
+  // 🔥 AGGIUNTA: fallback automatico
+  if (nominativi.length === 0) {
+    const { data, error } = await supabase
+      .from("tbtipi_scadenze")
+      .select("nome")
+      .eq("id", tipoScadenzaId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data?.nome) {
+      return [data.nome];
+    }
+
+    return [];
+  }
+
   return [...new Set(nominativi)].sort((a, b) =>
     a.localeCompare(b, "it", { sensitivity: "base" })
   );
