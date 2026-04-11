@@ -570,7 +570,7 @@ export const scadenzeAutomaticheService = {
   options?.ignoreAlreadySent === true &&
   options?.forceTipoScadenzaId === tipo.id;
 
-if (giorniMancanti === preavviso1) {
+if (giorniMancanti === preavviso1 || forceThisTipo) {
   await processAlertInvio(
     tipo,
     annoInvio,
@@ -582,7 +582,7 @@ if (giorniMancanti === preavviso1) {
   );
 }
 
-if (giorniMancanti === preavviso2) {
+if (giorniMancanti === preavviso2 || forceThisTipo) {
   await processAlertInvio(
     tipo,
     annoInvio,
